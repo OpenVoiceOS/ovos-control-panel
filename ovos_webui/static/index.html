@@ -11,7 +11,8 @@
 <body>
 <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
 <div class="banner" id="banner" role="alert" hidden></div>
-<header><h1>OpenVoiceOS</h1></header>
+<header><h1>OpenVoiceOS</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
 <nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
   <a href="/" data-i18n="nav.dashboard">Dashboard</a>
   <a href="/config" data-i18n="nav.settings">Settings</a>
@@ -58,6 +59,8 @@ OvosWebUI.ready(function () {
   function load() {
     el("bus").textContent = t("dash.checking", "Checking…");
     api("/api/health").then(function (h) {
+      var wave = el("wave");
+      if (wave) { wave.classList.toggle("flat", !h.bus.reachable); }
       el("bus").innerHTML = h.bus.reachable
         ? "<strong>" + esc(t("dash.bus", "Message bus:")) + "</strong> " + esc(t("dash.bus.ok", "connected."))
         : "<strong>" + esc(t("dash.bus", "Message bus:")) + "</strong> " + esc(t("dash.bus.down",
