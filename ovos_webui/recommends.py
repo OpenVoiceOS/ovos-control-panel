@@ -11,10 +11,16 @@ the Settings page does that, one field at a time, when a user asks for it.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 from ovos_utils.log import LOG
+
+#: A language code, e.g. ``pt`` or ``pt-pt``. Anything else is refused before
+#: it can be joined into a path: ``lang`` is used to build ``<lang>.conf``, so
+#: a value with a separator or ``..`` would otherwise walk out of the registry.
+LANG_RE = re.compile(r"^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})?$")
 
 #: The profiles the registry ships, in the order ovos-config merges them.
 PROFILE_ORDER = ["base", "platform", "offline_stt", "online_stt",
@@ -76,6 +82,9 @@ def for_language(lang: str) -> dict[str, Any]:
     if root is None:
         return {"available": False, "profiles": {}}
     lang = (lang or "").lower()
+    if not LANG_RE.match(lang):
+        # Not a language code. Refuse it rather than build a path from it.
+        return {"available": True, "lang": lang, "profiles": {}}
     short = lang.split("-")[0]
     out: dict[str, Any] = {}
     for profile in profiles():
