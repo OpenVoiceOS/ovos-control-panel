@@ -12,11 +12,16 @@ is in the package.
 
 | Page | What it does |
 | --- | --- |
-| Dashboard | Shows if the message bus and each OVOS service answer. |
-| Settings | Changes your layer of `mycroft.conf`, as a form or as raw JSON or YAML. |
-| Skills | Changes the settings of each installed skill. |
-| Backup | Downloads a copy of your settings, and puts a copy back. |
-| About | Shows the installed package versions and useful links. |
+| [Dashboard](docs/dashboard.md) | Shows if the message bus and each OVOS service answer. |
+| [Settings](docs/configuration.md) | Changes your layer of `mycroft.conf`, as a form or as raw JSON or YAML. |
+| [Skills](docs/skill-settings.md) | Changes the settings of each installed skill. |
+| [Plugins](docs/plugins.md) | Finds OVOS plugins and installs them on the device. |
+| [Personas](docs/personas.md) | Makes and edits personas — the ordered list of solvers that answer you. |
+| [Translate](docs/translate.md) | Translates what a skill says and hears into your language. |
+| [Backup](docs/backup-restore.md) | Downloads a copy of your settings, and puts a copy back. |
+| [About](docs/about.md) | Shows the installed package versions and useful links. |
+
+Signing in is covered in [security.md](docs/security.md).
 
 The page works on a phone. It follows the light or dark setting of your device.
 
