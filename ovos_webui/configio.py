@@ -20,6 +20,29 @@ class ConfigError(ValueError):
     """Raised when supplied configuration text is not usable."""
 
 
+class NoAliasLoader(yaml.SafeLoader):
+    """A YAML loader that refuses anchors and aliases.
+
+    An alias can name the same node many times over, so a few hundred bytes of
+    YAML can expand into gigabytes while it loads. This is the "billion laughs"
+    attack. A configuration file has no need of aliases, so the loader simply
+    refuses them and the expansion can never start.
+    """
+
+
+def _no_alias(loader, node):  # pragma: no cover - reached through compose_node
+    raise ConfigError("YAML anchors and aliases are not allowed here")
+
+
+def _compose_node(self, parent, index):
+    if self.check_event(yaml.events.AliasEvent):
+        raise ConfigError("YAML anchors and aliases are not allowed here")
+    return yaml.composer.Composer.compose_node(self, parent, index)
+
+
+NoAliasLoader.compose_node = _compose_node
+
+
 def user_config_path() -> Path:
     """Return the path of the user configuration file.
 
@@ -52,8 +75,10 @@ def parse_text(text: str, fmt: str) -> dict[str, Any]:
         if fmt == "json":
             data = json.loads(text)
         else:
-            data = yaml.safe_load(text)
-    except (json.JSONDecodeError, yaml.YAMLError) as err:
+            data = yaml.load(text, Loader=NoAliasLoader)
+    except ConfigError:
+        raise
+    except (json.JSONDecodeError, yaml.YAMLError, RecursionError) as err:
         raise ConfigError(str(err)) from err
     if data is None:
         data = {}
@@ -87,25 +112,31 @@ def write_user_config(data: dict[str, Any], bus=None) -> dict[str, Any]:
 def _notify(data: dict[str, Any], bus) -> None:
     """Tell running services that the configuration changed.
 
-    ``configuration.patch`` is an existing OVOS message. ovos-config also
-    watches the file, so this only makes the update faster.
+    ``Configuration.patch`` keeps a volatile layer that sits on top of the
+    files and is only ever added to, so a key removed from the file stays in
+    that layer until a restart. ``configuration.patch.clear`` empties the
+    layer. Sending the clear first and the new configuration second makes a
+    deletion take effect at once.
 
-    ``MessageBusClient.emit`` waits for the connection without a limit when the
-    bus is down, so a save would never answer. The connection is checked first,
-    and a save works with or without the bus.
+    Both messages already exist in ovos-config: ``Configuration.register_bus``
+    binds ``configuration.patch`` and ``configuration.patch.clear``. Nothing
+    new is added to the bus here.
+
+    Every send goes through the bounded wrapper, because an emit on a bus that
+    dropped waits with no limit and would hang the request.
     """
-    from ovos_webui.health import bus_reachable
+    from ovos_webui import buswait
 
-    if bus is None or not bus_reachable(bus):
+    if bus is None or not buswait.is_connected(bus):
         return
     try:
         from ovos_bus_client.message import Message
     except ImportError:  # pragma: no cover - fallback for minimal installs
         from ovos_utils.fakebus import Message
-    try:
-        bus.emit(Message("configuration.patch", {"config": data}))
-    except Exception as err:  # noqa: BLE001 # pragma: no cover - the bus may drop
-        LOG.warning(f"could not announce the configuration change: {err}")
+    if not buswait.emit(bus, Message("configuration.patch.clear", {})):
+        LOG.warning("could not clear the volatile configuration patch")
+        return
+    buswait.emit(bus, Message("configuration.patch", {"config": data}))
 
 
 def plugin_options() -> dict[str, list[str]]:
@@ -216,17 +247,58 @@ def apply_quick_form(values: dict[str, Any], bus=None) -> dict[str, Any]:
     An empty value removes the key from the user layer, so the default takes
     over again.
     """
-    known = {".".join(spec["path"]): spec["path"] for spec in QUICK_KEYS}
-    unknown = sorted(set(values) - set(known))
+    specs = {".".join(spec["path"]): spec for spec in QUICK_KEYS}
+    unknown = sorted(set(values) - set(specs))
     if unknown:
         raise ConfigError(f"unknown field(s): {', '.join(unknown)}")
+    plugins = plugin_options()
+    merged = read_merged_config()
     user = read_user_config()
-    for name, path in known.items():
+    for name, spec in specs.items():
         if name not in values:
             continue
         value = values[name]
         if value is None or (isinstance(value, str) and not value.strip()):
-            del_in(user, path)
-        else:
-            set_in(user, path, value)
+            del_in(user, spec["path"])
+            continue
+        set_in(user, spec["path"], _check_quick_value(name, spec, value, plugins, merged))
     return write_user_config(user, bus=bus)
+
+
+def _check_quick_value(name: str, spec: dict[str, Any], value: Any,
+                       plugins: dict[str, list[str]],
+                       merged: dict[str, Any]) -> str:
+    """Return ``value`` when it fits the field, else raise.
+
+    Every field of the simple form holds a short string. A boolean or a number
+    reaching the configuration would make a service fail later, far away from
+    the page that wrote it, so it is refused here.
+    """
+    if not isinstance(value, str):
+        raise ConfigError(f"'{name}' must be text, not {type(value).__name__}")
+    value = value.strip()
+    if len(value) > 128:
+        raise ConfigError(f"'{name}' is too long")
+    if "\x00" in value or "\n" in value or "\r" in value:
+        raise ConfigError(f"'{name}' must be a single line")
+    kind = spec["kind"]
+    if kind == "choice":
+        if value not in spec["options"]:
+            raise ConfigError(
+                f"'{name}' must be one of: {', '.join(spec['options'])}")
+    elif kind == "plugin":
+        allowed = plugins.get(spec["plugins"]) or []
+        if allowed and value not in allowed:
+            raise ConfigError(
+                f"'{name}' must be an installed plugin: {', '.join(allowed)}")
+    elif kind == "hotword":
+        hotwords = merged.get("hotwords") or {}
+        if isinstance(hotwords, dict) and hotwords and value not in hotwords:
+            raise ConfigError(
+                f"'{name}' must be a wake word named in the hotwords section: "
+                f"{', '.join(sorted(hotwords))}")
+    elif kind == "text" and name == "lang":
+        import re
+        if not re.match(r"^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})?$", value):
+            raise ConfigError("'lang' must be a language code, for example pt-pt")
+    return value

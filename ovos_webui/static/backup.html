@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
 <title>Backup — OpenVoiceOS</title>
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js"></script>
@@ -37,8 +38,8 @@ OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el;
 
   el("download").addEventListener("click", function () {
-    var url = "/api/backup" + (OvosWebUI.token ? "?token=" + encodeURIComponent(OvosWebUI.token) : "");
-    window.location.href = url;
+    // The cookie goes with a normal navigation, so no token in the URL.
+    window.location.href = "/api/backup";
   });
 
   el("restore").addEventListener("click", function () {

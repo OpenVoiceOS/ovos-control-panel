@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
 <title>Settings — OpenVoiceOS</title>
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/app.js"></script>
@@ -26,7 +27,9 @@
   <section id="simple">
     <h2>Common settings</h2>
     <p class="hint">Leave a box empty to use the standard value again.
-      The device reads the file as soon as you save it. You do not have to restart it.</p>
+      The device reads the file as soon as you save it, so you do not have to
+      restart it. A service that is already running keeps its old value only if
+      it does not listen for configuration changes.</p>
     <div class="card" id="fields">Loading…</div>
     <div class="row">
       <button id="save-simple">Save</button>

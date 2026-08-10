@@ -159,14 +159,17 @@ def test_saving_emits_when_the_bus_is_connected():
             seen.append(message.msg_type)
 
     configio.write_user_config({"lang": "pt-pt"}, bus=ConnectedClient())
-    assert seen == ["configuration.patch"]
+    # The volatile patch layer is only ever added to, so it must be cleared
+    # before the new configuration is sent, or a deleted key survives.
+    assert seen == ["configuration.patch.clear", "configuration.patch"]
 
 
 def test_config_notify_emits_existing_message_only(client, bus):
     seen = []
     bus.on("configuration.patch", lambda m: seen.append(m.msg_type))
+    bus.on("configuration.patch.clear", lambda m: seen.append(m.msg_type))
     client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
-    assert seen == ["configuration.patch"]
+    assert seen == ["configuration.patch.clear", "configuration.patch"]
 
 
 def test_wake_word_field_offers_the_configured_hotwords(client):

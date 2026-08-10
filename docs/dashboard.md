@@ -31,6 +31,11 @@ Then there is one card for each service:
 A device without a screen has no GUI service, and a device without hardware
 plugins has no PHAL. "No answer" for those two is normal.
 
+`ovos-simple-listener` does not register a status handler at all, so a device
+that uses it instead of `ovos-dinkum-listener` shows "no answer" for the
+listener even while it is listening. That is a limit of this page, not a fault
+on the device.
+
 ## How the check works
 
 `ovos_utils.process_utils.ProcessStatus` gives every OVOS service two message

@@ -2,23 +2,22 @@
 (function () {
   "use strict";
 
-  // A token can be given as ?token=... . It is kept for later requests only in
-  // this tab, so it is not written to disk.
-  var params = new URLSearchParams(window.location.search);
-  var token = params.get("token") || sessionStorage.getItem("ovos-webui-token") || "";
-  if (params.get("token")) { sessionStorage.setItem("ovos-webui-token", token); }
-
-  function headers(extra) {
-    var h = extra || {};
-    if (token) { h["Authorization"] = "Bearer " + token; }
-    return h;
-  }
-
+  // The token is never put in a URL. A sign in exchanges it for a cookie that
+  // only this site can send, so nothing ends up in an access log or in the
+  // browser history.
   function api(path, options) {
     options = options || {};
-    options.headers = headers(options.headers);
+    options.credentials = "same-origin";
     return fetch(path, options).then(function (r) {
-      if (r.status === 401) { throw new Error("A token is needed. Add ?token=... to the address."); }
+      if (r.status === 401) {
+        window.location.href = "/login";
+        throw new Error("Sign in first.");
+      }
+      if (r.status === 403) {
+        return r.json().catch(function () { return {}; }).then(function (b) {
+          throw new Error(b.detail || "That is not allowed.");
+        });
+      }
       var ctype = r.headers.get("content-type") || "";
       if (ctype.indexOf("json") === -1) {
         if (!r.ok) { throw new Error("Request failed (" + r.status + ")"); }
@@ -50,9 +49,8 @@
   function markNav() {
     var here = window.location.pathname.replace(/\/$/, "") || "/";
     document.querySelectorAll("nav a").forEach(function (a) {
-      var target = a.getAttribute("href").split("?")[0].replace(/\/$/, "") || "/";
+      var target = a.getAttribute("href").replace(/\/$/, "") || "/";
       if (target === here) { a.setAttribute("aria-current", "page"); }
-      if (token) { a.href = target + "?token=" + encodeURIComponent(token); }
     });
   }
 
@@ -65,7 +63,7 @@
   }
 
   window.OvosWebUI = {
-    api: api, el: el, say: say, esc: esc, token: token,
+    api: api, el: el, say: say, esc: esc,
     ready: function (fn) {
       document.addEventListener("DOMContentLoaded", function () {
         markNav();

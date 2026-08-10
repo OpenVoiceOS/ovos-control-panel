@@ -8,6 +8,7 @@ archive cannot reach the rest of the file system.
 from __future__ import annotations
 
 import io
+import json
 import tarfile
 from pathlib import Path
 from typing import Any
@@ -15,7 +16,8 @@ from typing import Any
 from ovos_webui.configio import user_config_path
 from ovos_webui.fsutils import (
     MAX_UPLOAD_BYTES,
-    atomic_write,
+    commit_staged,
+    stage_file,
     timestamp,
     validate_skill_id,
 )
@@ -85,11 +87,58 @@ def _check_member(member: tarfile.TarInfo) -> None:
     raise RestoreError(f"the archive holds an unexpected file: {name}")
 
 
+def _iter_members(tar: tarfile.TarFile):
+    """Yield members one at a time, counting as we go.
+
+    ``getmembers()`` parses the whole archive first and keeps every header in
+    memory, so a small archive with a huge number of members costs a lot of
+    memory before any limit is applied. Iterating the file object reads one
+    header at a time, so the count and the size limits bite immediately.
+    """
+    total = 0
+    for count, member in enumerate(tar, start=1):
+        if count > MAX_MEMBERS:
+            raise RestoreError("the archive holds too many files")
+        if member.isfile():
+            total += member.size
+            if total > MAX_UNPACKED_BYTES:
+                raise RestoreError("the archive unpacks to too much data")
+        yield member
+
+
+def _validate_payload(name: str, raw: bytes) -> str:
+    """Return the text of a member, after checking it is what it claims to be.
+
+    A restore replaces the live configuration. Writing bytes that do not decode,
+    or JSON that does not parse, would leave the device with a file no service
+    can read, and the page would still answer 200.
+    """
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as err:
+        raise RestoreError(f"{name} is not valid UTF-8 text") from err
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError as err:
+        raise RestoreError(f"{name} is not valid JSON: {err}") from err
+    if not isinstance(parsed, dict):
+        raise RestoreError(f"{name} must hold a mapping")
+    return text
+
+
 def restore_archive(blob: bytes) -> dict[str, Any]:
     """Unpack ``blob`` over the live files, after checking every member.
 
-    Each target file is backed up before it is replaced, so a restore can be
-    undone.
+    The work happens in three stages, so a failure never leaves the device with
+    half of a restore:
+
+    1. read and check every member, in memory;
+    2. write each new file beside its target, as a temporary file;
+    3. back up the live file and rename the temporary one over it.
+
+    Only the last stage touches a live file, and by then everything has been
+    read, decoded and parsed. A disk error in the middle of stage 3 is reported
+    and the files that were already replaced are named in the error.
     """
     if len(blob) > MAX_UPLOAD_BYTES:
         raise RestoreError("the upload is too large")
@@ -98,33 +147,57 @@ def restore_archive(blob: bytes) -> dict[str, Any]:
     except tarfile.TarError as err:
         raise RestoreError(f"this is not a gzip tar archive: {err}") from err
 
+    # ── stage 1: read and check everything ───────────────────────────────────
+    staged: list[tuple[Path, str]] = []
+    try:
+        with tar:
+            for member in _iter_members(tar):
+                _check_member(member)
+                if not member.isfile():
+                    continue
+                handle = tar.extractfile(member)
+                if handle is None:  # pragma: no cover - defensive
+                    continue
+                raw = handle.read(MAX_UNPACKED_BYTES + 1)
+                if len(raw) > MAX_UNPACKED_BYTES:
+                    raise RestoreError("the archive unpacks to too much data")
+                text = _validate_payload(member.name, raw)
+                if member.name == CONFIG_MEMBER:
+                    target = user_config_path()
+                else:
+                    skill_id = Path(member.name).parts[1]
+                    target = skills_root() / skill_id / "settings.json"
+                staged.append((target, text))
+    except tarfile.TarError as err:
+        raise RestoreError(f"the archive could not be read: {err}") from err
+
+    if not staged:
+        raise RestoreError("the archive holds nothing to restore")
+
+    # ── stage 2: write every new file beside its target ──────────────────────
+    temporaries: list[tuple[Path, Path]] = []
+    try:
+        for target, text in staged:
+            temporaries.append((target, stage_file(target, text)))
+    except OSError as err:
+        for _, tmp in temporaries:
+            tmp.unlink(missing_ok=True)
+        raise RestoreError(f"the restore could not be prepared: {err}") from err
+
+    # ── stage 3: back up, then rename each one into place ────────────────────
     written: list[str] = []
     backups: list[str] = []
-    with tar:
-        members = tar.getmembers()
-        if len(members) > MAX_MEMBERS:
-            raise RestoreError("the archive holds too many files")
-        total = sum(m.size for m in members if m.isfile())
-        if total > MAX_UNPACKED_BYTES:
-            raise RestoreError("the archive unpacks to too much data")
-        for member in members:
-            _check_member(member)
-        for member in members:
-            if not member.isfile():
-                continue
-            handle = tar.extractfile(member)
-            if handle is None:  # pragma: no cover - defensive
-                continue
-            content = handle.read().decode("utf-8", errors="replace")
-            if member.name == CONFIG_MEMBER:
-                target = user_config_path()
-            else:
-                skill_id = Path(member.name).parts[1]
-                target = skills_root() / skill_id / "settings.json"
-            backup = atomic_write(target, content)
+    try:
+        for target, tmp in temporaries:
+            backup = commit_staged(target, tmp)
             written.append(str(target))
             if backup:
                 backups.append(str(backup))
-    if not written:
-        raise RestoreError("the archive holds nothing to restore")
+    except OSError as err:
+        for _, tmp in temporaries:
+            tmp.unlink(missing_ok=True)
+        raise RestoreError(
+            f"the restore stopped part way: {err}. "
+            f"These files were replaced: {', '.join(written) or 'none'}. "
+            f"The files they replaced are in the backup directories.") from err
     return {"restored": written, "backups": backups}

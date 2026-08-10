@@ -10,10 +10,13 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import stat
 import tempfile
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
+
+from ovos_utils.log import LOG
 
 #: Largest body this service accepts on any write endpoint.
 MAX_PAYLOAD_BYTES = 1024 * 1024  # 1 MiB
@@ -94,8 +97,42 @@ def make_backup(path: Path) -> Path | None:
     return dest
 
 
+def _sorted_backups(bdir: Path, name: str) -> list[Path]:
+    """Return backups oldest first.
+
+    The names carry a timestamp with a resolution of one second, so several
+    backups can share a name prefix. Sorting by modification time, with the
+    name as the tie breaker, keeps the real order.
+    """
+    def key(path: Path):
+        try:
+            return (path.stat().st_mtime_ns, path.name)
+        except OSError:  # pragma: no cover - the file went away
+            return (0, path.name)
+
+    return sorted(bdir.glob(f"{name}.*.bak"), key=key)
+
+
+def _restore_metadata(tmp: str, previous) -> None:
+    """Give the new file the mode and owner the old one had."""
+    if previous is None:
+        # A new file. Use the process umask rather than the 0600 mkstemp gives.
+        umask = os.umask(0)
+        os.umask(umask)
+        os.chmod(tmp, 0o666 & ~umask)
+        return
+    try:
+        os.chmod(tmp, stat.S_IMODE(previous.st_mode))
+    except OSError as err:  # pragma: no cover - unusual file systems
+        LOG.debug(f"could not copy the file mode: {err}")
+    try:
+        os.chown(tmp, previous.st_uid, previous.st_gid)
+    except (OSError, AttributeError) as err:  # pragma: no cover - needs privilege
+        LOG.debug(f"could not copy the file owner: {err}")
+
+
 def _prune_backups(bdir: Path, name: str) -> None:
-    backups = sorted(bdir.glob(f"{name}.*.bak"))
+    backups = _sorted_backups(bdir, name)
     for old in backups[:-MAX_BACKUPS]:
         try:
             old.unlink()
@@ -108,7 +145,7 @@ def list_backups(path: Path) -> list[Path]:
     bdir = backup_dir_for(path)
     if not bdir.is_dir():
         return []
-    return sorted(bdir.glob(f"{Path(path).name}.*.bak"))
+    return _sorted_backups(bdir, Path(path).name)
 
 
 def atomic_write(path: Path, content: str, backup: bool = True) -> Path | None:
@@ -123,12 +160,21 @@ def atomic_write(path: Path, content: str, backup: bool = True) -> Path | None:
     with _WRITE_LOCK:
         path.parent.mkdir(parents=True, exist_ok=True)
         backup_path = make_backup(path) if backup else None
+        # Remember what the file looks like now. ``mkstemp`` always makes a
+        # 0600 file owned by this process, so replacing without copying the
+        # old mode and owner would silently tighten or change them.
+        previous = None
+        try:
+            previous = os.stat(path)
+        except FileNotFoundError:
+            pass
         fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.", suffix=".tmp")
         try:
             with os.fdopen(fd, "wb") as handle:
                 handle.write(data)
                 handle.flush()
                 os.fsync(handle.fileno())
+            _restore_metadata(tmp, previous)
             os.replace(tmp, path)
         except BaseException:
             try:
@@ -136,4 +182,40 @@ def atomic_write(path: Path, content: str, backup: bool = True) -> Path | None:
             except OSError:
                 pass
             raise
+    return backup_path
+
+
+def stage_file(path: Path, content: str) -> Path:
+    """Write ``content`` to a temporary file beside ``path``.
+
+    Nothing at ``path`` is touched. Use :func:`commit_staged` to put the
+    staged file into place, or unlink it to throw the change away. This lets a
+    caller prepare several files and only then replace any of them.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.", suffix=".staged")
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(content.encode("utf-8"))
+            handle.flush()
+            os.fsync(handle.fileno())
+    except BaseException:
+        os.unlink(tmp)
+        raise
+    return Path(tmp)
+
+
+def commit_staged(path: Path, staged: Path) -> Path | None:
+    """Back up ``path`` and rename ``staged`` over it. Return the backup."""
+    path = Path(path)
+    with _WRITE_LOCK:
+        previous = None
+        try:
+            previous = os.stat(path)
+        except FileNotFoundError:
+            pass
+        backup_path = make_backup(path)
+        _restore_metadata(str(staged), previous)
+        os.replace(str(staged), str(path))
     return backup_path

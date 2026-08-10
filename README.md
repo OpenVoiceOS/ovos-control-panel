@@ -27,13 +27,14 @@ pip install ovos-webui
 ## Run
 
 ```bash
-ovos-webui                       # 0.0.0.0:8500
-ovos-webui --host 127.0.0.1      # this device only
-ovos-webui --port 9000 --token my-secret
-ovos-webui --no-bus              # do not connect to the message bus
+ovos-webui                        # 127.0.0.1:8500, this device only
+ovos-webui --host 0.0.0.0 --token my-secret   # reachable from your phone
+ovos-webui --port 9000
+ovos-webui --no-bus               # do not connect to the message bus
 ```
 
-Then open `http://<the address of your device>:8500/`.
+Then open `http://<the address of your device>:8500/`. If a token is set, the
+page asks you to sign in once and then remembers you in a cookie.
 
 ## Run it as a service
 
@@ -47,7 +48,7 @@ Wants=ovos-messagebus.service
 
 [Service]
 Type=simple
-ExecStart=%h/.venvs/ovos/bin/ovos-webui --host 0.0.0.0 --port 8500
+ExecStart=%h/.venvs/ovos/bin/ovos-webui --host 0.0.0.0 --port 8500 --token CHANGE-ME
 Restart=on-failure
 RestartSec=5
 
@@ -70,15 +71,21 @@ you that the bus does not answer.
 
 The page changes the configuration of your device, so treat it like a key.
 
-- On `127.0.0.1` the page is open. Only a user of the device can reach it.
+- The default bind is `127.0.0.1`, so only a user of the device can reach it.
 - On any other address, set a token. Put it in `mycroft.conf`:
 
   ```json
   {"webui": {"access_token": "a long random string"}}
   ```
 
-  Or start the service with `--token`. Then open the page with
-  `http://<address>:8500/?token=a long random string`.
+  Or start the service with `--token`. The page then asks you to sign in. The
+  token goes in the body of a POST and comes back as a cookie, so it never
+  appears in an address, a log or the browser history.
+- With a token set, every page, asset and API call needs a sign in. Only the
+  sign in page, `/api/status`, `/api/login`, `/api/logout` and `/healthz`
+  answer without one.
+- Requests that change something must come from this page, not from another
+  web site.
 - Without a token on a network address, the page shows a red banner.
 - The service never runs a shell command.
 - Do not put this page on the public internet. It has no TLS.

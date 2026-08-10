@@ -18,6 +18,9 @@ SERVICES: list[dict[str, str]] = [
     {"name": "skills", "label": "Skills", "hint": "Loads and runs your skills."},
     {"name": "intents", "label": "Intents", "hint": "Decides which skill answers you."},
     {"name": "audio", "label": "Audio", "hint": "Plays speech and media."},
+    # ovos-simple-listener does not register a ProcessStatus at all, so a
+    # device that uses it instead of ovos-dinkum-listener shows "no answer"
+    # here even while it is listening perfectly well.
     {"name": "voice", "label": "Listener", "hint": "Hears the wake word and your speech."},
     {"name": "gui_service", "label": "GUI", "hint": "Drives the screen, if the device has one."},
     {"name": "PHAL", "label": "PHAL", "hint": "Talks to the hardware."},
@@ -41,14 +44,15 @@ def probe(bus, name: str, timeout: float = DEFAULT_TIMEOUT) -> dict[str, bool | 
     the same as a ``False`` answer: ``None`` means the service is not running,
     ``False`` means it runs but is not finished starting.
     """
+    from ovos_webui import buswait
+
     Message = _message_cls()
     result: dict[str, bool | None] = {"alive": None, "ready": None}
     for key in ("alive", "ready"):
         msg_type = f"mycroft.{name}.is_{key}"
-        try:
-            reply = bus.wait_for_response(Message(msg_type), timeout=timeout)
-        except Exception:  # noqa: BLE001 - a bus error means no answer
-            reply = None
+        # ``wait_for_response`` emits first, and an emit on a dropped bus waits
+        # with no limit. Go through the bounded wrapper instead.
+        reply = buswait.wait_for_response(bus, Message(msg_type), timeout=timeout)
         if reply is not None:
             result[key] = bool(reply.data.get("status"))
         elif key == "alive":
@@ -60,14 +64,9 @@ def probe(bus, name: str, timeout: float = DEFAULT_TIMEOUT) -> dict[str, bool | 
 
 def bus_reachable(bus) -> bool:
     """Return True when the bus client believes it is connected."""
-    if bus is None:
-        return False
-    # The real MessageBusClient always carries a ``connected_event``. A test
-    # double does not, and a test double is always usable.
-    event = getattr(bus, "connected_event", None)
-    if event is not None and hasattr(event, "is_set"):
-        return bool(event.is_set())
-    return True
+    from ovos_webui import buswait
+
+    return buswait.is_connected(bus)
 
 
 def snapshot(bus, timeout: float = DEFAULT_TIMEOUT) -> dict[str, Any]:
@@ -79,7 +78,13 @@ def snapshot(bus, timeout: float = DEFAULT_TIMEOUT) -> dict[str, Any]:
         # would make the page take one timeout per service. Ask all of them at
         # the same time instead: the whole check then costs one timeout.
         with ThreadPoolExecutor(max_workers=len(SERVICES)) as pool:
-            answers = list(pool.map(lambda s: probe(bus, s["name"], timeout), SERVICES))
+            futures = [pool.submit(probe, bus, s["name"], timeout) for s in SERVICES]
+            answers = []
+            for future in futures:
+                try:
+                    answers.append(future.result(timeout=timeout * 2 + 4))
+                except Exception:  # noqa: BLE001 - a stuck probe is "no answer"
+                    answers.append({"alive": None, "ready": None})
     else:
         answers = [{"alive": None, "ready": None} for _ in SERVICES]
     for spec, answer in zip(SERVICES, answers):

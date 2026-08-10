@@ -1,21 +1,43 @@
-"""The ovos-webui FastAPI service."""
+"""The ovos-webui FastAPI service.
+
+Every route lives on one of four routers, and each router carries its own
+checks:
+
+- ``public``     — the few things that must work before a sign in.
+- ``pages``      — the HTML and the assets. Signed in.
+- ``api``        — everything that reads or writes. Signed in.
+- ``privileged`` — anything that changes the software on the device. A token is
+  always required, whatever the bind address is.
+
+A route added to a router inherits that router's checks, so a route cannot be
+published without them by forgetting an argument.
+"""
 from __future__ import annotations
 
 import argparse
+import mimetypes
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    HTTPException,
+    Request,
+    Response,
+    status,
+)
+from fastapi.responses import FileResponse, PlainTextResponse
 from ovos_utils.log import LOG
 from pydantic import BaseModel, Field
 
 from ovos_webui import backupio, configio, health, meta, skillsio
-from ovos_webui.auth import AuthPolicy, policy_from_config
+from ovos_webui.auth import COOKIE_NAME, AuthPolicy, check_csrf, policy_from_config
 from ovos_webui.fsutils import MAX_PAYLOAD_BYTES, MAX_UPLOAD_BYTES, UnsafeIdentifier
+from ovos_webui.limits import BodyLimitMiddleware
 from ovos_webui.version import __version__
 
 #: Starlette renamed this constant. Keep working with both names.
@@ -31,6 +53,9 @@ PAGES = {
     "/about": "about.html",
 }
 
+#: The endpoints that take an upload, and so have a larger body limit.
+UPLOAD_PATHS = frozenset({"/api/restore"})
+
 
 class ConfigBody(BaseModel):
     text: str = Field(..., description="the whole user layer, as JSON or YAML")
@@ -43,6 +68,10 @@ class QuickBody(BaseModel):
 
 class SettingsBody(BaseModel):
     settings: dict[str, Any]
+
+
+class LoginBody(BaseModel):
+    token: str = Field(..., max_length=512)
 
 
 def _connect_bus():
@@ -58,7 +87,19 @@ def _connect_bus():
         return None
 
 
-def create_app(bus=None, host: str = "0.0.0.0", token: str | None = None,
+def body_limit_for(scope: dict[str, Any]) -> int:
+    """Return the number of body bytes allowed for one request."""
+    return MAX_UPLOAD_BYTES if scope.get("path") in UPLOAD_PATHS else MAX_PAYLOAD_BYTES
+
+
+def _page(name: str) -> FileResponse:
+    path = STATIC_DIR / name
+    if not path.is_file():  # pragma: no cover - packaging problem
+        raise HTTPException(status_code=500, detail=f"missing page: {name}")
+    return FileResponse(path, media_type="text/html")
+
+
+def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
                connect_bus: bool = True) -> FastAPI:
     """Build the application.
 
@@ -81,67 +122,127 @@ def create_app(bus=None, host: str = "0.0.0.0", token: str | None = None,
             except Exception as err:  # noqa: BLE001 # pragma: no cover
                 LOG.debug(f"closing the bus client failed: {err}")
 
-    app = FastAPI(title="OpenVoiceOS Web UI", version=__version__, lifespan=lifespan)
+    # The interactive documentation and the schema are turned off: they told a
+    # stranger the whole shape of the service before any sign in.
+    app = FastAPI(title="OpenVoiceOS Web UI", version=__version__, lifespan=lifespan,
+                  docs_url=None, redoc_url=None, openapi_url=None)
     app.state.policy = policy
 
+    # ── the checks every router hangs off ────────────────────────────────────
     def guard(request: Request) -> AuthPolicy:
+        """A signed in caller, and not a request forged by another site."""
+        check_csrf(request)
         policy.check(request)
         return policy
 
-    Auth = Depends(guard)
+    def guard_privileged(request: Request) -> AuthPolicy:
+        """Anything that changes the software on the device."""
+        check_csrf(request)
+        if not policy.token:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="this needs a token. Set webui.access_token in "
+                       "mycroft.conf, or start the service with --token.")
+        policy.check(request)
+        return policy
 
-    @app.middleware("http")
-    async def limit_body(request: Request, call_next):
-        raw = request.headers.get("content-length")
-        if raw:
-            try:
-                length = int(raw)
-            except ValueError:
-                return JSONResponse({"detail": "content-length is not a number"},
-                                    status_code=status.HTTP_400_BAD_REQUEST)
-            cap = MAX_UPLOAD_BYTES if request.url.path == "/api/restore" else MAX_PAYLOAD_BYTES
-            if length > cap:
-                return JSONResponse({"detail": "the request body is too large"},
-                                    status_code=TOO_LARGE)
-        return await call_next(request)
+    def guard_public(request: Request) -> None:
+        """Open, but still not usable as a forgery target."""
+        check_csrf(request)
 
-    # ── pages ────────────────────────────────────────────────────────────────
-    def _page(name: str) -> FileResponse:
-        path = STATIC_DIR / name
-        if not path.is_file():  # pragma: no cover - packaging problem
-            raise HTTPException(status_code=500, detail=f"missing page: {name}")
-        return FileResponse(path, media_type="text/html")
+    public = APIRouter(dependencies=[Depends(guard_public)])
+    pages = APIRouter(dependencies=[Depends(guard)], include_in_schema=False)
+    api = APIRouter(prefix="/api", dependencies=[Depends(guard)])
+    privileged = APIRouter(prefix="/api", dependencies=[Depends(guard_privileged)])
+    app.state.routers = {"public": public, "pages": pages, "api": api,
+                         "privileged": privileged}
 
+    # ── public ───────────────────────────────────────────────────────────────
+    @public.get("/api/status")
+    def api_status(request: Request) -> dict[str, Any]:
+        """What the sign in page needs, and nothing more.
+
+        Before a caller signs in this says only that a token is needed. The
+        bind address and the version are not told to a stranger.
+        """
+        signed_in = not policy.token or policy.matches(policy.supplied_token(request))
+        if not signed_in:
+            return {"auth": True, "signed_in": False}
+        return {
+            "version": __version__,
+            "host": policy.host,
+            "auth": bool(policy.token),
+            "signed_in": True,
+            "insecure": policy.insecure,
+            "warning": policy.warning,
+        }
+
+    @public.post("/api/login")
+    def api_login(body: LoginBody, response: Response) -> dict[str, Any]:
+        """Exchange a token for a cookie.
+
+        The token arrives in the body of a POST, so it is not written to the
+        access log of every proxy and to the browser history on every click,
+        which is what a token in the query string would do.
+        """
+        if not policy.token:
+            return {"ok": True, "auth": False}
+        if not policy.matches(body.token):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="that token is not right")
+        response.set_cookie(COOKIE_NAME, body.token, httponly=True,
+                            samesite="strict", path="/", max_age=30 * 24 * 3600)
+        return {"ok": True, "auth": True}
+
+    @public.post("/api/logout")
+    def api_logout(response: Response) -> dict[str, Any]:
+        response.delete_cookie(COOKIE_NAME, path="/")
+        return {"ok": True}
+
+    @public.get("/login", include_in_schema=False)
+    def login_page() -> FileResponse:
+        return _page("login.html")
+
+    @public.get("/healthz", include_in_schema=False)
+    def healthz() -> PlainTextResponse:
+        return PlainTextResponse("ok")
+
+    # ── pages and assets ─────────────────────────────────────────────────────
     def _page_handler(name: str):
-        """Return a handler that serves one page file."""
         def handler() -> FileResponse:
             return _page(name)
         return handler
 
     for route, filename in PAGES.items():
-        app.get(route, include_in_schema=False)(_page_handler(filename))
+        pages.get(route)(_page_handler(filename))
 
-    if STATIC_DIR.is_dir():
-        app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+    @pages.get("/static/{asset:path}")
+    def static_asset(asset: str) -> FileResponse:
+        """Serve one asset from the package.
 
-    # ── status and health ────────────────────────────────────────────────────
-    @app.get("/api/status")
-    def api_status() -> dict[str, Any]:
-        return {
-            "version": __version__,
-            "host": policy.host,
-            "auth": bool(policy.token),
-            "insecure": policy.insecure,
-            "warning": policy.warning,
-        }
+        A mount cannot carry a dependency, so the assets are served by a normal
+        route. That keeps them behind the same sign in as the pages.
+        """
+        if not asset or asset.startswith("/") or ".." in Path(asset).parts:
+            raise HTTPException(404, "no such asset")
+        path = (STATIC_DIR / asset).resolve()
+        try:
+            path.relative_to(STATIC_DIR.resolve())
+        except ValueError:
+            raise HTTPException(404, "no such asset") from None
+        if not path.is_file():
+            raise HTTPException(404, "no such asset")
+        media, _ = mimetypes.guess_type(str(path))
+        return FileResponse(path, media_type=media or "application/octet-stream")
 
-    @app.get("/api/health")
-    def api_health(_: AuthPolicy = Auth) -> dict[str, Any]:
+    # ── health ───────────────────────────────────────────────────────────────
+    @api.get("/health")
+    def api_health() -> dict[str, Any]:
         return health.snapshot(state["bus"])
 
     # ── configuration ────────────────────────────────────────────────────────
-    @app.get("/api/config")
-    def api_config_get(format: str = "json", _: AuthPolicy = Auth) -> dict[str, Any]:
+    @api.get("/config")
+    def api_config_get(format: str = "json") -> dict[str, Any]:
         if format not in ("json", "yaml"):
             raise HTTPException(400, "format must be json or yaml")
         data = configio.read_user_config()
@@ -151,40 +252,40 @@ def create_app(bus=None, host: str = "0.0.0.0", token: str | None = None,
             "text": configio.dump_text(data, format),
         }
 
-    @app.put("/api/config")
-    def api_config_put(body: ConfigBody, _: AuthPolicy = Auth) -> dict[str, Any]:
+    @api.put("/config")
+    def api_config_put(body: ConfigBody) -> dict[str, Any]:
         try:
             data = configio.parse_text(body.text, body.format)
         except configio.ConfigError as err:
-            raise HTTPException(400, str(err))
+            raise HTTPException(400, str(err)) from None
         return configio.write_user_config(data, bus=state["bus"])
 
-    @app.get("/api/config/merged")
-    def api_config_merged(_: AuthPolicy = Auth) -> dict[str, Any]:
+    @api.get("/config/merged")
+    def api_config_merged() -> dict[str, Any]:
         return {"config": configio.read_merged_config()}
 
-    @app.get("/api/config/quick")
-    def api_quick_get(_: AuthPolicy = Auth) -> dict[str, Any]:
+    @api.get("/config/quick")
+    def api_quick_get() -> dict[str, Any]:
         return {"fields": configio.quick_form()}
 
-    @app.post("/api/config/quick")
-    def api_quick_post(body: QuickBody, _: AuthPolicy = Auth) -> dict[str, Any]:
+    @api.post("/config/quick")
+    def api_quick_post(body: QuickBody) -> dict[str, Any]:
         try:
             return configio.apply_quick_form(body.values, bus=state["bus"])
         except configio.ConfigError as err:
-            raise HTTPException(400, str(err))
+            raise HTTPException(400, str(err)) from None
 
-    @app.get("/api/plugins")
-    def api_plugins(_: AuthPolicy = Auth) -> dict[str, Any]:
+    @api.get("/plugins")
+    def api_plugins() -> dict[str, Any]:
         return {"plugins": configio.plugin_options()}
 
     # ── skill settings ───────────────────────────────────────────────────────
-    @app.get("/api/skills")
-    def api_skills(_: AuthPolicy = Auth) -> dict[str, Any]:
+    @api.get("/skills")
+    def api_skills() -> dict[str, Any]:
         return {"skills": skillsio.list_skills()}
 
-    @app.get("/api/skills/{skill_id}")
-    def api_skill_get(skill_id: str, _: AuthPolicy = Auth) -> dict[str, Any]:
+    @api.get("/skills/{skill_id}")
+    def api_skill_get(skill_id: str) -> dict[str, Any]:
         try:
             return {
                 "skill_id": skill_id,
@@ -193,36 +294,23 @@ def create_app(bus=None, host: str = "0.0.0.0", token: str | None = None,
                 "generated_meta": skillsio.find_settingsmeta(skill_id) is None,
                 "path": str(skillsio.settings_path(skill_id)),
             }
-        except UnsafeIdentifier as err:
-            raise HTTPException(400, str(err))
-        except skillsio.SkillSettingsError as err:
-            raise HTTPException(400, str(err))
+        except (UnsafeIdentifier, skillsio.SkillSettingsError) as err:
+            raise HTTPException(400, str(err)) from None
 
-    @app.put("/api/skills/{skill_id}")
-    def api_skill_put(skill_id: str, body: SettingsBody,
-                      _: AuthPolicy = Auth) -> dict[str, Any]:
+    @api.put("/skills/{skill_id}")
+    def api_skill_put(skill_id: str, body: SettingsBody) -> dict[str, Any]:
         try:
             return skillsio.write_settings(skill_id, body.settings)
-        except UnsafeIdentifier as err:
-            raise HTTPException(400, str(err))
-        except skillsio.SkillSettingsError as err:
-            raise HTTPException(400, str(err))
+        except (UnsafeIdentifier, skillsio.SkillSettingsError) as err:
+            raise HTTPException(400, str(err)) from None
 
     # ── backup and restore ───────────────────────────────────────────────────
-    @app.get("/api/backup")
-    def api_backup(_: AuthPolicy = Auth) -> Response:
+    @api.get("/backup")
+    def api_backup() -> Response:
         blob = backupio.make_archive()
         name = backupio.archive_name()
         return Response(content=blob, media_type="application/gzip",
                         headers={"Content-Disposition": f'attachment; filename="{name}"'})
-
-    @app.post("/api/restore")
-    async def api_restore(request: Request, _: AuthPolicy = Auth) -> dict[str, Any]:
-        blob = await _read_upload(request)
-        try:
-            return backupio.restore_archive(blob)
-        except (backupio.RestoreError, UnsafeIdentifier) as err:
-            raise HTTPException(400, str(err))
 
     async def _read_upload(request: Request) -> bytes:
         ctype = request.headers.get("content-type", "")
@@ -234,15 +322,41 @@ def create_app(bus=None, host: str = "0.0.0.0", token: str | None = None,
             return await upload.read()
         return await request.body()
 
+    @api.post("/restore")
+    async def api_restore(request: Request) -> dict[str, Any]:
+        blob = await _read_upload(request)
+        try:
+            return backupio.restore_archive(blob)
+        except (backupio.RestoreError, UnsafeIdentifier) as err:
+            raise HTTPException(400, str(err)) from None
+
     # ── about ────────────────────────────────────────────────────────────────
-    @app.get("/api/about")
-    def api_about(request: Request, _: AuthPolicy = Auth) -> dict[str, Any]:
+    @api.get("/about")
+    def api_about(request: Request) -> dict[str, Any]:
         return meta.about(request.headers.get("host", ""))
 
-    @app.get("/healthz", include_in_schema=False)
-    def healthz() -> PlainTextResponse:
-        return PlainTextResponse("ok")
+    app.include_router(public)
+    app.include_router(pages)
+    app.include_router(api)
+    app.include_router(privileged)
 
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        # A token in a Referer header would leak to any site a page links to,
+        # so no referrer leaves this origin.
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+            "connect-src 'self'; form-action 'self'; frame-ancestors 'none'")
+        return response
+
+    app.add_middleware(BodyLimitMiddleware, limit_for=body_limit_for,
+                       status_code=TOO_LARGE)
     return app
 
 
@@ -251,8 +365,8 @@ def main() -> None:
     import uvicorn
 
     parser = argparse.ArgumentParser(description="Run the OpenVoiceOS web UI.")
-    parser.add_argument("--host", default=os.environ.get("OVOS_WEBUI_HOST", "0.0.0.0"),
-                        help="address to bind to (default: 0.0.0.0)")
+    parser.add_argument("--host", default=os.environ.get("OVOS_WEBUI_HOST", "127.0.0.1"),
+                        help="address to bind to (default: 127.0.0.1)")
     parser.add_argument("--port", type=int,
                         default=int(os.environ.get("OVOS_WEBUI_PORT", "8500")),
                         help="port to listen on (default: 8500)")
@@ -261,6 +375,12 @@ def main() -> None:
     parser.add_argument("--no-bus", action="store_true",
                         help="do not connect to the message bus")
     args = parser.parse_args()
+
+    policy = policy_from_config(host=args.host, token=args.token)
+    if policy.insecure:
+        LOG.warning(f"ovos-webui is bound to {args.host} with no token. Anyone "
+                    "on the network can change this device. Set "
+                    "webui.access_token in mycroft.conf, or pass --token.")
 
     app = create_app(host=args.host, token=args.token, connect_bus=not args.no_bus)
     uvicorn.run(app, host=args.host, port=args.port)

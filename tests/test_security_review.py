@@ -1,0 +1,486 @@
+"""Regression tests for the findings of the adversarial review of PR #1.
+
+Each test is named after its finding. Each one was seen to fail against the
+code as it was before the fix.
+"""
+import io
+import json
+import tarfile
+import threading
+import time
+
+import pytest
+from fastapi.testclient import TestClient
+
+from ovos_webui import backupio, buswait, configio, fsutils
+from ovos_webui.service import create_app
+
+# ── S1: cross-site request forgery ───────────────────────────────────────────
+CROSS_SITE = [
+    {"origin": "http://evil.example"},
+    {"sec-fetch-site": "cross-site"},
+    {"sec-fetch-site": "same-site"},
+    {"referer": "http://evil.example/page"},
+]
+
+UNSAFE_CALLS = [
+    ("put", "/api/config", {"json": {"text": "{}", "format": "json"}}),
+    ("post", "/api/config/quick", {"json": {"values": {}}}),
+    ("put", "/api/skills/a", {"json": {"settings": {}}}),
+    ("post", "/api/restore", {"content": b"x"}),
+    ("post", "/api/login", {"json": {"token": "s3cret"}}),
+]
+
+
+@pytest.mark.parametrize("method,path,kwargs", UNSAFE_CALLS)
+@pytest.mark.parametrize("headers", CROSS_SITE)
+def test_s1_cross_site_writes_are_refused(client, method, path, kwargs, headers):
+    """Any web page could otherwise rewrite the configuration of the device."""
+    r = getattr(client, method)(path, headers=headers, **kwargs)
+    assert r.status_code == 403, f"{path} accepted a cross-site call"
+
+
+def test_s1_a_plain_html_form_post_from_another_site_is_refused(client):
+    """A form post needs no preflight, so it is the easiest forgery."""
+    r = client.post("/api/restore",
+                    files={"file": ("b.tar.gz", b"x", "application/gzip")},
+                    headers={"origin": "http://evil.example",
+                             "sec-fetch-site": "cross-site"})
+    assert r.status_code == 403
+
+
+def test_s1_text_plain_body_from_another_site_is_refused(client):
+    r = client.post("/api/restore", content=b"x",
+                    headers={"content-type": "text/plain",
+                             "sec-fetch-site": "cross-site"})
+    assert r.status_code == 403
+
+
+def test_s1_same_origin_writes_still_work(client):
+    r = client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"},
+                   headers={"sec-fetch-site": "same-origin"})
+    assert r.status_code == 200
+
+
+def test_s1_a_program_with_no_browser_headers_still_works(client):
+    r = client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    assert r.status_code == 200
+
+
+def test_s1_reads_are_not_blocked(client):
+    assert client.get("/api/health", headers={"sec-fetch-site": "cross-site"}).status_code == 200
+
+
+# ── S2: body cap must survive a chunked request ──────────────────────────────
+def test_s2_chunked_body_without_content_length_is_capped(client):
+    """A chunked upload declares no length, so a header check never fires."""
+    def chunks():
+        for _ in range(400):
+            yield b"x" * 65536
+
+    r = client.put("/api/config", content=chunks(),
+                   headers={"content-type": "application/json"})
+    assert r.status_code == 413
+
+
+def test_s2_the_body_limit_stops_reading_as_soon_as_the_cap_is_passed():
+    """Drive the middleware directly: the test client buffers, a real server does not."""
+    import anyio
+
+    from ovos_webui.limits import BodyLimitMiddleware
+
+    produced = {"n": 0}
+    reached_app = {"yes": False}
+
+    async def receive():
+        produced["n"] += 1
+        return {"type": "http.request", "body": b"x" * 4096, "more_body": True}
+
+    async def app(scope, rcv, send):
+        reached_app["yes"] = True
+        while True:
+            message = await rcv()
+            if message["type"] == "http.disconnect":
+                return
+            if not message.get("more_body"):
+                return
+
+    sent = []
+
+    async def send(message):
+        sent.append(message)
+
+    middleware = BodyLimitMiddleware(app, limit_for=lambda scope: 64 * 1024)
+    scope = {"type": "http", "path": "/api/config", "headers": []}
+    anyio.run(middleware, scope, receive, send)
+
+    assert reached_app["yes"]
+    # 64 KiB cap, 4 KiB chunks: the read must stop at about 17 chunks, not run on.
+    assert produced["n"] < 32, f"the middleware read {produced['n']} chunks"
+    assert sent[0]["status"] == 413
+
+
+def test_s2_chunked_upload_to_restore_is_capped(client):
+    def chunks():
+        for _ in range(600):
+            yield b"x" * 65536
+
+    r = client.post("/api/restore", content=chunks(),
+                    headers={"content-type": "application/gzip"})
+    assert r.status_code == 413
+
+
+def test_s2_a_lying_content_length_cannot_raise_the_cap(client):
+    r = client.put("/api/config", content=b"x" * (2 * 1024 * 1024),
+                   headers={"content-type": "application/json",
+                            "content-length": "10"})
+    assert r.status_code in (400, 413, 422)
+
+
+# ── S3: YAML alias expansion ─────────────────────────────────────────────────
+BILLION_LAUGHS = (
+    "a: &a [\"x\",\"x\",\"x\",\"x\",\"x\",\"x\",\"x\",\"x\",\"x\"]\n"
+    "b: &b [*a,*a,*a,*a,*a,*a,*a,*a,*a]\n"
+    "c: &c [*b,*b,*b,*b,*b,*b,*b,*b,*b]\n"
+    "d: &d [*c,*c,*c,*c,*c,*c,*c,*c,*c]\n"
+    "e: &e [*d,*d,*d,*d,*d,*d,*d,*d,*d]\n"
+    "f: &f [*e,*e,*e,*e,*e,*e,*e,*e,*e]\n"
+    "g: [*f,*f,*f,*f,*f,*f,*f,*f,*f]\n"
+)
+
+
+def test_s3_yaml_alias_bomb_is_refused():
+    assert len(BILLION_LAUGHS) < 1024
+    with pytest.raises(configio.ConfigError):
+        configio.parse_text(BILLION_LAUGHS, "yaml")
+
+
+def test_s3_yaml_alias_bomb_is_refused_over_http(client):
+    r = client.put("/api/config", json={"text": BILLION_LAUGHS, "format": "yaml"})
+    assert r.status_code == 400
+
+
+def test_s3_a_single_anchor_is_also_refused():
+    with pytest.raises(configio.ConfigError):
+        configio.parse_text("a: &x 1\nb: *x\n", "yaml")
+
+
+def test_s3_ordinary_yaml_still_loads():
+    assert configio.parse_text("lang: pt-pt\ntts:\n  module: x\n", "yaml") == {
+        "lang": "pt-pt", "tts": {"module": "x"}}
+
+
+# ── S4: a bus that hangs must not hang the request ───────────────────────────
+class HangingBus:
+    """A bus whose emit never returns, like a disconnected MessageBusClient."""
+
+    def __init__(self):
+        self.connected_event = threading.Event()
+        self.connected_event.set()  # claims to be connected, then hangs
+        self.released = threading.Event()
+
+    def emit(self, message):
+        self.released.wait(30)
+
+    def wait_for_response(self, message, timeout=3.0):
+        self.released.wait(30)
+
+
+def test_s4_a_hanging_emit_does_not_hang_a_save():
+    bus = HangingBus()
+    started = time.monotonic()
+    try:
+        configio.write_user_config({"lang": "pt-pt"}, bus=bus)
+    finally:
+        bus.released.set()
+    assert time.monotonic() - started < 15, "the save waited on the bus"
+    assert configio.read_user_config()["lang"] == "pt-pt"
+
+
+def test_s4_a_hanging_bus_does_not_hang_the_dashboard():
+    from ovos_webui import health
+
+    bus = HangingBus()
+    started = time.monotonic()
+    try:
+        snap = health.snapshot(bus, timeout=0.5)
+    finally:
+        bus.released.set()
+    assert time.monotonic() - started < 20, "the dashboard waited on the bus"
+    assert all(s["state"] == "no answer" for s in snap["services"])
+
+
+def test_s4_bounded_call_returns_the_default_on_a_timeout():
+    stop = threading.Event()
+    try:
+        result = buswait.call(lambda: stop.wait(30) or "late", timeout=0.2,
+                              default="gave up")
+    finally:
+        stop.set()
+    assert result == "gave up"
+
+
+# ── S5 / S6: a restore must be all or nothing, and must be valid ─────────────
+def _archive(members):
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        for name, data in members.items():
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+    return buf.getvalue()
+
+
+def test_s6_a_config_that_is_not_json_is_refused(client):
+    client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    blob = _archive({"config/mycroft.conf": b"this is not json at all"})
+    r = client.post("/api/restore", files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert r.status_code == 400
+    assert configio.read_user_config()["lang"] == "pt-pt", "the live config was bricked"
+
+
+def test_s6_a_config_that_is_not_utf8_is_refused(client):
+    client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    blob = _archive({"config/mycroft.conf": b"\xff\xfe\x00binary"})
+    r = client.post("/api/restore", files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert r.status_code == 400
+    assert configio.read_user_config()["lang"] == "pt-pt"
+
+
+def test_s6_a_config_that_is_a_list_is_refused(client):
+    blob = _archive({"config/mycroft.conf": b"[1, 2, 3]"})
+    r = client.post("/api/restore", files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert r.status_code == 400
+
+
+def test_s6_skill_settings_are_validated_too(client, make_skill):
+    make_skill("skill-a", {"volume": 1})
+    blob = _archive({"skills/skill-a/settings.json": b"{broken"})
+    r = client.post("/api/restore", files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert r.status_code == 400
+
+
+def test_s5_a_write_failure_part_way_does_not_half_restore(client, make_skill,
+                                                           monkeypatch):
+    """A disk error must not leave one file new and another old, or return 500."""
+    client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    make_skill("skill-a", {"volume": 1})
+    blob = _archive({"config/mycroft.conf": b'{"lang": "restored"}',
+                     "skills/skill-a/settings.json": b'{"volume": 99}'})
+
+    calls = {"n": 0}
+    real = backupio.commit_staged
+
+    def flaky(target, staged):
+        calls["n"] += 1
+        if calls["n"] > 1:
+            raise OSError("disk full")
+        return real(target, staged)
+
+    monkeypatch.setattr(backupio, "commit_staged", flaky)
+    r = client.post("/api/restore", files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert r.status_code == 400, "a disk error must not surface as a 500"
+    assert "backup" in r.json()["detail"].lower()
+
+
+def test_s5_nothing_is_written_before_every_member_is_read(client):
+    """The bad member is last, so a streaming writer would already have written."""
+    client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    blob = _archive({"config/mycroft.conf": b'{"lang": "hacked"}',
+                     "skills/evil/../../x/settings.json": b"{}"})
+    r = client.post("/api/restore", files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert r.status_code == 400
+    assert configio.read_user_config()["lang"] == "pt-pt"
+
+
+# ── S7: deleting a key must really drop it ───────────────────────────────────
+def test_s7_deleting_a_key_clears_the_volatile_patch_first(client, bus):
+    seen = []
+    bus.on("configuration.patch", lambda m: seen.append((m.msg_type, m.data)))
+    bus.on("configuration.patch.clear", lambda m: seen.append((m.msg_type, m.data)))
+    client.put("/api/config", json={"text": '{"lang": "pt-pt", "extra": 1}',
+                                    "format": "json"})
+    seen.clear()
+    client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    assert [t for t, _ in seen] == ["configuration.patch.clear", "configuration.patch"]
+    assert "extra" not in seen[-1][1]["config"]
+
+
+# ── S8: no route may be published without a check ────────────────────────────
+UNAUTHENTICATED_ALLOWED = {"/api/status", "/api/login", "/api/logout",
+                           "/login", "/healthz"}
+
+
+def test_s8_every_route_needs_a_sign_in_except_the_known_few(bus):
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret", connect_bus=False)
+    routes = []
+    for router in app.state.routers.values():
+        for route in router.routes:
+            routes.append((getattr(route, "path", ""),
+                           getattr(route, "methods", set()) or set()))
+    checked = 0
+    with TestClient(app) as c:
+        for path, methods in routes:
+            if not path.startswith("/") or path in UNAUTHENTICATED_ALLOWED:
+                continue
+            if "GET" not in methods:
+                continue
+            probe = path.replace("{asset:path}", "app.css")
+            probe = probe.replace("{skill_id}", "x").replace("{persona_id}", "x")
+            if "{" in probe:
+                continue
+            r = c.get(probe)
+            checked += 1
+            assert r.status_code == 401, f"{probe} answered {r.status_code} with no token"
+    assert checked >= 8
+
+
+def test_s8_pages_need_a_sign_in(token_client):
+    for page in ("/", "/config", "/skills", "/backup", "/about"):
+        assert token_client.get(page).status_code == 401, page
+
+
+def test_s8_static_assets_need_a_sign_in(token_client):
+    assert token_client.get("/static/app.js").status_code == 401
+    assert token_client.get("/static/app.css").status_code == 401
+
+
+def test_s8_the_schema_and_docs_are_not_published(client):
+    for path in ("/openapi.json", "/docs", "/redoc"):
+        assert client.get(path).status_code == 404, path
+
+
+def test_s8_the_login_page_is_reachable_without_a_token(token_client):
+    assert token_client.get("/login").status_code == 200
+    assert token_client.get("/healthz").status_code == 200
+
+
+def test_s8_static_route_refuses_traversal(client):
+    for bad in ("../fsutils.py", "..%2f..%2fservice.py", "../../pyproject.toml"):
+        assert client.get(f"/static/{bad}").status_code in (400, 404)
+
+
+# ── S9: the token must not travel in a URL ───────────────────────────────────
+def test_s9_signing_in_uses_a_post_and_sets_a_cookie(token_client):
+    r = token_client.post("/api/login", json={"token": "s3cret"})
+    assert r.status_code == 200
+    assert "ovos_webui_token" in r.cookies or any(
+        "ovos_webui_token" in v for v in r.headers.get_list("set-cookie"))
+    cookie = r.headers.get_list("set-cookie")[0].lower()
+    assert "httponly" in cookie
+    assert "samesite=strict" in cookie
+
+
+def test_s9_the_cookie_then_works(token_client):
+    token_client.post("/api/login", json={"token": "s3cret"})
+    assert token_client.get("/api/health").status_code == 200
+    assert token_client.get("/").status_code == 200
+
+
+def test_s9_a_wrong_token_does_not_sign_in(token_client):
+    assert token_client.post("/api/login", json={"token": "nope"}).status_code == 401
+
+
+def test_s9_referrer_policy_is_set(client):
+    r = client.get("/")
+    assert r.headers.get("referrer-policy") == "same-origin"
+    assert r.headers.get("x-content-type-options") == "nosniff"
+    assert "frame-ancestors 'none'" in r.headers.get("content-security-policy", "")
+
+
+def test_s9_status_tells_a_stranger_almost_nothing(token_client):
+    body = token_client.get("/api/status").json()
+    assert body == {"auth": True, "signed_in": False}
+    assert "host" not in body and "version" not in body
+
+
+# ── S10: the file mode and owner must survive a write ────────────────────────
+def test_s10_atomic_write_keeps_the_file_mode(tmp_path):
+    target = tmp_path / "f.json"
+    target.write_text("{}")
+    target.chmod(0o644)
+    fsutils.atomic_write(target, '{"a": 1}')
+    assert oct(target.stat().st_mode & 0o777) == "0o644"
+
+
+def test_s10_a_private_mode_is_kept_private(tmp_path):
+    target = tmp_path / "f.json"
+    target.write_text("{}")
+    target.chmod(0o600)
+    fsutils.atomic_write(target, '{"a": 1}')
+    assert oct(target.stat().st_mode & 0o777) == "0o600"
+
+
+def test_s10_a_new_file_is_not_locked_to_0600(tmp_path):
+    target = tmp_path / "new.json"
+    fsutils.atomic_write(target, "{}")
+    assert target.stat().st_mode & 0o044, "a new file should be readable"
+
+
+def test_s10_restore_keeps_the_mode(client):
+    client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    path = configio.user_config_path()
+    path.chmod(0o640)
+    blob = _archive({"config/mycroft.conf": b'{"lang": "en-us"}'})
+    client.post("/api/restore", files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert oct(path.stat().st_mode & 0o777) == "0o640"
+
+
+# ── S11: the member count must be applied while streaming ────────────────────
+def test_s11_a_million_member_archive_is_refused_quickly(client):
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        for i in range(backupio.MAX_MEMBERS + 200):
+            info = tarfile.TarInfo(f"skills/s{i}/settings.json")
+            info.size = 2
+            tar.addfile(info, io.BytesIO(b"{}"))
+    blob = buf.getvalue()
+    assert len(blob) < 2 * 1024 * 1024
+    started = time.monotonic()
+    r = client.post("/api/restore", files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert r.status_code == 400
+    assert "too many files" in r.json()["detail"]
+    assert time.monotonic() - started < 30
+
+
+# ── S12: the simple form must validate what it writes ────────────────────────
+@pytest.mark.parametrize("values", [
+    {"lang": True},
+    {"lang": 42},
+    {"lang": {"a": 1}},
+    {"lang": "not a language"},
+    {"system_unit": "furlongs"},
+    {"time_format": "sundial"},
+    {"date_format": "YMD"},
+    {"listener.wake_word": "no_such_wake_word"},
+    {"lang": "x" * 300},
+    {"lang": "pt-pt\nevil: 1"},
+])
+def test_s12_bad_quick_form_values_are_refused(client, values):
+    r = client.post("/api/config/quick", json={"values": values})
+    assert r.status_code in (400, 422), f"{values} was accepted"
+
+
+def test_s12_a_refused_value_writes_nothing(client):
+    client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    client.post("/api/config/quick", json={"values": {"lang": True}})
+    assert configio.read_user_config()["lang"] == "pt-pt"
+
+
+def test_s12_good_quick_form_values_still_save(client):
+    r = client.post("/api/config/quick",
+                    json={"values": {"lang": "gl-es", "system_unit": "metric"}})
+    assert r.status_code == 200
+    assert configio.read_user_config()["lang"] == "gl-es"
+
+
+# ── nit: backup pruning must keep the newest ─────────────────────────────────
+def test_backup_pruning_keeps_the_newest_within_one_second(tmp_path):
+    target = tmp_path / "f.json"
+    for i in range(fsutils.MAX_BACKUPS + 6):
+        fsutils.atomic_write(target, json.dumps({"n": i}))
+    backups = fsutils.list_backups(target)
+    assert len(backups) <= fsutils.MAX_BACKUPS
+    newest = json.loads(backups[-1].read_text())
+    oldest = json.loads(backups[0].read_text())
+    assert newest["n"] > oldest["n"], "pruning kept the wrong backups"

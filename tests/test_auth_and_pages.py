@@ -60,8 +60,9 @@ def test_a_wrong_token_is_refused(token_client):
         assert r.status_code == 401
 
 
-def test_a_token_in_the_query_string_works(token_client):
-    assert token_client.get("/api/health?token=s3cret").status_code == 200
+def test_a_token_in_the_query_string_is_ignored(token_client):
+    """A token in a URL is written to every access log, so it is not accepted."""
+    assert token_client.get("/api/health?token=s3cret").status_code == 401
 
 
 def test_unauthorised_answers_carry_the_scheme(token_client):
