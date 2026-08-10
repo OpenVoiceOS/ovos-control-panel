@@ -1,13 +1,11 @@
 """The ovos-webui FastAPI service.
 
-Every route lives on one of four routers, and each router carries its own
+Every route lives on one of three routers, and each router carries its own
 checks:
 
-- ``public``     — the few things that must work before a sign in.
-- ``pages``      — the HTML and the assets. Signed in.
-- ``api``        — everything that reads or writes. Signed in.
-- ``privileged`` — anything that changes the software on the device. A token is
-  always required, whatever the bind address is.
+- ``public`` — the few things that must work before a sign in.
+- ``pages``  — the HTML and the assets. Signed in.
+- ``api``    — everything that reads or writes. Signed in.
 
 A route added to a router inherits that router's checks, so a route cannot be
 published without them by forgetting an argument.
@@ -30,7 +28,12 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import (
+    FileResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+)
 from ovos_utils.log import LOG
 from pydantic import BaseModel, Field
 
@@ -135,17 +138,6 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         policy.check(request)
         return policy
 
-    def guard_privileged(request: Request) -> AuthPolicy:
-        """Anything that changes the software on the device."""
-        check_csrf(request)
-        if not policy.token:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="this needs a token. Set webui.access_token in "
-                       "mycroft.conf, or start the service with --token.")
-        policy.check(request)
-        return policy
-
     def guard_public(request: Request) -> None:
         """Open, but still not usable as a forgery target."""
         check_csrf(request)
@@ -153,9 +145,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     public = APIRouter(dependencies=[Depends(guard_public)])
     pages = APIRouter(dependencies=[Depends(guard)], include_in_schema=False)
     api = APIRouter(prefix="/api", dependencies=[Depends(guard)])
-    privileged = APIRouter(prefix="/api", dependencies=[Depends(guard_privileged)])
-    app.state.routers = {"public": public, "pages": pages, "api": api,
-                         "privileged": privileged}
+    app.state.routers = {"public": public, "pages": pages, "api": api}
 
     # ── public ───────────────────────────────────────────────────────────────
     @public.get("/api/status")
@@ -178,21 +168,44 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         }
 
     @public.post("/api/login")
-    def api_login(body: LoginBody, response: Response) -> dict[str, Any]:
+    async def api_login(request: Request, response: Response) -> Any:
         """Exchange a token for a cookie.
 
         The token arrives in the body of a POST, so it is not written to the
         access log of every proxy and to the browser history on every click,
         which is what a token in the query string would do.
         """
+        supplied, from_form = await _read_login(request)
         if not policy.token:
-            return {"ok": True, "auth": False}
-        if not policy.matches(body.token):
+            return _login_answer(request, from_form, {"ok": True, "auth": False})
+        if not policy.matches(supplied):
+            if from_form:
+                return RedirectResponse("/login?bad=1", status_code=303)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                 detail="that token is not right")
-        response.set_cookie(COOKIE_NAME, body.token, httponly=True,
-                            samesite="strict", path="/", max_age=30 * 24 * 3600)
-        return {"ok": True, "auth": True}
+        answer = _login_answer(request, from_form, {"ok": True, "auth": True})
+        answer.set_cookie(COOKIE_NAME, supplied, httponly=True,
+                          samesite="strict", path="/", max_age=30 * 24 * 3600)
+        return answer
+
+    async def _read_login(request: Request) -> tuple[str, bool]:
+        """Return the token, and whether it came from an HTML form."""
+        ctype = request.headers.get("content-type", "")
+        if ctype.startswith(("application/x-www-form-urlencoded",
+                             "multipart/form-data")):
+            form = await request.form()
+            return str(form.get("token") or ""), True
+        try:
+            body = LoginBody.model_validate(await request.json())
+        except Exception as err:  # noqa: BLE001 - any bad body is the same answer
+            raise HTTPException(422, f"send a token: {err}") from None
+        return body.token, False
+
+    def _login_answer(request: Request, from_form: bool, payload: dict) -> Response:
+        """A form post goes back to a page; a fetch gets JSON."""
+        if from_form:
+            return RedirectResponse("/", status_code=303)
+        return JSONResponse(payload)
 
     @public.post("/api/logout")
     def api_logout(response: Response) -> dict[str, Any]:
@@ -202,6 +215,16 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     @public.get("/login", include_in_schema=False)
     def login_page() -> FileResponse:
         return _page("login.html")
+
+    @public.get("/static/app.css", include_in_schema=False)
+    def public_stylesheet() -> FileResponse:
+        """The sign in page needs this before anyone has signed in.
+
+        It is the stylesheet that ships in the package, the same one anybody
+        can read on PyPI, so serving it to a stranger gives nothing away. Every
+        other asset stays behind the sign in.
+        """
+        return FileResponse(STATIC_DIR / "app.css", media_type="text/css")
 
     @public.get("/healthz", include_in_schema=False)
     def healthz() -> PlainTextResponse:
@@ -338,7 +361,6 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     app.include_router(public)
     app.include_router(pages)
     app.include_router(api)
-    app.include_router(privileged)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):

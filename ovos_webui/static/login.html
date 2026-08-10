@@ -19,6 +19,7 @@
     <div class="row"><button type="submit">Sign in</button></div>
   </form>
   <div class="msg" id="msg" hidden></div>
+  <noscript><p class="hint">The form above works without JavaScript.</p></noscript>
   <p class="hint">The token is sent in the body of the request, so it is not
     written to a log or kept in the address bar. It is then held in a cookie
     that only this site can send.</p>
@@ -33,6 +34,10 @@
     msg.textContent = text;
     msg.className = "msg " + (bad ? "err" : "ok");
     msg.hidden = false;
+  }
+
+  if (new URLSearchParams(window.location.search).get("bad")) {
+    say("That token is not right.", true);
   }
 
   form.addEventListener("submit", function (event) {

@@ -114,12 +114,16 @@ def _sorted_backups(bdir: Path, name: str) -> list[Path]:
 
 
 def _restore_metadata(tmp: str, previous) -> None:
-    """Give the new file the mode and owner the old one had."""
+    """Give the new file the mode and owner the old one had.
+
+    A file that does not exist yet keeps the private mode ``mkstemp`` gives it.
+    The files this package creates hold configuration and skill settings, and
+    those carry API keys and passwords, so a new one is private until somebody
+    decides otherwise. Only an existing file keeps the mode it already had,
+    because that mode was somebody's decision.
+    """
     if previous is None:
-        # A new file. Use the process umask rather than the 0600 mkstemp gives.
-        umask = os.umask(0)
-        os.umask(umask)
-        os.chmod(tmp, 0o666 & ~umask)
+        os.chmod(tmp, 0o600)
         return
     try:
         os.chmod(tmp, stat.S_IMODE(previous.st_mode))
@@ -185,15 +189,34 @@ def atomic_write(path: Path, content: str, backup: bool = True) -> Path | None:
     return backup_path
 
 
-def stage_file(path: Path, content: str) -> Path:
+def assert_within(base: Path, target: Path) -> None:
+    """Raise when ``target`` does not really sit inside ``base``.
+
+    ``is_within`` resolves symbolic links on both sides, so a directory inside
+    ``base`` that is a link to somewhere else fails this check. It is called
+    again at the moment of writing, not only when a name is parsed, because a
+    link can appear between the two.
+    """
+    if not is_within(base, target):
+        raise UnsafeIdentifier(
+            f"{target} resolves outside {base}; refusing to write there")
+
+
+def stage_file(path: Path, content: str, within: Path | None = None) -> Path:
     """Write ``content`` to a temporary file beside ``path``.
 
     Nothing at ``path`` is touched. Use :func:`commit_staged` to put the
     staged file into place, or unlink it to throw the change away. This lets a
     caller prepare several files and only then replace any of them.
+
+    ``within`` names a directory the file must really be inside. The check runs
+    after the parent directories are made, because that is when a link on the
+    way there becomes real.
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    if within is not None:
+        assert_within(within, path)
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.", suffix=".staged")
     try:
         with os.fdopen(fd, "wb") as handle:
@@ -206,10 +229,17 @@ def stage_file(path: Path, content: str) -> Path:
     return Path(tmp)
 
 
-def commit_staged(path: Path, staged: Path) -> Path | None:
-    """Back up ``path`` and rename ``staged`` over it. Return the backup."""
+def commit_staged(path: Path, staged: Path, within: Path | None = None) -> Path | None:
+    """Back up ``path`` and rename ``staged`` over it. Return the backup.
+
+    ``within`` is checked once more here. The name was checked when it was
+    parsed and again when the file was staged; this is the last moment before
+    a real write, so it is the one that counts.
+    """
     path = Path(path)
     with _WRITE_LOCK:
+        if within is not None:
+            assert_within(within, path)
         previous = None
         try:
             previous = os.stat(path)

@@ -16,12 +16,13 @@ from typing import Any
 from ovos_webui.configio import user_config_path
 from ovos_webui.fsutils import (
     MAX_UPLOAD_BYTES,
+    UnsafeIdentifier,
     commit_staged,
     stage_file,
     timestamp,
     validate_skill_id,
 )
-from ovos_webui.skillsio import skills_root
+from ovos_webui.skillsio import SkillSettingsError, settings_path, skills_root
 
 CONFIG_MEMBER = "config/mycroft.conf"
 SKILLS_PREFIX = "skills/"
@@ -164,10 +165,21 @@ def restore_archive(blob: bytes) -> dict[str, Any]:
                 text = _validate_payload(member.name, raw)
                 if member.name == CONFIG_MEMBER:
                     target = user_config_path()
+                    root = user_config_path().parent
                 else:
+                    # Build the path with the same function the skill settings
+                    # page uses. It validates the id and checks that the result
+                    # really sits inside the skills directory, so a skill
+                    # directory that is a link to somewhere else is refused
+                    # here rather than followed.
                     skill_id = Path(member.name).parts[1]
-                    target = skills_root() / skill_id / "settings.json"
-                staged.append((target, text))
+                    try:
+                        target = settings_path(skill_id)
+                    except (UnsafeIdentifier, SkillSettingsError) as err:
+                        raise RestoreError(
+                            f"{member.name} cannot be restored: {err}") from err
+                    root = skills_root()
+                staged.append((target, text, root))
     except tarfile.TarError as err:
         raise RestoreError(f"the archive could not be read: {err}") from err
 
@@ -175,12 +187,16 @@ def restore_archive(blob: bytes) -> dict[str, Any]:
         raise RestoreError("the archive holds nothing to restore")
 
     # ── stage 2: write every new file beside its target ──────────────────────
-    temporaries: list[tuple[Path, Path]] = []
+    temporaries: list[tuple[Path, Path, Path]] = []
     try:
-        for target, text in staged:
-            temporaries.append((target, stage_file(target, text)))
+        for target, text, root in staged:
+            temporaries.append((target, stage_file(target, text, within=root), root))
+    except UnsafeIdentifier as err:
+        for _, tmp, _root in temporaries:
+            tmp.unlink(missing_ok=True)
+        raise RestoreError(str(err)) from err
     except OSError as err:
-        for _, tmp in temporaries:
+        for _, tmp, _root in temporaries:
             tmp.unlink(missing_ok=True)
         raise RestoreError(f"the restore could not be prepared: {err}") from err
 
@@ -188,13 +204,17 @@ def restore_archive(blob: bytes) -> dict[str, Any]:
     written: list[str] = []
     backups: list[str] = []
     try:
-        for target, tmp in temporaries:
-            backup = commit_staged(target, tmp)
+        for target, tmp, root in temporaries:
+            backup = commit_staged(target, tmp, within=root)
             written.append(str(target))
             if backup:
                 backups.append(str(backup))
+    except UnsafeIdentifier as err:
+        for _, tmp, _root in temporaries:
+            tmp.unlink(missing_ok=True)
+        raise RestoreError(str(err)) from err
     except OSError as err:
-        for _, tmp in temporaries:
+        for _, tmp, _root in temporaries:
             tmp.unlink(missing_ok=True)
         raise RestoreError(
             f"the restore stopped part way: {err}. "

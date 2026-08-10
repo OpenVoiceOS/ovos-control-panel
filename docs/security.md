@@ -47,6 +47,8 @@ Only four things answer without one, and none of them read or change anything:
 - `POST /api/login` and `POST /api/logout`
 - `GET /login` — the sign in page
 - `GET /healthz` — the word `ok`, for a service monitor
+- `GET /static/app.css` — the stylesheet the sign-in page needs; it ships in
+  the package, so anyone can already read it on PyPI
 
 The interactive documentation and the OpenAPI schema are turned off.
 
@@ -56,10 +58,13 @@ A web page you visit can send a request to a device on your own network. It
 cannot read the answer, but a write does not need one, so without a check any
 site could rewrite your configuration.
 
-Every request that changes something must look same-origin: `Sec-Fetch-Site`
-must be `same-origin` or `none`, and if the browser sends `Origin` or `Referer`
-they must match the host. A program such as `curl` sends none of these headers
-and is allowed, because a web page cannot make a program send them.
+Every request that changes something must prove where it came from. If the
+browser sends `Sec-Fetch-Site` it must say `same-origin`; failing that, an
+`Origin` or `Referer` header must match the host. A request that carries none
+of these headers is refused unless it authenticates with an
+`Authorization: Bearer` header — a web page cannot make a browser attach one
+to a cross-site request without a preflight, and no preflight is ever
+approved, so that is what keeps `curl` and other programs working.
 
 Every answer carries `Referrer-Policy: same-origin`, `X-Content-Type-Options`,
 `X-Frame-Options: DENY` and a content security policy that allows only this
@@ -93,8 +98,9 @@ origin.
 - A token is not a defence against someone who already has a shell on the
   device, or who can write to your configuration file another way.
 - The page trusts the browser's `Sec-Fetch-Site` and `Origin` headers. A very
-  old browser that sends neither, driven by a hostile page, would not be
-  stopped by the cross-site check.
+  old browser that sends neither, driven by a hostile page, is refused a write
+  outright — its requests carry no `Authorization` header either — so it loses
+  the page rather than the check.
 - Restoring a backup replaces your settings. It checks that every file in the
   archive is where it should be and that it parses, but it cannot tell whether
   the contents are sensible.

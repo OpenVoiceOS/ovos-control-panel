@@ -1,19 +1,28 @@
-"""Talk to the message bus without ever blocking a request forever.
+"""Talk to the message bus without ever blocking a request, and without
+leaking a thread for every call that does not come back.
 
 ``MessageBusClient._send`` waits on ``connected_event`` with no limit once the
-client has been started (ovos-bus-client ``client/client.py``). So a plain
-``bus.emit`` from an HTTP handler can hang for as long as the bus stays down,
-and ``wait_for_response`` hangs the same way because it emits first.
+client has been started (ovos-bus-client ``client/client.py``). A call that
+goes into that wait never returns. So two things have to be true at once:
 
-Checking ``connected_event`` before the call is not enough on its own: the bus
-can drop between the check and the call. Every bus call therefore runs in a
-throw-away daemon thread with a deadline. If the deadline passes, the request
-gets an answer and the stuck thread dies with the process instead of holding a
-worker.
+1. a request must get an answer even when the bus is gone, and
+2. the number of threads stuck in that wait must be bounded by a constant,
+   whatever the number of requests.
+
+Giving each call its own thread satisfies the first and breaks the second: a
+page that polls the dashboard would add stuck threads for as long as the bus
+stays down, until the device cannot start another thread.
+
+So a fixed number of permits is handed out. A call that cannot get a permit
+fails at once instead of queueing, and a call that hangs keeps its permit for
+good, which is exactly what bounds the damage. On top of that a short lived
+circuit breaker remembers that the bus did not answer, so the calls that follow
+fail immediately instead of each waiting out the full timeout.
 """
 from __future__ import annotations
 
 import threading
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -22,9 +31,76 @@ from ovos_utils.log import LOG
 #: How long any single bus call may take.
 DEFAULT_TIMEOUT = 3.0
 
+#: The largest number of threads this module may ever have in flight. A thread
+#: stuck inside the bus client keeps its permit, so this is also the largest
+#: number of threads that can ever be stuck.
+MAX_INFLIGHT = 4
 
-class BusTimeout(TimeoutError):
-    """Raised when a bus call did not finish inside its deadline."""
+#: After a call gives up, treat the bus as down for this long and answer at
+#: once instead of waiting again.
+BREAKER_TTL = 10.0
+
+
+class BusUnavailable(RuntimeError):
+    """Raised when there is no capacity left to talk to the bus."""
+
+
+class _Gate:
+    """The permits and the circuit breaker, kept together."""
+
+    def __init__(self, permits: int = MAX_INFLIGHT, ttl: float = BREAKER_TTL):
+        self._semaphore = threading.BoundedSemaphore(permits)
+        self._permits = permits
+        self._ttl = ttl
+        self._open_until = 0.0
+        self._lock = threading.Lock()
+        self._abandoned = 0
+
+    # ── circuit breaker ──────────────────────────────────────────────────────
+    def is_open(self) -> bool:
+        """True while the bus is believed to be down."""
+        with self._lock:
+            return time.monotonic() < self._open_until
+
+    def trip(self) -> None:
+        with self._lock:
+            self._open_until = time.monotonic() + self._ttl
+
+    def reset(self) -> None:
+        with self._lock:
+            self._open_until = 0.0
+
+    # ── permits ──────────────────────────────────────────────────────────────
+    def acquire(self) -> bool:
+        return self._semaphore.acquire(blocking=False)
+
+    def release(self) -> None:
+        try:
+            self._semaphore.release()
+        except ValueError:  # pragma: no cover - released more than acquired
+            pass
+
+    def abandon(self) -> None:
+        """Record a permit that will never come back."""
+        with self._lock:
+            self._abandoned += 1
+
+    @property
+    def abandoned(self) -> int:
+        return self._abandoned
+
+    @property
+    def free(self) -> int:
+        """Permits still available. Only for tests and for reporting."""
+        return self._permits - self._abandoned
+
+    def reset_for_tests(self) -> None:
+        self._semaphore = threading.BoundedSemaphore(self._permits)
+        self._open_until = 0.0
+        self._abandoned = 0
+
+
+GATE = _Gate()
 
 
 def is_connected(bus: Any) -> bool:
@@ -42,13 +118,25 @@ def is_connected(bus: Any) -> bool:
 
 def call(func: Callable[[], Any], timeout: float = DEFAULT_TIMEOUT,
          default: Any = None) -> Any:
-    """Run ``func`` in a daemon thread and give up after ``timeout``.
+    """Run ``func`` against the bus, with a deadline and a bounded cost.
 
-    Returns the value of ``func``, or ``default`` when it did not finish or it
-    raised. This is the only way this package touches the bus.
+    Returns the value of ``func``, or ``default`` when the bus did not answer,
+    when there was no capacity left, or when the breaker is open.
     """
+    if GATE.is_open():
+        # The bus did not answer a moment ago. Do not spend another timeout,
+        # and do not spend another permit, finding that out again.
+        return default
+
+    if not GATE.acquire():
+        LOG.warning("no capacity left to talk to the message bus; "
+                    f"{GATE.abandoned} call(s) never came back")
+        GATE.trip()
+        return default
+
     box: dict[str, Any] = {}
     done = threading.Event()
+    finished = threading.Event()
 
     def runner() -> None:
         try:
@@ -57,15 +145,28 @@ def call(func: Callable[[], Any], timeout: float = DEFAULT_TIMEOUT,
             box["error"] = err
         finally:
             done.set()
+            # The permit is only given back by a call that really finished. A
+            # call still stuck in the bus client never reaches this line, and
+            # that is what keeps the number of stuck threads bounded.
+            finished.set()
+            GATE.release()
 
     thread = threading.Thread(target=runner, daemon=True, name="ovos-webui-bus")
     thread.start()
+
     if not done.wait(timeout):
         LOG.warning(f"a message bus call did not finish in {timeout}s; giving up")
+        GATE.trip()
+        if not finished.is_set():
+            GATE.abandon()
         return default
+
     if "error" in box:
         LOG.warning(f"a message bus call failed: {box['error']}")
+        GATE.trip()
         return default
+
+    GATE.reset()
     return box.get("value", default)
 
 
@@ -82,10 +183,15 @@ def wait_for_response(bus: Any, message: Any, timeout: float = DEFAULT_TIMEOUT) 
     """Send ``message`` and wait for its reply, with a hard deadline.
 
     The client's own timeout only covers the waiting, not the emit that comes
-    first, so the whole call is wrapped. The outer deadline is a little longer
-    than the inner one so the client can report a normal timeout itself.
+    first, so the whole call is wrapped.
     """
     if not is_connected(bus):
         return None
     return call(lambda: bus.wait_for_response(message, timeout=timeout),
                 timeout=timeout + 1.0, default=None)
+
+
+def status() -> dict[str, Any]:
+    """Report the state of the gate, for the dashboard and for tests."""
+    return {"max_inflight": MAX_INFLIGHT, "abandoned": GATE.abandoned,
+            "breaker_open": GATE.is_open()}

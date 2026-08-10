@@ -82,31 +82,39 @@ class AuthPolicy:
 
 
 def same_origin(request: Request) -> bool:
-    """Return True when a state changing request did not come from another site.
+    """Return True when a state changing request really came from this page.
 
     A browser sends ``Sec-Fetch-Site`` on every request, and an ``Origin``
-    header on anything that can change state. A program such as curl sends
-    neither, and a program is not a cross-site request forgery risk, because a
-    web page cannot make one send an ``Authorization`` header.
+    header on anything that can change state. At least one of the three
+    headers below must be there and must say "this site". A request that
+    carries none of them is not accepted just because it is quiet: that would
+    let anything that can suppress them straight through.
 
-    Without this check any web page in the world could post a form to
-    ``http://<device>:8500/api/restore`` and rewrite the configuration of a
-    device on the visitor's home network, with no token and no reply needed.
+    The one exception is a caller that sends an ``Authorization`` header. A web
+    page cannot make a browser attach one to a cross-site request without a
+    preflight, and a preflight is never approved here, so such a request cannot
+    be a forgery. That is what keeps ``curl`` and other programs working.
+
+    ``Sec-Fetch-Site: none`` means a navigation the user typed, which is never
+    how this page sends a write, so it is not accepted for an unsafe method.
     """
+    host = request.headers.get("host", "")
+
     site = request.headers.get("sec-fetch-site", "")
     if site:
-        return site in ("same-origin", "none")
+        return site == "same-origin"
+
     origin = request.headers.get("origin", "")
     if origin:
-        host = request.headers.get("host", "")
-        parsed = urlsplit(origin)
-        return bool(host) and parsed.netloc == host
+        return bool(host) and urlsplit(origin).netloc == host
+
     referer = request.headers.get("referer", "")
     if referer:
-        host = request.headers.get("host", "")
         return bool(host) and urlsplit(referer).netloc == host
-    # No browser sent this.
-    return True
+
+    # Nothing said where this came from. Only a caller that authenticates with
+    # a header, which a web page cannot do across sites, is allowed through.
+    return request.headers.get("authorization", "").lower().startswith("bearer ")
 
 
 def check_csrf(request: Request) -> None:

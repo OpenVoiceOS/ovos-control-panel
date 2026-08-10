@@ -16,11 +16,14 @@ from ovos_webui import backupio, buswait, configio, fsutils
 from ovos_webui.service import create_app
 
 # ── S1: cross-site request forgery ───────────────────────────────────────────
+# ``sec-fetch-site`` is cleared where the test is about Origin or Referer,
+# because a real browser would not send a same-origin value with them.
 CROSS_SITE = [
-    {"origin": "http://evil.example"},
+    {"origin": "http://evil.example", "sec-fetch-site": ""},
     {"sec-fetch-site": "cross-site"},
     {"sec-fetch-site": "same-site"},
-    {"referer": "http://evil.example/page"},
+    {"sec-fetch-site": "none"},
+    {"referer": "http://evil.example/page", "sec-fetch-site": ""},
 ]
 
 UNSAFE_CALLS = [
@@ -62,8 +65,13 @@ def test_s1_same_origin_writes_still_work(client):
     assert r.status_code == 200
 
 
-def test_s1_a_program_with_no_browser_headers_still_works(client):
-    r = client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
+def test_s1_a_program_that_sends_a_token_still_works(token_client):
+    """A browser cannot attach an Authorization header across sites without a
+    preflight, and no preflight is ever approved, so this cannot be forged."""
+    r = token_client.put("/api/config",
+                         json={"text": '{"lang": "pt-pt"}', "format": "json"},
+                         headers={"Authorization": "Bearer s3cret",
+                                  "sec-fetch-site": ""})
     assert r.status_code == 200
 
 
@@ -271,11 +279,11 @@ def test_s5_a_write_failure_part_way_does_not_half_restore(client, make_skill,
     calls = {"n": 0}
     real = backupio.commit_staged
 
-    def flaky(target, staged):
+    def flaky(target, staged, within=None):
         calls["n"] += 1
         if calls["n"] > 1:
             raise OSError("disk full")
-        return real(target, staged)
+        return real(target, staged, within=within)
 
     monkeypatch.setattr(backupio, "commit_staged", flaky)
     r = client.post("/api/restore", files={"file": ("b.tar.gz", blob, "application/gzip")})
@@ -308,7 +316,9 @@ def test_s7_deleting_a_key_clears_the_volatile_patch_first(client, bus):
 
 # ── S8: no route may be published without a check ────────────────────────────
 UNAUTHENTICATED_ALLOWED = {"/api/status", "/api/login", "/api/logout",
-                           "/login", "/healthz"}
+                           "/login", "/healthz",
+                           # the sign in page must be able to style itself
+                           "/static/app.css"}
 
 
 def test_s8_every_route_needs_a_sign_in_except_the_known_few(bus):
@@ -325,7 +335,7 @@ def test_s8_every_route_needs_a_sign_in_except_the_known_few(bus):
                 continue
             if "GET" not in methods:
                 continue
-            probe = path.replace("{asset:path}", "app.css")
+            probe = path.replace("{asset:path}", "app.js")
             probe = probe.replace("{skill_id}", "x").replace("{persona_id}", "x")
             if "{" in probe:
                 continue
@@ -342,7 +352,34 @@ def test_s8_pages_need_a_sign_in(token_client):
 
 def test_s8_static_assets_need_a_sign_in(token_client):
     assert token_client.get("/static/app.js").status_code == 401
-    assert token_client.get("/static/app.css").status_code == 401
+
+
+def test_n3_only_the_stylesheet_is_public(token_client):
+    """The sign in page would render unstyled without it, and a stylesheet
+    that ships in the package tells a stranger nothing."""
+    assert token_client.get("/static/app.css").status_code == 200
+    assert token_client.get("/static/app.js").status_code == 401
+    assert token_client.get("/static/login.html").status_code == 401
+
+
+def test_n3_a_form_post_signs_in_without_javascript(token_client):
+    r = token_client.post("/api/login", data={"token": "s3cret"},
+                          follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/"
+    assert "ovos_webui_token" in r.headers.get_list("set-cookie")[0]
+
+
+def test_n3_a_bad_form_post_goes_back_to_the_form(token_client):
+    r = token_client.post("/api/login", data={"token": "wrong"},
+                          follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/login?bad=1"
+
+
+def test_n3_a_json_login_still_returns_json(token_client):
+    r = token_client.post("/api/login", json={"token": "s3cret"})
+    assert r.status_code == 200 and r.json()["ok"] is True
 
 
 def test_s8_the_schema_and_docs_are_not_published(client):
@@ -411,10 +448,25 @@ def test_s10_a_private_mode_is_kept_private(tmp_path):
     assert oct(target.stat().st_mode & 0o777) == "0o600"
 
 
-def test_s10_a_new_file_is_not_locked_to_0600(tmp_path):
+def test_n2_a_new_file_is_private(tmp_path):
+    """A new settings file can hold an API key, so it starts private."""
     target = tmp_path / "new.json"
     fsutils.atomic_write(target, "{}")
-    assert target.stat().st_mode & 0o044, "a new file should be readable"
+    assert oct(target.stat().st_mode & 0o777) == "0o600"
+
+
+def test_n2_a_new_skill_settings_file_is_private(client):
+    from ovos_webui import skillsio
+    client.put("/api/skills/brand-new", json={"settings": {"api_key": "secret"}})
+    assert oct(skillsio.settings_path("brand-new").stat().st_mode & 0o777) == "0o600"
+
+
+def test_n2_an_existing_mode_is_still_respected(tmp_path):
+    target = tmp_path / "f.json"
+    target.write_text("{}")
+    target.chmod(0o644)
+    fsutils.atomic_write(target, '{"a": 1}')
+    assert oct(target.stat().st_mode & 0o777) == "0o644"
 
 
 def test_s10_restore_keeps_the_mode(client):
@@ -484,3 +536,204 @@ def test_backup_pruning_keeps_the_newest_within_one_second(tmp_path):
     newest = json.loads(backups[-1].read_text())
     oldest = json.loads(backups[0].read_text())
     assert newest["n"] > oldest["n"], "pruning kept the wrong backups"
+
+
+# ── B1: bus threads must be bounded, whatever the number of requests ─────────
+def _bus_threads() -> int:
+    return sum(1 for t in threading.enumerate() if t.name == "ovos-webui-bus")
+
+
+def test_b1_a_hundred_bus_down_saves_do_not_leak_threads(client):
+    """The first fix gave every call its own thread and abandoned it on a
+    timeout. A page that polls would then add stuck threads until the device
+    could not start another one."""
+    from ovos_webui import buswait
+
+    bus = HangingBus()
+    before = _bus_threads()
+    started = time.monotonic()
+    try:
+        for _ in range(100):
+            configio.write_user_config({"lang": "pt-pt"}, bus=bus)
+        leaked = _bus_threads() - before
+        elapsed = time.monotonic() - started
+    finally:
+        bus.released.set()
+
+    assert leaked <= buswait.MAX_INFLIGHT, (
+        f"{leaked} stuck bus threads after 100 calls; "
+        f"the limit is {buswait.MAX_INFLIGHT}")
+    assert elapsed < 60, f"100 bus-down saves took {elapsed:.0f}s"
+
+
+def test_b1_a_hundred_health_requests_do_not_leak_threads(client):
+    """The dashboard polls, and each poll probes six services twice."""
+    from ovos_webui import buswait, health
+
+    bus = HangingBus()
+    before = _bus_threads()
+    try:
+        for _ in range(100):
+            health.snapshot(bus, timeout=0.2)
+        leaked = _bus_threads() - before
+    finally:
+        bus.released.set()
+    assert leaked <= buswait.MAX_INFLIGHT, f"{leaked} stuck bus threads"
+
+
+def test_b1_the_breaker_makes_repeat_calls_fast():
+    """A save that waits three seconds every time makes the page unusable."""
+
+    bus = HangingBus()
+    try:
+        first = time.monotonic()
+        configio.write_user_config({"lang": "pt-pt"}, bus=bus)
+        first_took = time.monotonic() - first
+
+        second = time.monotonic()
+        for _ in range(20):
+            configio.write_user_config({"lang": "pt-pt"}, bus=bus)
+        rest_took = time.monotonic() - second
+    finally:
+        bus.released.set()
+    assert rest_took < first_took + 1.0, (
+        f"20 more saves took {rest_took:.1f}s after the first took {first_took:.1f}s")
+
+
+def test_b1_capacity_runs_out_instead_of_growing():
+    """When every permit is held by a stuck call, the next one gives up now."""
+    from ovos_webui import buswait
+
+    stop = threading.Event()
+    try:
+        for _ in range(buswait.MAX_INFLIGHT):
+            # Clear the breaker each time, so every call really takes a permit
+            # and the permits, not the breaker, are what runs out.
+            buswait.GATE.reset()
+            buswait.call(lambda: stop.wait(60), timeout=0.05, default="gave up")
+        buswait.GATE.reset()
+        started = time.monotonic()
+        assert buswait.call(lambda: "fresh", timeout=5, default="no capacity") == \
+            "no capacity"
+        assert time.monotonic() - started < 1.0
+    finally:
+        stop.set()
+
+
+def test_b1_a_healthy_bus_gives_its_permit_back():
+    from ovos_webui import buswait
+
+    for _ in range(buswait.MAX_INFLIGHT * 10):
+        assert buswait.call(lambda: "fine", timeout=2) == "fine"
+    assert buswait.GATE.abandoned == 0
+    assert _bus_threads() == 0
+
+
+def test_b1_the_breaker_reopens_after_a_success():
+    from ovos_webui import buswait
+
+    stop = threading.Event()
+    try:
+        buswait.call(lambda: stop.wait(60), timeout=0.05)
+        assert buswait.GATE.is_open()
+    finally:
+        stop.set()
+    buswait.GATE.reset()
+    assert buswait.call(lambda: "fine", timeout=2) == "fine"
+    assert not buswait.GATE.is_open()
+
+
+# ── B2: a symlinked skill directory must not lead a write out of the tree ────
+def test_b2_a_symlinked_skill_directory_is_refused(client, tmp_path):
+    """The name is a plain skill id, but the directory it names is a link."""
+    from ovos_webui import skillsio
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    victim = outside / "settings.json"
+    victim.write_text("untouched")
+
+    root = skillsio.skills_root()
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "evil").symlink_to(outside, target_is_directory=True)
+
+    blob = _archive({"skills/evil/settings.json": b'{"pwned": true}'})
+    r = client.post("/api/restore", files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert r.status_code == 400, f"a symlinked skill directory was accepted ({r.status_code})"
+    assert victim.read_text() == "untouched", "a file outside the skills tree was written"
+
+
+def test_b2_a_symlinked_skill_directory_is_refused_by_the_settings_route(client, tmp_path):
+    from ovos_webui import skillsio
+
+    outside = tmp_path / "outside2"
+    outside.mkdir()
+    victim = outside / "settings.json"
+    victim.write_text("untouched")
+    root = skillsio.skills_root()
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "evil2").symlink_to(outside, target_is_directory=True)
+
+    r = client.put("/api/skills/evil2", json={"settings": {"pwned": True}})
+    assert r.status_code == 400
+    assert victim.read_text() == "untouched"
+
+
+def test_b2_containment_is_checked_again_at_write_time(tmp_path):
+    """A link can appear between parsing a name and writing the file."""
+    base = tmp_path / "base"
+    base.mkdir()
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    (base / "link").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(fsutils.UnsafeIdentifier):
+        fsutils.stage_file(base / "link" / "f.json", "{}", within=base)
+
+
+def test_b2_commit_refuses_a_target_that_moved_outside(tmp_path):
+    base = tmp_path / "base"
+    base.mkdir()
+    outside = tmp_path / "elsewhere2"
+    outside.mkdir()
+    staged = fsutils.stage_file(base / "f.json", "{}", within=base)
+    (base / "link").symlink_to(outside, target_is_directory=True)
+    with pytest.raises(fsutils.UnsafeIdentifier):
+        fsutils.commit_staged(base / "link" / "f.json", staged, within=base)
+
+
+def test_b2_an_ordinary_restore_still_works(client, make_skill):
+    make_skill("skill-a", {"volume": 1})
+    blob = _archive({"skills/skill-a/settings.json": b'{"volume": 7}'})
+    r = client.post("/api/restore", files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert r.status_code == 200
+    from ovos_webui import skillsio
+    assert skillsio.read_settings("skill-a") == {"volume": 7}
+
+
+# ── N1: the cross-site gate must not fail open ───────────────────────────────
+def test_n1_a_browser_style_write_with_no_origin_headers_is_refused(client):
+    """A request with no Origin, no Referer and no Sec-Fetch-Site and no
+    Authorization header is not something this page ever sends."""
+    r = client.put("/api/config",
+                   json={"text": '{"lang": "pt-pt"}', "format": "json"},
+                   headers={"user-agent": "Mozilla/5.0", "sec-fetch-site": ""})
+    assert r.status_code == 403
+
+
+def test_n1_sec_fetch_site_none_is_refused_for_writes(client):
+    """`none` means a navigation typed into the address bar, never an API write."""
+    r = client.put("/api/config", json={"text": "{}", "format": "json"},
+                   headers={"sec-fetch-site": "none"})
+    assert r.status_code == 403
+
+
+def test_n1_a_program_with_a_bearer_token_still_works(token_client):
+    r = token_client.put("/api/config",
+                         json={"text": '{"lang": "pt-pt"}', "format": "json"},
+                         headers={"Authorization": "Bearer s3cret"})
+    assert r.status_code == 200
+
+
+def test_n1_reads_with_no_headers_are_still_fine(client):
+    assert client.get("/api/health").status_code == 200

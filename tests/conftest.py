@@ -45,6 +45,15 @@ def clean_sandbox():
         shutil.rmtree(root, ignore_errors=True)
 
 
+@pytest.fixture(autouse=True)
+def reset_bus_gate():
+    """The bus gate is process wide, so a tripped breaker must not leak."""
+    from ovos_webui import buswait
+    buswait.GATE.reset_for_tests()
+    yield
+    buswait.GATE.reset_for_tests()
+
+
 @pytest.fixture
 def bus():
     """A FakeBus with no service attached to it."""
@@ -56,7 +65,10 @@ def bus():
 def client(bus):
     """A TestClient over the app, with no token."""
     app = create_app(bus=bus, host="127.0.0.1", token=None, connect_bus=False)
-    with TestClient(app) as test_client:
+    # A browser puts this on every request it makes from the page itself, so
+    # the default client behaves like one. Tests that care about the
+    # cross-site check set the headers themselves.
+    with TestClient(app, headers={"sec-fetch-site": "same-origin"}) as test_client:
         yield test_client
 
 
@@ -64,7 +76,7 @@ def client(bus):
 def token_client(bus):
     """A TestClient over an app that needs a token."""
     app = create_app(bus=bus, host="0.0.0.0", token="s3cret", connect_bus=False)
-    with TestClient(app) as test_client:
+    with TestClient(app, headers={"sec-fetch-site": "same-origin"}) as test_client:
         yield test_client
 
 
