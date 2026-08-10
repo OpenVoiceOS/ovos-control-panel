@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ovos-webui"
+dynamic = ["version"]
+description = "Unified local web UI for OpenVoiceOS devices — health, configuration, skill settings and backups"
+readme = "README.md"
+license = "Apache-2.0"
+authors = [{ name = "JarbasAi", email = "jarbasai@mailfence.com" }]
+requires-python = ">=3.10"
+keywords = ["ovos", "openvoiceos", "webui", "configuration", "dashboard"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Home Automation",
+    "Environment :: Web Environment",
+]
+dependencies = [
+    # floors chosen to keep a frozen install off known-vulnerable builds:
+    # starlette>=0.40 fixes the multipart buffering DoS CVE-2024-47874 (a
+    # fastapi floor alone is not enough — 0.111 still pins starlette<0.38), and
+    # python-multipart>=0.0.18 fixes the form-parser DoS CVE-2024-53981.
+    "fastapi>=0.115.3",
+    "starlette>=0.40.0",
+    "uvicorn[standard]>=0.29.0",
+    "python-multipart>=0.0.18",
+    "PyYAML>=5.4",
+    "ovos-bus-client>=1.0.0",
+    "ovos-config>=1.0.0",
+    "ovos-utils>=0.3.0",
+    "ovos-plugin-manager>=1.0.0",
+    "ovos-workshop>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27,<1.0",
+    "pytest-cov>=4.1",
+]
+
+[project.scripts]
+ovos-webui = "ovos_webui.service:main"
+
+[project.urls]
+Homepage = "https://github.com/OpenVoiceOS/ovos-webui"
+"Bug Tracker" = "https://github.com/OpenVoiceOS/ovos-webui/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "ovos_webui.version.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ovos_webui*"]
+
+[tool.setuptools.package-data]
+ovos_webui = ["static/*"]
+
+[tool.pytest.ini_options]
+
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["ovos_webui"]
+omit = ["tests/*"]

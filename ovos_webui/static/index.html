@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Dashboard — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<div class="banner" id="banner" hidden></div>
+<header><h1>OpenVoiceOS</h1></header>
+<nav>
+  <a href="/">Dashboard</a>
+  <a href="/config">Settings</a>
+  <a href="/skills">Skills</a>
+  <a href="/backup">Backup</a>
+  <a href="/about">About</a>
+</nav>
+<main>
+  <h2>Is the device working?</h2>
+  <p class="hint">This page asks each part of OpenVoiceOS if it is running.</p>
+  <div class="card" id="bus">Checking…</div>
+  <div class="grid" id="services"></div>
+  <div class="row"><button id="refresh">Check again</button></div>
+  <div class="msg" id="msg" hidden></div>
+
+  <h2>If something is down</h2>
+  <div class="card">
+    <ul class="plain">
+      <li>Read the log of the service:
+        <code>journalctl --user -u ovos-skills -n 100</code>
+        (use <code>ovos-audio</code>, <code>ovos-dinkum-listener</code>,
+        <code>ovos-gui</code> or <code>ovos-phal</code> for the others).</li>
+      <li>Start it again: <code>systemctl --user restart ovos-skills</code>.</li>
+      <li>Watch the messages on the bus with
+        <a id="busmon" href="#">the bus monitor</a>, if it runs on this device.</li>
+      <li>Check your settings on the <a href="/config">Settings</a> page.
+        Every save keeps a backup, so you can go back.</li>
+    </ul>
+  </div>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc;
+
+  function badge(state) {
+    var kind = state === "ready" ? "ready" : (state === "starting" ? "starting" : "bad");
+    return '<span class="badge ' + kind + '">' + esc(state) + "</span>";
+  }
+
+  function load() {
+    el("bus").textContent = "Checking…";
+    api("/api/health").then(function (h) {
+      el("bus").innerHTML = h.bus.reachable
+        ? "<strong>Message bus:</strong> connected."
+        : "<strong>Message bus:</strong> not reachable. Start <code>ovos-messagebus</code> first; "
+          + "until it runs, no other check can answer.";
+      el("services").innerHTML = h.services.map(function (s) {
+        var note = s.state === "no answer"
+          ? "This service did not answer. It is probably not running."
+          : esc(s.hint);
+        return '<div class="card"><strong>' + esc(s.label) + "</strong> " + badge(s.state)
+          + '<p class="hint">' + note + "</p>"
+          + "<code>mycroft." + esc(s.name) + ".is_ready</code></div>";
+      }).join("");
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  el("busmon").href = "http://" + window.location.hostname + ":8000/";
+  el("refresh").addEventListener("click", load);
+  load();
+});
+</script>
+</body>
+</html>

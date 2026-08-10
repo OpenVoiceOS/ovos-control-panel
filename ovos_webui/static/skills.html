@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Skills — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<div class="banner" id="banner" hidden></div>
+<header><h1>Skill settings</h1></header>
+<nav>
+  <a href="/">Dashboard</a>
+  <a href="/config">Settings</a>
+  <a href="/skills">Skills</a>
+  <a href="/backup">Backup</a>
+  <a href="/about">About</a>
+</nav>
+<main>
+  <h2>Installed skills</h2>
+  <p class="hint">Choose a skill to change its settings. A backup is made every time you save.</p>
+  <div class="card"><label for="pick">Skill<select id="pick"></select></label></div>
+  <div id="editor" hidden>
+    <div class="card" id="form"></div>
+    <div class="tabs"><button class="secondary" id="toggle-raw" aria-pressed="false">Edit as JSON</button></div>
+    <textarea id="raw" spellcheck="false" aria-label="settings JSON" hidden></textarea>
+    <div class="row">
+      <button id="save">Save</button>
+      <button class="secondary" id="reload">Undo my edits</button>
+    </div>
+  </div>
+  <div class="msg" id="msg" hidden></div>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc;
+  var current = null, rawMode = false;
+
+  function fieldsOf(meta) {
+    var out = [];
+    var sections = ((meta || {}).skillMetadata || {}).sections || [];
+    sections.forEach(function (s) { (s.fields || []).forEach(function (f) { if (f.name) { out.push(f); } }); });
+    return out;
+  }
+
+  function render(data) {
+    current = data;
+    var fields = fieldsOf(data.meta);
+    var known = {};
+    var html = fields.map(function (f) {
+      known[f.name] = true;
+      var value = data.settings[f.name];
+      if (value === undefined) { value = f.value; }
+      var label = esc(f.label || f.name);
+      if (f.type === "checkbox") {
+        var on = value === true || value === "true";
+        return "<label>" + label + '<select name="' + esc(f.name) + '" data-type="bool">'
+          + '<option value="true"' + (on ? " selected" : "") + ">Yes</option>"
+          + '<option value="false"' + (on ? "" : " selected") + ">No</option></select></label>";
+      }
+      var type = f.type === "number" ? "number" : (f.type === "password" ? "password" : "text");
+      return "<label>" + label + '<input type="' + type + '" name="' + esc(f.name)
+        + '" data-type="' + esc(f.type || "text") + '" value="' + esc(value === undefined || value === null ? "" : value) + '"></label>';
+    });
+    var extra = Object.keys(data.settings).filter(function (k) {
+      return !known[k] && k.indexOf("_") !== 0;
+    });
+    if (extra.length) {
+      html.push('<p class="hint">Other keys are only editable as JSON: <code>'
+        + esc(extra.join(", ")) + "</code></p>");
+    }
+    if (!fields.length) {
+      html.push('<p class="hint">This skill does not describe its settings, so edit it as JSON.</p>');
+    }
+    if (data.generated_meta) {
+      html.push('<p class="hint">The form below was built from the current settings.</p>');
+    }
+    el("form").innerHTML = html.join("");
+    el("raw").value = JSON.stringify(data.settings, null, 2);
+    el("editor").hidden = false;
+  }
+
+  function load(skillId) {
+    api("/api/skills/" + encodeURIComponent(skillId)).then(render)
+      .catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  el("toggle-raw").addEventListener("click", function () {
+    rawMode = !rawMode;
+    el("raw").hidden = !rawMode;
+    el("form").hidden = rawMode;
+    el("toggle-raw").setAttribute("aria-pressed", String(rawMode));
+    el("toggle-raw").textContent = rawMode ? "Back to the form" : "Edit as JSON";
+  });
+
+  el("save").addEventListener("click", function () {
+    if (!current) { return; }
+    if (!OvosWebUI.confirmed("Save the settings of " + current.skill_id + "?")) { return; }
+    var settings;
+    if (rawMode) {
+      try { settings = JSON.parse(el("raw").value); }
+      catch (e) { OvosWebUI.say("msg", "That is not valid JSON: " + e.message, true); return; }
+    } else {
+      settings = JSON.parse(JSON.stringify(current.settings));
+      el("form").querySelectorAll("input,select").forEach(function (i) {
+        var t = i.getAttribute("data-type");
+        if (t === "bool" || t === "checkbox") { settings[i.name] = i.value === "true"; }
+        else if (t === "number") { settings[i.name] = i.value === "" ? null : Number(i.value); }
+        else { settings[i.name] = i.value; }
+      });
+    }
+    api("/api/skills/" + encodeURIComponent(current.skill_id), {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({settings: settings})
+    }).then(function (r) {
+      OvosWebUI.say("msg", "Saved. Backup: " + (r.backup || "none was needed."));
+      load(current.skill_id);
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  });
+
+  el("reload").addEventListener("click", function () { if (current) { load(current.skill_id); } });
+  el("pick").addEventListener("change", function () { if (this.value) { load(this.value); } });
+
+  api("/api/skills").then(function (r) {
+    if (!r.skills.length) {
+      el("pick").innerHTML = "<option>No skill has settings yet</option>";
+      OvosWebUI.say("msg", "No skill settings were found on this device.", false);
+      return;
+    }
+    el("pick").innerHTML = '<option value="">Choose a skill…</option>'
+      + r.skills.map(function (s) { return '<option value="' + esc(s.skill_id) + '">' + esc(s.skill_id) + "</option>"; }).join("");
+  }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+});
+</script>
+</body>
+</html>

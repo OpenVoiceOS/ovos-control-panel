@@ -10,3 +10,7 @@ htmlcov/
 venv/
 .idea/
 .vscode/
+.worktrees/
+
+# local session handoff, never commit
+HANDOFF.md
