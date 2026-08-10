@@ -38,7 +38,8 @@ from fastapi.responses import (
 from ovos_utils.log import LOG
 from pydantic import BaseModel, Field
 
-from ovos_webui import backupio, configio, health, meta, skillsio
+from ovos_webui import (backupio, configio, health, installer, meta, personas,
+                        pypi, recommends, skillsio, translate)
 from ovos_webui.auth import (
     COOKIE_NAME,
     AuthPolicy,
@@ -61,6 +62,9 @@ PAGES = {
     "/skills": "skills.html",
     "/backup": "backup.html",
     "/about": "about.html",
+    "/plugins": "plugins.html",
+    "/personas": "personas.html",
+    "/translate": "translate.html",
 }
 
 #: The endpoints that take an upload, and so have a larger body limit.
@@ -82,6 +86,29 @@ class SettingsBody(BaseModel):
 
 class LoginBody(BaseModel):
     token: str = Field(..., max_length=512)
+
+
+class PackageBody(BaseModel):
+    package: str = Field(..., max_length=100)
+
+
+class PersonaBody(BaseModel):
+    persona: dict[str, Any]
+
+
+class PersonaTestBody(BaseModel):
+    question: str = Field(..., max_length=2000)
+
+
+class TranslateBody(BaseModel):
+    lines: list[str]
+    source: str = Field(..., max_length=16)
+    target: str = Field(..., max_length=16)
+    plugin: str | None = Field(None, max_length=128)
+
+
+class OverrideBody(BaseModel):
+    lines: list[str]
 
 
 def _connect_bus():
@@ -155,10 +182,31 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         check_host(policy, request)
         check_csrf(request)
 
+    def guard_privileged(request: Request) -> AuthPolicy:
+        """Anything that changes the software on the device.
+
+        A token is always required here, whatever the bind address is. On
+        loopback the rest of the page is open for convenience, but nothing that
+        runs a process is ever open. The host and cross-site checks still run,
+        because this router carries ``guard`` as well.
+        """
+        if not policy.token:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="this needs a token. Set webui.access_token in "
+                       "mycroft.conf, or start the service with --token.")
+        policy.check(request)
+        return policy
+
     public = APIRouter(dependencies=[Depends(guard_public)])
     pages = APIRouter(dependencies=[Depends(guard)], include_in_schema=False)
     api = APIRouter(prefix="/api", dependencies=[Depends(guard)])
-    app.state.routers = {"public": public, "pages": pages, "api": api}
+    # Privileged routes inherit the host and cross-site checks from ``guard``
+    # and add the always-a-token rule on top.
+    privileged = APIRouter(prefix="/api",
+                           dependencies=[Depends(guard), Depends(guard_privileged)])
+    app.state.routers = {"public": public, "pages": pages, "api": api,
+                         "privileged": privileged}
 
     # ── public ───────────────────────────────────────────────────────────────
     @public.get("/api/status")
@@ -386,6 +434,182 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         except (backupio.RestoreError, UnsafeIdentifier) as err:
             raise HTTPException(400, str(err)) from None
 
+    # ── plugin catalog and installer ─────────────────────────────────────────
+    # Reads sit on the ``api`` router (host + cross-site + sign-in). Anything
+    # that runs pip sits on ``privileged``, which adds the always-a-token rule.
+    @api.get("/plugins/search")
+    def api_plugin_search(q: str = "", kind: str = "",
+                          refresh: bool = False) -> dict[str, Any]:
+        if len(q) > 100 or len(kind) > 50:
+            raise HTTPException(400, "the search is too long")
+        return pypi.search(query=q, kind=kind, refresh=refresh)
+
+    @api.get("/plugins/details/{package}")
+    def api_plugin_details(package: str) -> dict[str, Any]:
+        try:
+            return pypi.details(package)
+        except installer.UnsafePackageName as err:
+            raise HTTPException(400, str(err))
+        except LookupError as err:
+            raise HTTPException(404, str(err))
+        except OSError as err:
+            raise HTTPException(502, f"PyPI could not be reached: {err}")
+
+    @api.get("/plugins/recommended")
+    def api_recommended(lang: str = "") -> dict[str, Any]:
+        if not lang:
+            lang = configio.read_merged_config().get("lang") or "en-us"
+        if len(lang) > 32:
+            raise HTTPException(400, "that is not a language code")
+        return {"lang": lang, "profiles": recommends.for_language(lang),
+                "plugins": recommends.recommended_plugins(lang)}
+
+    @privileged.post("/plugins/install")
+    def api_install(body: PackageBody) -> dict[str, Any]:
+        try:
+            return installer.INSTALLER.install(body.package).as_dict()
+        except installer.UnsafePackageName as err:
+            raise HTTPException(400, str(err))
+        except installer.InstallerBusy as err:
+            raise HTTPException(409, str(err))
+        except LookupError as err:
+            raise HTTPException(404, str(err))
+        except OSError as err:
+            raise HTTPException(502, f"PyPI could not be reached: {err}")
+
+    @privileged.post("/plugins/uninstall")
+    def api_uninstall(body: PackageBody) -> dict[str, Any]:
+        try:
+            return installer.INSTALLER.uninstall(body.package).as_dict()
+        except installer.UnsafePackageName as err:
+            raise HTTPException(400, str(err))
+        except installer.InstallerBusy as err:
+            raise HTTPException(409, str(err))
+        except LookupError as err:
+            raise HTTPException(404, str(err))
+
+    @privileged.get("/plugins/jobs/{job_id}")
+    def api_job(job_id: str, since: int = 0) -> dict[str, Any]:
+        job = installer.INSTALLER.get(job_id)
+        if job is None:
+            raise HTTPException(404, "there is no job with that id")
+        return job.as_dict(since=max(0, since))
+
+    @privileged.get("/plugins/jobs")
+    def api_jobs() -> dict[str, Any]:
+        current = installer.INSTALLER.current()
+        return {"current": current.as_dict(since=10 ** 9) if current else None,
+                "recent": installer.INSTALLER.recent()}
+
+    # ── personas ─────────────────────────────────────────────────────────────
+    @api.get("/personas")
+    def api_personas() -> dict[str, Any]:
+        return {"personas": personas.list_personas(),
+                "solvers": personas.available_solvers(),
+                "memory_plugins": personas.available_memory_plugins(),
+                "path": str(personas.personas_root())}
+
+    @api.get("/personas/{persona_id}")
+    def api_persona_get(persona_id: str) -> dict[str, Any]:
+        try:
+            data = personas.read_persona(persona_id)
+        except UnsafeIdentifier as err:
+            raise HTTPException(400, str(err))
+        except LookupError as err:
+            raise HTTPException(404, str(err))
+        except personas.PersonaError as err:
+            raise HTTPException(400, str(err))
+        return {"persona_id": persona_id, "persona": data,
+                "missing_solvers": personas.missing_solvers(data)}
+
+    @api.put("/personas/{persona_id}")
+    def api_persona_put(persona_id: str, body: PersonaBody) -> dict[str, Any]:
+        try:
+            return personas.write_persona(persona_id, body.persona)
+        except UnsafeIdentifier as err:
+            raise HTTPException(400, str(err))
+        except personas.PersonaError as err:
+            raise HTTPException(400, str(err))
+
+    @api.delete("/personas/{persona_id}")
+    def api_persona_delete(persona_id: str) -> dict[str, Any]:
+        try:
+            return personas.delete_persona(persona_id)
+        except UnsafeIdentifier as err:
+            raise HTTPException(400, str(err))
+        except LookupError as err:
+            raise HTTPException(404, str(err))
+
+    @api.post("/personas/{persona_id}/try")
+    def api_persona_try(persona_id: str, body: PersonaTestBody) -> dict[str, Any]:
+        try:
+            return personas.try_persona(persona_id, body.question)
+        except UnsafeIdentifier as err:
+            raise HTTPException(400, str(err))
+        except LookupError as err:
+            raise HTTPException(404, str(err))
+        except personas.PersonaError as err:
+            raise HTTPException(400, str(err))
+
+    # ── resource translation ─────────────────────────────────────────────────
+    @api.get("/translate/skills")
+    def api_tr_skills() -> dict[str, Any]:
+        return {"skills": translate.list_skills(),
+                "plugins": translate.translation_plugins(),
+                "root": str(translate.user_resources_root())}
+
+    @api.get("/translate/{skill_id}/languages")
+    def api_tr_langs(skill_id: str) -> dict[str, Any]:
+        try:
+            return {"languages": translate.source_languages(skill_id)}
+        except UnsafeIdentifier as err:
+            raise HTTPException(400, str(err))
+
+    @api.get("/translate/{skill_id}/{lang}/files")
+    def api_tr_files(skill_id: str, lang: str) -> dict[str, Any]:
+        try:
+            return {"files": translate.list_resources(skill_id, lang)}
+        except (UnsafeIdentifier, translate.TranslateError) as err:
+            raise HTTPException(400, str(err))
+
+    @api.get("/translate/{skill_id}/{lang}/file/{file_name}")
+    def api_tr_file(skill_id: str, lang: str, file_name: str) -> dict[str, Any]:
+        try:
+            return {"source": translate.read_source(skill_id, lang, file_name),
+                    "override": translate.read_override(skill_id, lang, file_name)}
+        except (UnsafeIdentifier, translate.TranslateError) as err:
+            raise HTTPException(400, str(err))
+        except LookupError as err:
+            raise HTTPException(404, str(err))
+
+    @api.post("/translate/{skill_id}/{lang}/machine")
+    def api_tr_machine(skill_id: str, lang: str,
+                       body: TranslateBody) -> dict[str, Any]:
+        try:
+            translate.validate_skill_id(skill_id)
+            translate.validate_lang(lang)
+            return translate.machine_translate(body.lines, body.source, body.target,
+                                               body.plugin)
+        except (UnsafeIdentifier, translate.TranslateError) as err:
+            raise HTTPException(400, str(err))
+
+    @api.put("/translate/{skill_id}/{lang}/file/{file_name}")
+    def api_tr_put(skill_id: str, lang: str, file_name: str,
+                   body: OverrideBody) -> dict[str, Any]:
+        try:
+            return translate.write_override(skill_id, lang, file_name, body.lines)
+        except (UnsafeIdentifier, translate.TranslateError) as err:
+            raise HTTPException(400, str(err))
+
+    @api.delete("/translate/{skill_id}/{lang}/file/{file_name}")
+    def api_tr_delete(skill_id: str, lang: str, file_name: str) -> dict[str, Any]:
+        try:
+            return translate.delete_override(skill_id, lang, file_name)
+        except (UnsafeIdentifier, translate.TranslateError) as err:
+            raise HTTPException(400, str(err))
+        except LookupError as err:
+            raise HTTPException(404, str(err))
+
     # ── about ────────────────────────────────────────────────────────────────
     @api.get("/about")
     def api_about(request: Request) -> dict[str, Any]:
@@ -394,6 +618,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     app.include_router(public)
     app.include_router(pages)
     app.include_router(api)
+    app.include_router(privileged)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
