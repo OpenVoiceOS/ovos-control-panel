@@ -23,25 +23,25 @@
   <a href="/about" data-i18n="nav.about">About</a>
 </nav>
 <main id="main" tabindex="-1">
-  <h2>Recommended for your language</h2>
-  <p class="hint">These come from the list that OpenVoiceOS ships for your language.</p>
-  <div class="card" id="recommended">Loading…</div>
+  <h2 data-i18n="plugins.recommended.title">Recommended for your language</h2>
+  <p class="hint" data-i18n="plugins.recommended.hint">These come from the list that OpenVoiceOS ships for your language.</p>
+  <div class="card" id="recommended" data-i18n="plugins.loading">Loading…</div>
 
-  <h2>Find a plugin</h2>
+  <h2 data-i18n="plugins.find.title">Find a plugin</h2>
   <div class="card">
-    <label>Search<input id="q" placeholder="for example: piper, vosk, wikipedia"></label>
-    <label>Kind<select id="kind"><option value="">Any</option></select></label>
+    <label data-i18n="plugins.search.label">Search<input id="q" placeholder="for example: piper, vosk, wikipedia" data-i18n-attr="placeholder:plugins.search.placeholder"></label>
+    <label data-i18n="plugins.kind.label">Kind<select id="kind"><option value="" data-i18n="plugins.kind.any">Any</option></select></label>
     <div class="row">
-      <button id="go">Search</button>
-      <button class="secondary" id="refresh">Update the list from PyPI</button>
+      <button id="go" data-i18n="plugins.search.button">Search</button>
+      <button class="secondary" id="refresh" data-i18n="plugins.refresh.button">Update the list from PyPI</button>
     </div>
     <p class="hint" id="cacheinfo"></p>
   </div>
   <div id="results"></div>
 
-  <h2>Job</h2>
-  <p class="hint">Only one install or removal runs at a time.</p>
-  <div class="card"><pre id="joblog" style="overflow-x:auto;white-space:pre-wrap">No job has run yet.</pre></div>
+  <h2 data-i18n="plugins.job.title">Job</h2>
+  <p class="hint" data-i18n="plugins.job.hint">Only one install or removal runs at a time.</p>
+  <div class="card"><pre id="joblog" style="overflow-x:auto;white-space:pre-wrap" data-i18n="plugins.job.nojob">No job has run yet.</pre></div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
 </main>
 <script>
@@ -50,20 +50,20 @@ OvosWebUI.ready(function () {
   var poll = null;
 
   function age(seconds) {
-    if (seconds === null || seconds === undefined) { return "never"; }
+    if (seconds === null || seconds === undefined) { return OvosWebUI.t("plugins.age.never", "never"); }
     var h = Math.floor(seconds / 3600);
-    if (h < 1) { return Math.floor(seconds / 60) + " minutes ago"; }
-    if (h < 48) { return h + " hours ago"; }
-    return Math.floor(h / 24) + " days ago";
+    if (h < 1) { return Math.floor(seconds / 60) + " " + OvosWebUI.t("plugins.age.minutesAgo", "minutes ago"); }
+    if (h < 48) { return h + " " + OvosWebUI.t("plugins.age.hoursAgo", "hours ago"); }
+    return Math.floor(h / 24) + " " + OvosWebUI.t("plugins.age.daysAgo", "days ago");
   }
 
   function card(r) {
     var state = r.installed
-      ? '<span class="badge ready">installed ' + esc(r.version || "") + "</span>"
-      : '<span class="badge">available</span>';
+      ? '<span class="badge ready">' + OvosWebUI.t("plugins.badge.installed", "installed") + " " + esc(r.version || "") + "</span>"
+      : '<span class="badge">' + OvosWebUI.t("plugins.badge.available", "available") + "</span>";
     var button = r.installed
-      ? '<button class="secondary" data-remove="' + esc(r.name) + '">Remove</button>'
-      : '<button data-add="' + esc(r.name) + '">Install</button>';
+      ? '<button class="secondary" data-remove="' + esc(r.name) + '">' + OvosWebUI.t("plugins.button.remove", "Remove") + '</button>'
+      : '<button data-add="' + esc(r.name) + '">' + OvosWebUI.t("plugins.button.install", "Install") + '</button>';
     return '<div class="card"><strong>' + esc(r.name) + "</strong> " + state
       + '<p class="hint">' + esc(r.kind) + "</p>"
       + '<div class="row">' + button + "</div></div>";
@@ -79,7 +79,7 @@ OvosWebUI.ready(function () {
   }
 
   function search(refresh) {
-    el("results").innerHTML = '<div class="card">Searching…</div>';
+    el("results").innerHTML = '<div class="card">' + OvosWebUI.t("plugins.searching", "Searching…") + '</div>';
     var url = "/api/plugins/search?q=" + encodeURIComponent(el("q").value)
       + "&kind=" + encodeURIComponent(el("kind").value)
       + (refresh ? "&refresh=true" : "");
@@ -90,20 +90,20 @@ OvosWebUI.ready(function () {
         el("kind").dataset.filled = "1";
       }
       el("cacheinfo").textContent = r.offline
-        ? "PyPI could not be reached, so only the plugins already installed are listed."
-        : "List updated " + age(r.cache_age) + ". " + r.total + " plugin(s) match."
-          + (r.stale ? " PyPI could not be reached, so this list may be old." : "");
+        ? OvosWebUI.t("plugins.offline", "PyPI could not be reached, so only the plugins already installed are listed.")
+        : OvosWebUI.t("plugins.listUpdated", "List updated") + " " + age(r.cache_age) + ". " + r.total + " " + OvosWebUI.t("plugins.pluginsMatch", "plugin(s) match.")
+          + (r.stale ? " " + OvosWebUI.t("plugins.stale", "PyPI could not be reached, so this list may be old.") : "");
       el("results").innerHTML = r.results.length
         ? r.results.map(card).join("")
-        : '<div class="card">Nothing matched.</div>';
+        : '<div class="card">' + OvosWebUI.t("plugins.nothingMatched", "Nothing matched.") + '</div>';
       bind();
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   }
 
   function run(action, name) {
     var q = action === "install"
-      ? "Install " + name + " on this device?"
-      : "Remove " + name + " from this device?";
+      ? OvosWebUI.t("plugins.confirm.install", "Install") + " " + name + " " + OvosWebUI.t("plugins.confirm.installSuffix", "on this device?")
+      : OvosWebUI.t("plugins.confirm.remove", "Remove") + " " + name + " " + OvosWebUI.t("plugins.confirm.removeSuffix", "from this device?");
     if (!OvosWebUI.confirmed(q)) { return; }
     api("/api/plugins/" + action, {
       method: "POST",
@@ -123,8 +123,8 @@ OvosWebUI.ready(function () {
         poll = setTimeout(function () { watch(id, job.next); }, 1000);
       } else {
         OvosWebUI.say("msg", job.state === "done"
-          ? "Finished. Restart the OVOS services to load the change."
-          : "The job failed. Read the output above.", job.state !== "done");
+          ? OvosWebUI.t("plugins.job.finished", "Finished. Restart the OVOS services to load the change.")
+          : OvosWebUI.t("plugins.job.failed", "The job failed. Read the output above."), job.state !== "done");
         search(false);
       }
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
@@ -136,7 +136,7 @@ OvosWebUI.ready(function () {
 
   api("/api/plugins/recommended").then(function (r) {
     if (!r.plugins.length) {
-      el("recommended").textContent = "There is no recommendation for " + r.lang + ".";
+      el("recommended").textContent = OvosWebUI.t("plugins.noRecommendation", "There is no recommendation for") + " " + r.lang + ".";
       return;
     }
     el("recommended").innerHTML = "<ul class='plain'>" + r.plugins.map(function (p) {

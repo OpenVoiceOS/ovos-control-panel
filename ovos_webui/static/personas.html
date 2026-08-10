@@ -23,48 +23,48 @@
   <a href="/about" data-i18n="nav.about">About</a>
 </nav>
 <main id="main" tabindex="-1">
-  <p class="hint">A persona decides who answers your questions. It is a list of
+  <p class="hint" data-i18n="personas.intro">A persona decides who answers your questions. It is a list of
     solvers, tried in order, until one of them can answer.</p>
 
   <div class="card">
-    <label>Persona<select id="pick"></select></label>
+    <label data-i18n="personas.pick.label">Persona<select id="pick"></select></label>
     <div class="row">
-      <button class="secondary" id="new">Make a new persona</button>
-      <button class="secondary" id="delete">Delete this persona</button>
+      <button class="secondary" id="new" data-i18n="personas.new.button">Make a new persona</button>
+      <button class="secondary" id="delete" data-i18n="personas.delete.button">Delete this persona</button>
     </div>
   </div>
 
   <div id="editor" hidden>
-    <h2>Name</h2>
+    <h2 data-i18n="personas.name.title">Name</h2>
     <div class="card">
-      <label>File name <small>letters, digits, dot, dash and underscore</small>
+      <label data-i18n="personas.filename.label">File name <small data-i18n="personas.filename.hint">letters, digits, dot, dash and underscore</small>
         <input id="pid"></label>
-      <label>Shown name<input id="pname"></label>
-      <label>Catch phrase <small>optional</small><input id="phrase"></label>
-      <label>Memory<select id="memory"></select></label>
+      <label data-i18n="personas.shownname.label">Shown name<input id="pname"></label>
+      <label data-i18n="personas.catchphrase.label">Catch phrase <small data-i18n="personas.catchphrase.hint">optional</small><input id="phrase"></label>
+      <label data-i18n="personas.memory.label">Memory<select id="memory"></select></label>
     </div>
 
-    <h2>Solvers, in order</h2>
-    <p class="hint">The first solver that can answer wins. Put the fast, certain
+    <h2 data-i18n="personas.solvers.title">Solvers, in order</h2>
+    <p class="hint" data-i18n="personas.solvers.hint">The first solver that can answer wins. Put the fast, certain
       ones first and a general one last.</p>
     <div class="card" id="chosen"></div>
     <div class="card">
-      <label>Add a solver<select id="add"></select></label>
+      <label data-i18n="personas.addsolver.label">Add a solver<select id="add"></select></label>
     </div>
 
-    <h2>Solver settings</h2>
-    <p class="hint">Only fill these in if a solver needs a key or a model name.</p>
-    <textarea id="raw" spellcheck="false" aria-label="persona JSON"></textarea>
+    <h2 data-i18n="personas.solversettings.title">Solver settings</h2>
+    <p class="hint" data-i18n="personas.solversettings.hint">Only fill these in if a solver needs a key or a model name.</p>
+    <textarea id="raw" spellcheck="false" aria-label="persona JSON" data-i18n-attr="aria-label:personas.raw.arialabel"></textarea>
 
     <div class="row">
-      <button id="save">Save</button>
-      <button class="secondary" id="reload">Undo my edits</button>
+      <button id="save" data-i18n="personas.save.button">Save</button>
+      <button class="secondary" id="reload" data-i18n="personas.undo.button">Undo my edits</button>
     </div>
 
-    <h2>Try it</h2>
+    <h2 data-i18n="personas.tryit.title">Try it</h2>
     <div class="card">
-      <label>Ask something<input id="question" placeholder="what is the capital of Portugal?"></label>
-      <div class="row"><button class="secondary" id="try">Ask</button></div>
+      <label data-i18n="personas.ask.label">Ask something<input id="question" placeholder="what is the capital of Portugal?" data-i18n-attr="placeholder:personas.ask.placeholder"></label>
+      <div class="row"><button class="secondary" id="try" data-i18n="personas.ask.button">Ask</button></div>
       <p class="hint" id="answer"></p>
     </div>
   </div>
@@ -77,15 +77,15 @@ OvosWebUI.ready(function () {
 
   function renderChosen() {
     if (!chosen.length) {
-      el("chosen").innerHTML = '<p class="hint">No solver yet. A persona needs at least one.</p>';
+      el("chosen").innerHTML = '<p class="hint">' + OvosWebUI.t("personas.chosen.none", "No solver yet. A persona needs at least one.") + '</p>';
       return;
     }
     el("chosen").innerHTML = "<ul class='plain'>" + chosen.map(function (name, i) {
       return "<li><strong>" + (i + 1) + ".</strong> <code>" + esc(name) + "</code>"
         + '<div class="row">'
-        + '<button class="secondary" data-up="' + i + '" ' + (i === 0 ? "disabled" : "") + ">Up</button>"
-        + '<button class="secondary" data-down="' + i + '" ' + (i === chosen.length - 1 ? "disabled" : "") + ">Down</button>"
-        + '<button class="secondary" data-rm="' + i + '">Remove</button></div></li>';
+        + '<button class="secondary" data-up="' + i + '" ' + (i === 0 ? "disabled" : "") + ">" + OvosWebUI.t("personas.chosen.up", "Up") + "</button>"
+        + '<button class="secondary" data-down="' + i + '" ' + (i === chosen.length - 1 ? "disabled" : "") + ">" + OvosWebUI.t("personas.chosen.down", "Down") + "</button>"
+        + '<button class="secondary" data-rm="' + i + '">' + OvosWebUI.t("personas.chosen.remove", "Remove") + '</button></div></li>';
     }).join("") + "</ul>";
     el("chosen").querySelectorAll("[data-up]").forEach(function (b) {
       b.addEventListener("click", function () {
@@ -133,8 +133,8 @@ OvosWebUI.ready(function () {
     el("editor").hidden = false;
     el("answer").textContent = "";
     if (missing && missing.length) {
-      OvosWebUI.say("msg", "These solvers are not installed yet: " + missing.join(", ")
-        + ". Install them on the Plugins page.", true);
+      OvosWebUI.say("msg", OvosWebUI.t("personas.missingSolvers", "These solvers are not installed yet:") + " " + missing.join(", ")
+        + ". " + OvosWebUI.t("personas.installOnPlugins", "Install them on the Plugins page."), true);
     }
   }
 
@@ -147,20 +147,20 @@ OvosWebUI.ready(function () {
   function refresh(select) {
     return api("/api/personas").then(function (r) {
       solvers = r.solvers; memories = r.memory_plugins;
-      el("add").innerHTML = '<option value="">Choose a solver…</option>'
+      el("add").innerHTML = '<option value="">' + OvosWebUI.t("personas.chooseSolver", "Choose a solver…") + '</option>'
         + solvers.map(function (s) {
             return '<option value="' + esc(s.name) + '">' + esc(s.name) + "</option>";
           }).join("");
-      el("memory").innerHTML = '<option value="">No memory</option>'
+      el("memory").innerHTML = '<option value="">' + OvosWebUI.t("personas.noMemory", "No memory") + '</option>'
         + memories.map(function (m) { return '<option value="' + esc(m) + '">' + esc(m) + "</option>"; }).join("");
-      el("pick").innerHTML = '<option value="">Choose a persona…</option>'
+      el("pick").innerHTML = '<option value="">' + OvosWebUI.t("personas.choosePersona", "Choose a persona…") + '</option>'
         + r.personas.map(function (p) {
             return '<option value="' + esc(p.persona_id) + '">' + esc(p.name)
-              + (p.broken ? " (broken file)" : "") + "</option>";
+              + (p.broken ? " " + OvosWebUI.t("personas.brokenFile", "(broken file)") : "") + "</option>";
           }).join("");
       if (!solvers.length) {
-        OvosWebUI.say("msg", "No solver plugin is installed. Install one on the "
-          + "Plugins page first — a persona needs at least one solver.", true);
+        OvosWebUI.say("msg", OvosWebUI.t("personas.noSolverInstalled", "No solver plugin is installed. Install one on the")
+          + " " + OvosWebUI.t("personas.noSolverInstalled2", "Plugins page first — a persona needs at least one solver."), true);
       }
       if (select) { el("pick").value = select; }
       return r;
@@ -179,7 +179,7 @@ OvosWebUI.ready(function () {
   el("memory").addEventListener("change", syncRaw);
 
   el("new").addEventListener("click", function () {
-    show("my-persona", {name: "My persona", solvers: []}, []);
+    show("my-persona", {name: OvosWebUI.t("personas.newPersona.name", "My persona"), solvers: []}, []);
     el("pick").value = "";
   });
 
@@ -187,29 +187,29 @@ OvosWebUI.ready(function () {
 
   el("save").addEventListener("click", function () {
     var pid = el("pid").value.trim();
-    if (!pid) { OvosWebUI.say("msg", "Give the persona a file name.", true); return; }
+    if (!pid) { OvosWebUI.say("msg", OvosWebUI.t("personas.giveFileName", "Give the persona a file name."), true); return; }
     var data = build();
-    if (!data.solvers.length) { OvosWebUI.say("msg", "Add at least one solver.", true); return; }
-    if (!OvosWebUI.confirmed("Save the persona " + pid + "?")) { return; }
+    if (!data.solvers.length) { OvosWebUI.say("msg", OvosWebUI.t("personas.addAtLeastOne", "Add at least one solver."), true); return; }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("personas.confirm.save", "Save the persona") + " " + pid + "?")) { return; }
     api("/api/personas/" + encodeURIComponent(pid), {
       method: "PUT",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({persona: data})
     }).then(function (r) {
       var extra = r.missing_solvers.length
-        ? " These solvers are not installed yet: " + r.missing_solvers.join(", ") + "."
+        ? " " + OvosWebUI.t("personas.missingSolvers", "These solvers are not installed yet:") + " " + r.missing_solvers.join(", ") + "."
         : "";
-      OvosWebUI.say("msg", "Saved." + extra, r.missing_solvers.length > 0);
+      OvosWebUI.say("msg", OvosWebUI.t("personas.saved", "Saved.") + extra, r.missing_solvers.length > 0);
       refresh(pid).then(function () { load(pid); });
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   });
 
   el("delete").addEventListener("click", function () {
     var pid = el("pick").value;
-    if (!pid) { OvosWebUI.say("msg", "Choose a persona first.", true); return; }
-    if (!OvosWebUI.confirmed("Delete the persona " + pid + "? A backup is kept.")) { return; }
+    if (!pid) { OvosWebUI.say("msg", OvosWebUI.t("personas.chooseFirst", "Choose a persona first."), true); return; }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("personas.confirm.delete", "Delete the persona") + " " + pid + "? " + OvosWebUI.t("personas.confirm.deleteSuffix", "A backup is kept."))) { return; }
     api("/api/personas/" + encodeURIComponent(pid), {method: "DELETE"}).then(function (r) {
-      OvosWebUI.say("msg", "Deleted. Backup: " + (r.backup || "none."));
+      OvosWebUI.say("msg", OvosWebUI.t("personas.deleted", "Deleted. Backup:") + " " + (r.backup || OvosWebUI.t("personas.noneBackup", "none.")));
       el("editor").hidden = true;
       refresh("");
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
@@ -219,13 +219,13 @@ OvosWebUI.ready(function () {
 
   el("try").addEventListener("click", function () {
     if (!current) { return; }
-    el("answer").textContent = "Asking…";
+    el("answer").textContent = OvosWebUI.t("personas.asking", "Asking…");
     api("/api/personas/" + encodeURIComponent(el("pid").value) + "/try", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({question: el("question").value})
     }).then(function (r) {
-      el("answer").textContent = r.skipped ? "Not tried here: " + r.reason : r.answer;
+      el("answer").textContent = r.skipped ? OvosWebUI.t("personas.notTried", "Not tried here:") + " " + r.reason : r.answer;
     }).catch(function (e) { el("answer").textContent = e.message; });
   });
 

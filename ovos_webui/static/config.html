@@ -25,37 +25,37 @@
 </nav>
 <main id="main" tabindex="-1">
   <div class="tabs">
-    <button id="tab-simple" aria-pressed="true">Simple</button>
-    <button id="tab-raw" aria-pressed="false">Advanced</button>
+    <button id="tab-simple" aria-pressed="true" data-i18n="config.tab.simple">Simple</button>
+    <button id="tab-raw" aria-pressed="false" data-i18n="config.tab.advanced">Advanced</button>
   </div>
 
   <section id="simple">
-    <h2>Common settings</h2>
-    <p class="hint">Leave a box empty to use the standard value again.
+    <h2 data-i18n="config.simple.title">Common settings</h2>
+    <p class="hint" data-i18n="config.simple.hint">Leave a box empty to use the standard value again.
       The device reads the file as soon as you save it, so you do not have to
       restart it. A service that is already running keeps its old value only if
       it does not listen for configuration changes.</p>
-    <div class="card" id="fields">Loading…</div>
+    <div class="card" id="fields" data-i18n="config.loading">Loading…</div>
     <div class="row">
-      <button id="save-simple">Save</button>
-      <button class="secondary" id="reload-simple">Undo my edits</button>
+      <button id="save-simple" data-i18n="config.save">Save</button>
+      <button class="secondary" id="reload-simple" data-i18n="config.undo">Undo my edits</button>
     </div>
     <div class="msg" id="msg-simple" role="status" aria-live="polite" hidden></div>
   </section>
 
   <section id="raw" hidden>
-    <h2>Your configuration file</h2>
-    <p class="hint">This is your own layer of <code id="path"></code>.
-      It sits on top of the standard settings, so it only holds what you changed.
-      A backup is made every time you save.</p>
+    <h2 data-i18n="config.raw.title">Your configuration file</h2>
+    <p class="hint"><span data-i18n="config.raw.hint.pre">This is your own layer of</span> <code id="path"></code>.
+      <span data-i18n="config.raw.hint.post">It sits on top of the standard settings, so it only holds what you changed.
+      A backup is made every time you save.</span></p>
     <div class="tabs">
-      <button id="fmt-json" aria-pressed="true">JSON</button>
-      <button id="fmt-yaml" aria-pressed="false">YAML</button>
+      <button id="fmt-json" aria-pressed="true" data-i18n="config.fmt.json">JSON</button>
+      <button id="fmt-yaml" aria-pressed="false" data-i18n="config.fmt.yaml">YAML</button>
     </div>
-    <textarea id="text" spellcheck="false" aria-label="configuration text"></textarea>
+    <textarea id="text" spellcheck="false" aria-label="configuration text" data-i18n-attr="aria-label:config.raw.aria"></textarea>
     <div class="row">
-      <button id="save-raw">Save</button>
-      <button class="secondary" id="reload-raw">Undo my edits</button>
+      <button id="save-raw" data-i18n="config.save">Save</button>
+      <button class="secondary" id="reload-raw" data-i18n="config.undo">Undo my edits</button>
     </div>
     <div class="msg" id="msg-raw" role="status" aria-live="polite" hidden></div>
   </section>
@@ -77,12 +77,12 @@ OvosWebUI.ready(function () {
   function control(f) {
     var value = f.value === null || f.value === undefined ? "" : f.value;
     if (f.kind === "choice" || f.kind === "plugin" || f.kind === "hotword") {
-      var opts = ['<option value="">Use the standard value</option>'];
+      var opts = ['<option value="">' + esc(OvosWebUI.t("config.field.default", "Use the standard value")) + '</option>'];
       (f.options || []).forEach(function (o) {
         opts.push('<option value="' + esc(o) + '"' + (o === value ? " selected" : "") + ">" + esc(o) + "</option>");
       });
       if (value && (f.options || []).indexOf(value) === -1) {
-        opts.push('<option value="' + esc(value) + '" selected>' + esc(value) + " (not installed)</option>");
+        opts.push('<option value="' + esc(value) + '" selected>' + esc(value) + " " + esc(OvosWebUI.t("config.field.notInstalled", "(not installed)")) + "</option>");
       }
       return '<select name="' + esc(f.name) + '">' + opts.join("") + "</select>";
     }
@@ -92,16 +92,16 @@ OvosWebUI.ready(function () {
   function loadSimple() {
     api("/api/config/quick").then(function (r) {
       el("fields").innerHTML = r.fields.map(function (f) {
-        var now = f.effective === null || f.effective === undefined ? "not set" : f.effective;
+        var now = f.effective === null || f.effective === undefined ? OvosWebUI.t("config.field.notSet", "not set") : f.effective;
         return "<label>" + esc(f.label)
-          + "<small>In use now: " + esc(now) + "</small>"
+          + "<small>" + esc(OvosWebUI.t("config.field.inUse", "In use now:")) + " " + esc(now) + "</small>"
           + control(f) + "</label>";
       }).join("");
     }).catch(function (e) { OvosWebUI.say("msg-simple", e.message, true); });
   }
 
   el("save-simple").addEventListener("click", function () {
-    if (!OvosWebUI.confirmed("Save these settings? The old file is kept as a backup.")) { return; }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("config.confirm.saveSimple", "Save these settings? The old file is kept as a backup."))) { return; }
     var values = {};
     el("fields").querySelectorAll("input,select").forEach(function (i) { values[i.name] = i.value; });
     api("/api/config/quick", {
@@ -116,10 +116,10 @@ OvosWebUI.ready(function () {
   el("reload-simple").addEventListener("click", loadSimple);
 
   function savedMessage(r) {
-    var base = "Saved. Backup: " + (r.backup || "none was needed.");
+    var base = OvosWebUI.t("config.saved", "Saved. Backup:") + " " + (r.backup || OvosWebUI.t("config.saved.noBackup", "none was needed."));
     if (r.applied === false) {
-      return base + " The running services could not be told, so this is not "
-        + "live yet; it takes effect when the device is next restarted.";
+      return base + " " + OvosWebUI.t("config.saved.notLive", "The running services could not be told, so this is not "
+        + "live yet; it takes effect when the device is next restarted.");
     }
     return base;
   }
@@ -141,7 +141,7 @@ OvosWebUI.ready(function () {
   el("reload-raw").addEventListener("click", loadRaw);
 
   el("save-raw").addEventListener("click", function () {
-    if (!OvosWebUI.confirmed("Replace your configuration with this text? The old file is kept as a backup.")) { return; }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("config.confirm.saveRaw", "Replace your configuration with this text? The old file is kept as a backup."))) { return; }
     api("/api/config", {
       method: "PUT",
       headers: {"Content-Type": "application/json"},

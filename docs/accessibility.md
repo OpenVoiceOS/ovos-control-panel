@@ -26,6 +26,8 @@ right-to-left language, flips the whole layout to read right-to-left.
 
 ![The dashboard in Arabic, right-to-left](images/dashboard-rtl-arabic.png)
 
+![The settings page in Arabic, right-to-left](images/settings-rtl-arabic.png)
+
 Translations live in `ovos_webui/static/i18n/`, one file per language, keyed by
 the same short keys the pages carry. English is written into the pages
 themselves and is the fallback, so a missing translation shows English rather

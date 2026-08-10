@@ -24,20 +24,20 @@
   <a href="/about" data-i18n="nav.about">About</a>
 </nav>
 <main id="main" tabindex="-1">
-  <div class="card" id="version">Loading…</div>
-  <h2>Links</h2>
+  <div class="card" id="version" data-i18n="about.loading">Loading…</div>
+  <h2 data-i18n="about.links_heading">Links</h2>
   <div class="card"><ul class="plain" id="links"></ul></div>
-  <h2>Installed packages</h2>
-  <p class="hint">Give these version numbers when you report a problem.</p>
+  <h2 data-i18n="about.packages_heading">Installed packages</h2>
+  <p class="hint" data-i18n="about.packages_hint">Give these version numbers when you report a problem.</p>
   <div class="card"><ul class="plain" id="packages"></ul></div>
-  <h2>Credits</h2>
+  <h2 data-i18n="about.credits_heading">Credits</h2>
   <div class="card">
-    <p>Developed by <a href="https://tigregotico.pt">TigreGotico</a> for
+    <p><span data-i18n="about.developed_by">Developed by </span><a href="https://tigregotico.pt">TigreGotico</a><span data-i18n="about.developed_for"> for</span>
       <a href="https://openvoiceos.org">OpenVoiceOS</a>.</p>
-    <p>Funded by the <a href="https://nlnet.nl/project/OpenVoiceOS">NGI0 Commons Fund</a> /
-      <a href="https://nlnet.nl">NLnet</a> under grant agreement No
-      <a href="https://cordis.europa.eu/project/id/101135429">101135429</a>, through the
-      European Commission's <a href="https://ngi.eu">Next Generation Internet</a> programme.</p>
+    <p><span data-i18n="about.funded_by">Funded by the </span><a href="https://nlnet.nl/project/OpenVoiceOS">NGI0 Commons Fund</a><span data-i18n="about.funded_sep"> /
+      </span><a href="https://nlnet.nl">NLnet</a><span data-i18n="about.funded_grant"> under grant agreement No
+      </span><a href="https://cordis.europa.eu/project/id/101135429">101135429</a><span data-i18n="about.funded_programme">, through the
+      European Commission's </span><a href="https://ngi.eu">Next Generation Internet</a><span data-i18n="about.funded_end"> programme.</span></p>
   </div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
 </main>
@@ -45,13 +45,13 @@
 OvosWebUI.ready(function () {
   var esc = OvosWebUI.esc, el = OvosWebUI.el;
   OvosWebUI.api("/api/about").then(function (a) {
-    el("version").innerHTML = "<strong>ovos-webui</strong> version " + esc(a.version);
+    el("version").innerHTML = "<strong>ovos-webui</strong> " + esc(OvosWebUI.t("about.version_prefix", "version ")) + esc(a.version);
     el("links").innerHTML = a.links.map(function (l) {
       return '<li><a href="' + esc(l.url) + '">' + esc(l.label) + "</a></li>";
     }).join("");
     el("packages").innerHTML = a.packages.length
       ? a.packages.map(function (p) { return "<li>" + esc(p.name) + " <code>" + esc(p.version) + "</code></li>"; }).join("")
-      : "<li>No OpenVoiceOS package was found.</li>";
+      : "<li>" + esc(OvosWebUI.t("about.no_package", "No OpenVoiceOS package was found.")) + "</li>";
   }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
 });
 </script>

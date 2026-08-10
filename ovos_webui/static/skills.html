@@ -24,16 +24,16 @@
   <a href="/about" data-i18n="nav.about">About</a>
 </nav>
 <main id="main" tabindex="-1">
-  <h2>Installed skills</h2>
-  <p class="hint">Choose a skill to change its settings. A backup is made every time you save.</p>
-  <div class="card"><label for="pick">Skill<select id="pick"></select></label></div>
+  <h2 data-i18n="skills.title">Installed skills</h2>
+  <p class="hint" data-i18n="skills.hint">Choose a skill to change its settings. A backup is made every time you save.</p>
+  <div class="card"><label for="pick"><span data-i18n="skills.pick.label">Skill</span><select id="pick"></select></label></div>
   <div id="editor" hidden>
     <div class="card" id="form"></div>
-    <div class="tabs"><button class="secondary" id="toggle-raw" aria-pressed="false">Edit as JSON</button></div>
-    <textarea id="raw" spellcheck="false" aria-label="settings JSON" hidden></textarea>
+    <div class="tabs"><button class="secondary" id="toggle-raw" aria-pressed="false" data-i18n="skills.editJson">Edit as JSON</button></div>
+    <textarea id="raw" spellcheck="false" aria-label="settings JSON" hidden data-i18n-attr="aria-label:skills.raw.aria"></textarea>
     <div class="row">
-      <button id="save">Save</button>
-      <button class="secondary" id="reload">Undo my edits</button>
+      <button id="save" data-i18n="skills.save">Save</button>
+      <button class="secondary" id="reload" data-i18n="skills.undo">Undo my edits</button>
     </div>
   </div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
@@ -62,8 +62,8 @@ OvosWebUI.ready(function () {
       if (f.type === "checkbox") {
         var on = value === true || value === "true";
         return "<label>" + label + '<select name="' + esc(f.name) + '" data-type="bool">'
-          + '<option value="true"' + (on ? " selected" : "") + ">Yes</option>"
-          + '<option value="false"' + (on ? "" : " selected") + ">No</option></select></label>";
+          + '<option value="true"' + (on ? " selected" : "") + ">" + esc(OvosWebUI.t("skills.yes", "Yes")) + "</option>"
+          + '<option value="false"' + (on ? "" : " selected") + ">" + esc(OvosWebUI.t("skills.no", "No")) + "</option></select></label>";
       }
       var type = f.type === "number" ? "number" : (f.type === "password" ? "password" : "text");
       return "<label>" + label + '<input type="' + type + '" name="' + esc(f.name)
@@ -73,14 +73,14 @@ OvosWebUI.ready(function () {
       return !known[k] && k.indexOf("_") !== 0;
     });
     if (extra.length) {
-      html.push('<p class="hint">Other keys are only editable as JSON: <code>'
+      html.push('<p class="hint">' + esc(OvosWebUI.t("skills.extraKeys", "Other keys are only editable as JSON:")) + ' <code>'
         + esc(extra.join(", ")) + "</code></p>");
     }
     if (!fields.length) {
-      html.push('<p class="hint">This skill does not describe its settings, so edit it as JSON.</p>');
+      html.push('<p class="hint">' + esc(OvosWebUI.t("skills.noMeta", "This skill does not describe its settings, so edit it as JSON.")) + '</p>');
     }
     if (data.generated_meta) {
-      html.push('<p class="hint">The form below was built from the current settings.</p>');
+      html.push('<p class="hint">' + esc(OvosWebUI.t("skills.generatedMeta", "The form below was built from the current settings.")) + '</p>');
     }
     el("form").innerHTML = html.join("");
     el("raw").value = JSON.stringify(data.settings, null, 2);
@@ -97,16 +97,16 @@ OvosWebUI.ready(function () {
     el("raw").hidden = !rawMode;
     el("form").hidden = rawMode;
     el("toggle-raw").setAttribute("aria-pressed", String(rawMode));
-    el("toggle-raw").textContent = rawMode ? "Back to the form" : "Edit as JSON";
+    el("toggle-raw").textContent = rawMode ? OvosWebUI.t("skills.backToForm", "Back to the form") : OvosWebUI.t("skills.editJson", "Edit as JSON");
   });
 
   el("save").addEventListener("click", function () {
     if (!current) { return; }
-    if (!OvosWebUI.confirmed("Save the settings of " + current.skill_id + "?")) { return; }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("skills.confirm.save", "Save the settings of") + " " + current.skill_id + "?")) { return; }
     var settings;
     if (rawMode) {
       try { settings = JSON.parse(el("raw").value); }
-      catch (e) { OvosWebUI.say("msg", "That is not valid JSON: " + e.message, true); return; }
+      catch (e) { OvosWebUI.say("msg", OvosWebUI.t("skills.invalidJson", "That is not valid JSON:") + " " + e.message, true); return; }
     } else {
       settings = JSON.parse(JSON.stringify(current.settings));
       el("form").querySelectorAll("input,select").forEach(function (i) {
@@ -121,7 +121,7 @@ OvosWebUI.ready(function () {
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({settings: settings})
     }).then(function (r) {
-      OvosWebUI.say("msg", "Saved. Backup: " + (r.backup || "none was needed."));
+      OvosWebUI.say("msg", OvosWebUI.t("skills.saved", "Saved. Backup:") + " " + (r.backup || OvosWebUI.t("skills.saved.noBackup", "none was needed.")));
       load(current.skill_id);
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   });
@@ -131,11 +131,11 @@ OvosWebUI.ready(function () {
 
   api("/api/skills").then(function (r) {
     if (!r.skills.length) {
-      el("pick").innerHTML = "<option>No skill has settings yet</option>";
-      OvosWebUI.say("msg", "No skill settings were found on this device.", false);
+      el("pick").innerHTML = "<option>" + esc(OvosWebUI.t("skills.none", "No skill has settings yet")) + "</option>";
+      OvosWebUI.say("msg", OvosWebUI.t("skills.noneFound", "No skill settings were found on this device."), false);
       return;
     }
-    el("pick").innerHTML = '<option value="">Choose a skill…</option>'
+    el("pick").innerHTML = '<option value="">' + esc(OvosWebUI.t("skills.pick.placeholder", "Choose a skill…")) + '</option>'
       + r.skills.map(function (s) { return '<option value="' + esc(s.skill_id) + '">' + esc(s.skill_id) + "</option>"; }).join("");
   }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
 });
