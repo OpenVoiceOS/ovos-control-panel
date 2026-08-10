@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<div class="banner" id="banner" hidden></div>
+<header><h1>Settings</h1></header>
+<nav>
+  <a href="/">Dashboard</a>
+  <a href="/config">Settings</a>
+  <a href="/skills">Skills</a>
+  <a href="/backup">Backup</a>
+  <a href="/about">About</a>
+</nav>
+<main>
+  <div class="tabs">
+    <button id="tab-simple" aria-pressed="true">Simple</button>
+    <button id="tab-raw" aria-pressed="false">Advanced</button>
+  </div>
+
+  <section id="simple">
+    <h2>Common settings</h2>
+    <p class="hint">Leave a box empty to use the standard value again.
+      The device reads the file as soon as you save it. You do not have to restart it.</p>
+    <div class="card" id="fields">Loading…</div>
+    <div class="row">
+      <button id="save-simple">Save</button>
+      <button class="secondary" id="reload-simple">Undo my edits</button>
+    </div>
+    <div class="msg" id="msg-simple" hidden></div>
+  </section>
+
+  <section id="raw" hidden>
+    <h2>Your configuration file</h2>
+    <p class="hint">This is your own layer of <code id="path"></code>.
+      It sits on top of the standard settings, so it only holds what you changed.
+      A backup is made every time you save.</p>
+    <div class="tabs">
+      <button id="fmt-json" aria-pressed="true">JSON</button>
+      <button id="fmt-yaml" aria-pressed="false">YAML</button>
+    </div>
+    <textarea id="text" spellcheck="false" aria-label="configuration text"></textarea>
+    <div class="row">
+      <button id="save-raw">Save</button>
+      <button class="secondary" id="reload-raw">Undo my edits</button>
+    </div>
+    <div class="msg" id="msg-raw" hidden></div>
+  </section>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc;
+  var format = "json";
+
+  function tab(which) {
+    el("simple").hidden = which !== "simple";
+    el("raw").hidden = which !== "raw";
+    el("tab-simple").setAttribute("aria-pressed", String(which === "simple"));
+    el("tab-raw").setAttribute("aria-pressed", String(which === "raw"));
+  }
+  el("tab-simple").addEventListener("click", function () { tab("simple"); });
+  el("tab-raw").addEventListener("click", function () { tab("raw"); loadRaw(); });
+
+  function control(f) {
+    var value = f.value === null || f.value === undefined ? "" : f.value;
+    if (f.kind === "choice" || f.kind === "plugin" || f.kind === "hotword") {
+      var opts = ['<option value="">Use the standard value</option>'];
+      (f.options || []).forEach(function (o) {
+        opts.push('<option value="' + esc(o) + '"' + (o === value ? " selected" : "") + ">" + esc(o) + "</option>");
+      });
+      if (value && (f.options || []).indexOf(value) === -1) {
+        opts.push('<option value="' + esc(value) + '" selected>' + esc(value) + " (not installed)</option>");
+      }
+      return '<select name="' + esc(f.name) + '">' + opts.join("") + "</select>";
+    }
+    return '<input name="' + esc(f.name) + '" value="' + esc(value) + '">';
+  }
+
+  function loadSimple() {
+    api("/api/config/quick").then(function (r) {
+      el("fields").innerHTML = r.fields.map(function (f) {
+        var now = f.effective === null || f.effective === undefined ? "not set" : f.effective;
+        return "<label>" + esc(f.label)
+          + "<small>In use now: " + esc(now) + "</small>"
+          + control(f) + "</label>";
+      }).join("");
+    }).catch(function (e) { OvosWebUI.say("msg-simple", e.message, true); });
+  }
+
+  el("save-simple").addEventListener("click", function () {
+    if (!OvosWebUI.confirmed("Save these settings? The old file is kept as a backup.")) { return; }
+    var values = {};
+    el("fields").querySelectorAll("input,select").forEach(function (i) { values[i.name] = i.value; });
+    api("/api/config/quick", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({values: values})
+    }).then(function (r) {
+      OvosWebUI.say("msg-simple", "Saved. Backup: " + (r.backup || "none was needed."));
+      loadSimple();
+    }).catch(function (e) { OvosWebUI.say("msg-simple", e.message, true); });
+  });
+  el("reload-simple").addEventListener("click", loadSimple);
+
+  function loadRaw() {
+    api("/api/config?format=" + format).then(function (r) {
+      el("text").value = r.text;
+      el("path").textContent = r.path;
+    }).catch(function (e) { OvosWebUI.say("msg-raw", e.message, true); });
+  }
+  function setFormat(f) {
+    format = f;
+    el("fmt-json").setAttribute("aria-pressed", String(f === "json"));
+    el("fmt-yaml").setAttribute("aria-pressed", String(f === "yaml"));
+    loadRaw();
+  }
+  el("fmt-json").addEventListener("click", function () { setFormat("json"); });
+  el("fmt-yaml").addEventListener("click", function () { setFormat("yaml"); });
+  el("reload-raw").addEventListener("click", loadRaw);
+
+  el("save-raw").addEventListener("click", function () {
+    if (!OvosWebUI.confirmed("Replace your configuration with this text? The old file is kept as a backup.")) { return; }
+    api("/api/config", {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({text: el("text").value, format: format})
+    }).then(function (r) {
+      OvosWebUI.say("msg-raw", "Saved. Backup: " + (r.backup || "none was needed."));
+      loadSimple();
+    }).catch(function (e) { OvosWebUI.say("msg-raw", e.message, true); });
+  });
+
+  loadSimple();
+});
+</script>
+</body>
+</html>

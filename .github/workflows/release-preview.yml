@@ -1,0 +1,13 @@
+name: Release Preview
+
+on:
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:
+
+jobs:
+  release_preview:
+    uses: OpenVoiceOS/gh-automations/.github/workflows/release-preview.yml@82252c363b239fe5c60dc0ae2a4e81721d4cabef
+    with:
+      package_name: 'ovos_webui'
+      version_file: 'ovos_webui/version.py'

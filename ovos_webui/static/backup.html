@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backup — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<div class="banner" id="banner" hidden></div>
+<header><h1>Backup and restore</h1></header>
+<nav>
+  <a href="/">Dashboard</a>
+  <a href="/config">Settings</a>
+  <a href="/skills">Skills</a>
+  <a href="/backup">Backup</a>
+  <a href="/about">About</a>
+</nav>
+<main>
+  <h2>Save a copy</h2>
+  <p class="hint">The file holds your configuration and the settings of every skill.
+    Keep it somewhere safe.</p>
+  <div class="row"><button id="download">Download a backup</button></div>
+
+  <h2>Put a copy back</h2>
+  <p class="hint">This replaces your configuration and your skill settings with the ones
+    in the file. The current files are kept as backups on the device, so you can undo it.</p>
+  <div class="card">
+    <label for="file">Backup file<input type="file" id="file" accept=".gz,.tgz,.tar.gz,application/gzip"></label>
+  </div>
+  <div class="row"><button id="restore">Restore this file</button></div>
+  <div class="msg" id="msg" hidden></div>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el;
+
+  el("download").addEventListener("click", function () {
+    var url = "/api/backup" + (OvosWebUI.token ? "?token=" + encodeURIComponent(OvosWebUI.token) : "");
+    window.location.href = url;
+  });
+
+  el("restore").addEventListener("click", function () {
+    var file = el("file").files[0];
+    if (!file) { OvosWebUI.say("msg", "Choose a backup file first.", true); return; }
+    if (!OvosWebUI.confirmed("Replace the settings on this device with the ones in "
+        + file.name + "? The current files are kept as backups.")) { return; }
+    var form = new FormData();
+    form.append("file", file);
+    api("/api/restore", {method: "POST", body: form}).then(function (r) {
+      OvosWebUI.say("msg", "Restored " + r.restored.length + " file(s).");
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  });
+});
+</script>
+</body>
+</html>
