@@ -2,6 +2,8 @@
 
 The dashboard answers one question: does this device work?
 
+![The dashboard on a phone, every service ready](images/dashboard.png)
+
 ## What it shows
 
 The first card shows the message bus. Every OVOS service talks through the bus.

@@ -6,6 +6,8 @@ if the device works, it lets you change the settings, and it makes backups.
 There is no cloud account and no internet connection. Every file the page needs
 is in the package.
 
+![The dashboard and the settings page on a phone](docs/images/dashboard.png)
+
 ## What you can do
 
 | Page | What it does |

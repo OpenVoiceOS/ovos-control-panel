@@ -2,6 +2,8 @@
 
 The Settings page changes your own layer of `mycroft.conf`.
 
+![The simple settings form on a phone](images/configuration.png)
+
 ## The layers
 
 OVOS reads several configuration files and puts them on top of each other. Your

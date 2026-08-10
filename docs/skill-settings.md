@@ -3,6 +3,8 @@
 Each skill keeps its own settings. The Skills page lists the skills that have a
 settings directory on this device, and lets you change them.
 
+![The skill settings page on a phone](images/skill-settings.png)
+
 ## Where the files are
 
 A skill keeps its settings in:

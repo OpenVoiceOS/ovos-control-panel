@@ -1,5 +1,7 @@
 # Backup and restore
 
+![The backup and restore page on a phone](images/backup-restore.png)
+
 ## What is in a backup
 
 A backup is one `.tar.gz` file with two things:

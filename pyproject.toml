@@ -18,9 +18,11 @@ classifiers = [
 ]
 dependencies = [
     # floors chosen to keep a frozen install off known-vulnerable builds:
-    # fastapi>=0.111 pulls starlette>=0.37 (avoids CVE-2024-47874), and
+    # starlette>=0.40 fixes the multipart buffering DoS CVE-2024-47874 (a
+    # fastapi floor alone is not enough — 0.111 still pins starlette<0.38), and
     # python-multipart>=0.0.18 fixes the form-parser DoS CVE-2024-53981.
-    "fastapi>=0.111.0",
+    "fastapi>=0.115.3",
+    "starlette>=0.40.0",
     "uvicorn[standard]>=0.29.0",
     "python-multipart>=0.0.18",
     "PyYAML>=5.4",

@@ -862,3 +862,43 @@ def test_n8_a_multipart_text_field_named_file_is_a_clean_400(client):
     # so the server parses it as a string, not an upload.
     r = client.post("/api/restore", files={"file": (None, "not a file")})
     assert r.status_code == 400
+
+
+# ── N9: repeated wrong tokens must be slowed down (no lock-out means throttle) ─
+def test_n9_failed_logins_are_throttled_and_reset(token_client, monkeypatch):
+    """Each wrong token in a row waits longer; a correct one resets the wait."""
+    import ovos_webui.service as service
+
+    delays = []
+
+    async def fake_sleep(d):
+        delays.append(d)
+
+    monkeypatch.setattr(service.asyncio, "sleep", fake_sleep)
+
+    for _ in range(4):
+        r = token_client.post("/api/login", json={"token": "wrong-token"})
+        assert r.status_code == 401
+    assert delays == [0.5, 1.0, 1.5, 2.0], delays
+
+    # a correct sign in clears the streak
+    r = token_client.post("/api/login", json={"token": "s3cret-token"})
+    assert r.status_code == 200
+    delays.clear()
+    r = token_client.post("/api/login", json={"token": "wrong-token"})
+    assert r.status_code == 401
+    assert delays == [0.5], delays
+
+
+def test_n9_the_delay_is_capped(token_client, monkeypatch):
+    import ovos_webui.service as service
+
+    delays = []
+
+    async def fake_sleep(d):
+        delays.append(d)
+
+    monkeypatch.setattr(service.asyncio, "sleep", fake_sleep)
+    for _ in range(20):
+        token_client.post("/api/login", json={"token": "nope-nope"})
+    assert max(delays) == 5.0

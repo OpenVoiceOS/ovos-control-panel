@@ -13,6 +13,7 @@ published without them by forgetting an argument.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import mimetypes
 import os
 from contextlib import asynccontextmanager
@@ -179,6 +180,19 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             "warning": policy.warning,
         }
 
+    #: How many wrong tokens in a row we have seen, to slow a guesser down.
+    login_throttle = {"fails": 0}
+    #: The longest a failed sign in ever waits.
+    MAX_LOGIN_DELAY = 5.0
+
+    async def _throttle_after_failed_login(request: Request) -> None:
+        login_throttle["fails"] += 1
+        LOG.warning("ovos-webui: a sign in was refused from "
+                    f"{request.client.host if request.client else '?'} "
+                    f"({login_throttle['fails']} in a row)")
+        delay = min(login_throttle["fails"] * 0.5, MAX_LOGIN_DELAY)
+        await asyncio.sleep(delay)
+
     @public.post("/api/login")
     async def api_login(request: Request, response: Response) -> Any:
         """Exchange a token for a cookie.
@@ -191,10 +205,15 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         if not policy.token:
             return _login_answer(request, from_form, {"ok": True, "auth": False})
         if not policy.matches(supplied):
+            # There is no account lock-out, so slow a guesser down: each wrong
+            # try in a row waits a little longer, up to a few seconds. A single
+            # mistyped token barely notices; a script trying thousands cannot.
+            await _throttle_after_failed_login(request)
             if from_form:
                 return RedirectResponse("/login?bad=1", status_code=303)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                 detail="that token is not right")
+        login_throttle["fails"] = 0
         answer = _login_answer(request, from_form, {"ok": True, "auth": True})
         answer.set_cookie(COOKIE_NAME, supplied, httponly=True,
                           samesite="strict", path="/", max_age=30 * 24 * 3600)

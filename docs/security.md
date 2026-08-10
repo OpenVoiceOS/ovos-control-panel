@@ -3,6 +3,8 @@
 This page changes the configuration of your device. Anyone who can open it can
 change how the device listens and what it says. Treat the address like a key.
 
+![The sign in page](images/login.png)
+
 ## Default
 
 The service binds to `127.0.0.1:8500`, so only a user of the device can reach
@@ -41,7 +43,8 @@ screen.
 ## What is protected
 
 With a token set, every page, every asset and every API call needs a sign in.
-Only four things answer without one, and none of them read or change anything:
+Only these few things answer without one, and none of them read or change
+anything:
 
 - `GET /api/status` — says only whether a token is needed
 - `POST /api/login` and `POST /api/logout`
@@ -98,7 +101,10 @@ A request for any other host name is answered with `400`.
 When you set a token it must be at least eight characters. There is no account
 and no lock-out, so a short token could be guessed over the network; the
 service refuses to start with one that is too short. Use a long random string.
-Every refused sign in is written to the log.
+
+Every refused sign in is written to the log, and each wrong token in a row
+makes the next attempt wait a little longer, up to a few seconds, so a script
+cannot try many tokens quickly. A single mistyped token barely notices.
 
 ## What the service does not do
 
