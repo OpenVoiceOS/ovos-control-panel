@@ -218,7 +218,16 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         """
         signed_in = not policy.token or policy.matches(policy.supplied_token(request))
         if not signed_in:
+            # A stranger is told only whether a token is needed — not the
+            # version, the bind address, or the device language.
             return {"auth": True, "signed_in": False}
+        # The device language drives which language and direction the page uses.
+        # It is only told to a signed-in caller; the sign in page follows the
+        # browser's own language instead.
+        try:
+            lang = configio.read_merged_config().get("lang") or "en-us"
+        except Exception:  # noqa: BLE001 - a broken config must not stop the UI
+            lang = "en-us"
         return {
             "version": __version__,
             "host": policy.host,
@@ -226,6 +235,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             "signed_in": True,
             "insecure": policy.insecure,
             "warning": policy.warning,
+            "lang": lang,
         }
 
     #: How many wrong tokens in a row we have seen, to slow a guesser down.

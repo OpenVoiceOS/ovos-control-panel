@@ -76,7 +76,7 @@ def test_every_page_renders(client, route):
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/html")
     body = r.text
-    assert "<nav>" in body and "app.js" in body
+    assert "<nav" in body and "app.js" in body
 
 
 @pytest.mark.parametrize("route", sorted(PAGES))

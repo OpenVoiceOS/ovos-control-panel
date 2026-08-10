@@ -8,19 +8,20 @@
 <script src="/static/app.js"></script>
 </head>
 <body>
-<div class="banner" id="banner" hidden></div>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
 <header><h1>Translate a skill</h1></header>
-<nav>
-  <a href="/">Dashboard</a>
-  <a href="/config">Settings</a>
-  <a href="/skills">Skills</a>
-  <a href="/plugins">Plugins</a>
-  <a href="/personas">Personas</a>
-  <a href="/translate">Translate</a>
-  <a href="/backup">Backup</a>
-  <a href="/about">About</a>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/config" data-i18n="nav.settings">Settings</a>
+  <a href="/skills" data-i18n="nav.skills">Skills</a>
+  <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
+  <a href="/personas" data-i18n="nav.personas">Personas</a>
+  <a href="/translate" data-i18n="nav.translate">Translate</a>
+  <a href="/backup" data-i18n="nav.backup">Backup</a>
+  <a href="/about" data-i18n="nav.about">About</a>
 </nav>
-<main>
+<main id="main" tabindex="-1">
   <p class="hint">Translate what a skill says and hears into your language.
     Your words are saved beside the skill, not inside it, so a skill update
     cannot lose them.</p>
@@ -48,7 +49,7 @@
       <button class="secondary" id="acceptall">Accept every line</button>
     </div>
   </div>
-  <div class="msg" id="msg" hidden></div>
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
 </main>
 <script>
 OvosWebUI.ready(function () {

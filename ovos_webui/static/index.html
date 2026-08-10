@@ -9,27 +9,28 @@
 <script src="/static/app.js"></script>
 </head>
 <body>
-<div class="banner" id="banner" hidden></div>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
 <header><h1>OpenVoiceOS</h1></header>
-<nav>
-  <a href="/">Dashboard</a>
-  <a href="/config">Settings</a>
-  <a href="/skills">Skills</a>
-  <a href="/plugins">Plugins</a>
-  <a href="/personas">Personas</a>
-  <a href="/translate">Translate</a>
-  <a href="/backup">Backup</a>
-  <a href="/about">About</a>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/config" data-i18n="nav.settings">Settings</a>
+  <a href="/skills" data-i18n="nav.skills">Skills</a>
+  <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
+  <a href="/personas" data-i18n="nav.personas">Personas</a>
+  <a href="/translate" data-i18n="nav.translate">Translate</a>
+  <a href="/backup" data-i18n="nav.backup">Backup</a>
+  <a href="/about" data-i18n="nav.about">About</a>
 </nav>
-<main>
-  <h2>Is the device working?</h2>
-  <p class="hint">This page asks each part of OpenVoiceOS if it is running.</p>
-  <div class="card" id="bus">Checking…</div>
-  <div class="grid" id="services"></div>
-  <div class="row"><button id="refresh">Check again</button></div>
-  <div class="msg" id="msg" hidden></div>
+<main id="main" tabindex="-1">
+  <h2 data-i18n="dash.title">Is the device working?</h2>
+  <p class="hint" data-i18n="dash.intro">This page asks each part of OpenVoiceOS if it is running.</p>
+  <div class="card" id="bus" data-i18n="dash.checking">Checking…</div>
+  <div class="grid" id="services" aria-live="polite"></div>
+  <div class="row"><button id="refresh" data-i18n="dash.recheck">Check again</button></div>
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
 
-  <h2>If something is down</h2>
+  <h2 data-i18n="dash.down.title">If something is down</h2>
   <div class="card">
     <ul class="plain">
       <li>Read the log of the service:
@@ -46,23 +47,24 @@
 </main>
 <script>
 OvosWebUI.ready(function () {
-  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc;
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
 
   function badge(state) {
     var kind = state === "ready" ? "ready" : (state === "starting" ? "starting" : "bad");
-    return '<span class="badge ' + kind + '">' + esc(state) + "</span>";
+    var label = t("state." + kind, state);
+    return '<span class="badge ' + kind + '">' + esc(label) + "</span>";
   }
 
   function load() {
-    el("bus").textContent = "Checking…";
+    el("bus").textContent = t("dash.checking", "Checking…");
     api("/api/health").then(function (h) {
       el("bus").innerHTML = h.bus.reachable
-        ? "<strong>Message bus:</strong> connected."
-        : "<strong>Message bus:</strong> not reachable. Start <code>ovos-messagebus</code> first; "
-          + "until it runs, no other check can answer.";
+        ? "<strong>" + esc(t("dash.bus", "Message bus:")) + "</strong> " + esc(t("dash.bus.ok", "connected."))
+        : "<strong>" + esc(t("dash.bus", "Message bus:")) + "</strong> " + esc(t("dash.bus.down",
+            "not reachable. Start ovos-messagebus first; until it runs, no other check can answer."));
       el("services").innerHTML = h.services.map(function (s) {
         var note = s.state === "no answer"
-          ? "This service did not answer. It is probably not running."
+          ? t("dash.noanswer", "This service did not answer. It is probably not running.")
           : esc(s.hint);
         return '<div class="card"><strong>' + esc(s.label) + "</strong> " + badge(s.state)
           + '<p class="hint">' + note + "</p>"

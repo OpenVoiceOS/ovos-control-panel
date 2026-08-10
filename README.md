@@ -21,7 +21,9 @@ is in the package.
 | [Backup](docs/backup-restore.md) | Downloads a copy of your settings, and puts a copy back. |
 | [About](docs/about.md) | Shows the installed package versions and useful links. |
 
-Signing in is covered in [security.md](docs/security.md).
+Signing in is covered in [security.md](docs/security.md). The interface is
+keyboard- and screen-reader-friendly and follows the device language, including
+right-to-left — see [accessibility.md](docs/accessibility.md).
 
 The page works on a phone. It follows the light or dark setting of your device.
 
