@@ -105,12 +105,18 @@ def write_user_config(data: dict[str, Any], bus=None) -> dict[str, Any]:
         raise ConfigError("the configuration must be a mapping at the top level")
     path = user_config_path()
     backup = atomic_write(path, json.dumps(data, indent=2, ensure_ascii=False))
-    _notify(data, bus)
-    return {"path": str(path), "backup": str(backup) if backup else None}
+    applied = _notify(data, bus)
+    return {"path": str(path), "backup": str(backup) if backup else None,
+            "applied": applied}
 
 
-def _notify(data: dict[str, Any], bus) -> None:
+def _notify(data: dict[str, Any], bus) -> bool:
     """Tell running services that the configuration changed.
+
+    Return ``True`` when the running services were told, ``False`` when the
+    file was written but the bus could not be reached, so the caller can say
+    the change is saved but not yet live. There is no bus when the UI runs
+    without one; that is not a failure, so it reports ``True``.
 
     ``Configuration.patch`` keeps a volatile layer that sits on top of the
     files and is only ever added to, so a key removed from the file stays in
@@ -127,16 +133,18 @@ def _notify(data: dict[str, Any], bus) -> None:
     """
     from ovos_webui import buswait
 
-    if bus is None or not buswait.is_connected(bus):
-        return
+    if bus is None:
+        return True  # no bus to tell; nothing was lost
+    if not buswait.is_connected(bus):
+        return False
     try:
         from ovos_bus_client.message import Message
     except ImportError:  # pragma: no cover - fallback for minimal installs
         from ovos_utils.fakebus import Message
     if not buswait.emit(bus, Message("configuration.patch.clear", {})):
         LOG.warning("could not clear the volatile configuration patch")
-        return
-    buswait.emit(bus, Message("configuration.patch", {"config": data}))
+        return False
+    return buswait.emit(bus, Message("configuration.patch", {"config": data}))
 
 
 def plugin_options() -> dict[str, list[str]]:

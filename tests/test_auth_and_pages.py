@@ -28,7 +28,7 @@ def test_policy_flags():
 
 def test_status_reports_the_warning(bus):
     app = create_app(bus=bus, host="0.0.0.0", token=None, connect_bus=False)
-    with TestClient(app) as c:
+    with TestClient(app, base_url="http://127.0.0.1:8500") as c:
         body = c.get("/api/status").json()
     assert body["insecure"] is True and body["auth"] is False and body["warning"]
 
@@ -44,7 +44,7 @@ def test_token_is_required(token_client, method, path):
 
 @pytest.mark.parametrize("method,path", PROTECTED)
 def test_correct_token_is_accepted(token_client, method, path):
-    r = getattr(token_client, method)(path, headers={"Authorization": "Bearer s3cret"})
+    r = getattr(token_client, method)(path, headers={"Authorization": "Bearer s3cret-token"})
     assert r.status_code == 200
 
 
@@ -62,7 +62,7 @@ def test_a_wrong_token_is_refused(token_client):
 
 def test_a_token_in_the_query_string_is_ignored(token_client):
     """A token in a URL is written to every access log, so it is not accepted."""
-    assert token_client.get("/api/health?token=s3cret").status_code == 401
+    assert token_client.get("/api/health?token=s3cret-token").status_code == 401
 
 
 def test_unauthorised_answers_carry_the_scheme(token_client):
@@ -110,5 +110,5 @@ def test_unknown_route_is_a_404(client):
 
 def test_app_starts_and_stops_without_a_bus():
     app = create_app(bus=None, host="127.0.0.1", connect_bus=False)
-    with TestClient(app) as c:
+    with TestClient(app, base_url="http://127.0.0.1:8500") as c:
         assert c.get("/").status_code == 200

@@ -34,7 +34,13 @@ DEFAULT_TIMEOUT = 3.0
 #: The largest number of threads this module may ever have in flight. A thread
 #: stuck inside the bus client keeps its permit, so this is also the largest
 #: number of threads that can ever be stuck.
-MAX_INFLIGHT = 4
+#:
+#: This has to be larger than the most calls the app makes at once, or a
+#: healthy call is refused for lack of a permit. The dashboard is the busiest
+#: caller: one page load probes six services at the same time
+#: (``health.SERVICES``), so this leaves room for several page loads at once
+#: while still bounding a flood on a bus that has gone away.
+MAX_INFLIGHT = 24
 
 #: After a call gives up, treat the bus as down for this long and answer at
 #: once instead of waiting again.

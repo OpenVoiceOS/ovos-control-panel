@@ -38,7 +38,13 @@ from ovos_utils.log import LOG
 from pydantic import BaseModel, Field
 
 from ovos_webui import backupio, configio, health, meta, skillsio
-from ovos_webui.auth import COOKIE_NAME, AuthPolicy, check_csrf, policy_from_config
+from ovos_webui.auth import (
+    COOKIE_NAME,
+    AuthPolicy,
+    check_csrf,
+    check_host,
+    policy_from_config,
+)
 from ovos_webui.fsutils import MAX_PAYLOAD_BYTES, MAX_UPLOAD_BYTES, UnsafeIdentifier
 from ovos_webui.limits import BodyLimitMiddleware
 from ovos_webui.version import __version__
@@ -103,14 +109,18 @@ def _page(name: str) -> FileResponse:
 
 
 def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
-               connect_bus: bool = True) -> FastAPI:
+               connect_bus: bool = True,
+               hostnames: tuple[str, ...] = ()) -> FastAPI:
     """Build the application.
 
     ``bus`` lets a test pass a ``FakeBus``. When it is ``None`` and
     ``connect_bus`` is true, the app connects to the real message bus while it
-    starts up, and it keeps working if the bus is down.
+    starts up, and it keeps working if the bus is down. ``hostnames`` lists
+    extra names a browser may use in the ``Host`` header, for a reverse proxy
+    or an mDNS name.
     """
-    policy: AuthPolicy = policy_from_config(host=host, token=token)
+    policy: AuthPolicy = policy_from_config(host=host, token=token,
+                                            hostnames=hostnames)
     state: dict[str, Any] = {"bus": bus}
 
     @asynccontextmanager
@@ -134,12 +144,14 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     # ── the checks every router hangs off ────────────────────────────────────
     def guard(request: Request) -> AuthPolicy:
         """A signed in caller, and not a request forged by another site."""
+        check_host(policy, request)
         check_csrf(request)
         policy.check(request)
         return policy
 
     def guard_public(request: Request) -> None:
         """Open, but still not usable as a forgery target."""
+        check_host(policy, request)
         check_csrf(request)
 
     public = APIRouter(dependencies=[Depends(guard_public)])
@@ -340,7 +352,9 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         if ctype.startswith("multipart/form-data"):
             form = await request.form()
             upload = form.get("file")
-            if upload is None:
+            if not hasattr(upload, "read"):
+                # A plain text field named "file", or nothing at all, has no
+                # file to read. Answer 400 rather than let ``.read`` raise 500.
                 raise HTTPException(400, "no file was sent")
             return await upload.read()
         return await request.body()
@@ -396,15 +410,25 @@ def main() -> None:
                         help="access token; overrides webui.access_token")
     parser.add_argument("--no-bus", action="store_true",
                         help="do not connect to the message bus")
+    parser.add_argument("--hostname", action="append", default=[],
+                        help="extra Host header name to accept (repeatable); "
+                             "for a reverse proxy or an mDNS name. Numeric IPs "
+                             "and the loopback names are always accepted.")
     args = parser.parse_args()
 
-    policy = policy_from_config(host=args.host, token=args.token)
+    hostnames = tuple(args.hostname)
+    try:
+        policy = policy_from_config(host=args.host, token=args.token,
+                                    hostnames=hostnames)
+    except ValueError as err:
+        parser.error(str(err))
     if policy.insecure:
         LOG.warning(f"ovos-webui is bound to {args.host} with no token. Anyone "
                     "on the network can change this device. Set "
                     "webui.access_token in mycroft.conf, or pass --token.")
 
-    app = create_app(host=args.host, token=args.token, connect_bus=not args.no_bus)
+    app = create_app(host=args.host, token=args.token,
+                     connect_bus=not args.no_bus, hostnames=hostnames)
     uvicorn.run(app, host=args.host, port=args.port)
 
 

@@ -34,6 +34,13 @@ MAX_UNPACKED_BYTES = 64 * 1024 * 1024
 #: Refuse an archive with more members than this.
 MAX_MEMBERS = 5000
 
+#: Refuse a single member larger than this. A ``mycroft.conf`` or a skill's
+#: ``settings.json`` is a few kilobytes; a megabyte is already generous. This
+#: stops one member that is under the whole-archive limit but still large
+#: enough that decoding and ``json.loads`` on it would exhaust the memory of a
+#: small device.
+MAX_MEMBER_BYTES = 1024 * 1024
+
 
 class RestoreError(ValueError):
     """Raised when an uploaded archive is refused."""
@@ -101,6 +108,9 @@ def _iter_members(tar: tarfile.TarFile):
         if count > MAX_MEMBERS:
             raise RestoreError("the archive holds too many files")
         if member.isfile():
+            if member.size > MAX_MEMBER_BYTES:
+                raise RestoreError(f"{member.name} is too large to be a "
+                                   "settings file")
             total += member.size
             if total > MAX_UNPACKED_BYTES:
                 raise RestoreError("the archive unpacks to too much data")
@@ -159,9 +169,13 @@ def restore_archive(blob: bytes) -> dict[str, Any]:
                 handle = tar.extractfile(member)
                 if handle is None:  # pragma: no cover - defensive
                     continue
-                raw = handle.read(MAX_UNPACKED_BYTES + 1)
-                if len(raw) > MAX_UNPACKED_BYTES:
-                    raise RestoreError("the archive unpacks to too much data")
+                # Read against the per-member cap, not the whole-archive one:
+                # the header size was already checked, but a header can lie, so
+                # the read itself is bounded too.
+                raw = handle.read(MAX_MEMBER_BYTES + 1)
+                if len(raw) > MAX_MEMBER_BYTES:
+                    raise RestoreError(f"{member.name} is too large to be a "
+                                       "settings file")
                 text = _validate_payload(member.name, raw)
                 if member.name == CONFIG_MEMBER:
                     target = user_config_path()

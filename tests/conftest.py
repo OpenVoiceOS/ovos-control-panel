@@ -65,18 +65,21 @@ def bus():
 def client(bus):
     """A TestClient over the app, with no token."""
     app = create_app(bus=bus, host="127.0.0.1", token=None, connect_bus=False)
-    # A browser puts this on every request it makes from the page itself, so
-    # the default client behaves like one. Tests that care about the
-    # cross-site check set the headers themselves.
-    with TestClient(app, headers={"sec-fetch-site": "same-origin"}) as test_client:
+    # A browser reaches the device by its address, so the Host header is an IP,
+    # and it puts sec-fetch-site on every request from the page itself. The
+    # default client behaves like one; tests that care about a check set the
+    # headers themselves.
+    with TestClient(app, base_url="http://127.0.0.1:8500",
+                    headers={"sec-fetch-site": "same-origin"}) as test_client:
         yield test_client
 
 
 @pytest.fixture
 def token_client(bus):
     """A TestClient over an app that needs a token."""
-    app = create_app(bus=bus, host="0.0.0.0", token="s3cret", connect_bus=False)
-    with TestClient(app, headers={"sec-fetch-site": "same-origin"}) as test_client:
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
+    with TestClient(app, base_url="http://127.0.0.1:8500",
+                    headers={"sec-fetch-site": "same-origin"}) as test_client:
         yield test_client
 
 

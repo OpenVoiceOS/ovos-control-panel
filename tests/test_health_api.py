@@ -63,7 +63,7 @@ def test_health_route_without_a_bus(bus):
 
     from ovos_webui.service import create_app
     app = create_app(bus=None, host="127.0.0.1", connect_bus=False)
-    with TestClient(app) as c:
+    with TestClient(app, base_url="http://127.0.0.1:8500") as c:
         assert c.get("/api/health").json()["bus"]["reachable"] is False
 
 

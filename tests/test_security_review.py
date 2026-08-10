@@ -31,7 +31,7 @@ UNSAFE_CALLS = [
     ("post", "/api/config/quick", {"json": {"values": {}}}),
     ("put", "/api/skills/a", {"json": {"settings": {}}}),
     ("post", "/api/restore", {"content": b"x"}),
-    ("post", "/api/login", {"json": {"token": "s3cret"}}),
+    ("post", "/api/login", {"json": {"token": "s3cret-token"}}),
 ]
 
 
@@ -70,7 +70,7 @@ def test_s1_a_program_that_sends_a_token_still_works(token_client):
     preflight, and no preflight is ever approved, so this cannot be forged."""
     r = token_client.put("/api/config",
                          json={"text": '{"lang": "pt-pt"}', "format": "json"},
-                         headers={"Authorization": "Bearer s3cret",
+                         headers={"Authorization": "Bearer s3cret-token",
                                   "sec-fetch-site": ""})
     assert r.status_code == 200
 
@@ -322,14 +322,14 @@ UNAUTHENTICATED_ALLOWED = {"/api/status", "/api/login", "/api/logout",
 
 
 def test_s8_every_route_needs_a_sign_in_except_the_known_few(bus):
-    app = create_app(bus=bus, host="0.0.0.0", token="s3cret", connect_bus=False)
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
     routes = []
     for router in app.state.routers.values():
         for route in router.routes:
             routes.append((getattr(route, "path", ""),
                            getattr(route, "methods", set()) or set()))
     checked = 0
-    with TestClient(app) as c:
+    with TestClient(app, base_url="http://127.0.0.1:8500") as c:
         for path, methods in routes:
             if not path.startswith("/") or path in UNAUTHENTICATED_ALLOWED:
                 continue
@@ -363,7 +363,7 @@ def test_n3_only_the_stylesheet_is_public(token_client):
 
 
 def test_n3_a_form_post_signs_in_without_javascript(token_client):
-    r = token_client.post("/api/login", data={"token": "s3cret"},
+    r = token_client.post("/api/login", data={"token": "s3cret-token"},
                           follow_redirects=False)
     assert r.status_code == 303
     assert r.headers["location"] == "/"
@@ -378,7 +378,7 @@ def test_n3_a_bad_form_post_goes_back_to_the_form(token_client):
 
 
 def test_n3_a_json_login_still_returns_json(token_client):
-    r = token_client.post("/api/login", json={"token": "s3cret"})
+    r = token_client.post("/api/login", json={"token": "s3cret-token"})
     assert r.status_code == 200 and r.json()["ok"] is True
 
 
@@ -399,7 +399,7 @@ def test_s8_static_route_refuses_traversal(client):
 
 # ── S9: the token must not travel in a URL ───────────────────────────────────
 def test_s9_signing_in_uses_a_post_and_sets_a_cookie(token_client):
-    r = token_client.post("/api/login", json={"token": "s3cret"})
+    r = token_client.post("/api/login", json={"token": "s3cret-token"})
     assert r.status_code == 200
     assert "ovos_webui_token" in r.cookies or any(
         "ovos_webui_token" in v for v in r.headers.get_list("set-cookie"))
@@ -409,7 +409,7 @@ def test_s9_signing_in_uses_a_post_and_sets_a_cookie(token_client):
 
 
 def test_s9_the_cookie_then_works(token_client):
-    token_client.post("/api/login", json={"token": "s3cret"})
+    token_client.post("/api/login", json={"token": "s3cret-token"})
     assert token_client.get("/api/health").status_code == 200
     assert token_client.get("/").status_code == 200
 
@@ -731,9 +731,134 @@ def test_n1_sec_fetch_site_none_is_refused_for_writes(client):
 def test_n1_a_program_with_a_bearer_token_still_works(token_client):
     r = token_client.put("/api/config",
                          json={"text": '{"lang": "pt-pt"}', "format": "json"},
-                         headers={"Authorization": "Bearer s3cret"})
+                         headers={"Authorization": "Bearer s3cret-token"})
     assert r.status_code == 200
 
 
 def test_n1_reads_with_no_headers_are_still_fine(client):
     assert client.get("/api/health").status_code == 200
+
+
+# ── N3: the Host header must be checked, or DNS rebinding defeats everything ──
+def test_n3_a_foreign_host_header_is_refused(client):
+    """A DNS rebinding page reaches the device but the browser still sends the
+    attacker's own name in Host. That name is refused, reads included."""
+    r = client.get("/api/config", headers={"host": "evil.com"})
+    assert r.status_code == 400
+
+
+def test_n3_a_foreign_host_cannot_write_either(client):
+    r = client.put("/api/config", headers={"host": "evil.com:8500"},
+                   json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    assert r.status_code == 400
+
+
+def test_n3_a_numeric_ip_host_is_accepted(client):
+    """The legitimate case: a browser reaching the device by its LAN address."""
+    r = client.get("/api/config", headers={"host": "192.168.1.50:8500"})
+    assert r.status_code == 200
+
+
+def test_n3_the_loopback_names_are_accepted(client):
+    for name in ("127.0.0.1:8500", "localhost:8500", "[::1]:8500"):
+        r = client.get("/api/status", headers={"host": name})
+        assert r.status_code == 200, name
+
+
+def test_n3_a_configured_hostname_is_accepted(bus):
+    app = create_app(bus=bus, host="0.0.0.0", token=None, connect_bus=False,
+                     hostnames=("ovos.local",))
+    with TestClient(app, base_url="http://ovos.local:8500",
+                    headers={"sec-fetch-site": "same-origin"}) as c:
+        assert c.get("/api/status").status_code == 200
+        assert c.get("/api/status", headers={"host": "evil.com"}).status_code == 400
+
+
+# ── N4: the bus permit pool must not starve the dashboard's own fan-out ───────
+def test_n4_a_healthy_dashboard_load_reports_every_service(bus):
+    """One dashboard load probes six services at once. If the permit pool is
+    smaller than that fan-out, healthy services show 'no answer' and the
+    breaker trips."""
+    from ovos_bus_client.message import Message
+
+    from ovos_webui import buswait, health
+
+    for spec in health.SERVICES:
+        for key in ("alive", "ready"):
+            mt = f"mycroft.{spec['name']}.is_{key}"
+            bus.on(mt, (lambda m: bus.emit(
+                Message(m.msg_type + ".response", {"status": True}, m.context))))
+
+    for _ in range(3):
+        buswait.GATE.reset_for_tests()
+        snap = health.snapshot(bus, timeout=1.0)
+        assert all(s["state"] == "ready" for s in snap["services"]), \
+            [s["state"] for s in snap["services"]]
+        assert not buswait.GATE.is_open()
+
+    assert len(health.SERVICES) <= buswait.MAX_INFLIGHT
+
+
+# ── N5: one archive member must not be able to exhaust memory ─────────────────
+def test_n5_a_giant_member_is_refused(client):
+    big = b'{"x": "' + b"a" * (backupio.MAX_MEMBER_BYTES + 10) + b'"}'
+    blob = _archive({"config/mycroft.conf": big})
+    r = client.post("/api/restore",
+                    files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert r.status_code == 400
+
+
+def test_n5_a_normal_settings_file_still_restores(client, make_skill):
+    make_skill("skill-a", {"volume": 1})
+    blob = _archive({"skills/skill-a/settings.json": b'{"volume": 9}'})
+    r = client.post("/api/restore",
+                    files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert r.status_code == 200
+
+
+# ── N6: a save that could not reach the bus must say so ───────────────────────
+def test_n6_a_save_with_the_bus_down_is_reported_not_live(tmp_path, monkeypatch):
+    from ovos_webui import buswait, configio
+
+    class DownBus:
+        connected_event = None  # is_connected -> True, but emit hangs
+
+        def emit(self, message):
+            import time as _t
+            _t.sleep(30)
+
+    buswait.GATE.reset_for_tests()
+    # is_connected returns True for a bus with no connected_event attribute
+    result = configio.write_user_config({"lang": "pt-pt"}, bus=DownBus())
+    assert result["applied"] is False
+
+
+def test_n6_a_save_with_no_bus_is_live(client):
+    """When the UI runs without a bus, nothing was lost, so applied is True."""
+    r = client.put("/api/config",
+                   json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    assert r.status_code == 200
+    assert r.json()["applied"] is True
+
+
+# ── N7: a token too short to resist guessing must be refused at startup ───────
+def test_n7_a_short_token_is_refused():
+    from ovos_webui.auth import policy_from_config
+    with pytest.raises(ValueError):
+        policy_from_config(host="0.0.0.0", token="1234")
+
+
+def test_n7_a_long_enough_token_is_accepted():
+    from ovos_webui.auth import policy_from_config
+    p = policy_from_config(host="0.0.0.0", token="a-long-token")
+    assert p.token == "a-long-token"
+
+
+# ── N8: a form field named 'file' that is not a file must not crash ───────────
+def test_n8_a_multipart_text_field_named_file_is_a_clean_400(client):
+    """A multipart form whose ``file`` part is a plain text field, not an
+    upload, used to reach ``.read()`` on a str and answer 500."""
+    # (None, value) makes httpx send a multipart form field with no filename,
+    # so the server parses it as a string, not an upload.
+    r = client.post("/api/restore", files={"file": (None, "not a file")})
+    assert r.status_code == 400

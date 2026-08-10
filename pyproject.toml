@@ -17,9 +17,12 @@ classifiers = [
     "Environment :: Web Environment",
 ]
 dependencies = [
-    "fastapi>=0.110.1",
+    # floors chosen to keep a frozen install off known-vulnerable builds:
+    # fastapi>=0.111 pulls starlette>=0.37 (avoids CVE-2024-47874), and
+    # python-multipart>=0.0.18 fixes the form-parser DoS CVE-2024-53981.
+    "fastapi>=0.111.0",
     "uvicorn[standard]>=0.29.0",
-    "python-multipart>=0.0.9",
+    "python-multipart>=0.0.18",
     "PyYAML>=5.4",
     "ovos-bus-client>=1.0.0",
     "ovos-config>=1.0.0",

@@ -104,11 +104,20 @@ OvosWebUI.ready(function () {
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({values: values})
     }).then(function (r) {
-      OvosWebUI.say("msg-simple", "Saved. Backup: " + (r.backup || "none was needed."));
+      OvosWebUI.say("msg-simple", savedMessage(r), r.applied === false);
       loadSimple();
     }).catch(function (e) { OvosWebUI.say("msg-simple", e.message, true); });
   });
   el("reload-simple").addEventListener("click", loadSimple);
+
+  function savedMessage(r) {
+    var base = "Saved. Backup: " + (r.backup || "none was needed.");
+    if (r.applied === false) {
+      return base + " The running services could not be told, so this is not "
+        + "live yet; it takes effect when the device is next restarted.";
+    }
+    return base;
+  }
 
   function loadRaw() {
     api("/api/config?format=" + format).then(function (r) {
@@ -133,7 +142,7 @@ OvosWebUI.ready(function () {
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({text: el("text").value, format: format})
     }).then(function (r) {
-      OvosWebUI.say("msg-raw", "Saved. Backup: " + (r.backup || "none was needed."));
+      OvosWebUI.say("msg-raw", savedMessage(r), r.applied === false);
       loadSimple();
     }).catch(function (e) { OvosWebUI.say("msg-raw", e.message, true); });
   });
