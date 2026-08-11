@@ -425,5 +425,10 @@
   "plugins.more": "more match — narrow your search to see them.",
   "setup.lang.other": "Need a language that is not listed?",
   "setup.lang.otherLink": "Set the exact code on the Settings page.",
-  "setup.speak.aboutLink": "About page"
+  "setup.speak.aboutLink": "About page",
+  "theme.label": "Theme:",
+  "theme.change": "change",
+  "theme.system": "match my device",
+  "theme.dark": "dark",
+  "theme.light": "light"
 }

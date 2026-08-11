@@ -54,3 +54,7 @@ Nothing is hidden on either size; it is the same markup reflowed with CSS.
   control stops it, and its label carries the state.
 - Opening a backup preview moves focus into the labelled region; closing it
   returns focus to the row it came from.
+
+## Choosing a theme
+
+The header carries a theme control that cycles match-my-device → dark → light. The choice is saved in the browser and applied before the page paints, so there is no flash. "Match my device" follows the operating-system light/dark setting. The control names the current theme for a screen reader.

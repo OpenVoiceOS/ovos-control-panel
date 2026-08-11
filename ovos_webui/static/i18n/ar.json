@@ -425,5 +425,10 @@
   "plugins.more": "نتيجة أخرى مطابقة — ضيّق بحثك لرؤيتها.",
   "setup.lang.other": "تحتاج لغة غير مدرجة؟",
   "setup.lang.otherLink": "اضبط الرمز الدقيق في صفحة الإعدادات.",
-  "setup.speak.aboutLink": "صفحة حول"
+  "setup.speak.aboutLink": "صفحة حول",
+  "theme.label": "السمة:",
+  "theme.change": "تغيير",
+  "theme.system": "مطابقة جهازي",
+  "theme.dark": "داكنة",
+  "theme.light": "فاتحة"
 }

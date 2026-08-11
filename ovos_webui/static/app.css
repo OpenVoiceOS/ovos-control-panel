@@ -32,8 +32,11 @@
   --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
+/* Dark tokens. The default (no data-theme) follows the OS via the media
+ * query, unless the viewer forced light; an explicit data-theme="dark" wins in
+ * both directions. Keep the two blocks identical. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #101216;          /* a real dark surface, not pure black */
     --bg-soft: #0b0d10;
     --card: #191c21;        /* cards lift off the surface */
@@ -52,6 +55,25 @@
     --bad: #ff5a52;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 34px rgba(0, 0, 0, 0.42);
   }
+}
+:root[data-theme="dark"] {
+  --bg: #101216;
+  --bg-soft: #0b0d10;
+  --card: #191c21;
+  --card-soft: #21252c;
+  --bevel: rgba(255, 255, 255, 0.06);
+  --ink: #f2efec;
+  --muted: #918c94;
+  --line: #29272e;
+  --accent: #ff3b30;
+  --accent-strong: #9e1b1b;
+  --accent-hover: #b52222;
+  --accent-ink: #fbeceb;
+  --accent-wash: rgba(255, 59, 48, 0.13);
+  --ok: #3ecf6a;
+  --warn: #e6a13c;
+  --bad: #ff5a52;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 34px rgba(0, 0, 0, 0.42);
 }
 
 * { box-sizing: border-box; }
@@ -108,6 +130,23 @@ header h1 {
   letter-spacing: -0.01em;
   flex: 0 0 auto;
 }
+/* The theme control: a quiet icon button at the end of the header, never the
+ * red primary weight. */
+button.theme-toggle {
+  flex: 0 0 auto;
+  margin-inline-start: auto;  /* flush to the header's trailing edge */
+  width: 2.4rem;
+  min-width: 0;
+  height: 2.4rem;
+  padding: 0;
+  font-size: 1.15rem;
+  line-height: 1;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+button.theme-toggle:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-wash); }
 
 /* The signature: a red equalizer that reads as sound made visible. It is
  * decorative for a screen reader, and on the dashboard it goes flat and dim
