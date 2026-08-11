@@ -47,6 +47,11 @@ _CONFLICTS_LOCK = threading.Lock()
 _CONFLICTS_CACHE: dict[str, Any] = {}
 _MAX_PROJECT_JSON = 4 * 1024 * 1024
 
+#: The shortest gap between two real PyPI sweeps. A burst of refresh=true
+#: requests collapses to one sweep; the rest read the cache the first filled.
+_MIN_SWEEP_GAP = 20
+_LAST_SWEEP = 0.0
+
 _PRE = re.compile(r"(a|b|rc|dev)", re.IGNORECASE)
 
 
@@ -117,10 +122,17 @@ def check_updates(refresh: bool = False) -> dict[str, Any]:
     """
     from ovos_webui.pypi import classify, installed_versions
 
-    # One sweep at a time. A second caller waits and then reads the cache the
-    # first one just filled instead of starting its own PyPI sweep.
+    # One sweep at a time, and no more often than _MIN_SWEEP_GAP: a burst of
+    # refresh=true requests collapses to a single PyPI sweep, so this cannot be
+    # turned into a request amplifier against PyPI or the device.
+    global _LAST_SWEEP
     with _CHECK_LOCK:
-        return _check_updates_locked(refresh, classify, installed_versions)
+        if refresh and time.time() - _LAST_SWEEP < _MIN_SWEEP_GAP:
+            refresh = False
+        result = _check_updates_locked(refresh, classify, installed_versions)
+        if refresh:
+            _LAST_SWEEP = time.time()
+        return result
 
 
 def _check_updates_locked(refresh, classify, installed_versions) -> dict[str, Any]:

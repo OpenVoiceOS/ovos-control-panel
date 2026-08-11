@@ -495,7 +495,12 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
 
     # ── plugin catalog and installer ─────────────────────────────────────────
     # Reads sit on the ``api`` router (host + cross-site + sign-in). Anything
-    # that runs pip sits on ``privileged``, which adds the always-a-token rule.
+    # that *changes* the software — install, uninstall, upgrade — sits on
+    # ``privileged``, which adds the always-a-token rule. Two read-only
+    # diagnostics (``/updates`` and ``/updates/conflicts``) do spawn a short pip
+    # subprocess, but each is single-flight and rate-limited in updates.py
+    # (one PyPI sweep per _MIN_SWEEP_GAP, one ``pip check`` per CONFLICTS_TTL),
+    # so they cannot be turned into an amplifier.
     @api.get("/plugins/search")
     def api_plugin_search(q: str = "", kind: str = "",
                           refresh: bool = False) -> dict[str, Any]:

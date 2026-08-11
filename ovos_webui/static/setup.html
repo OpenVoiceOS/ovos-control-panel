@@ -31,9 +31,9 @@
 
   <h2><span data-i18n="setup.step1.title">1. Your language</span></h2>
   <div class="card">
-    <label data-i18n="setup.lang.label">Language code
-      <small data-i18n="setup.lang.hint">for example en-us, pt-pt, ar-sa</small>
-      <input id="lang" maxlength="16"></label>
+    <label data-i18n="setup.lang.label">Language<select id="lang"></select></label>
+    <p class="hint"><span data-i18n="setup.lang.other">Need a language that is not listed?</span>
+      <a href="/config" data-i18n="setup.lang.otherLink">Set the exact code on the Settings page.</a></p>
     <div class="row"><button id="save-lang" data-i18n="setup.save">Save</button></div>
     <div class="msg" id="msg-lang" role="status" aria-live="polite" hidden></div>
   </div>
@@ -49,8 +49,9 @@
     <label data-i18n="setup.speak.label">Text to speak<input id="speak-text" maxlength="500"
       placeholder="hello, I am your assistant" data-i18n-attr="placeholder:setup.speak.placeholder"></label>
     <div class="row"><button class="secondary" id="speak" data-i18n="setup.speak.button">Speak it out loud</button></div>
-    <p class="hint" data-i18n="setup.speak.hint">If nothing comes out, restart the OVOS services after installing
-      a voice, then try again.</p>
+    <p class="hint"><span data-i18n="setup.speak.hint">If nothing comes out, restart the voice services after installing
+      a voice, then try again — you can do that on the</span>
+      <a href="/about" data-i18n="setup.speak.aboutLink">About page</a>.</p>
     <div class="msg" id="msg-speak" role="status" aria-live="polite" hidden></div>
   </div>
 
@@ -69,9 +70,28 @@ OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
   var poll = null;
 
+  // A curated list of the languages OVOS is commonly used in. Someone who
+  // needs an exact code the wizard doesn't list is sent to Settings.
+  var LANGS = [
+    ["en-us", "English (US)"], ["en-gb", "English (UK)"], ["es-es", "Español"],
+    ["pt-pt", "Português"], ["pt-br", "Português (Brasil)"], ["fr-fr", "Français"],
+    ["de-de", "Deutsch"], ["it-it", "Italiano"], ["nl-nl", "Nederlands"],
+    ["ca-es", "Català"], ["gl-es", "Galego"], ["eu-es", "Euskara"],
+    ["ar-sa", "العربية"], ["ru-ru", "Русский"], ["uk-ua", "Українська"],
+    ["pl-pl", "Polski"], ["sv-se", "Svenska"], ["da-dk", "Dansk"],
+    ["fi-fi", "Suomi"], ["cs-cz", "Čeština"], ["tr-tr", "Türkçe"],
+    ["zh-cn", "中文"], ["ja-jp", "日本語"], ["ko-kr", "한국어"], ["hi-in", "हिन्दी"]
+  ];
+
   api("/api/config/quick").then(function (r) {
     var lang = (r.fields || []).filter(function (f) { return f.name === "lang"; })[0];
-    if (lang && lang.effective) { el("lang").value = lang.effective; }
+    var current = lang && lang.effective ? String(lang.effective).toLowerCase() : "en-us";
+    var opts = LANGS.slice();
+    if (!opts.some(function (o) { return o[0] === current; })) { opts.unshift([current, current]); }
+    el("lang").innerHTML = opts.map(function (o) {
+      return '<option value="' + esc(o[0]) + '"' + (o[0] === current ? " selected" : "") + ">"
+        + esc(o[1]) + "</option>";
+    }).join("");
   }).catch(function () {});
 
   el("save-lang").addEventListener("click", function () {
@@ -89,7 +109,7 @@ OvosWebUI.ready(function () {
     if (poll) { clearTimeout(poll); }
     api("/api/plugins/jobs/" + encodeURIComponent(id) + "?since=" + since).then(function (job) {
       el("joblog-card").hidden = false;
-      if (job.lines.length) { el("joblog").textContent += "\n" + job.lines.join("\n"); }
+      if (job.lines.length) { el("joblog").insertAdjacentText("beforeend", "\n" + job.lines.join("\n")); }
       if (job.state === "running") {
         poll = setTimeout(function () { watch(id, job.next); }, 1000);
       } else {

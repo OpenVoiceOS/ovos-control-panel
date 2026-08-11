@@ -416,5 +416,14 @@
   "plugins.updates.checked": "Last checked:",
   "about.power_lead": "Restart the voice services if the device has stopped answering. Rebooting restarts the whole device and takes a minute or two to come back.",
   "about.power_confirm_note": "You will be asked to confirm first.",
-  "about.power_how": "How this works"
+  "about.power_how": "How this works",
+  "tryit.asking": "Asking the device…",
+  "tryit.live.pause": "Pause updates",
+  "tryit.live.resume": "Resume updates",
+  "tryit.live.needsToken": "The live feed needs the device access token. Sign in with it to see activity.",
+  "plugins.searchPrompt": "Type a name above, or choose a kind, to search the catalog.",
+  "plugins.more": "more match — narrow your search to see them.",
+  "setup.lang.other": "Need a language that is not listed?",
+  "setup.lang.otherLink": "Set the exact code on the Settings page.",
+  "setup.speak.aboutLink": "About page"
 }

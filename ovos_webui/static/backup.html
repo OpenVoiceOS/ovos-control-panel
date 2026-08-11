@@ -49,7 +49,7 @@
   <p class="hint" data-i18n="backup.history_hint">Every save keeps the file it replaced, right here on the device.
     Pick one to look at it or put it back.</p>
   <div class="card" id="history" data-i18n="backup.history_loading">Looking for backups…</div>
-  <div class="card" id="preview-card" hidden>
+  <div class="card" id="preview-card" tabindex="-1" role="region" aria-labelledby="preview-title" hidden>
     <strong id="preview-title"></strong>
     <pre id="preview" style="overflow-x:auto"></pre>
     <div class="row">
@@ -87,7 +87,7 @@ OvosWebUI.ready(function () {
         return "<li><strong>" + esc(b.file) + "</strong> "
           + "<small class='hint' title='" + esc(b.stamp) + "'>" + esc(niceStamp(b.stamp)) + "</small> "
           + '<button class="secondary" data-show="' + esc(b.id) + '" aria-label="'
-          + esc(t("backup.view_button", "Look at it") + " " + b.file + " " + b.stamp) + '">'
+          + esc(t("backup.view_button", "Look at it") + " " + b.file + " " + niceStamp(b.stamp)) + '">'
           + esc(t("backup.view_button", "Look at it")) + "</button>"
           + '<code class="slug">' + esc(b.target) + "</code></li>";
       }).join("") + "</ul>"
@@ -106,6 +106,7 @@ OvosWebUI.ready(function () {
       el("preview-title").textContent = r.target;
       el("preview").textContent = r.text + (r.truncated ? "\n…" : "");
       el("preview-card").scrollIntoView({behavior: "smooth", block: "nearest"});
+      el("preview-card").focus();  // announce the preview and land the user in it
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   }
 

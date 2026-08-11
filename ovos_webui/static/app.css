@@ -250,10 +250,16 @@ main { padding: 1.1rem; max-width: 62rem; margin: 0 auto; }
    * hold form fields to a readable measure and let code editors run wider. */
   input, select { max-width: 34rem; }
   textarea { max-width: 54rem; }
-  .row { max-width: 34rem; }
+  .row { max-width: 36rem; }
+  /* Form-only pages read best at a column measure, not stretched across a card
+   * that then frames empty space. Settings holds its fields to that measure. */
+  section#simple, section#raw { max-width: 40rem; }
   /* Room to breathe: two columns for forms and content that suit it. */
   .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; align-items: start; }
 }
+/* The header mark stays near the wordmark instead of a bar stretching the
+ * whole desktop header — most visible in the bus-down flat state. */
+@media (min-width: 48rem) { .wave { max-width: 30rem; } }
 
 @media (min-width: 90rem) {
   main { max-width: 78rem; }
@@ -439,7 +445,10 @@ button.danger:hover {
 }
 button[disabled] { opacity: 0.55; cursor: not-allowed; }
 .row { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.9rem; }
-.row button { width: auto; flex: 1 1 10rem; }
+.row button { width: auto; flex: 0 1 auto; min-width: 9rem; }
+/* A button sitting inside a list row (plugin/skill lists) hugs its label
+ * instead of stretching to the full width the way form controls do. */
+ul.plain button, ul.picklist button { width: auto; display: inline-block; }
 
 /* ── status LEDs ──────────────────────────────────────────────────────────── */
 .badge {

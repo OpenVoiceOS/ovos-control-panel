@@ -416,5 +416,14 @@
   "plugins.updates.checked": "آخر فحص:",
   "about.power_lead": "أعد تشغيل خدمات الصوت إذا توقف الجهاز عن الإجابة. إعادة تشغيل الجهاز بالكامل تستغرق دقيقة أو دقيقتين حتى يعود.",
   "about.power_confirm_note": "سيُطلب منك التأكيد أولًا.",
-  "about.power_how": "كيف يعمل هذا"
+  "about.power_how": "كيف يعمل هذا",
+  "tryit.asking": "يسأل الجهاز…",
+  "tryit.live.pause": "إيقاف التحديثات",
+  "tryit.live.resume": "استئناف التحديثات",
+  "tryit.live.needsToken": "يحتاج البث المباشر إلى رمز وصول الجهاز. سجّل الدخول به لرؤية النشاط.",
+  "plugins.searchPrompt": "اكتب اسمًا في الأعلى، أو اختر نوعًا، للبحث في الفهرس.",
+  "plugins.more": "نتيجة أخرى مطابقة — ضيّق بحثك لرؤيتها.",
+  "setup.lang.other": "تحتاج لغة غير مدرجة؟",
+  "setup.lang.otherLink": "اضبط الرمز الدقيق في صفحة الإعدادات.",
+  "setup.speak.aboutLink": "صفحة حول"
 }
