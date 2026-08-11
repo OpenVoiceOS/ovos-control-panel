@@ -133,8 +133,30 @@
     if (b && status && status.warning) { b.textContent = status.warning; b.hidden = false; }
   }
 
+  // One date renderer for the whole UI: "11 Aug 2026, 10:12" — never a locale
+  // DD/MM vs MM/DD guess, never trailing seconds. Accepts a Date, epoch ms, or
+  // a "YYYYMMDDTHHMMSSZ" backup stamp.
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function fmtDateTime(value) {
+    var d;
+    if (value instanceof Date) {
+      d = value;
+    } else if (typeof value === "number") {
+      d = new Date(value);
+    } else {
+      var m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(String(value));
+      if (!m) { return String(value); }
+      d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
+    }
+    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    return d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear()
+      + ", " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
   window.OvosWebUI = {
     api: api, el: el, say: say, esc: esc, t: t, applyI18n: applyI18n,
+    fmtDateTime: fmtDateTime,
     ready: function (fn) {
       document.addEventListener("DOMContentLoaded", function () {
         markNav();

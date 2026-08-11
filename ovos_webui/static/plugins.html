@@ -227,7 +227,7 @@ OvosWebUI.ready(function () {
       }
       var checked = r.checked
         ? '<p class="hint">' + esc(OvosWebUI.t("plugins.updates.checked", "Last checked:")) + " "
-          + esc(new Date(r.checked * 1000).toLocaleString()) + "</p>"
+          + esc(OvosWebUI.fmtDateTime(r.checked * 1000)) + "</p>"
         : "";
       if (!r.outdated) {
         box.innerHTML = "<strong>" + esc(OvosWebUI.t("plugins.updates.ok", "Everything is up to date."))

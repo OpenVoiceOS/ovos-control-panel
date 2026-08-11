@@ -67,19 +67,7 @@ OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
   var shownId = null, shownFrom = null;
 
-  // "20260811T091210Z" is a machine stamp; show it the way a person reads a
-  // date. Built by hand so it is never ambiguous (11/08 vs 08/11) whatever the
-  // runtime locale decides to do.
-  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  function niceStamp(stamp) {
-    var m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(stamp);
-    if (!m) { return stamp; }
-    var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
-    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
-    return d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear()
-      + ", " + pad(d.getHours()) + ":" + pad(d.getMinutes());
-  }
+  var niceStamp = OvosWebUI.fmtDateTime;  // one date renderer for the whole UI
 
   function loadHistory() {
     api("/api/backups").then(function (r) {
