@@ -33,24 +33,6 @@
   <h2 data-i18n="about.packages_heading">Installed packages</h2>
   <p class="hint" data-i18n="about.packages_hint">Give these version numbers when you report a problem.</p>
   <div class="card"><ul class="plain" id="packages"></ul></div>
-  <h2 data-i18n="about.power_heading">Device power</h2>
-  <div class="card">
-    <p data-i18n="about.power_lead">Restart the voice services if the device has stopped answering. Rebooting
-      restarts the whole device and takes a minute or two to come back.</p>
-    <p class="hint" data-i18n="about.power_confirm_note">You will be asked to confirm first.</p>
-    <div class="row">
-      <button class="secondary" id="restart-services" data-i18n="about.power_restart">Restart the voice services</button>
-      <button class="danger" id="reboot" data-i18n="about.power_reboot">Reboot the device</button>
-    </div>
-    <details class="tech">
-      <summary data-i18n="about.power_how">How this works</summary>
-      <p class="hint" data-i18n="about.power_hint">These send the standard system messages over the bus.
-        They work when the system PHAL plugin is installed; on a device without it, nothing happens.
-        This page never runs a command itself.</p>
-    </details>
-    <div class="msg" id="msg-power" role="status" aria-live="polite" hidden></div>
-  </div>
-
   <h2 data-i18n="about.credits_heading">Credits</h2>
   <div class="card">
     <p><span data-i18n="about.developed_by">Developed by </span><a href="https://tigregotico.pt">TigreGotico</a><span data-i18n="about.developed_for"> for</span>
@@ -81,19 +63,6 @@ OvosWebUI.ready(function () {
       ? a.packages.map(function (p) { return "<li>" + esc(p.name) + " <code>" + esc(p.version) + "</code></li>"; }).join("")
       : "<li>" + esc(OvosWebUI.t("about.no_package", "No OpenVoiceOS package was found.")) + "</li>";
   }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
-
-  function power(action, question) {
-    if (!OvosWebUI.confirmed(question)) { return; }
-    OvosWebUI.api("/api/system/" + action, {method: "POST"}).then(function () {
-      OvosWebUI.say("msg-power", OvosWebUI.t("about.power_sent", "Sent. If the system plugin is installed, it happens now."));
-    }).catch(function (e) { OvosWebUI.say("msg-power", e.message, true); });
-  }
-  el("restart-services").addEventListener("click", function () {
-    power("restart_services", OvosWebUI.t("about.power_confirm_restart", "Restart the voice services? The device stops answering for a moment."));
-  });
-  el("reboot").addEventListener("click", function () {
-    power("reboot", OvosWebUI.t("about.power_confirm_reboot", "Reboot the whole device? It goes quiet for a minute or two."));
-  });
 });
 </script>
 </body>

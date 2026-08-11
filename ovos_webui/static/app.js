@@ -136,6 +136,31 @@
       .catch(function () { /* keep the English already on the page */ });
   }
 
+  // The one place the site navigation is defined. Every page carries an empty
+  // (or fallback) <nav aria-label="Site">; this fills it, so a new page is
+  // added here once rather than in every file.
+  var NAV = [
+    ["/", "nav.dashboard", "Dashboard"],
+    ["/tryit", "nav.tryit", "Try it"],
+    ["/controls", "nav.controls", "Device"],
+    ["/config", "nav.settings", "Settings"],
+    ["/skills", "nav.skills", "Skills"],
+    ["/abilities", "nav.abilities", "Abilities"],
+    ["/plugins", "nav.plugins", "Plugins"],
+    ["/personas", "nav.personas", "Personas"],
+    ["/translate", "nav.translate", "Translate"],
+    ["/backup", "nav.backup", "Backup"],
+    ["/about", "nav.about", "About"]
+  ];
+  function renderNav() {
+    var nav = document.querySelector('nav[aria-label], nav#sitenav');
+    if (!nav) { return; }
+    nav.innerHTML = NAV.map(function (item) {
+      return '<a href="' + item[0] + '" data-i18n="' + item[1] + '">'
+        + esc(t(item[1], item[2])) + "</a>";
+    }).join("");
+  }
+
   function markNav() {
     var here = window.location.pathname.replace(/\/$/, "") || "/";
     document.querySelectorAll("nav a").forEach(function (a) {
@@ -214,6 +239,7 @@
     fmtDateTime: fmtDateTime,
     ready: function (fn) {
       document.addEventListener("DOMContentLoaded", function () {
+        renderNav();
         markNav();
         mountThemeToggle();
         // One status call drives both the language/direction and the banner,

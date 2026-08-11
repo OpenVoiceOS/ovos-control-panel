@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Abilities — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.abilities">What it can do</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/tryit" data-i18n="nav.tryit">Try it</a>
+  <a href="/controls" data-i18n="nav.controls">Device</a>
+  <a href="/config" data-i18n="nav.settings">Settings</a>
+  <a href="/skills" data-i18n="nav.skills">Skills</a>
+  <a href="/abilities" data-i18n="nav.abilities">Abilities</a>
+  <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
+  <a href="/personas" data-i18n="nav.personas">Personas</a>
+  <a href="/translate" data-i18n="nav.translate">Translate</a>
+  <a href="/backup" data-i18n="nav.backup">Backup</a>
+  <a href="/about" data-i18n="nav.about">About</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="abilities.intro">Every skill installed on your device, and what it is for. Ask the device
+    out loud, or try a sentence on the Try it page.</p>
+  <label class="find"><span data-i18n="abilities.filter">Find an ability</span>
+    <input id="filter" placeholder="for example: weather, time, music" data-i18n-attr="placeholder:abilities.filter.placeholder"></label>
+  <p class="hint" id="count" aria-live="polite"></p>
+  <div id="list" data-i18n="abilities.loading">Loading…</div>
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
+  var all = [];
+
+  function render(skills) {
+    if (!skills.length) {
+      el("list").innerHTML = '<div class="empty"><strong>'
+        + esc(t("abilities.none", "No skills are installed yet")) + "</strong><p>"
+        + esc(t("abilities.none.hint", "Add skills on the Plugins page and they will appear here.")) + "</p></div>";
+      return;
+    }
+    el("list").innerHTML = "<ul class='plain rowlist abilities'>" + skills.map(function (s) {
+      var desc = s.description
+        ? '<p class="hint">' + esc(s.description) + "</p>"
+        : '<p class="hint">' + esc(t("abilities.noDesc", "This skill does not describe itself.")) + "</p>";
+      var settings = s.configurable
+        ? ' <a href="/skills" class="small" aria-label="'
+          + esc(t("abilities.settings", "Settings") + " — " + s.name) + '">'
+          + esc(t("abilities.settings", "Settings")) + "</a>" : "";
+      return "<li><strong>" + esc(s.name) + "</strong>" + settings
+        + desc + '<code class="slug">' + esc(s.id) + "</code></li>";
+    }).join("") + "</ul>";
+  }
+
+  function applyFilter() {
+    var q = el("filter").value.trim().toLowerCase();
+    var shown = !q ? all : all.filter(function (s) {
+      return (s.name + " " + s.description + " " + s.id).toLowerCase().indexOf(q) !== -1;
+    });
+    el("count").textContent = q
+      ? shown.length + " " + t("abilities.match", "match")
+      : all.length + " " + t("abilities.total", "abilities");
+    render(shown);
+  }
+
+  el("filter").addEventListener("input", applyFilter);
+
+  api("/api/capabilities").then(function (r) {
+    all = r.skills;
+    applyFilter();
+  }).catch(function (e) { el("list").textContent = e.message; });
+});
+</script>
+</body>
+</html>

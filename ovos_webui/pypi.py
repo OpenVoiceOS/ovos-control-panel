@@ -71,7 +71,11 @@ _HREF = re.compile(rb">([^<>]+)</a>")
 def classify(name: str) -> str | None:
     """Return the plugin kind of ``name``, or ``None`` when it is not one."""
     for pattern, kind in _COMPILED:
-        if pattern.match(name):
+        # fullmatch, not match: in Python ``$`` also matches just before a
+        # trailing newline, and ``match`` never anchors the end — so
+        # ``pattern.match("ovos-skill-foo\n")`` would wrongly succeed. fullmatch
+        # requires the whole string to be consumed, rejecting the trailing \n.
+        if pattern.fullmatch(name):
             return kind
     return None
 

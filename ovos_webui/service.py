@@ -69,6 +69,8 @@ PAGES = {
     "/translate": "translate.html",
     "/tryit": "tryit.html",
     "/setup": "setup.html",
+    "/controls": "controls.html",
+    "/abilities": "abilities.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -134,6 +136,19 @@ class BackupIdBody(BaseModel):
 
 class EnabledBody(BaseModel):
     enabled: bool
+
+
+class VolumeBody(BaseModel):
+    percent: int = Field(ge=0, le=100)
+
+
+class MuteBody(BaseModel):
+    muted: bool
+
+
+class TokenBody(BaseModel):
+    current: str | None = Field(None, max_length=512)
+    new: str = Field(max_length=512)
 
 
 class OverrideBody(BaseModel):
@@ -536,11 +551,13 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     @privileged.post("/plugins/install")
     def api_install(body: PackageBody) -> dict[str, Any]:
         try:
-            return installer.INSTALLER.install(body.package).as_dict()
+            return installer.INSTALLER.install(body.package, bus=state["bus"]).as_dict()
         except installer.UnsafePackageName as err:
             raise HTTPException(400, str(err))
         except installer.InstallerBusy as err:
             raise HTTPException(409, str(err))
+        except installer.InstallerUnavailable as err:
+            raise HTTPException(503, str(err))
         except LookupError as err:
             raise HTTPException(404, str(err))
         except OSError as err:
@@ -549,11 +566,13 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     @privileged.post("/plugins/uninstall")
     def api_uninstall(body: PackageBody) -> dict[str, Any]:
         try:
-            return installer.INSTALLER.uninstall(body.package).as_dict()
+            return installer.INSTALLER.uninstall(body.package, bus=state["bus"]).as_dict()
         except installer.UnsafePackageName as err:
             raise HTTPException(400, str(err))
         except installer.InstallerBusy as err:
             raise HTTPException(409, str(err))
+        except installer.InstallerUnavailable as err:
+            raise HTTPException(503, str(err))
         except LookupError as err:
             raise HTTPException(404, str(err))
 
@@ -579,11 +598,13 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     @privileged.post("/plugins/upgrade")
     def api_upgrade(body: PackageBody) -> dict[str, Any]:
         try:
-            return installer.INSTALLER.upgrade(body.package).as_dict()
+            return installer.INSTALLER.upgrade(body.package, bus=state["bus"]).as_dict()
         except installer.UnsafePackageName as err:
             raise HTTPException(400, str(err))
         except installer.InstallerBusy as err:
             raise HTTPException(409, str(err))
+        except installer.InstallerUnavailable as err:
+            raise HTTPException(503, str(err))
         except LookupError as err:
             raise HTTPException(404, str(err))
 
@@ -705,6 +726,80 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         from ovos_bus_client.message import Message
         state["bus"].emit(Message(message_type, {}, {"source": "ovos-webui"}))
         return {"sent": message_type}
+
+    def _need_bus():
+        if state["bus"] is None or not health.bus_reachable(state["bus"]):
+            raise HTTPException(503, "the message bus is not reachable")
+        return state["bus"]
+
+    # ── device controls: volume, microphone, and what each needs ─────────────
+    @api.get("/device/capabilities")
+    def api_capabilities_status() -> dict[str, Any]:
+        from ovos_webui import phal
+        return phal.capability_status()
+
+    @api.get("/device/volume")
+    def api_volume_get() -> dict[str, Any]:
+        from ovos_webui import devicecontrol
+        return devicecontrol.get_volume(_need_bus())
+
+    @privileged.post("/device/volume")
+    def api_volume_set(body: VolumeBody) -> dict[str, Any]:
+        from ovos_webui import devicecontrol
+        try:
+            return devicecontrol.set_volume(_need_bus(), body.percent)
+        except ValueError as err:
+            raise HTTPException(400, str(err))
+
+    @privileged.post("/device/volume/mute")
+    def api_volume_mute(body: MuteBody) -> dict[str, Any]:
+        from ovos_webui import devicecontrol
+        return devicecontrol.set_mute(_need_bus(), body.muted)
+
+    @api.get("/device/mic")
+    def api_mic_get() -> dict[str, Any]:
+        from ovos_webui import devicecontrol
+        return devicecontrol.get_mic(_need_bus())
+
+    @privileged.post("/device/mic/mute")
+    def api_mic_mute(body: MuteBody) -> dict[str, Any]:
+        from ovos_webui import devicecontrol
+        return devicecontrol.set_mic_mute(_need_bus(), body.muted)
+
+    # ── what can it do: the installed skills ─────────────────────────────────
+    @api.get("/capabilities")
+    def api_abilities() -> dict[str, Any]:
+        from ovos_webui import capabilities
+        return capabilities.list_capabilities()
+
+    # ── access token: set the first one, or rotate it ────────────────────────
+    # On a device that already has a token, changing it needs a signed-in
+    # session (the ``api`` guard) AND the current token re-supplied in the body.
+    # On a device with no token yet, the ``api`` router is open to the same
+    # callers that can already write it through ``PUT /api/config`` — setting a
+    # token here only tightens the device, so it is allowed on the same terms.
+    @api.post("/auth/token")
+    def api_set_token(body: TokenBody, response: Response) -> dict[str, Any]:
+        from ovos_webui.auth import MIN_TOKEN_LENGTH
+
+        new = (body.new or "").strip()
+        had_token = bool(policy.token)
+        if len(new) < MIN_TOKEN_LENGTH:
+            raise HTTPException(400, f"the token must be at least "
+                                     f"{MIN_TOKEN_LENGTH} characters")
+        if policy.token:
+            # Changing an existing token needs the current one, so a walk-up to
+            # an unlocked session cannot silently lock the owner out.
+            if not policy.matches((body.current or "").strip()):
+                raise HTTPException(403, "the current token is not right")
+        configdata = configio.read_user_config()
+        configio.set_in(configdata, ["webui", "access_token"], new)
+        configio.write_user_config(configdata, bus=state["bus"])
+        policy.token = new  # take effect at once for the rest of this process
+        # Keep this session signed in under the new token.
+        response.set_cookie(COOKIE_NAME, new, httponly=True, samesite="strict",
+                            path="/", max_age=30 * 24 * 3600)
+        return {"ok": True, "had_token": had_token}
 
     # ── personas ─────────────────────────────────────────────────────────────
     @api.get("/personas")
