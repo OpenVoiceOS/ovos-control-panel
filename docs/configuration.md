@@ -1,5 +1,6 @@
 # Settings
 
+
 The Settings page changes your own layer of `mycroft.conf`.
 
 ![The simple settings form on a phone](images/configuration.png)
@@ -49,3 +50,9 @@ it again when it changes. When the message bus is up, the page also sends the
 existing `configuration.patch` message, so the services see the change at once.
 
 Every save first copies the old file into `.ovos-webui-backups` beside it.
+
+## On a wide screen
+
+On a computer the fields lay out in two columns and the tabs move to a left rail.
+
+![Settings on a desktop](images/settings-desktop.png)
