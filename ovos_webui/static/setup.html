@@ -42,7 +42,7 @@
   <p class="hint" data-i18n="setup.step2.hint">These are the plugins OpenVoiceOS recommends for your language.
     Install one for hearing (speech to text) and one for speaking (voice).</p>
   <div class="card" id="recommended" data-i18n="setup.loading">Loading…</div>
-  <div class="card"><pre id="joblog" role="log" aria-live="polite" aria-relevant="additions text" style="overflow-x:auto;white-space:pre-wrap" hidden></pre></div>
+  <div class="card" id="joblog-card" hidden><pre id="joblog" role="log" aria-live="polite" aria-relevant="additions text" style="overflow-x:auto;white-space:pre-wrap"></pre></div>
 
   <h2><span data-i18n="setup.step3.title">3. Hear it speak</span></h2>
   <div class="card">
@@ -88,7 +88,7 @@ OvosWebUI.ready(function () {
   function watch(id, since) {
     if (poll) { clearTimeout(poll); }
     api("/api/plugins/jobs/" + encodeURIComponent(id) + "?since=" + since).then(function (job) {
-      el("joblog").hidden = false;
+      el("joblog-card").hidden = false;
       if (job.lines.length) { el("joblog").textContent += "\n" + job.lines.join("\n"); }
       if (job.state === "running") {
         poll = setTimeout(function () { watch(id, job.next); }, 1000);
@@ -108,7 +108,7 @@ OvosWebUI.ready(function () {
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({package: name})
     }).then(function (job) {
-      el("joblog").hidden = false;
+      el("joblog-card").hidden = false;
       el("joblog").textContent = job.lines.join("\n");
       watch(job.id, job.next);
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
@@ -129,6 +129,15 @@ OvosWebUI.ready(function () {
     stt: t("plugins.kind.stt", "Speech to text"),
     tts: t("plugins.kind.tts", "Voice")
   };
+  var profileLabels = {
+    offline_stt: t("plugins.profile.offline_stt", "works offline"),
+    online_stt: t("plugins.profile.online_stt", "needs the internet"),
+    offline_male: t("plugins.profile.offline_male", "works offline"),
+    offline_female: t("plugins.profile.offline_female", "works offline"),
+    online_male: t("plugins.profile.online_male", "needs the internet"),
+    online_female: t("plugins.profile.online_female", "needs the internet"),
+    gpu: t("plugins.profile.gpu", "needs a GPU")
+  };
 
   function loadRecommended() {
     api("/api/plugins/recommended").then(function (r) {
@@ -136,14 +145,22 @@ OvosWebUI.ready(function () {
         el("recommended").textContent = t("plugins.noRecommendation", "There is no recommendation for") + " " + r.lang + ".";
         return;
       }
+      // The first entry offered for each role is the one to pick — mark it so
+      // a beginner is not faced with five identical Install buttons.
+      var firstOfRole = {};
       el("recommended").innerHTML = "<ul class='plain'>" + r.plugins.map(function (p) {
+        var recommended = !firstOfRole[p.section];
+        firstOfRole[p.section] = true;
+        var pick = (recommended && !p.installed)
+          ? ' <span class="badge">' + esc(t("setup.recommended", "recommended")) + "</span>" : "";
+        var profile = profileLabels[p.profile] ? " <small>(" + esc(profileLabels[p.profile]) + ")</small>" : "";
         var action = p.installed
           ? ' <span class="badge ready">' + esc(t("plugins.badge.installed", "installed")) + "</span>"
           : ' <button data-add="' + esc(p.module) + '" aria-label="'
             + esc(t("plugins.button.install", "Install") + " " + p.module) + '">'
             + esc(t("plugins.button.install", "Install")) + "</button>";
         return "<li><strong>" + esc(prettyName(p.module)) + "</strong> — "
-          + esc((kindLabels[p.section]) || p.section) + action
+          + esc((kindLabels[p.section]) || p.section) + profile + pick + action
           + ' <code class="slug">' + esc(p.module) + "</code></li>";
       }).join("") + "</ul>";
       el("recommended").querySelectorAll("[data-add]").forEach(function (b) {

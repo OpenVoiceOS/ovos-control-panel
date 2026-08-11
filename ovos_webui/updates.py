@@ -149,7 +149,10 @@ def _check_updates_locked(refresh, classify, installed_versions) -> dict[str, An
                          "latest": latest, "outdated": outdated})
     if dirty:
         _write_cache(cache)
+    checked = max((cache.get(p["name"], {}).get("fetched", 0)
+                   for p in packages), default=0) or None
     return {"channel": channel, "offline": offline, "packages": packages,
+            "checked": checked,
             "outdated": sum(1 for p in packages if p["outdated"])}
 
 

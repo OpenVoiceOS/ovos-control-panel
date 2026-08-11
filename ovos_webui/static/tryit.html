@@ -68,6 +68,13 @@ OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
   var last = 0;
 
+  function prettySkill(id) {
+    return String(id).split(".")[0]
+      .replace(/^(ovos-|neon-|mycroft-)?skill-/, "")
+      .replace(/-/g, " ").trim()
+      .replace(/\b\w/g, function (c) { return c.toUpperCase(); }) || id;
+  }
+
   var EVENT_LABELS = {
     wakeword: t("tryit.event.wakeword", "Wake word heard"),
     listening: t("tryit.event.listening", "Listening…"),
@@ -89,7 +96,9 @@ OvosWebUI.ready(function () {
     }).then(function (r) {
       el("result").hidden = false;
       var card = el("result-card");
-      card.className = "card " + (r.matched ? "ok" : "down");
+      // The design system carries state in red and muted only; a failure gets
+      // the red bar, a success is a plain calm card with a confident heading.
+      card.className = "card" + (r.matched ? "" : " down");
       el("result-title").textContent = r.matched
         ? t("tryit.result.ok", "Answered in") + " " + r.elapsed + "s"
         : (r.timeout
@@ -98,7 +107,9 @@ OvosWebUI.ready(function () {
       var handler = el("result-handler");
       handler.hidden = !r.handler;
       if (r.handler) {
-        handler.textContent = t("tryit.result.handler", "Handled by:") + " " + r.handler;
+        handler.innerHTML = esc(t("tryit.result.handler", "Handled by:")) + " "
+          + "<strong>" + esc(prettySkill(r.handler)) + "</strong>"
+          + '<code class="slug">' + esc(r.handler) + "</code>";
       }
       el("result-lines").innerHTML = (r.spoken || []).map(function (line) {
         return "<p>“" + esc(line) + "”</p>";
@@ -139,9 +150,10 @@ OvosWebUI.ready(function () {
       r.events.forEach(function (e) {
         var li = document.createElement("li");
         var label = EVENT_LABELS[e.event] || e.event;
+        var detail = e.event === "skill_start" ? prettySkill(e.detail) : e.detail;
         li.innerHTML = "<small class='hint'>" + esc(fmtTime(e.time)) + "</small> "
           + "<strong>" + esc(label) + "</strong>"
-          + (e.detail ? " <bdi>" + esc(e.detail) + "</bdi>" : "");
+          + (detail ? " <bdi>" + esc(detail) + "</bdi>" : "");
         list.appendChild(li);
       });
       while (list.children.length > 40) { list.removeChild(list.children[1]); }

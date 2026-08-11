@@ -28,6 +28,7 @@
   <p class="hint" data-i18n="plugins.what">Plugins add abilities to your device — a voice, a way to hear you, a way to answer.</p>
   <h2 data-i18n="plugins.updates.title">Updates</h2>
   <div class="card" id="updates" data-i18n="plugins.loading">Loading…</div>
+  <div class="row"><button class="secondary refresh" id="recheck" data-i18n="plugins.updates.recheck">Check for updates now</button></div>
   <div class="card">
     <span data-i18n="plugins.channel.label">Release channel</span>
     <div class="tabs" role="group" aria-label="Release channel" data-i18n-attr="aria-label:plugins.channel.label">
@@ -200,9 +201,13 @@ OvosWebUI.ready(function () {
         box.textContent = OvosWebUI.t("plugins.updates.none", "No OVOS packages are installed here yet.");
         return;
       }
+      var checked = r.checked
+        ? '<p class="hint">' + esc(OvosWebUI.t("plugins.updates.checked", "Last checked:")) + " "
+          + esc(new Date(r.checked * 1000).toLocaleString()) + "</p>"
+        : "";
       if (!r.outdated) {
         box.innerHTML = "<strong>" + esc(OvosWebUI.t("plugins.updates.ok", "Everything is up to date."))
-          + "</strong>" + (r.offline ? '<p class="hint">'
+          + "</strong>" + checked + (r.offline ? '<p class="hint">'
           + esc(OvosWebUI.t("plugins.updates.offline", "PyPI could not be reached, so this may be out of date.")) + "</p>" : "");
         return;
       }
@@ -215,7 +220,7 @@ OvosWebUI.ready(function () {
             + esc(OvosWebUI.t("plugins.button.upgrade", "Upgrade") + " " + p.name) + '">'
             + esc(OvosWebUI.t("plugins.button.upgrade", "Upgrade")) + "</button>"
             + '<code class="slug">' + esc(p.name) + "</code></li>";
-        }).join("") + "</ul>";
+        }).join("") + "</ul>" + checked;
       box.querySelectorAll("[data-upgrade]").forEach(function (b) {
         b.addEventListener("click", function () {
           var name = b.getAttribute("data-upgrade");
@@ -269,6 +274,10 @@ OvosWebUI.ready(function () {
           "An upgrade of the named packages usually clears this.")) + "</p>";
   }).catch(function (e) { el("conflicts").textContent = e.message; });
 
+  el("recheck").addEventListener("click", function () {
+    el("updates").textContent = OvosWebUI.t("plugins.loading", "Loading…");
+    loadUpdates(true);
+  });
   loadUpdates(false);
 
   api("/api/plugins/recommended").then(function (r) {

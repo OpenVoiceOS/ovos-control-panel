@@ -410,5 +410,11 @@
   "about.power_reboot": "أعد تشغيل الجهاز",
   "about.power_sent": "أُرسل. إن كانت إضافة النظام مثبتة فسيحدث الآن.",
   "about.power_confirm_restart": "إعادة تشغيل خدمات الصوت؟ يتوقف الجهاز عن الإجابة للحظة.",
-  "about.power_confirm_reboot": "إعادة تشغيل الجهاز كله؟ يصمت دقيقة أو دقيقتين."
+  "about.power_confirm_reboot": "إعادة تشغيل الجهاز كله؟ يصمت دقيقة أو دقيقتين.",
+  "setup.recommended": "موصى بها",
+  "plugins.updates.recheck": "ابحث عن تحديثات الآن",
+  "plugins.updates.checked": "آخر فحص:",
+  "about.power_lead": "أعد تشغيل خدمات الصوت إذا توقف الجهاز عن الإجابة. إعادة تشغيل الجهاز بالكامل تستغرق دقيقة أو دقيقتين حتى يعود.",
+  "about.power_confirm_note": "سيُطلب منك التأكيد أولًا.",
+  "about.power_how": "كيف يعمل هذا"
 }

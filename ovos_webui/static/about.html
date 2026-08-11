@@ -35,12 +35,19 @@
   <div class="card"><ul class="plain" id="packages"></ul></div>
   <h2 data-i18n="about.power_heading">Device power</h2>
   <div class="card">
-    <p class="hint" data-i18n="about.power_hint">These send the standard system messages over the bus.
-      They work when the system PHAL plugin is installed; on a device without it, nothing happens.</p>
+    <p data-i18n="about.power_lead">Restart the voice services if the device has stopped answering. Rebooting
+      restarts the whole device and takes a minute or two to come back.</p>
+    <p class="hint" data-i18n="about.power_confirm_note">You will be asked to confirm first.</p>
     <div class="row">
       <button class="secondary" id="restart-services" data-i18n="about.power_restart">Restart the voice services</button>
       <button class="danger" id="reboot" data-i18n="about.power_reboot">Reboot the device</button>
     </div>
+    <details class="tech">
+      <summary data-i18n="about.power_how">How this works</summary>
+      <p class="hint" data-i18n="about.power_hint">These send the standard system messages over the bus.
+        They work when the system PHAL plugin is installed; on a device without it, nothing happens.
+        This page never runs a command itself.</p>
+    </details>
     <div class="msg" id="msg-power" role="status" aria-live="polite" hidden></div>
   </div>
 

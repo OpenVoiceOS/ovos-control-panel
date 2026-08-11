@@ -410,5 +410,11 @@
   "about.power_reboot": "Reboot the device",
   "about.power_sent": "Sent. If the system plugin is installed, it happens now.",
   "about.power_confirm_restart": "Restart the voice services? The device stops answering for a moment.",
-  "about.power_confirm_reboot": "Reboot the whole device? It goes quiet for a minute or two."
+  "about.power_confirm_reboot": "Reboot the whole device? It goes quiet for a minute or two.",
+  "setup.recommended": "recommended",
+  "plugins.updates.recheck": "Check for updates now",
+  "plugins.updates.checked": "Last checked:",
+  "about.power_lead": "Restart the voice services if the device has stopped answering. Rebooting restarts the whole device and takes a minute or two to come back.",
+  "about.power_confirm_note": "You will be asked to confirm first.",
+  "about.power_how": "How this works"
 }
