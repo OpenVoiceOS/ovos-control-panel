@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Plugins — OpenVoiceOS</title>
 <link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
 <script src="/static/app.js"></script>
 </head>
 <body>
@@ -14,6 +15,7 @@
   <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
 <nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
   <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/tryit" data-i18n="nav.tryit">Try it</a>
   <a href="/config" data-i18n="nav.settings">Settings</a>
   <a href="/skills" data-i18n="nav.skills">Skills</a>
   <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
@@ -24,6 +26,24 @@
 </nav>
 <main id="main" tabindex="-1">
   <p class="hint" data-i18n="plugins.what">Plugins add abilities to your device — a voice, a way to hear you, a way to answer.</p>
+  <h2 data-i18n="plugins.updates.title">Updates</h2>
+  <div class="card" id="updates" data-i18n="plugins.loading">Loading…</div>
+  <div class="row"><button class="secondary refresh" id="recheck" data-i18n="plugins.updates.recheck">Check for updates now</button></div>
+  <div class="card">
+    <span data-i18n="plugins.channel.label">Release channel</span>
+    <div class="tabs" role="group" aria-label="Release channel" data-i18n-attr="aria-label:plugins.channel.label">
+      <button id="ch-stable" data-i18n="plugins.channel.stable">Steady releases</button>
+      <button id="ch-alpha" data-i18n="plugins.channel.alpha">Latest fixes (alpha)</button>
+    </div>
+    <p class="hint" data-i18n="plugins.channel.hint">OpenVoiceOS publishes an alpha for every merged fix.
+      "Latest fixes" gets them right away; "Steady releases" waits for a numbered release.</p>
+    <div class="msg" id="msg-channel" role="status" aria-live="polite" hidden></div>
+  </div>
+  <details class="tech">
+    <summary data-i18n="plugins.conflicts.summary">Dependency health</summary>
+    <div class="card" id="conflicts" data-i18n="plugins.loading">Loading…</div>
+  </details>
+
   <h2 data-i18n="plugins.recommended.title">Recommended for your language</h2>
   <p class="hint" data-i18n="plugins.recommended.hint">These come from the list that OpenVoiceOS ships for your language.</p>
   <div class="card" id="recommended" data-i18n="plugins.loading">Loading…</div>
@@ -42,8 +62,10 @@
 
   <h2 data-i18n="plugins.job.title">Job</h2>
   <p class="hint" data-i18n="plugins.job.hint">Only one install or removal runs at a time.</p>
-  <div class="card"><pre id="joblog" role="log" aria-live="polite" aria-relevant="additions text" style="overflow-x:auto;white-space:pre-wrap" data-i18n="plugins.job.nojob">No job has run yet.</pre></div>
+  <div class="card"><pre id="joblog" role="log" tabindex="0" aria-live="polite" aria-relevant="additions text" style="overflow-x:auto;white-space:pre-wrap" data-i18n="plugins.job.nojob">No job has run yet.</pre></div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
 </main>
 <script>
 OvosWebUI.ready(function () {
@@ -75,9 +97,11 @@ OvosWebUI.ready(function () {
     var state = r.installed
       ? '<span class="badge ready">' + OvosWebUI.t("plugins.badge.installed", "installed") + " " + esc(r.version || "") + "</span>"
       : '<span class="badge">' + OvosWebUI.t("plugins.badge.available", "available") + "</span>";
+    // Both actions are low-emphasis in a long list, so red stays reserved for
+    // the page's own primary actions instead of becoming wallpaper.
     var button = r.installed
       ? '<button class="secondary" data-remove="' + esc(r.name) + '" aria-label="' + esc(OvosWebUI.t("plugins.button.remove", "Remove") + " " + r.name) + '">' + OvosWebUI.t("plugins.button.remove", "Remove") + '</button>'
-      : '<button data-add="' + esc(r.name) + '" aria-label="' + esc(OvosWebUI.t("plugins.button.install", "Install") + " " + r.name) + '">' + OvosWebUI.t("plugins.button.install", "Install") + '</button>';
+      : '<button class="secondary" data-add="' + esc(r.name) + '" aria-label="' + esc(OvosWebUI.t("plugins.button.install", "Install") + " " + r.name) + '">' + OvosWebUI.t("plugins.button.install", "Install") + '</button>';
     return '<div class="card"><strong>' + esc(prettyName(r.name)) + "</strong> " + state
       + '<p class="hint">' + esc(plainLabel(r.kind, kindLabels))
       + '<code class="slug">' + esc(r.name) + "</code></p>"
@@ -93,23 +117,45 @@ OvosWebUI.ready(function () {
     });
   }
 
+  //: The catalog is hundreds of packages; never render it whole. Show matches
+  //: only once there is a query or a kind filter, and cap what is drawn.
+  var MAX_RESULTS = 60;
+
+  function fillKinds(kinds) {
+    if (el("kind").dataset.filled) { return; }
+    el("kind").innerHTML = '<option value="">' + esc(OvosWebUI.t("plugins.kind.any", "Any")) + "</option>"
+      + kinds.map(function (k) { return '<option value="' + esc(k) + '">' + esc(k) + "</option>"; }).join("");
+    el("kind").dataset.filled = "1";
+  }
+
   function search(refresh) {
+    var q = el("q").value.trim(), kind = el("kind").value;
+    if (!q && !kind && !refresh) {
+      el("results").innerHTML = '<div class="card hint">'
+        + esc(OvosWebUI.t("plugins.searchPrompt", "Type a name above, or choose a kind, to search the catalog."))
+        + "</div>";
+      // still fetch once to fill the kind list, without drawing the catalog
+      if (!el("kind").dataset.filled) {
+        api("/api/plugins/search?q=&kind=").then(function (r) { fillKinds(r.kinds); }).catch(function () {});
+      }
+      return;
+    }
     el("results").innerHTML = '<div class="card">' + OvosWebUI.t("plugins.searching", "Searching…") + '</div>';
     var url = "/api/plugins/search?q=" + encodeURIComponent(el("q").value)
       + "&kind=" + encodeURIComponent(el("kind").value)
       + (refresh ? "&refresh=true" : "");
     api(url).then(function (r) {
-      if (!el("kind").dataset.filled) {
-        el("kind").innerHTML = '<option value="">Any</option>'
-          + r.kinds.map(function (k) { return '<option value="' + esc(k) + '">' + esc(k) + "</option>"; }).join("");
-        el("kind").dataset.filled = "1";
-      }
+      fillKinds(r.kinds);
+      var shown = r.results.slice(0, MAX_RESULTS);
+      var more = r.results.length - shown.length;
       el("cacheinfo").textContent = r.offline
         ? OvosWebUI.t("plugins.offline", "PyPI could not be reached, so only the plugins already installed are listed.")
         : OvosWebUI.t("plugins.listUpdated", "List updated") + " " + age(r.cache_age) + ". " + r.total + " " + OvosWebUI.t("plugins.pluginsMatch", "plugin(s) match.")
           + (r.stale ? " " + OvosWebUI.t("plugins.stale", "PyPI could not be reached, so this list may be old.") : "");
-      el("results").innerHTML = r.results.length
-        ? r.results.map(card).join("")
+      el("results").innerHTML = shown.length
+        ? shown.map(card).join("")
+          + (more > 0 ? '<div class="card hint">' + more + " "
+            + esc(OvosWebUI.t("plugins.more", "more match — narrow your search to see them.")) + "</div>" : "")
         : '<div class="card">' + OvosWebUI.t("plugins.nothingMatched", "Nothing matched.") + '</div>';
       bind();
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
@@ -133,7 +179,7 @@ OvosWebUI.ready(function () {
   function watch(id, since) {
     if (poll) { clearTimeout(poll); }
     api("/api/plugins/jobs/" + encodeURIComponent(id) + "?since=" + since).then(function (job) {
-      if (job.lines.length) { el("joblog").textContent += "\n" + job.lines.join("\n"); }
+      if (job.lines.length) { el("joblog").insertAdjacentText("beforeend", "\n" + job.lines.join("\n")); }
       if (job.state === "running") {
         poll = setTimeout(function () { watch(id, job.next); }, 1000);
       } else {
@@ -172,12 +218,98 @@ OvosWebUI.ready(function () {
     return (map && map[code]) || code;
   }
 
+  function loadUpdates(refresh) {
+    api("/api/updates" + (refresh ? "?refresh=true" : "")).then(function (r) {
+      var box = el("updates");
+      if (!r.packages.length) {
+        box.textContent = OvosWebUI.t("plugins.updates.none", "No OVOS packages are installed here yet.");
+        return;
+      }
+      var checked = r.checked
+        ? '<p class="hint">' + esc(OvosWebUI.t("plugins.updates.checked", "Last checked:")) + " "
+          + esc(OvosWebUI.fmtDateTime(r.checked * 1000)) + "</p>"
+        : "";
+      if (!r.outdated) {
+        box.innerHTML = "<strong>" + esc(OvosWebUI.t("plugins.updates.ok", "Everything is up to date."))
+          + "</strong>" + checked + (r.offline ? '<p class="hint">'
+          + esc(OvosWebUI.t("plugins.updates.offline", "PyPI could not be reached, so this may be out of date.")) + "</p>" : "");
+        return;
+      }
+      box.innerHTML = "<strong>" + r.outdated + " "
+        + esc(OvosWebUI.t("plugins.updates.behind", "package(s) have a newer version.")) + "</strong>"
+        + "<ul class='plain'>" + r.packages.filter(function (p) { return p.outdated; }).map(function (p) {
+          return "<li><strong>" + esc(prettyName(p.name)) + "</strong> "
+            + "<bdi>" + esc(p.installed) + " → " + esc(p.latest) + "</bdi> "
+            + '<button data-upgrade="' + esc(p.name) + '" aria-label="'
+            + esc(OvosWebUI.t("plugins.button.upgrade", "Upgrade") + " " + p.name) + '">'
+            + esc(OvosWebUI.t("plugins.button.upgrade", "Upgrade")) + "</button>"
+            + '<code class="slug">' + esc(p.name) + "</code></li>";
+        }).join("") + "</ul>" + checked;
+      box.querySelectorAll("[data-upgrade]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var name = b.getAttribute("data-upgrade");
+          if (!OvosWebUI.confirmed(OvosWebUI.t("plugins.confirm.upgrade", "Upgrade") + " " + name + "?")) { return; }
+          api("/api/plugins/upgrade", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({package: name})
+          }).then(function (job) {
+            el("joblog").textContent = job.lines.join("\n");
+            watch(job.id, job.next);
+          }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+        });
+      });
+    }).catch(function (e) { el("updates").textContent = e.message; });
+  }
+
+  function markChannel(channel) {
+    if (channel === "alpha") {
+      el("ch-alpha").setAttribute("aria-current", "true");
+      el("ch-stable").removeAttribute("aria-current");
+    } else {
+      el("ch-stable").setAttribute("aria-current", "true");
+      el("ch-alpha").removeAttribute("aria-current");
+    }
+  }
+
+  api("/api/updates/channel").then(function (r) { markChannel(r.channel); }).catch(function () {});
+  ["stable", "alpha"].forEach(function (channel) {
+    el("ch-" + channel).addEventListener("click", function () {
+      api("/api/updates/channel", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({channel: channel})
+      }).then(function () {
+        markChannel(channel);
+        OvosWebUI.say("msg-channel", OvosWebUI.t("plugins.channel.saved", "Saved. Installs and upgrades now follow this channel."));
+        loadUpdates(true);
+      }).catch(function (e) { OvosWebUI.say("msg-channel", e.message, true); });
+    });
+  });
+
+  api("/api/updates/conflicts").then(function (r) {
+    el("conflicts").innerHTML = r.ok
+      ? esc(OvosWebUI.t("plugins.conflicts.ok", "pip reports no conflicts between the installed packages."))
+      : "<strong>" + esc(OvosWebUI.t("plugins.conflicts.bad", "pip found problems:")) + "</strong>"
+        + "<ul class='plain'>" + (r.conflicts.length ? r.conflicts : [r.error || ""]).map(function (line) {
+          return "<li><code>" + esc(line) + "</code></li>";
+        }).join("") + "</ul>"
+        + '<p class="hint">' + esc(OvosWebUI.t("plugins.conflicts.hint",
+          "An upgrade of the named packages usually clears this.")) + "</p>";
+  }).catch(function (e) { el("conflicts").textContent = e.message; });
+
+  el("recheck").addEventListener("click", function () {
+    el("updates").textContent = OvosWebUI.t("plugins.loading", "Loading…");
+    loadUpdates(true);
+  });
+  loadUpdates(false);
+
   api("/api/plugins/recommended").then(function (r) {
     if (!r.plugins.length) {
       el("recommended").textContent = OvosWebUI.t("plugins.noRecommendation", "There is no recommendation for") + " " + r.lang + ".";
       return;
     }
-    el("recommended").innerHTML = "<ul class='plain'>" + r.plugins.map(function (p) {
+    el("recommended").innerHTML = "<ul class='plain rowlist'>" + r.plugins.map(function (p) {
       var installedBadge = p.installed
         ? ' <span class="badge ready">' + OvosWebUI.t("plugins.badge.installed", "installed") + "</span>"
         : "";

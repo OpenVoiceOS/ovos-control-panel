@@ -47,7 +47,9 @@ from ovos_webui.auth import (
     check_host,
     policy_from_config,
 )
-from ovos_webui.fsutils import MAX_PAYLOAD_BYTES, MAX_UPLOAD_BYTES, UnsafeIdentifier
+from ovos_webui.fsutils import (MAX_PAYLOAD_BYTES, MAX_UPLOAD_BYTES,
+                                UnsafeIdentifier,
+                                validate_skill_id as fsutils_validate_skill_id)
 from ovos_webui.limits import BodyLimitMiddleware
 from ovos_webui.version import __version__
 
@@ -65,6 +67,17 @@ PAGES = {
     "/plugins": "plugins.html",
     "/personas": "personas.html",
     "/translate": "translate.html",
+    "/tryit": "tryit.html",
+    "/setup": "setup.html",
+}
+
+#: The bus messages a browser may ask the device to act on. Each one is an
+#: existing message type that ovos-PHAL-plugin-system already handles; when
+#: that plugin is absent the message is simply ignored by the stack.
+SYSTEM_ACTIONS = {
+    "reboot": "system.reboot",
+    "shutdown": "system.shutdown",
+    "restart_services": "system.mycroft.service.restart",
 }
 
 #: The endpoints that take an upload, and so have a larger body limit.
@@ -105,6 +118,22 @@ class TranslateBody(BaseModel):
     source: str = Field(..., max_length=16)
     target: str = Field(..., max_length=16)
     plugin: str | None = Field(None, max_length=128)
+
+
+class UtteranceBody(BaseModel):
+    text: str = Field(max_length=500)
+
+
+class ChannelBody(BaseModel):
+    channel: str = Field(max_length=16)
+
+
+class BackupIdBody(BaseModel):
+    id: str = Field(max_length=512)
+
+
+class EnabledBody(BaseModel):
+    enabled: bool
 
 
 class OverrideBody(BaseModel):
@@ -155,6 +184,9 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     async def lifespan(app: FastAPI):
         if state["bus"] is None and connect_bus:
             state["bus"] = _connect_bus()
+        if state["bus"] is not None:
+            from ovos_webui.events import LOG_SINGLETON
+            LOG_SINGLETON.attach(state["bus"])
         yield
         client = state["bus"]
         if client is not None and bus is None:
@@ -315,6 +347,22 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         """
         return FileResponse(STATIC_DIR / "app.css", media_type="text/css")
 
+    @public.get("/static/manifest.webmanifest", include_in_schema=False)
+    def public_manifest() -> FileResponse:
+        """The web-app manifest and its icons ship in the package — the same
+        bytes anybody can read on PyPI — and a browser fetches the manifest
+        without cookies, so they stay public like the stylesheet."""
+        return FileResponse(STATIC_DIR / "manifest.webmanifest",
+                            media_type="application/manifest+json")
+
+    @public.get("/static/icon-192.png", include_in_schema=False)
+    def public_icon_small() -> FileResponse:
+        return FileResponse(STATIC_DIR / "icon-192.png", media_type="image/png")
+
+    @public.get("/static/icon-512.png", include_in_schema=False)
+    def public_icon_large() -> FileResponse:
+        return FileResponse(STATIC_DIR / "icon-512.png", media_type="image/png")
+
     @public.get("/healthz", include_in_schema=False)
     def healthz() -> PlainTextResponse:
         return PlainTextResponse("ok")
@@ -447,7 +495,13 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
 
     # ── plugin catalog and installer ─────────────────────────────────────────
     # Reads sit on the ``api`` router (host + cross-site + sign-in). Anything
-    # that runs pip sits on ``privileged``, which adds the always-a-token rule.
+    # that *changes* the software — install, uninstall, upgrade — sits on
+    # ``privileged``, which adds the always-a-token rule. The read-only
+    # diagnostics on ``api`` (``/updates`` sweeps PyPI, ``/updates/conflicts``
+    # runs ``pip check``, ``/plugins/search`` reads the index) each take their
+    # work-lock without blocking and are rate-limited (updates.py, pypi.py), so
+    # a burst of concurrent requests neither amplifies outward nor parks the
+    # worker pool — it just reads the cache.
     @api.get("/plugins/search")
     def api_plugin_search(q: str = "", kind: str = "",
                           refresh: bool = False) -> dict[str, Any]:
@@ -516,13 +570,171 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         return {"current": current.as_dict(since=10 ** 9) if current else None,
                 "recent": installer.INSTALLER.recent()}
 
+    # ── updates, release channel, dependency health ──────────────────────────
+    @api.get("/updates")
+    def api_updates(refresh: bool = False) -> dict[str, Any]:
+        from ovos_webui import updates
+        return updates.check_updates(refresh=refresh)
+
+    @privileged.post("/plugins/upgrade")
+    def api_upgrade(body: PackageBody) -> dict[str, Any]:
+        try:
+            return installer.INSTALLER.upgrade(body.package).as_dict()
+        except installer.UnsafePackageName as err:
+            raise HTTPException(400, str(err))
+        except installer.InstallerBusy as err:
+            raise HTTPException(409, str(err))
+        except LookupError as err:
+            raise HTTPException(404, str(err))
+
+    @api.get("/updates/channel")
+    def api_channel_get() -> dict[str, Any]:
+        from ovos_webui import updates
+        return {"channel": updates.release_channel(),
+                "channels": list(updates.CHANNELS)}
+
+    @privileged.post("/updates/channel")
+    def api_channel_set(body: ChannelBody) -> dict[str, Any]:
+        from ovos_webui import updates
+        try:
+            return updates.set_release_channel(body.channel, bus=state["bus"])
+        except ValueError as err:
+            raise HTTPException(400, str(err))
+
+    @api.get("/updates/conflicts")
+    def api_conflicts() -> dict[str, Any]:
+        from ovos_webui import updates
+        return updates.dependency_conflicts()
+
+    # ── backup history: the backups every save keeps on the device ───────────
+    @api.get("/backups")
+    def api_backups() -> dict[str, Any]:
+        from ovos_webui import history
+        return {"backups": history.list_backups()}
+
+    @api.get("/backups/show")
+    def api_backup_show(id: str) -> dict[str, Any]:
+        from ovos_webui import history
+        try:
+            return history.read_backup(id)
+        except UnsafeIdentifier as err:
+            raise HTTPException(400, str(err))
+        except LookupError as err:
+            raise HTTPException(404, str(err))
+
+    @api.post("/backups/revert")
+    def api_backup_revert(body: BackupIdBody) -> dict[str, Any]:
+        from ovos_webui import history
+        try:
+            return history.revert(body.id)
+        except UnsafeIdentifier as err:
+            raise HTTPException(400, str(err))
+        except LookupError as err:
+            raise HTTPException(404, str(err))
+
+    # ── try it: the round trip a spoken sentence would take ──────────────────
+    # Sending an utterance is running a command on the device, so it sits on
+    # ``privileged`` — a token is always required, like the installer.
+    @privileged.post("/tryit/ask")
+    def api_tryit(body: UtteranceBody) -> dict[str, Any]:
+        from ovos_webui import tryit
+        if state["bus"] is None or not health.bus_reachable(state["bus"]):
+            raise HTTPException(503, "the message bus is not reachable")
+        lang = configio.read_merged_config().get("lang") or "en-us"
+        try:
+            return tryit.ask(state["bus"], body.text, lang)
+        except ValueError as err:
+            raise HTTPException(400, str(err))
+
+    @privileged.post("/tryit/speak")
+    def api_tryit_speak(body: UtteranceBody) -> dict[str, Any]:
+        from ovos_webui import tryit
+        if state["bus"] is None or not health.bus_reachable(state["bus"]):
+            raise HTTPException(503, "the message bus is not reachable")
+        lang = configio.read_merged_config().get("lang") or "en-us"
+        try:
+            return tryit.preview(state["bus"], body.text, lang)
+        except ValueError as err:
+            raise HTTPException(400, str(err))
+
+    # The live feed carries what the device heard and said in plain text, so
+    # it is as sensitive as causing speech: it sits on the privileged router,
+    # a token always required, never open on a tokenless loopback device.
+    @privileged.get("/events")
+    def api_events(since: int = 0) -> dict[str, Any]:
+        from ovos_webui.events import LOG_SINGLETON
+        return LOG_SINGLETON.since(max(0, since))
+
+    # ── skill enable / disable via the blacklist ─────────────────────────────
+    @api.get("/skills/{skill_id}/enabled")
+    def api_skill_enabled(skill_id: str) -> dict[str, Any]:
+        try:
+            skill_id = fsutils_validate_skill_id(skill_id)
+        except UnsafeIdentifier as err:
+            raise HTTPException(400, str(err))
+        blacklist = configio.user_or_merged(
+            ["skills", "blacklisted_skills"]) or []
+        return {"skill_id": skill_id, "enabled": skill_id not in blacklist}
+
+    @api.put("/skills/{skill_id}/enabled")
+    def api_skill_set_enabled(skill_id: str, body: EnabledBody) -> dict[str, Any]:
+        try:
+            skill_id = fsutils_validate_skill_id(skill_id)
+        except UnsafeIdentifier as err:
+            raise HTTPException(400, str(err))
+        data = configio.read_user_config()
+        blacklist = list(configio.get_in(data, ["skills", "blacklisted_skills"])
+                         or [])
+        if body.enabled:
+            blacklist = [s for s in blacklist if s != skill_id]
+        elif skill_id not in blacklist:
+            blacklist.append(skill_id)
+        configio.set_in(data, ["skills", "blacklisted_skills"], blacklist)
+        result = configio.write_user_config(data, bus=state["bus"])
+        result.update({"skill_id": skill_id, "enabled": body.enabled})
+        return result
+
+    # ── system actions: bus messages PHAL may act on ─────────────────────────
+    @privileged.post("/system/{action}")
+    def api_system(action: str) -> dict[str, Any]:
+        message_type = SYSTEM_ACTIONS.get(action)
+        if message_type is None:
+            raise HTTPException(404, "there is no such action")
+        if state["bus"] is None or not health.bus_reachable(state["bus"]):
+            raise HTTPException(503, "the message bus is not reachable")
+        from ovos_bus_client.message import Message
+        state["bus"].emit(Message(message_type, {}, {"source": "ovos-webui"}))
+        return {"sent": message_type}
+
     # ── personas ─────────────────────────────────────────────────────────────
     @api.get("/personas")
     def api_personas() -> dict[str, Any]:
+        active = configio.user_or_merged(
+            ["intents", "persona", "default_persona"])
         return {"personas": personas.list_personas(),
                 "solvers": personas.available_solvers(),
                 "memory_plugins": personas.available_memory_plugins(),
+                "active": active,
                 "path": str(personas.personas_root())}
+
+    @api.post("/personas/{persona_id}/activate")
+    def api_persona_activate(persona_id: str) -> dict[str, Any]:
+        try:
+            data = personas.read_persona(persona_id)
+        except UnsafeIdentifier as err:
+            raise HTTPException(400, str(err))
+        except LookupError as err:
+            raise HTTPException(404, str(err))
+        except personas.PersonaError as err:
+            raise HTTPException(400, str(err))
+        # The persona service matches ``default_persona`` against the *name*
+        # a persona declares, so that is what goes in the configuration.
+        name = data.get("name") or persona_id
+        user = configio.read_user_config()
+        configio.set_in(user, ["intents", "persona", "default_persona"], name)
+        result = configio.write_user_config(user, bus=state["bus"])
+        result.update({"active": name, "persona_id": persona_id})
+        return result
 
     @api.get("/personas/{persona_id}")
     def api_persona_get(persona_id: str) -> dict[str, Any]:

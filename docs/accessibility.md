@@ -33,3 +33,24 @@ the same short keys the pages carry. English is written into the pages
 themselves and is the fallback, so a missing translation shows English rather
 than nothing. To add a language, copy `en.json` to `<code>.json` and translate
 the values. See `ovos_webui/static/i18n/README.md`.
+
+## On a computer, not just a phone
+
+The layout is phone-first but responsive. At 1024px and wider the tab bar
+becomes a left rail (each tab a full-width target, the current page marked with
+`aria-current="page"`), the content fills the width — the dashboard flows into
+two or three columns, Settings into a two-column field grid — and forms hold a
+readable measure rather than stretching a single control across the screen.
+Nothing is hidden on either size; it is the same markup reflowed with CSS.
+
+## More live-region care
+
+- The scrollable log and preview panes carry `tabindex="0"` so they can be
+  scrolled from the keyboard.
+- The Try-it result is a polite live region that first says "Asking the
+  device…" then the answer; the button is never disabled mid-request, so
+  focus is never dropped.
+- The live activity feed does not auto-announce (it would interrupt); a Pause
+  control stops it, and its label carries the state.
+- Opening a backup preview moves focus into the labelled region; closing it
+  returns focus to the row it came from.

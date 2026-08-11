@@ -6,6 +6,7 @@
 <meta name="referrer" content="same-origin">
 <title>Settings — OpenVoiceOS</title>
 <link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
 <script src="/static/app.js"></script>
 </head>
 <body>
@@ -15,6 +16,7 @@
   <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
 <nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
   <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/tryit" data-i18n="nav.tryit">Try it</a>
   <a href="/config" data-i18n="nav.settings">Settings</a>
   <a href="/skills" data-i18n="nav.skills">Skills</a>
   <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
@@ -66,6 +68,8 @@
     </div>
     <div class="msg" id="msg-raw" role="status" aria-live="polite" hidden></div>
   </section>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
 </main>
 <script>
 OvosWebUI.ready(function () {

@@ -157,7 +157,7 @@ nav {
   flex-wrap: wrap;
   gap: 0.35rem;
   padding: 0.55rem 0.8rem;
-  background: color-mix(in srgb, var(--card) 90%, transparent);
+  background: var(--card);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
   position: sticky;
@@ -194,6 +194,7 @@ nav a::before {
   mask: center/contain no-repeat var(--icon, none);
 }
 nav a[href="/"]        { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7' height='7' rx='1'/%3E%3Crect x='14' y='3' width='7' height='7' rx='1'/%3E%3Crect x='3' y='14' width='7' height='7' rx='1'/%3E%3Crect x='14' y='14' width='7' height='7' rx='1'/%3E%3C/svg%3E"); }
+nav a[href="/tryit"]  { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M10 8l6 4-6 4z'/%3E%3C/svg%3E"); }
 nav a[href="/config"]  { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='4' y1='8' x2='20' y2='8'/%3E%3Ccircle cx='9' cy='8' r='2.2'/%3E%3Cline x1='4' y1='16' x2='20' y2='16'/%3E%3Ccircle cx='15' cy='16' r='2.2'/%3E%3C/svg%3E"); }
 nav a[href="/skills"]  { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6h16M4 12h16M4 18h10'/%3E%3C/svg%3E"); }
 nav a[href="/plugins"] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0z M12 17v5'/%3E%3C/svg%3E"); }
@@ -202,7 +203,70 @@ nav a[href="/translate"]{ --icon: url("data:image/svg+xml,%3Csvg xmlns='http://w
 nav a[href="/backup"]  { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v11M8 10l4 4 4-4M4 21h16'/%3E%3C/svg%3E"); }
 nav a[href="/about"]   { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 7.5h.01'/%3E%3C/svg%3E"); }
 
-main { padding: 1.1rem; max-width: 60rem; margin: 0 auto; }
+main { padding: 1.1rem; max-width: 62rem; margin: 0 auto; }
+
+/* ── desktop: the pill row becomes a left rail, content uses the width ──────
+ * Below 64rem the phone layout stands (header, wrapping pill nav, single
+ * column). At and above it the page becomes a two-column app: a sticky rail
+ * of full-width tabs on the left, the content beside it. Same DOM, no wrapper
+ * element — the body itself is the grid. */
+@media (min-width: 64rem) {
+  body {
+    display: grid;
+    grid-template-columns: 16rem minmax(0, 1fr);
+    grid-template-areas: "head head" "nav  main";
+    min-height: 100vh;
+    padding-bottom: 0;
+  }
+  .skip, .banner { grid-column: 1 / -1; }
+  header { grid-area: head; }
+  nav {
+    grid-area: nav;
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    gap: 0.15rem;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    border-inline-end: 1px solid var(--line);
+    border-bottom: none;
+    padding: 0.8rem 0.7rem;
+  }
+  nav a {
+    font-size: 1rem;
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.9rem;
+  }
+  main {
+    grid-area: main;
+    max-width: 66rem;
+    padding: 1.6rem 2rem 4rem;
+    margin: 0;
+  }
+  /* A single control spanning the whole content width reads as unfinished;
+   * hold form fields to a readable measure and let code editors run wider. */
+  input, select { max-width: 34rem; }
+  textarea { max-width: 54rem; }
+  .row { max-width: 36rem; }
+  /* Settings fills the width with a two-column field grid rather than a narrow
+   * card floating in empty space or one column with a framed gutter. */
+  #fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 1.6rem; }
+  #fields label { margin-bottom: 0.4rem; }
+  #fields input, #fields select { max-width: none; }
+  section#raw { max-width: 46rem; }
+  /* Room to breathe: two columns for forms and content that suit it. */
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; align-items: start; }
+}
+/* The header mark stays near the wordmark instead of a bar stretching the
+ * whole desktop header — most visible in the bus-down flat state. */
+@media (min-width: 48rem) { .wave { max-width: 30rem; } }
+
+@media (min-width: 90rem) {
+  main { max-width: 78rem; }
+}
 
 /* ── type ─────────────────────────────────────────────────────────────────── */
 h2 {
@@ -233,8 +297,9 @@ p.hint { color: var(--muted); margin: 0.2rem 0 1rem; }
   margin-bottom: 1rem;
   box-shadow: var(--shadow);
 }
-.grid { display: grid; gap: 0.75rem; grid-template-columns: 1fr; }
-@media (min-width: 40rem) { .grid { grid-template-columns: 1fr 1fr; } }
+/* Cards flow into as many columns as the width allows — one on a phone, two
+ * or three on a laptop — instead of a single tall stack everywhere. */
+.grid { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
 
 /* A service that did not answer: red-tinted, so a down device does not read as
  * a wall of identical grey cards. */
@@ -294,6 +359,8 @@ p.hint { color: var(--muted); margin: 0.2rem 0 1rem; }
 }
 .empty strong { display: block; color: var(--ink); font-size: 1.1rem; margin-bottom: 0.35rem; }
 .empty a { color: var(--accent); }
+/* The quiet per-page footer that points at the technical manual. */
+.foot { margin-top: 2.2rem; text-align: center; }
 /* Every in-page link wears the brand red — no browser-default blue. */
 main a, main a:visited { color: var(--accent); }
 
@@ -370,9 +437,10 @@ button.secondary:hover { background: var(--accent-wash); border-color: var(--acc
 /* A consequential action (restore, delete): reads as caution, not a twin of a
  * safe action beside it. */
 button.danger {
-  background: transparent;
+  background: color-mix(in srgb, var(--bad) 10%, transparent);
   color: var(--bad);
-  border: 1px solid color-mix(in srgb, var(--bad) 50%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--bad) 55%, var(--line));
+  font-weight: 650;
 }
 button.danger:hover {
   background: color-mix(in srgb, var(--bad) 12%, transparent);
@@ -381,7 +449,20 @@ button.danger:hover {
 }
 button[disabled] { opacity: 0.55; cursor: not-allowed; }
 .row { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.9rem; }
-.row button { width: auto; flex: 1 1 10rem; }
+.row button { width: auto; flex: 0 1 auto; min-width: 9rem; }
+/* A button sitting inside a list row (plugin/skill lists) hugs its label
+ * instead of stretching to the full width the way form controls do. */
+ul.plain button, ul.picklist button { width: auto; display: inline-block; }
+#recommended li, ul.rowlist li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  min-height: 2.4rem;
+}
+#recommended li .slug, ul.rowlist li .slug { flex-basis: 100%; margin-top: 0.1rem; }
+#recommended li button, ul.rowlist li button { margin-inline-start: auto; }
+ul.rowlist li .when { color: var(--muted); font-size: 0.85rem; }
 
 /* ── status LEDs ──────────────────────────────────────────────────────────── */
 .badge {

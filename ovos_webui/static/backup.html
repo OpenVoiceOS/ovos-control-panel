@@ -6,6 +6,7 @@
 <meta name="referrer" content="same-origin">
 <title>Backup — OpenVoiceOS</title>
 <link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
 <script src="/static/app.js"></script>
 </head>
 <body>
@@ -15,6 +16,7 @@
   <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
 <nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
   <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/tryit" data-i18n="nav.tryit">Try it</a>
   <a href="/config" data-i18n="nav.settings">Settings</a>
   <a href="/skills" data-i18n="nav.skills">Skills</a>
   <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
@@ -42,11 +44,88 @@
   </div>
   <div class="row"><button id="restore" class="danger" data-i18n="backup.restore_button">Restore this file</button></div>
   <p class="hint" data-i18n="backup.undo_hint">You will be asked to confirm first, and the replaced files are kept on the device, so you can undo this.</p>
+
+  <h2 data-i18n="backup.history_heading">Go back to an earlier save</h2>
+  <p class="hint" data-i18n="backup.history_hint">Every save keeps the file it replaced, right here on the device.
+    Pick one to look at it or put it back.</p>
+  <div class="card" id="history" data-i18n="backup.history_loading">Looking for backups…</div>
+  <div class="card" id="preview-card" tabindex="-1" role="region" aria-labelledby="preview-title" hidden>
+    <strong id="preview-title"></strong>
+    <pre id="preview" tabindex="0" style="overflow-x:auto"></pre>
+    <div class="row">
+      <button id="revert" data-i18n="backup.revert_button">Put this version back</button>
+      <button class="secondary" id="preview-close" data-i18n="backup.preview_close">Close</button>
+    </div>
+    <p class="hint" data-i18n="backup.revert_hint">The file it replaces is backed up first, so a revert can be reverted.</p>
+  </div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
 </main>
 <script>
 OvosWebUI.ready(function () {
-  var api = OvosWebUI.api, el = OvosWebUI.el;
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
+  var shownId = null, shownFrom = null;
+
+  var niceStamp = OvosWebUI.fmtDateTime;  // one date renderer for the whole UI
+
+  function loadHistory() {
+    api("/api/backups").then(function (r) {
+      if (!r.backups.length) {
+        el("history").textContent = t("backup.history_empty", "No saved versions yet. They appear after your first save.");
+        return;
+      }
+      el("history").innerHTML = "<ul class='plain rowlist'>" + r.backups.slice(0, 20).map(function (b) {
+        return "<li><strong>" + esc(b.file) + "</strong> "
+          + "<span class='when' title='" + esc(b.stamp) + "'>" + esc(niceStamp(b.stamp)) + "</span> "
+          + '<button class="secondary" data-show="' + esc(b.id) + '" aria-label="'
+          + esc(t("backup.view_button", "Look at it") + " " + b.file + " " + niceStamp(b.stamp)) + '">'
+          + esc(t("backup.view_button", "Look at it")) + "</button>"
+          + '<code class="slug">' + esc(b.target) + "</code></li>";
+      }).join("") + "</ul>"
+        + (r.backups.length > 20 ? '<p class="hint">'
+          + esc(t("backup.history_more", "Only the newest 20 are shown.")) + "</p>" : "");
+      el("history").querySelectorAll("[data-show]").forEach(function (b) {
+        b.addEventListener("click", function () { shownFrom = b; show(b.getAttribute("data-show")); });
+      });
+    }).catch(function (e) { el("history").textContent = e.message; });
+  }
+
+  function show(id) {
+    api("/api/backups/show?id=" + encodeURIComponent(id)).then(function (r) {
+      shownId = id;
+      el("preview-card").hidden = false;
+      el("preview-title").textContent = r.target;
+      el("preview").textContent = r.text + (r.truncated ? "\n…" : "");
+      el("preview-card").scrollIntoView({behavior: "smooth", block: "nearest"});
+      el("preview-card").focus();  // announce the preview and land the user in it
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  el("preview-close").addEventListener("click", function () {
+    el("preview-card").hidden = true;
+    shownId = null;
+    // Return focus to the row the preview opened from, not the page body.
+    if (shownFrom) { shownFrom.focus(); }
+  });
+
+  el("revert").addEventListener("click", function () {
+    if (!shownId) { return; }
+    if (!OvosWebUI.confirmed(t("backup.confirm_revert", "Put this earlier version back? The current file is kept as a backup."))) { return; }
+    api("/api/backups/revert", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id: shownId})
+    }).then(function (r) {
+      OvosWebUI.say("msg", t("backup.reverted", "Done. The earlier version is back in place."));
+      el("preview-card").hidden = true;
+      shownId = null;
+      loadHistory();
+      el("main").focus();  // history is rebuilt; land focus somewhere stable
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  });
+
+  loadHistory();
 
   el("file").addEventListener("change", function () {
     var f = el("file").files[0];
