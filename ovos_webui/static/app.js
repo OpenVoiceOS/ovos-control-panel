@@ -2,6 +2,22 @@
 (function () {
   "use strict";
 
+  // Apply the saved theme immediately, at head-parse time, before the body
+  // paints — so a viewer who chose light never sees a dark flash and back.
+  var THEME_KEY = "ovos-theme", THEMES = ["system", "dark", "light"];
+  function storedTheme() {
+    try {
+      var v = window.localStorage.getItem(THEME_KEY);
+      return THEMES.indexOf(v) === -1 ? "system" : v;
+    } catch (e) { return "system"; }
+  }
+  function applyTheme(theme) {
+    var root = document.documentElement;
+    if (theme === "system") { root.removeAttribute("data-theme"); }
+    else { root.setAttribute("data-theme", theme); }
+  }
+  applyTheme(storedTheme());
+
   // The token is never put in a URL. A sign in exchanges it for a cookie that
   // only this site can send, so nothing ends up in an access log or in the
   // browser history.
@@ -128,6 +144,38 @@
     });
   }
 
+  // A theme control lives in every header without touching each page's markup.
+  // It cycles system → dark → light, persists the choice, and names the
+  // current state for a screen reader.
+  var THEME_ICON = {system: "◐", dark: "☾", light: "☀"};
+  function themeName(theme) {
+    return t("theme." + theme, theme === "system" ? "match my device"
+      : (theme === "dark" ? "dark" : "light"));
+  }
+  function labelThemeButton(button, theme) {
+    button.textContent = THEME_ICON[theme];
+    button.setAttribute("aria-label", t("theme.label", "Theme:") + " " + themeName(theme)
+      + " — " + t("theme.change", "change"));
+    button.setAttribute("title", t("theme.label", "Theme:") + " " + themeName(theme));
+  }
+  function mountThemeToggle() {
+    var header = document.querySelector("header");
+    if (!header || document.getElementById("theme-toggle")) { return; }
+    var button = document.createElement("button");
+    button.id = "theme-toggle";
+    button.type = "button";
+    button.className = "theme-toggle";
+    var theme = storedTheme();
+    labelThemeButton(button, theme);
+    button.addEventListener("click", function () {
+      theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+      try { window.localStorage.setItem(THEME_KEY, theme); } catch (e) { /* ignore */ }
+      applyTheme(theme);
+      labelThemeButton(button, theme);
+    });
+    header.appendChild(button);
+  }
+
   function showBanner(status) {
     var b = el("banner");
     if (b && status && status.warning) { b.textContent = status.warning; b.hidden = false; }
@@ -160,6 +208,7 @@
     ready: function (fn) {
       document.addEventListener("DOMContentLoaded", function () {
         markNav();
+        mountThemeToggle();
         // One status call drives both the language/direction and the banner,
         // then the page runs with translations already applied.
         api("/api/status").then(function (s) {

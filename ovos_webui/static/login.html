@@ -6,6 +6,16 @@
 <meta name="referrer" content="same-origin">
 <title>Sign in — OpenVoiceOS</title>
 <link rel="stylesheet" href="/static/app.css">
+<script>
+// The sign-in page does not load app.js, but it should still honour the saved
+// theme so the colours do not change on the way in.
+(function () {
+  try {
+    var v = window.localStorage.getItem("ovos-theme");
+    if (v === "dark" || v === "light") { document.documentElement.setAttribute("data-theme", v); }
+  } catch (e) { /* ignore */ }
+})();
+</script>
 </head>
 <body>
 <header><h1>OpenVoiceOS</h1>
