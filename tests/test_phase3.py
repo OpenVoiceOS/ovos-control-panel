@@ -271,6 +271,65 @@ def test_history_refuses_a_symlinked_backup():
     assert history.read_backup(entry["id"])
 
 
+def test_revert_refuses_a_symlinked_target():
+    from ovos_webui import history
+
+    _make_history()
+    conf_dir = Path(configio.user_config_path()).parent
+    # a config file that is a symlink to an outside secret
+    secret = conf_dir.parent / "secret.txt"
+    secret.write_text("TOPSECRET")
+    link = conf_dir / "linked.json"
+    if link.exists() or link.is_symlink():
+        link.unlink()
+    link.symlink_to(secret)
+    atomic_write(conf_dir / "linked.json.placeholder", "{}")  # ensure dir
+    # make a backup entry that points at the symlinked target
+    from ovos_webui.fsutils import make_backup
+    make_backup(link)
+    entry = [b for b in history.list_backups() if b["file"] == "linked.json"]
+    try:
+        assert entry, "the backup of the linked file should still list"
+        with pytest.raises(LookupError):
+            history.revert(entry[0]["id"])
+        # the symlink is intact and the outside file was not copied out
+        assert link.is_symlink()
+    finally:
+        link.unlink()
+        secret.unlink()
+
+
+def test_conflicts_are_cached(monkeypatch):
+    calls = {"n": 0}
+
+    def fake_run():
+        calls["n"] += 1
+        return {"ok": True, "conflicts": []}
+
+    monkeypatch.setattr(updates, "_run_pip_check", fake_run)
+    updates._CONFLICTS_CACHE.clear()
+    updates.dependency_conflicts()
+    updates.dependency_conflicts()
+    assert calls["n"] == 1  # the second call read the cache
+
+
+def test_project_json_is_size_capped(monkeypatch):
+    import io
+
+    class Huge:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self, n=-1): return b"x" * (5 * 1024 * 1024)
+
+    monkeypatch.setattr("ovos_webui.pypi._open", lambda url: Huge())
+    with pytest.raises(OSError):
+        updates.latest_versions("ovos-tts-plugin-piper")
+
+
+def test_events_route_needs_a_token(token_client):
+    assert token_client.get("/api/events").status_code == 401
+
+
 def test_history_routes(client):
     _make_history()
     listed = client.get("/api/backups").json()["backups"]

@@ -63,6 +63,8 @@ def _describe(bak: Path, root: Path) -> dict[str, Any] | None:
     match = _BAK_RE.match(bak.name)
     if not match:
         return None
+    if bak.is_symlink():  # a planted link is never a real backup
+        return None
     try:
         size = bak.stat().st_size
     except OSError:
@@ -131,7 +133,15 @@ def read_backup(backup_id: str) -> dict[str, Any]:
 def revert(backup_id: str) -> dict[str, Any]:
     """Put one backup back in place of its file."""
     backup, target = _resolve(backup_id)
-    content = backup.read_text(encoding="utf-8")
-    new_backup = atomic_write(target, content)
-    return {"reverted": str(target),
-            "backup": str(new_backup) if new_backup else None}
+    # Never write through a symlinked target: following it would copy an
+    # outside file into a readable backup, and clobber the user's link.
+    if target.is_symlink():
+        raise LookupError("the file this backup belongs to is a link, "
+                          "so it is not reverted")
+    for root in roots():
+        if is_within(root, target.resolve()):
+            content = backup.read_text(encoding="utf-8")
+            new_backup = atomic_write(target, content)
+            return {"reverted": str(target),
+                    "backup": str(new_backup) if new_backup else None}
+    raise LookupError("that backup does not belong to a file here")

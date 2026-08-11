@@ -20,6 +20,7 @@ import json
 import re
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -34,6 +35,17 @@ CACHE_TTL = 6 * 3600
 
 #: pip check is quick; anything longer than this means something is wrong.
 PIP_CHECK_TIMEOUT = 60
+
+#: How long a pip-check result is reused, so a caller cannot make the device
+#: spawn a process per request.
+CONFLICTS_TTL = 30
+
+#: One lock per expensive operation, so concurrent requests share one run
+#: instead of each starting its own subprocess or PyPI sweep.
+_CHECK_LOCK = threading.Lock()
+_CONFLICTS_LOCK = threading.Lock()
+_CONFLICTS_CACHE: dict[str, Any] = {}
+_MAX_PROJECT_JSON = 4 * 1024 * 1024
 
 _PRE = re.compile(r"(a|b|rc|dev)", re.IGNORECASE)
 
@@ -84,7 +96,10 @@ def latest_versions(name: str) -> dict[str, str | None]:
     validate_package_name(name)
     url = PROJECT_JSON.format(name=urllib.parse.quote(name, safe=""))
     with _open(url) as response:
-        body = json.loads(response.read().decode("utf-8"))
+        raw = response.read(_MAX_PROJECT_JSON + 1)
+    if len(raw) > _MAX_PROJECT_JSON:
+        raise OSError("the PyPI response is larger than expected")
+    body = json.loads(raw.decode("utf-8"))
     releases = [v for v, files in (body.get("releases") or {}).items() if files]
     if not releases:
         info_version = (body.get("info") or {}).get("version")
@@ -102,6 +117,13 @@ def check_updates(refresh: bool = False) -> dict[str, Any]:
     """
     from ovos_webui.pypi import classify, installed_versions
 
+    # One sweep at a time. A second caller waits and then reads the cache the
+    # first one just filled instead of starting its own PyPI sweep.
+    with _CHECK_LOCK:
+        return _check_updates_locked(refresh, classify, installed_versions)
+
+
+def _check_updates_locked(refresh, classify, installed_versions) -> dict[str, Any]:
     channel = release_channel()
     cache = _read_cache()
     now = time.time()
@@ -159,6 +181,17 @@ def dependency_conflicts() -> dict[str, Any]:
     is no shell. pip exits non-zero when it finds a conflict, so the exit code
     is the signal, not an error.
     """
+    now = time.time()
+    with _CONFLICTS_LOCK:
+        cached = _CONFLICTS_CACHE.get("result")
+        if cached and now - _CONFLICTS_CACHE.get("at", 0) < CONFLICTS_TTL:
+            return cached
+        result = _run_pip_check()
+        _CONFLICTS_CACHE.update({"result": result, "at": now})
+        return result
+
+
+def _run_pip_check() -> dict[str, Any]:
     argv = [sys.executable, "-m", "pip", "check", "--no-input",
             "--disable-pip-version-check"]
     try:

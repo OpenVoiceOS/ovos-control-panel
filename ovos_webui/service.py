@@ -651,7 +651,10 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         except ValueError as err:
             raise HTTPException(400, str(err))
 
-    @api.get("/events")
+    # The live feed carries what the device heard and said in plain text, so
+    # it is as sensitive as causing speech: it sits on the privileged router,
+    # a token always required, never open on a tokenless loopback device.
+    @privileged.get("/events")
     def api_events(since: int = 0) -> dict[str, Any]:
         from ovos_webui.events import LOG_SINGLETON
         return LOG_SINGLETON.since(max(0, since))
