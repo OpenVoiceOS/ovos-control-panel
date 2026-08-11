@@ -6,6 +6,7 @@
 <meta name="referrer" content="same-origin">
 <title>Skills — OpenVoiceOS</title>
 <link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
 <script src="/static/app.js"></script>
 </head>
 <body>
@@ -15,6 +16,7 @@
   <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
 <nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
   <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/tryit" data-i18n="nav.tryit">Try it</a>
   <a href="/config" data-i18n="nav.settings">Settings</a>
   <a href="/skills" data-i18n="nav.skills">Skills</a>
   <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
@@ -38,6 +40,13 @@
   </div>
   <div id="editor" tabindex="-1" role="region" aria-labelledby="editor-title" hidden>
     <h2 id="editor-title"></h2>
+    <div class="card" id="enable-card" hidden>
+      <span id="enable-state"></span>
+      <div class="row"><button class="secondary" id="enable-toggle"></button></div>
+      <p class="hint" data-i18n="skills.enable.hint">A turned-off skill stays installed but does not load.
+        The change takes effect when the OVOS services next restart.</p>
+      <div class="msg" id="msg-enable" role="status" aria-live="polite" hidden></div>
+    </div>
     <div class="card" id="form"></div>
     <div class="tabs"><button class="secondary" id="toggle-raw" aria-pressed="false" data-i18n="skills.editJson">Edit as JSON</button></div>
     <textarea id="raw" spellcheck="false" aria-label="settings JSON" hidden data-i18n-attr="aria-label:skills.raw.aria"></textarea>
@@ -47,6 +56,8 @@
     </div>
   </div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
 </main>
 <script>
 OvosWebUI.ready(function () {
@@ -97,6 +108,7 @@ OvosWebUI.ready(function () {
     el("form").innerHTML = html.join("");
     el("raw").value = JSON.stringify(data.settings, null, 2);
     el("editor").hidden = false;
+    showEnabled(data.skill_id);
     // On a fresh pick, tell a screen-reader user the form arrived and take
     // them to it. On Save/Undo reloads focus stays where the user put it.
     if (focusEditor) { el("editor").focus(); }
@@ -143,6 +155,38 @@ OvosWebUI.ready(function () {
   });
 
   el("reload").addEventListener("click", function () { if (current) { load(current.skill_id); } });
+
+  var enabledNow = true;
+
+  function showEnabled(skillId) {
+    api("/api/skills/" + encodeURIComponent(skillId) + "/enabled").then(function (r) {
+      enabledNow = r.enabled;
+      el("enable-card").hidden = false;
+      el("enable-state").textContent = r.enabled
+        ? OvosWebUI.t("skills.enable.on", "This skill is on.")
+        : OvosWebUI.t("skills.enable.off", "This skill is turned off.");
+      el("enable-toggle").textContent = r.enabled
+        ? OvosWebUI.t("skills.enable.turnOff", "Turn it off")
+        : OvosWebUI.t("skills.enable.turnOn", "Turn it on");
+    }).catch(function () { el("enable-card").hidden = true; });
+  }
+
+  el("enable-toggle").addEventListener("click", function () {
+    if (!current) { return; }
+    var target = !enabledNow;
+    var q = target
+      ? OvosWebUI.t("skills.enable.confirmOn", "Turn this skill back on?")
+      : OvosWebUI.t("skills.enable.confirmOff", "Turn this skill off? It stays installed and keeps its settings.");
+    if (!OvosWebUI.confirmed(q)) { return; }
+    api("/api/skills/" + encodeURIComponent(current.skill_id) + "/enabled", {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({enabled: target})
+    }).then(function () {
+      OvosWebUI.say("msg-enable", OvosWebUI.t("skills.enable.saved", "Saved. Restart the OVOS services to apply it."));
+      showEnabled(current.skill_id);
+    }).catch(function (e) { OvosWebUI.say("msg-enable", e.message, true); });
+  });
 
   // "ovos-skill-weather.openvoiceos" is a package id; a person just wants
   // "Weather". Keep the id as a quiet footnote.

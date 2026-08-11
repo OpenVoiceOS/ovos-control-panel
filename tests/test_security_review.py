@@ -318,7 +318,12 @@ def test_s7_deleting_a_key_clears_the_volatile_patch_first(client, bus):
 UNAUTHENTICATED_ALLOWED = {"/api/status", "/api/login", "/api/logout",
                            "/login", "/healthz",
                            # the sign in page must be able to style itself
-                           "/static/app.css"}
+                           "/static/app.css",
+                           # a browser fetches the web-app manifest and its
+                           # icons without cookies; they ship in the package,
+                           # so serving them tells a stranger nothing
+                           "/static/manifest.webmanifest",
+                           "/static/icon-192.png", "/static/icon-512.png"}
 
 
 def test_s8_every_route_needs_a_sign_in_except_the_known_few(bus):

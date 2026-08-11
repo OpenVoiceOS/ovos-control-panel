@@ -40,3 +40,11 @@ that comes out of the check is then checked again against the skills directory.
 
 Every save first copies the old `settings.json` into a `.ovos-webui-backups`
 directory beside it. The last 20 copies are kept.
+
+## Turning a skill off
+
+The editor shows whether the chosen skill is on, with one button to turn it
+off or back on. Off means the skill id is added to
+`skills.blacklisted_skills` in your configuration layer: the skill stays
+installed and keeps its settings, it just does not load after the OVOS
+services next restart. Turning it on removes the entry again.

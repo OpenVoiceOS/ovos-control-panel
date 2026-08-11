@@ -33,3 +33,11 @@ model name. Leave it empty for the rest.
 **Save** writes the persona; it is checked first, so a persona that cannot work
 is refused before it is saved. **Try it** sends a question through the persona
 as it stands, so you can see who answers before you rely on it.
+
+## Making a persona answer
+
+"Use this persona" writes the persona's name into
+`intents.persona.default_persona` in your configuration layer — the key the
+persona service reads to decide who answers when you do not name a persona.
+The page shows which persona is answering now. The change takes effect when
+the OVOS services next restart.

@@ -6,6 +6,7 @@
 <meta name="referrer" content="same-origin">
 <title>Dashboard — OpenVoiceOS</title>
 <link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
 <script src="/static/app.js"></script>
 </head>
 <body>
@@ -15,6 +16,7 @@
   <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
 <nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
   <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/tryit" data-i18n="nav.tryit">Try it</a>
   <a href="/config" data-i18n="nav.settings">Settings</a>
   <a href="/skills" data-i18n="nav.skills">Skills</a>
   <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
@@ -26,6 +28,8 @@
 <main id="main" tabindex="-1">
   <h2 data-i18n="dash.title">Is the device working?</h2>
   <p class="hint" data-i18n="dash.intro">This page asks each part of OpenVoiceOS if it is running.</p>
+  <p class="hint"><span data-i18n="dash.setup.lead">First time here?</span>
+    <a href="/setup" data-i18n="dash.setup.link">Set up this device</a>.</p>
   <div class="summary" id="summary" role="status" aria-live="polite" hidden></div>
   <div class="card" id="bus" role="status" data-i18n="dash.checking">Checking…</div>
   <div class="grid" id="services" aria-live="polite"></div>
@@ -56,6 +60,8 @@
       </ul>
     </details>
   </div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
 </main>
 <script>
 OvosWebUI.ready(function () {

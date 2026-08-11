@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Try it — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.tryit">Try it</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/tryit" data-i18n="nav.tryit">Try it</a>
+  <a href="/config" data-i18n="nav.settings">Settings</a>
+  <a href="/skills" data-i18n="nav.skills">Skills</a>
+  <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
+  <a href="/personas" data-i18n="nav.personas">Personas</a>
+  <a href="/translate" data-i18n="nav.translate">Translate</a>
+  <a href="/backup" data-i18n="nav.backup">Backup</a>
+  <a href="/about" data-i18n="nav.about">About</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="tryit.intro">Type a sentence and it takes the same path your voice would.
+    You see which skill answered and what the device said.</p>
+
+  <h2 data-i18n="tryit.ask.title">Ask the device</h2>
+  <div class="card">
+    <label data-i18n="tryit.ask.label">Sentence<input id="ask-text" maxlength="500"
+      placeholder="what time is it" data-i18n-attr="placeholder:tryit.ask.placeholder"></label>
+    <div class="row"><button id="ask" data-i18n="tryit.ask.button">Send it</button></div>
+    <p class="hint" data-i18n="tryit.ask.hint">The answer is also spoken out loud on the device.</p>
+  </div>
+  <div id="result" hidden>
+    <div class="card" id="result-card">
+      <strong id="result-title"></strong>
+      <p class="hint" id="result-handler" hidden></p>
+      <div id="result-lines"></div>
+    </div>
+  </div>
+
+  <h2 data-i18n="tryit.speak.title">Hear the voice</h2>
+  <div class="card">
+    <label data-i18n="tryit.speak.label">Text to speak<input id="speak-text" maxlength="500"
+      placeholder="hello, I am your assistant" data-i18n-attr="placeholder:tryit.speak.placeholder"></label>
+    <div class="row"><button class="secondary" id="speak" data-i18n="tryit.speak.button">Speak it out loud</button></div>
+    <p class="hint" data-i18n="tryit.speak.hint">The sound comes out of the device, not this browser.
+      Use it to hear a voice before you settle on it.</p>
+  </div>
+
+  <h2 data-i18n="tryit.live.title">Live activity</h2>
+  <p class="hint" data-i18n="tryit.live.hint">What the device hears and says, as it happens.
+    Say the wake word near the device and watch it appear here.</p>
+  <div class="card"><ul class="plain" id="events" aria-live="polite" aria-relevant="additions">
+    <li class="hint" id="events-empty" data-i18n="tryit.live.empty">Nothing yet. This list fills as the device listens and speaks.</li>
+  </ul></div>
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
+  var last = 0;
+
+  var EVENT_LABELS = {
+    wakeword: t("tryit.event.wakeword", "Wake word heard"),
+    listening: t("tryit.event.listening", "Listening…"),
+    done_listening: t("tryit.event.done", "Done listening"),
+    heard: t("tryit.event.heard", "Heard:"),
+    speaking: t("tryit.event.speaking", "Saying:"),
+    no_match: t("tryit.event.nomatch", "No skill matched"),
+    skill_start: t("tryit.event.skill", "Skill answering:")
+  };
+
+  function ask() {
+    var text = el("ask-text").value.trim();
+    if (!text) { return; }
+    el("ask").disabled = true;
+    api("/api/tryit/ask", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({text: text})
+    }).then(function (r) {
+      el("result").hidden = false;
+      var card = el("result-card");
+      card.className = "card " + (r.matched ? "ok" : "down");
+      el("result-title").textContent = r.matched
+        ? t("tryit.result.ok", "Answered in") + " " + r.elapsed + "s"
+        : (r.timeout
+          ? t("tryit.result.timeout", "No answer within the wait. The skills service may be busy or down.")
+          : t("tryit.result.nomatch", "No skill knew what to do with that."));
+      var handler = el("result-handler");
+      handler.hidden = !r.handler;
+      if (r.handler) {
+        handler.textContent = t("tryit.result.handler", "Handled by:") + " " + r.handler;
+      }
+      el("result-lines").innerHTML = (r.spoken || []).map(function (line) {
+        return "<p>“" + esc(line) + "”</p>";
+      }).join("");
+      el("ask").disabled = false;
+    }).catch(function (e) {
+      OvosWebUI.say("msg", e.message, true);
+      el("ask").disabled = false;
+    });
+  }
+
+  el("ask").addEventListener("click", ask);
+  el("ask-text").addEventListener("keydown", function (e) { if (e.key === "Enter") { ask(); } });
+
+  el("speak").addEventListener("click", function () {
+    var text = el("speak-text").value.trim();
+    if (!text) { return; }
+    api("/api/tryit/speak", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({text: text})
+    }).then(function () {
+      OvosWebUI.say("msg", t("tryit.speak.sent", "Sent. Listen to the device."));
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  });
+
+  function fmtTime(unix) {
+    var d = new Date(unix * 1000);
+    return d.toLocaleTimeString();
+  }
+
+  function poll() {
+    api("/api/events?since=" + last).then(function (r) {
+      last = r.next;
+      if (!r.events.length) { return; }
+      el("events-empty").hidden = true;
+      var list = el("events");
+      r.events.forEach(function (e) {
+        var li = document.createElement("li");
+        var label = EVENT_LABELS[e.event] || e.event;
+        li.innerHTML = "<small class='hint'>" + esc(fmtTime(e.time)) + "</small> "
+          + "<strong>" + esc(label) + "</strong>"
+          + (e.detail ? " <bdi>" + esc(e.detail) + "</bdi>" : "");
+        list.appendChild(li);
+      });
+      while (list.children.length > 40) { list.removeChild(list.children[1]); }
+    }).catch(function () {});
+  }
+  poll();
+  setInterval(poll, 2000);
+});
+</script>
+</body>
+</html>

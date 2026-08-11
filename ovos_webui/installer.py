@@ -138,7 +138,25 @@ class Installer:
             details(package)  # raises LookupError when PyPI does not have it
         return self._start("install", package, [
             sys.executable, "-m", "pip", "install", "--no-input",
-            "--disable-pip-version-check", "--", package,
+            "--disable-pip-version-check", *_channel_flags(), "--", package,
+        ])
+
+    def upgrade(self, package: str) -> Job:
+        """Start an upgrade of a package that is already installed.
+
+        On the ``alpha`` channel pip may pick a pre-release; on ``stable`` it
+        only moves between releases. The flag is decided here from the
+        configuration — nothing from the request reaches the argument vector
+        except the validated package name.
+        """
+        validate_package_name(package)
+        from ovos_webui.pypi import installed_versions
+        if package.lower() not in installed_versions():
+            raise LookupError(f"'{package}' is not installed")
+        return self._start("upgrade", package, [
+            sys.executable, "-m", "pip", "install", "--no-input",
+            "--disable-pip-version-check", "--upgrade", *_channel_flags(),
+            "--", package,
         ])
 
     def uninstall(self, package: str) -> Job:
@@ -208,6 +226,13 @@ class Installer:
             job.append("  systemctl --user restart ovos-skills ovos-audio")
             _clear_plugin_caches()
         LOG.info(f"pip {job.action} {job.package} finished with {job.returncode}")
+
+
+def _channel_flags() -> list[str]:
+    """Extra pip flags for the configured release channel."""
+    from ovos_webui.updates import release_channel
+
+    return ["--pre"] if release_channel() == "alpha" else []
 
 
 def _clear_plugin_caches() -> None:

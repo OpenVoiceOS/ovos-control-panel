@@ -147,6 +147,20 @@ def _notify(data: dict[str, Any], bus) -> bool:
     return buswait.emit(bus, Message("configuration.patch", {"config": data}))
 
 
+def user_or_merged(path: list[str]) -> Any:
+    """Return a key, preferring the user layer read fresh from disk.
+
+    The merged view (``Configuration``) is a cached singleton that follows
+    file changes with a delay. For keys this app itself writes, the user
+    layer on disk is the truth of record — reading it first means a page
+    never shows a stale value right after its own save.
+    """
+    value = get_in(read_user_config(), path)
+    if value is not None:
+        return value
+    return get_in(read_merged_config(), path)
+
+
 def plugin_options() -> dict[str, list[str]]:
     """Return the installed plugin names, grouped by kind.
 

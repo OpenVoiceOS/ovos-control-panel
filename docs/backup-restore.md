@@ -42,3 +42,17 @@ archive as a whole when it finds:
 - an archive with nothing to restore
 
 If one member is bad, nothing is written at all.
+
+## Go back to an earlier save
+
+Every save this app makes first copies the old file into a
+`.ovos-webui-backups` directory next to it. The "Go back to an earlier save"
+list shows those copies, newest first, lets you read one, and puts it back.
+
+![The backup history list](images/backup-history.png)
+
+A revert goes through the same atomic write as every other save, so the file
+being replaced is itself backed up first — a revert can always be reverted.
+A backup is addressed only by a checked identifier that must resolve to a
+`*.bak` file inside a `.ovos-webui-backups` directory under the configuration
+home; nothing else on the disk is reachable, and symlinks are refused.

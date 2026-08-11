@@ -144,3 +144,23 @@ cannot try many tokens quickly. A single mistyped token barely notices.
 - Restoring a backup replaces your settings. It checks that every file in the
   archive is where it should be and that it parses, but it cannot tell whether
   the contents are sensible.
+
+## Phase 3 additions
+
+- `POST /api/tryit/ask` and `/api/tryit/speak` send `recognizer_loop:utterance`
+  and `speak` over the bus. Sending an utterance is running a command on the
+  device, so both live on the privileged router: token always required.
+- `POST /api/system/{action}` emits one of a fixed map of existing system
+  messages (`system.reboot`, `system.shutdown`,
+  `system.mycroft.service.restart`). The action name is a dictionary key, not
+  a string that reaches the bus. Token always required.
+- `POST /api/plugins/upgrade` and `POST /api/updates/channel` are privileged.
+  The channel only adds a constant `--pre` flag; nothing from a request ever
+  reaches the pip argument vector except the validated package name.
+- `pip check` runs with a constant argument vector and no shell.
+- Backup history identifiers must resolve inside the configuration home, in a
+  `.ovos-webui-backups` directory, to a real `*.bak` file that is not a
+  symlink. Reverts go through the atomic writer, so they are themselves
+  backed up.
+- The web-app manifest and its two icons are served without a sign in — they
+  ship in the package, and a browser fetches a manifest without cookies.

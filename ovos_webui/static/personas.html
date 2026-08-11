@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Personas — OpenVoiceOS</title>
 <link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
 <script src="/static/app.js"></script>
 </head>
 <body>
@@ -14,6 +15,7 @@
   <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
 <nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
   <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/tryit" data-i18n="nav.tryit">Try it</a>
   <a href="/config" data-i18n="nav.settings">Settings</a>
   <a href="/skills" data-i18n="nav.skills">Skills</a>
   <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
@@ -34,8 +36,11 @@
     <label id="pickwrap" data-i18n="personas.pick.label">Persona<select id="pick"></select></label>
     <div class="row">
       <button class="secondary" id="new" data-i18n="personas.new.button">Make a new persona</button>
+      <button class="secondary" id="activate" data-i18n="personas.activate.button">Use this persona</button>
       <button class="secondary" id="delete" data-i18n="personas.delete.button">Delete this persona</button>
     </div>
+    <p class="hint" id="active-line" hidden></p>
+    <div class="msg" id="msg-activate" role="status" aria-live="polite" hidden></div>
   </div>
 
   <div id="editor" hidden>
@@ -75,6 +80,8 @@
     </div>
   </div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
 </main>
 <script>
 OvosWebUI.ready(function () {
@@ -194,6 +201,12 @@ OvosWebUI.ready(function () {
       el("pempty").hidden = !none;
       el("pickwrap").hidden = none;
       el("delete").hidden = none;
+      el("activate").hidden = none;
+      var line = el("active-line");
+      line.hidden = none || !r.active;
+      if (r.active) {
+        line.textContent = OvosWebUI.t("personas.active.line", "Answering your questions now:") + " " + r.active;
+      }
       if (!solvers.length) {
         OvosWebUI.say("msg", OvosWebUI.t("personas.noSolverInstalled", "No solver plugin is installed. Install one on the")
           + " " + OvosWebUI.t("personas.noSolverInstalled2", "Plugins page first — a persona needs at least one solver."), true);
@@ -238,6 +251,16 @@ OvosWebUI.ready(function () {
       OvosWebUI.say("msg", OvosWebUI.t("personas.saved", "Saved.") + extra, r.missing_solvers.length > 0);
       refresh(pid).then(function () { load(pid); });
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  });
+
+  el("activate").addEventListener("click", function () {
+    var pid = el("pick").value;
+    if (!pid) { OvosWebUI.say("msg-activate", OvosWebUI.t("personas.chooseFirst", "Choose a persona first."), true); return; }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("personas.confirm.activate", "Make this the persona that answers your questions?"))) { return; }
+    api("/api/personas/" + encodeURIComponent(pid) + "/activate", {method: "POST"}).then(function (r) {
+      OvosWebUI.say("msg-activate", OvosWebUI.t("personas.activated", "Saved. It answers after the OVOS services next restart."));
+      refresh(pid);
+    }).catch(function (e) { OvosWebUI.say("msg-activate", e.message, true); });
   });
 
   el("delete").addEventListener("click", function () {
