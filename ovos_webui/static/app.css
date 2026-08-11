@@ -251,9 +251,12 @@ main { padding: 1.1rem; max-width: 62rem; margin: 0 auto; }
   input, select { max-width: 34rem; }
   textarea { max-width: 54rem; }
   .row { max-width: 36rem; }
-  /* Form-only pages read best at a column measure, not stretched across a card
-   * that then frames empty space. Settings holds its fields to that measure. */
-  section#simple, section#raw { max-width: 40rem; }
+  /* Settings fills the width with a two-column field grid rather than a narrow
+   * card floating in empty space or one column with a framed gutter. */
+  #fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 1.6rem; }
+  #fields label { margin-bottom: 0.4rem; }
+  #fields input, #fields select { max-width: none; }
+  section#raw { max-width: 46rem; }
   /* Room to breathe: two columns for forms and content that suit it. */
   .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; align-items: start; }
 }
