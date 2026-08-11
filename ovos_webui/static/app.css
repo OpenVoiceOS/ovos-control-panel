@@ -134,6 +134,7 @@ header h1 {
  * red primary weight. */
 button.theme-toggle {
   flex: 0 0 auto;
+  margin-inline-start: auto;  /* flush to the header's trailing edge */
   width: 2.4rem;
   min-width: 0;
   height: 2.4rem;

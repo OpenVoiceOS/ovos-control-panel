@@ -165,6 +165,11 @@
     button.id = "theme-toggle";
     button.type = "button";
     button.className = "theme-toggle";
+    // A polite live region so the change is announced, not left to the screen
+    // reader re-reading the focused control.
+    var live = document.createElement("span");
+    live.className = "visually-hidden";
+    live.setAttribute("aria-live", "polite");
     var theme = storedTheme();
     labelThemeButton(button, theme);
     button.addEventListener("click", function () {
@@ -172,8 +177,10 @@
       try { window.localStorage.setItem(THEME_KEY, theme); } catch (e) { /* ignore */ }
       applyTheme(theme);
       labelThemeButton(button, theme);
+      live.textContent = t("theme.label", "Theme:") + " " + themeName(theme);
     });
     header.appendChild(button);
+    header.appendChild(live);
   }
 
   function showBanner(status) {
