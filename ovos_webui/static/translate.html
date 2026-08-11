@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Translate — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.translate">Translate a skill</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/config" data-i18n="nav.settings">Settings</a>
+  <a href="/skills" data-i18n="nav.skills">Skills</a>
+  <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
+  <a href="/personas" data-i18n="nav.personas">Personas</a>
+  <a href="/translate" data-i18n="nav.translate">Translate</a>
+  <a href="/backup" data-i18n="nav.backup">Backup</a>
+  <a href="/about" data-i18n="nav.about">About</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="translate.hint">Translate what a skill says and hears into your language.
+    Your words are saved beside the skill, not inside it, so a skill update
+    cannot lose them.</p>
+
+  <div class="card" id="pickercard">
+    <label><span data-i18n="translate.skill">Skill</span><select id="skill"></select></label>
+    <label><span data-i18n="translate.from">Translate from</span><select id="from"></select></label>
+    <label><span data-i18n="translate.to">Translate into </span><small data-i18n="translate.to_example">for example pt-pt</small><input id="to" placeholder="pt-pt"></label>
+    <label><span data-i18n="translate.file">File</span><select id="file"></select></label>
+  </div>
+  <div class="empty" id="noskill" hidden>
+    <strong data-i18n="translate.empty.title">Nothing to translate yet</strong>
+    <p data-i18n="translate.no_skill">None of your installed skills has text that can be translated yet.</p>
+    <p><span data-i18n="translate.empty.lead">You can search for more skills on the</span>
+      <a href="/plugins" data-i18n="translate.empty.link">Plugins page</a>.</p>
+  </div>
+
+  <div id="work" hidden>
+    <div class="row">
+      <button id="machine" data-i18n="translate.machine">Draft with a translation plugin</button>
+      <button class="secondary" id="reload" data-i18n="translate.reload">Start again from the original</button>
+      <button class="secondary" id="remove" data-i18n="translate.remove">Delete my translation</button>
+    </div>
+    <p class="hint" id="plugininfo"></p>
+    <h2 data-i18n="translate.lines_heading">Lines</h2>
+    <p class="hint"><span data-i18n="translate.draft_hint1">A line marked</span> <strong data-i18n="translate.draft_badge">draft</strong> <span data-i18n="translate.draft_hint2">came from a machine.
+      Read it, fix it, then press Accept. Only accepted lines are saved.</span></p>
+    <div class="card" id="lines"></div>
+    <div class="row">
+      <button id="save" data-i18n="translate.save">Save the accepted lines</button>
+      <button class="secondary" id="acceptall" data-i18n="translate.acceptall">Accept every line</button>
+    </div>
+  </div>
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc;
+  var plugins = [], rows = [];
+
+  function focusAccept(i) {
+    var btn = el("lines").querySelector('[data-ok="' + i + '"]');
+    if (btn) { btn.focus(); return true; }
+    return false;
+  }
+
+  function renderRows() {
+    if (!rows.length) { el("lines").innerHTML = '<p class="hint">' + esc(OvosWebUI.t("translate.empty_file", "This file is empty.")) + '</p>'; return; }
+    el("lines").innerHTML = rows.map(function (r, i) {
+      var mark = r.accepted
+        ? '<span class="badge ready">' + esc(OvosWebUI.t("translate.badge_accepted", "accepted")) + '</span>'
+        : (r.machine ? '<span class="badge starting">' + esc(OvosWebUI.t("translate.draft_badge", "draft")) + '</span>'
+                     : '<span class="badge">' + esc(OvosWebUI.t("translate.badge_unchanged", "unchanged")) + '</span>');
+      var acceptLabel = OvosWebUI.t("translate.accept", "Accept") + " " + OvosWebUI.t("translate.accept_line", "line") + " " + (i + 1);
+      return "<label>" + mark
+        + "<small>" + esc(OvosWebUI.t("translate.original_prefix", "original: ")) + esc(r.source) + "</small>"
+        + '<input data-i="' + i + '" value="' + esc(r.text) + '">'
+        + '</label><div class="row"><button class="secondary" data-ok="' + i + '" aria-label="' + esc(acceptLabel) + '">'
+        + esc(OvosWebUI.t("translate.accept", "Accept")) + '</button></div>';
+    }).join("");
+    el("lines").querySelectorAll("input[data-i]").forEach(function (input) {
+      input.addEventListener("input", function () {
+        rows[+input.getAttribute("data-i")].text = input.value;
+      });
+    });
+    el("lines").querySelectorAll("[data-ok]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var i = +b.getAttribute("data-ok");
+        rows[i].accepted = true; renderRows();
+        if (!focusAccept(i)) { focusAccept(rows.length - 1); }
+      });
+    });
+  }
+
+  function loadFile() {
+    var s = el("skill").value, l = el("from").value, f = el("file").value;
+    if (!s || !l || !f) { el("work").hidden = true; return; }
+    api("/api/translate/" + encodeURIComponent(s) + "/" + encodeURIComponent(l)
+        + "/file/" + encodeURIComponent(f)).then(function (r) {
+      var existing = r.override;
+      rows = r.source.map(function (line, i) {
+        var have = existing && existing[i] !== undefined && existing[i] !== line;
+        return {source: line, text: have ? existing[i] : line,
+                machine: false, accepted: !!have};
+      });
+      renderRows();
+      el("work").hidden = false;
+      el("plugininfo").textContent = plugins.length
+        ? OvosWebUI.t("translate.plugins_available", "Translation plugins available: ") + plugins.join(", ")
+        : OvosWebUI.t("translate.no_plugin", "No translation plugin is installed. You can still type the translation "
+          + "yourself, or install a plugin whose name starts with "
+          + "ovos-translate-plugin- on the Plugins page.");
+      el("machine").disabled = !plugins.length;
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  function loadFiles() {
+    var s = el("skill").value, l = el("from").value;
+    if (!s || !l) { return; }
+    api("/api/translate/" + encodeURIComponent(s) + "/" + encodeURIComponent(l) + "/files")
+      .then(function (r) {
+        el("file").innerHTML = '<option value="">' + esc(OvosWebUI.t("translate.choose_file", "Choose a file…")) + '</option>'
+          + r.files.map(function (f) {
+              return '<option value="' + esc(f.file) + '">' + esc(f.file)
+                + (f.translated ? esc(OvosWebUI.t("translate.translated_suffix", " (translated)")) : "") + "</option>";
+            }).join("");
+        el("work").hidden = true;
+      }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  function loadLangs() {
+    var s = el("skill").value;
+    if (!s) { return; }
+    api("/api/translate/" + encodeURIComponent(s) + "/languages").then(function (r) {
+      el("from").innerHTML = r.languages.map(function (l) {
+        return '<option value="' + esc(l) + '">' + esc(l) + "</option>";
+      }).join("") || '<option value="">' + esc(OvosWebUI.t("translate.no_resources", "no resources found")) + '</option>';
+      loadFiles();
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  el("skill").addEventListener("change", loadLangs);
+  el("from").addEventListener("change", loadFiles);
+  el("file").addEventListener("change", loadFile);
+  el("reload").addEventListener("click", loadFile);
+
+  el("machine").addEventListener("click", function () {
+    var s = el("skill").value, l = el("from").value, to = el("to").value.trim();
+    if (!to) { OvosWebUI.say("msg", OvosWebUI.t("translate.type_lang_to", "Type the language to translate into."), true); return; }
+    OvosWebUI.say("msg", OvosWebUI.t("translate.translating", "Translating…"), false);
+    api("/api/translate/" + encodeURIComponent(s) + "/" + encodeURIComponent(l) + "/machine", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({lines: rows.map(function (r) { return r.source; }),
+                            source: l, target: to, plugin: plugins[0] || null})
+    }).then(function (r) {
+      rows = r.lines.map(function (line) {
+        return {source: line.source, text: line.draft,
+                machine: !!line.machine, accepted: !line.machine};
+      });
+      renderRows();
+      OvosWebUI.say("msg", OvosWebUI.t("translate.drafted_prefix", "Drafted with ") + r.plugin
+        + OvosWebUI.t("translate.drafted_suffix", ". Read every line and press Accept before you save."), false);
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  });
+
+  el("acceptall").addEventListener("click", function () {
+    if (!OvosWebUI.confirmed(OvosWebUI.t("translate.confirm_acceptall", "Accept every line, including the machine drafts?"))) { return; }
+    rows.forEach(function (r) { r.accepted = true; }); renderRows();
+  });
+
+  el("save").addEventListener("click", function () {
+    var to = el("to").value.trim();
+    if (!to) { OvosWebUI.say("msg", OvosWebUI.t("translate.type_lang_save", "Type the language to save into."), true); return; }
+    if (!rows.some(function (r) { return r.accepted; })) {
+      OvosWebUI.say("msg", OvosWebUI.t("translate.accept_one_first", "Accept at least one line first."), true); return;
+    }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("translate.confirm_save_prefix", "Save this translation as your own copy for ") + to
+        + OvosWebUI.t("translate.confirm_save_suffix", "?"))) { return; }
+    api("/api/translate/" + encodeURIComponent(el("skill").value) + "/"
+        + encodeURIComponent(to) + "/file/" + encodeURIComponent(el("file").value), {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({lines: rows.map(function (r) { return r.accepted ? r.text : r.source; })})
+    }).then(function (r) {
+      OvosWebUI.say("msg", OvosWebUI.t("translate.saved_prefix", "Saved to ") + r.path
+        + OvosWebUI.t("translate.saved_suffix", ". Restart the skills service to use it."));
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  });
+
+  el("remove").addEventListener("click", function () {
+    var to = el("to").value.trim();
+    if (!to) { return; }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("translate.confirm_remove_prefix", "Delete your translation for ") + to
+        + OvosWebUI.t("translate.confirm_remove_suffix", "?"))) { return; }
+    api("/api/translate/" + encodeURIComponent(el("skill").value) + "/"
+        + encodeURIComponent(to) + "/file/" + encodeURIComponent(el("file").value),
+        {method: "DELETE"}).then(function (r) {
+      OvosWebUI.say("msg", OvosWebUI.t("translate.deleted_prefix", "Deleted. Backup: ") + (r.backup || OvosWebUI.t("translate.no_backup", "none.")));
+      loadFile();
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  });
+
+  api("/api/translate/skills").then(function (r) {
+    plugins = r.plugins;
+    el("skill").innerHTML = '<option value="">Choose a skill…</option>'
+      + r.skills.filter(function (s) { return s.has_source; }).map(function (s) {
+          return '<option value="' + esc(s.skill_id) + '">' + esc(s.skill_id) + "</option>";
+        }).join("");
+    if (!r.skills.length) {
+      el("pickercard").hidden = true;
+      el("noskill").hidden = false;
+    } else {
+      OvosWebUI.say("msg", OvosWebUI.t("translate.choose_to_begin", "Choose a skill to begin."), false);
+    }
+  }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+});
+</script>
+</body>
+</html>

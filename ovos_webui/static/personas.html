@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personas — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.personas">Personas</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/config" data-i18n="nav.settings">Settings</a>
+  <a href="/skills" data-i18n="nav.skills">Skills</a>
+  <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
+  <a href="/personas" data-i18n="nav.personas">Personas</a>
+  <a href="/translate" data-i18n="nav.translate">Translate</a>
+  <a href="/backup" data-i18n="nav.backup">Backup</a>
+  <a href="/about" data-i18n="nav.about">About</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="personas.intro">A persona decides who answers your questions. It is a list of
+    solvers, tried in order, until one of them can answer.</p>
+
+  <div class="empty" id="pempty" hidden>
+    <strong data-i18n="personas.empty.title">No persona yet</strong>
+    <p data-i18n="personas.empty.hint">Make one below: give it a name and add a solver.</p>
+  </div>
+  <div class="card">
+    <label id="pickwrap" data-i18n="personas.pick.label">Persona<select id="pick"></select></label>
+    <div class="row">
+      <button class="secondary" id="new" data-i18n="personas.new.button">Make a new persona</button>
+      <button class="secondary" id="delete" data-i18n="personas.delete.button">Delete this persona</button>
+    </div>
+  </div>
+
+  <div id="editor" hidden>
+    <h2 data-i18n="personas.name.title">Name</h2>
+    <div class="card">
+      <label data-i18n="personas.filename.label">File name <small data-i18n="personas.filename.hint">letters, digits, dot, dash and underscore</small>
+        <input id="pid"></label>
+      <label data-i18n="personas.shownname.label">Shown name<input id="pname"></label>
+      <label data-i18n="personas.catchphrase.label">Catch phrase <small data-i18n="personas.catchphrase.hint">optional</small><input id="phrase"></label>
+      <label data-i18n="personas.memory.label">Memory<select id="memory"></select></label>
+    </div>
+
+    <h2 data-i18n="personas.solvers.title">Solvers, in order</h2>
+    <p class="hint" data-i18n="personas.solvers.hint">The first solver that can answer wins. Put the fast, certain
+      ones first and a general one last.</p>
+    <div class="card" id="chosen"></div>
+    <div class="card">
+      <label data-i18n="personas.addsolver.label">Add a solver<select id="add"></select></label>
+    </div>
+
+    <details class="tech" id="advanced">
+      <summary data-i18n="personas.solversettings.title">Solver settings</summary>
+      <p class="hint" data-i18n="personas.solversettings.hint">Only fill these in if a solver needs a key or a model name.</p>
+      <textarea id="raw" spellcheck="false" aria-label="persona JSON" data-i18n-attr="aria-label:personas.raw.arialabel"></textarea>
+    </details>
+
+    <div class="row">
+      <button id="save" data-i18n="personas.save.button">Save</button>
+      <button class="secondary" id="reload" data-i18n="personas.undo.button">Undo my edits</button>
+    </div>
+
+    <h2 data-i18n="personas.tryit.title">Try it</h2>
+    <div class="card">
+      <label data-i18n="personas.ask.label">Ask something<input id="question" placeholder="what is the capital of Portugal?" data-i18n-attr="placeholder:personas.ask.placeholder"></label>
+      <div class="row"><button class="secondary" id="try" data-i18n="personas.ask.button">Ask</button></div>
+      <p class="hint" id="answer"></p>
+    </div>
+  </div>
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc;
+  var solvers = [], memories = [], current = null, chosen = [];
+
+  function focusChosen(act, i) {
+    var box = el("chosen");
+    var btn = box.querySelector('[data-act="' + act + '"][data-i="' + i + '"]');
+    // A button that landed at the top (no Up) or bottom (no Down) is disabled,
+    // and .focus() on a disabled control is a silent no-op — so fall back to
+    // another control on the same row, then to "Add a solver", so focus is
+    // never dropped to <body>.
+    if (btn && !btn.disabled) { btn.focus(); return true; }
+    var alt = box.querySelector('[data-i="' + i + '"]:not([disabled])');
+    if (alt) { alt.focus(); return true; }
+    var add = el("add");
+    if (add) { add.focus(); return true; }
+    return false;
+  }
+
+  function renderChosen() {
+    if (!chosen.length) {
+      el("chosen").innerHTML = '<p class="hint">' + OvosWebUI.t("personas.chosen.none", "No solver yet. A persona needs at least one.") + '</p>';
+      return;
+    }
+    el("chosen").innerHTML = "<ul class='plain'>" + chosen.map(function (name, i) {
+      var upLabel = OvosWebUI.t("personas.chosen.up", "Up") + " " + name;
+      var downLabel = OvosWebUI.t("personas.chosen.down", "Down") + " " + name;
+      var rmLabel = OvosWebUI.t("personas.chosen.remove", "Remove") + " " + name;
+      // With a single solver there is nothing to reorder, so the Up/Down
+      // controls are left out rather than shown greyed and confusing.
+      var move = chosen.length > 1
+        ? '<button class="secondary" data-act="up" data-i="' + i + '" aria-label="' + esc(upLabel) + '" ' + (i === 0 ? "disabled" : "") + ">" + OvosWebUI.t("personas.chosen.up", "Up") + "</button>"
+          + '<button class="secondary" data-act="down" data-i="' + i + '" aria-label="' + esc(downLabel) + '" ' + (i === chosen.length - 1 ? "disabled" : "") + ">" + OvosWebUI.t("personas.chosen.down", "Down") + "</button>"
+        : "";
+      return "<li><strong><bdi>" + (i + 1) + ".</bdi></strong> <code>" + esc(name) + "</code>"
+        + '<div class="row">' + move
+        + '<button class="secondary" data-act="rm" data-i="' + i + '" aria-label="' + esc(rmLabel) + '">' + OvosWebUI.t("personas.chosen.remove", "Remove") + '</button></div></li>';
+    }).join("") + "</ul>";
+    el("chosen").querySelectorAll('[data-act="up"]').forEach(function (b) {
+      b.addEventListener("click", function () {
+        var i = +b.getAttribute("data-i");
+        chosen.splice(i - 1, 0, chosen.splice(i, 1)[0]); renderChosen(); syncRaw();
+        focusChosen("up", i - 1);
+      });
+    });
+    el("chosen").querySelectorAll('[data-act="down"]').forEach(function (b) {
+      b.addEventListener("click", function () {
+        var i = +b.getAttribute("data-i");
+        chosen.splice(i + 1, 0, chosen.splice(i, 1)[0]); renderChosen(); syncRaw();
+        focusChosen("down", i + 1);
+      });
+    });
+    el("chosen").querySelectorAll('[data-act="rm"]').forEach(function (b) {
+      b.addEventListener("click", function () {
+        var i = +b.getAttribute("data-i");
+        chosen.splice(i, 1); renderChosen(); syncRaw();
+        if (!chosen.length || !focusChosen("rm", Math.min(i, chosen.length - 1))) { el("add").focus(); }
+      });
+    });
+  }
+
+  function build() {
+    var data = {};
+    try { data = JSON.parse(el("raw").value || "{}"); } catch (e) { data = {}; }
+    data.name = el("pname").value || el("pid").value;
+    data.solvers = chosen.slice();
+    delete data.handlers;
+    if (el("phrase").value) { data.catch_phrase = el("phrase").value; }
+    else { delete data.catch_phrase; }
+    if (el("memory").value) { data.memory_module = el("memory").value; }
+    else { delete data.memory_module; }
+    return data;
+  }
+
+  function syncRaw() { el("raw").value = JSON.stringify(build(), null, 2); }
+
+  function show(persona_id, data, missing) {
+    current = persona_id;
+    el("pid").value = persona_id;
+    el("pname").value = data.name || persona_id;
+    el("phrase").value = data.catch_phrase || "";
+    el("memory").value = data.memory_module || "";
+    chosen = (data.handlers || data.solvers || []).slice();
+    renderChosen();
+    el("raw").value = JSON.stringify(data, null, 2);
+    el("editor").hidden = false;
+    el("answer").textContent = "";
+    if (missing && missing.length) {
+      OvosWebUI.say("msg", OvosWebUI.t("personas.missingSolvers", "These solvers are not installed yet:") + " " + missing.join(", ")
+        + ". " + OvosWebUI.t("personas.installOnPlugins", "Install them on the Plugins page."), true);
+    }
+  }
+
+  function load(persona_id) {
+    api("/api/personas/" + encodeURIComponent(persona_id)).then(function (r) {
+      show(persona_id, r.persona, r.missing_solvers);
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  function refresh(select) {
+    return api("/api/personas").then(function (r) {
+      solvers = r.solvers; memories = r.memory_plugins;
+      el("add").innerHTML = '<option value="">' + OvosWebUI.t("personas.chooseSolver", "Choose a solver…") + '</option>'
+        + solvers.map(function (s) {
+            return '<option value="' + esc(s.name) + '">' + esc(s.name) + "</option>";
+          }).join("");
+      el("memory").innerHTML = '<option value="">' + OvosWebUI.t("personas.noMemory", "No memory") + '</option>'
+        + memories.map(function (m) { return '<option value="' + esc(m) + '">' + esc(m) + "</option>"; }).join("");
+      el("pick").innerHTML = '<option value="">' + OvosWebUI.t("personas.choosePersona", "Choose a persona…") + '</option>'
+        + r.personas.map(function (p) {
+            return '<option value="' + esc(p.persona_id) + '">' + esc(p.name)
+              + (p.broken ? " " + OvosWebUI.t("personas.brokenFile", "(broken file)") : "") + "</option>";
+          }).join("");
+      var none = !r.personas.length;
+      el("pempty").hidden = !none;
+      el("pickwrap").hidden = none;
+      el("delete").hidden = none;
+      if (!solvers.length) {
+        OvosWebUI.say("msg", OvosWebUI.t("personas.noSolverInstalled", "No solver plugin is installed. Install one on the")
+          + " " + OvosWebUI.t("personas.noSolverInstalled2", "Plugins page first — a persona needs at least one solver."), true);
+      }
+      if (select) { el("pick").value = select; }
+      return r;
+    });
+  }
+
+  el("add").addEventListener("change", function () {
+    if (this.value && chosen.indexOf(this.value) === -1) {
+      chosen.push(this.value); renderChosen(); syncRaw();
+    }
+    this.value = "";
+  });
+  ["pname", "phrase"].forEach(function (id) {
+    el(id).addEventListener("change", syncRaw);
+  });
+  el("memory").addEventListener("change", syncRaw);
+
+  el("new").addEventListener("click", function () {
+    show("my-persona", {name: OvosWebUI.t("personas.newPersona.name", "My persona"), solvers: []}, []);
+    el("pick").value = "";
+  });
+
+  el("pick").addEventListener("change", function () { if (this.value) { load(this.value); } });
+
+  el("save").addEventListener("click", function () {
+    var pid = el("pid").value.trim();
+    if (!pid) { OvosWebUI.say("msg", OvosWebUI.t("personas.giveFileName", "Give the persona a file name."), true); return; }
+    var data = build();
+    if (!data.solvers.length) { OvosWebUI.say("msg", OvosWebUI.t("personas.addAtLeastOne", "Add at least one solver."), true); return; }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("personas.confirm.save", "Save the persona") + " " + pid + "?")) { return; }
+    api("/api/personas/" + encodeURIComponent(pid), {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({persona: data})
+    }).then(function (r) {
+      var extra = r.missing_solvers.length
+        ? " " + OvosWebUI.t("personas.missingSolvers", "These solvers are not installed yet:") + " " + r.missing_solvers.join(", ") + "."
+        : "";
+      OvosWebUI.say("msg", OvosWebUI.t("personas.saved", "Saved.") + extra, r.missing_solvers.length > 0);
+      refresh(pid).then(function () { load(pid); });
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  });
+
+  el("delete").addEventListener("click", function () {
+    var pid = el("pick").value;
+    if (!pid) { OvosWebUI.say("msg", OvosWebUI.t("personas.chooseFirst", "Choose a persona first."), true); return; }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("personas.confirm.delete", "Delete the persona") + " " + pid + "? " + OvosWebUI.t("personas.confirm.deleteSuffix", "A backup is kept."))) { return; }
+    api("/api/personas/" + encodeURIComponent(pid), {method: "DELETE"}).then(function (r) {
+      OvosWebUI.say("msg", OvosWebUI.t("personas.deleted", "Deleted. Backup:") + " " + (r.backup || OvosWebUI.t("personas.noneBackup", "none.")));
+      el("editor").hidden = true;
+      refresh("");
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  });
+
+  el("reload").addEventListener("click", function () { if (current) { load(current); } });
+
+  el("try").addEventListener("click", function () {
+    if (!current) { return; }
+    el("answer").textContent = OvosWebUI.t("personas.asking", "Asking…");
+    api("/api/personas/" + encodeURIComponent(el("pid").value) + "/try", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({question: el("question").value})
+    }).then(function (r) {
+      el("answer").textContent = r.skipped ? OvosWebUI.t("personas.notTried", "Not tried here:") + " " + r.reason : r.answer;
+    }).catch(function (e) { el("answer").textContent = e.message; });
+  });
+
+  refresh("").catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+});
+</script>
+</body>
+</html>

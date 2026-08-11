@@ -29,14 +29,21 @@ Then there is one card for each service:
 | starting | The service runs but is not ready yet. Wait and check again. |
 | not ready | The service answered but reports a problem. |
 | no answer | Nothing answered. The service is not running. |
+| off | The part is absent on this device, which is normal. Shown grey, not red. |
+| waiting | The message bus is down, so the service could not be asked. |
 
 A device without a screen has no GUI service, and a device without hardware
-plugins has no PHAL. "No answer" for those two is normal.
+plugins has no PHAL. Their cards show a grey "off" chip with a one-line
+explanation instead of a red alarm, and they never turn the summary banner red.
 
 `ovos-simple-listener` does not register a status handler at all, so a device
-that uses it instead of `ovos-dinkum-listener` shows "no answer" for the
-listener even while it is listening. That is a limit of this page, not a fault
-on the device.
+that uses it instead of `ovos-dinkum-listener` shows the same neutral "off"
+chip for the listener even while it is listening. That is a limit of this
+page, not a fault on the device.
+
+When the bus itself is down, every service card shows a grey "waiting" chip
+and keeps its plain description: the red banner at the top already carries
+the one real alarm, and repeating it six times would only add noise.
 
 ## How the check works
 
@@ -65,3 +72,19 @@ systemctl --user restart ovos-skills
 To see the messages themselves, use
 [ovos-busmon](https://github.com/OpenVoiceOS/ovos-busmon). The dashboard links
 to it on port 8000 of the same device.
+
+## What this page does not do
+
+The dashboard answers "is each part running?" — it does not measure how fast
+the device answers. There is no round-trip or model latency here; use a
+benchmarking tool for that.
+
+It also does not restart services or show service logs in the browser: the
+service never runs a shell command from a web request, by design (see
+[security.md](security.md)). The steps under "If something is down" show the
+`journalctl` and `systemctl` commands to run over SSH instead.
+
+The summary banner at the top reflects only the core services — skills, intents
+and audio. The screen, the hardware layer (PHAL) and the listener can be
+legitimately absent on a given device, so their being quiet never turns the
+banner to "needs attention"; their own cards still show and explain the state.

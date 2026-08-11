@@ -9,50 +9,62 @@
 <script src="/static/app.js"></script>
 </head>
 <body>
-<div class="banner" id="banner" hidden></div>
-<header><h1>Settings</h1></header>
-<nav>
-  <a href="/">Dashboard</a>
-  <a href="/config">Settings</a>
-  <a href="/skills">Skills</a>
-  <a href="/backup">Backup</a>
-  <a href="/about">About</a>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.settings">Settings</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/config" data-i18n="nav.settings">Settings</a>
+  <a href="/skills" data-i18n="nav.skills">Skills</a>
+  <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
+  <a href="/personas" data-i18n="nav.personas">Personas</a>
+  <a href="/translate" data-i18n="nav.translate">Translate</a>
+  <a href="/backup" data-i18n="nav.backup">Backup</a>
+  <a href="/about" data-i18n="nav.about">About</a>
 </nav>
-<main>
+<main id="main" tabindex="-1">
   <div class="tabs">
-    <button id="tab-simple" aria-pressed="true">Simple</button>
-    <button id="tab-raw" aria-pressed="false">Advanced</button>
+    <button id="tab-simple" aria-current="true" data-i18n="config.tab.simple">Simple</button>
+    <button id="tab-raw" data-i18n="config.tab.advanced">Advanced</button>
   </div>
 
   <section id="simple">
-    <h2>Common settings</h2>
-    <p class="hint">Leave a box empty to use the standard value again.
-      The device reads the file as soon as you save it, so you do not have to
-      restart it. A service that is already running keeps its old value only if
-      it does not listen for configuration changes.</p>
-    <div class="card" id="fields">Loading…</div>
+    <h2 data-i18n="config.simple.title">Common settings</h2>
+    <p class="hint" data-i18n="config.simple.reassure">You usually don't need to change anything here.</p>
+    <p class="hint" data-i18n="config.simple.hint">Leave a box empty to use the standard value again. Every save keeps a backup, so you can go back.</p>
+    <details class="tech">
+      <summary data-i18n="config.simple.where">Where these settings live</summary>
+      <p class="hint" data-i18n="config.simple.applies">The device reads the file as soon as you save it, so you do not have to
+        restart it. A service that is already running keeps its old value only if
+        it does not listen for configuration changes.</p>
+      <p class="hint"><span data-i18n="config.simple.file">Your changes are stored in your own layer of this file:</span></p>
+      <code id="path-simple" dir="ltr"></code>
+    </details>
+    <div class="card" id="fields" data-i18n="config.loading">Loading…</div>
     <div class="row">
-      <button id="save-simple">Save</button>
-      <button class="secondary" id="reload-simple">Undo my edits</button>
+      <button id="save-simple" data-i18n="config.save">Save</button>
+      <button class="secondary" id="reload-simple" data-i18n="config.undo">Undo my edits</button>
     </div>
-    <div class="msg" id="msg-simple" hidden></div>
+    <div class="msg" id="msg-simple" role="status" aria-live="polite" hidden></div>
   </section>
 
   <section id="raw" hidden>
-    <h2>Your configuration file</h2>
-    <p class="hint">This is your own layer of <code id="path"></code>.
-      It sits on top of the standard settings, so it only holds what you changed.
+    <h2 data-i18n="config.raw.title">Your configuration file</h2>
+    <p class="hint" data-i18n="config.raw.hint.post">It sits on top of the standard settings, so it only holds what you changed.
       A backup is made every time you save.</p>
+    <p class="hint"><span data-i18n="config.raw.hint.pre">This is your own layer of this file:</span></p>
+    <code id="path" dir="ltr"></code>
     <div class="tabs">
-      <button id="fmt-json" aria-pressed="true">JSON</button>
-      <button id="fmt-yaml" aria-pressed="false">YAML</button>
+      <button id="fmt-json" aria-current="true" data-i18n="config.fmt.json">JSON</button>
+      <button id="fmt-yaml" data-i18n="config.fmt.yaml">YAML</button>
     </div>
-    <textarea id="text" spellcheck="false" aria-label="configuration text"></textarea>
+    <textarea id="text" spellcheck="false" aria-label="configuration text" data-i18n-attr="aria-label:config.raw.aria"></textarea>
     <div class="row">
-      <button id="save-raw">Save</button>
-      <button class="secondary" id="reload-raw">Undo my edits</button>
+      <button id="save-raw" data-i18n="config.save">Save</button>
+      <button class="secondary" id="reload-raw" data-i18n="config.undo">Undo my edits</button>
     </div>
-    <div class="msg" id="msg-raw" hidden></div>
+    <div class="msg" id="msg-raw" role="status" aria-live="polite" hidden></div>
   </section>
 </main>
 <script>
@@ -63,21 +75,30 @@ OvosWebUI.ready(function () {
   function tab(which) {
     el("simple").hidden = which !== "simple";
     el("raw").hidden = which !== "raw";
-    el("tab-simple").setAttribute("aria-pressed", String(which === "simple"));
-    el("tab-raw").setAttribute("aria-pressed", String(which === "raw"));
+    if (which === "simple") { el("tab-simple").setAttribute("aria-current", "true"); el("tab-raw").removeAttribute("aria-current"); }
+    else { el("tab-raw").setAttribute("aria-current", "true"); el("tab-simple").removeAttribute("aria-current"); }
   }
   el("tab-simple").addEventListener("click", function () { tab("simple"); });
   el("tab-raw").addEventListener("click", function () { tab("raw"); loadRaw(); });
 
+  // Raw values like "metric" or "MDY" are engineer-speak: show a plain
+  // translated label when we have one, keep the raw value on the wire.
+  var OPT_EN = {
+    metric: "Metric", imperial: "Imperial",
+    full: "24-hour clock", half: "12-hour clock",
+    DMY: "day / month / year", MDY: "month / day / year", YMD: "year / month / day"
+  };
+  function optLabel(v) { return OvosWebUI.t("cfg.opt." + v, OPT_EN[v] || v); }
+
   function control(f) {
     var value = f.value === null || f.value === undefined ? "" : f.value;
     if (f.kind === "choice" || f.kind === "plugin" || f.kind === "hotword") {
-      var opts = ['<option value="">Use the standard value</option>'];
+      var opts = ['<option value="">' + esc(OvosWebUI.t("config.field.default", "Use the standard value")) + '</option>'];
       (f.options || []).forEach(function (o) {
-        opts.push('<option value="' + esc(o) + '"' + (o === value ? " selected" : "") + ">" + esc(o) + "</option>");
+        opts.push('<option value="' + esc(o) + '"' + (o === value ? " selected" : "") + ">" + esc(optLabel(o)) + "</option>");
       });
       if (value && (f.options || []).indexOf(value) === -1) {
-        opts.push('<option value="' + esc(value) + '" selected>' + esc(value) + " (not installed)</option>");
+        opts.push('<option value="' + esc(value) + '" selected>' + esc(value) + " " + esc(OvosWebUI.t("config.field.notInstalled", "(not installed)")) + "</option>");
       }
       return '<select name="' + esc(f.name) + '">' + opts.join("") + "</select>";
     }
@@ -87,16 +108,26 @@ OvosWebUI.ready(function () {
   function loadSimple() {
     api("/api/config/quick").then(function (r) {
       el("fields").innerHTML = r.fields.map(function (f) {
-        var now = f.effective === null || f.effective === undefined ? "not set" : f.effective;
-        return "<label>" + esc(f.label)
-          + "<small>In use now: " + esc(now) + "</small>"
+        var raw = f.effective;
+        var now = raw === null || raw === undefined ? OvosWebUI.t("config.field.notSet", "not set") : optLabel(raw);
+        // An expert verifying mycroft.conf by hand needs the wire value too.
+        if (raw !== null && raw !== undefined && String(now) !== String(raw)) { now += " (" + raw + ")"; }
+        return "<label>" + esc(OvosWebUI.t("cfg." + f.name + ".label", f.label))
+          + "<small>" + esc(OvosWebUI.t("config.field.inUse", "In use now:")) + " <bdi>" + esc(now) + "</bdi></small>"
           + control(f) + "</label>";
       }).join("");
+      if (r.path) {
+        el("path-simple").textContent = r.path;
+      } else {
+        api("/api/config?format=json").then(function (c) {
+          el("path-simple").textContent = c.path;
+        }).catch(function () {});
+      }
     }).catch(function (e) { OvosWebUI.say("msg-simple", e.message, true); });
   }
 
   el("save-simple").addEventListener("click", function () {
-    if (!OvosWebUI.confirmed("Save these settings? The old file is kept as a backup.")) { return; }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("config.confirm.saveSimple", "Save these settings? The old file is kept as a backup."))) { return; }
     var values = {};
     el("fields").querySelectorAll("input,select").forEach(function (i) { values[i.name] = i.value; });
     api("/api/config/quick", {
@@ -111,10 +142,10 @@ OvosWebUI.ready(function () {
   el("reload-simple").addEventListener("click", loadSimple);
 
   function savedMessage(r) {
-    var base = "Saved. Backup: " + (r.backup || "none was needed.");
+    var base = OvosWebUI.t("config.saved", "Saved. Backup:") + " " + (r.backup || OvosWebUI.t("config.saved.noBackup", "none was needed."));
     if (r.applied === false) {
-      return base + " The running services could not be told, so this is not "
-        + "live yet; it takes effect when the device is next restarted.";
+      return base + " " + OvosWebUI.t("config.saved.notLive", "The running services could not be told, so this is not "
+        + "live yet; it takes effect when the device is next restarted.");
     }
     return base;
   }
@@ -127,8 +158,8 @@ OvosWebUI.ready(function () {
   }
   function setFormat(f) {
     format = f;
-    el("fmt-json").setAttribute("aria-pressed", String(f === "json"));
-    el("fmt-yaml").setAttribute("aria-pressed", String(f === "yaml"));
+    if (f === "json") { el("fmt-json").setAttribute("aria-current", "true"); el("fmt-yaml").removeAttribute("aria-current"); }
+    else { el("fmt-yaml").setAttribute("aria-current", "true"); el("fmt-json").removeAttribute("aria-current"); }
     loadRaw();
   }
   el("fmt-json").addEventListener("click", function () { setFormat("json"); });
@@ -136,7 +167,7 @@ OvosWebUI.ready(function () {
   el("reload-raw").addEventListener("click", loadRaw);
 
   el("save-raw").addEventListener("click", function () {
-    if (!OvosWebUI.confirmed("Replace your configuration with this text? The old file is kept as a backup.")) { return; }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("config.confirm.saveRaw", "Replace your configuration with this text? The old file is kept as a backup."))) { return; }
     api("/api/config", {
       method: "PUT",
       headers: {"Content-Type": "application/json"},

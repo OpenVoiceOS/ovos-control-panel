@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plugins — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.plugins">Plugins</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/config" data-i18n="nav.settings">Settings</a>
+  <a href="/skills" data-i18n="nav.skills">Skills</a>
+  <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
+  <a href="/personas" data-i18n="nav.personas">Personas</a>
+  <a href="/translate" data-i18n="nav.translate">Translate</a>
+  <a href="/backup" data-i18n="nav.backup">Backup</a>
+  <a href="/about" data-i18n="nav.about">About</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="plugins.what">Plugins add abilities to your device — a voice, a way to hear you, a way to answer.</p>
+  <h2 data-i18n="plugins.recommended.title">Recommended for your language</h2>
+  <p class="hint" data-i18n="plugins.recommended.hint">These come from the list that OpenVoiceOS ships for your language.</p>
+  <div class="card" id="recommended" data-i18n="plugins.loading">Loading…</div>
+
+  <h2 data-i18n="plugins.find.title">Find a plugin</h2>
+  <div class="card">
+    <label data-i18n="plugins.search.label">Search<input id="q" placeholder="for example: piper, vosk, wikipedia" data-i18n-attr="placeholder:plugins.search.placeholder"></label>
+    <label data-i18n="plugins.kind.label">Kind<select id="kind"><option value="" data-i18n="plugins.kind.any">Any</option></select></label>
+    <div class="row">
+      <button id="go" data-i18n="plugins.search.button">Search</button>
+      <button class="secondary refresh" id="refresh" data-i18n="plugins.refresh.button">Update the list from PyPI</button>
+    </div>
+    <p class="hint" id="cacheinfo"></p>
+  </div>
+  <div id="results"></div>
+
+  <h2 data-i18n="plugins.job.title">Job</h2>
+  <p class="hint" data-i18n="plugins.job.hint">Only one install or removal runs at a time.</p>
+  <div class="card"><pre id="joblog" role="log" aria-live="polite" aria-relevant="additions text" style="overflow-x:auto;white-space:pre-wrap" data-i18n="plugins.job.nojob">No job has run yet.</pre></div>
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc;
+  var poll = null;
+
+  function age(seconds) {
+    if (seconds === null || seconds === undefined) { return OvosWebUI.t("plugins.age.never", "never"); }
+    var h = Math.floor(seconds / 3600);
+    if (h < 1) { return Math.floor(seconds / 60) + " " + OvosWebUI.t("plugins.age.minutesAgo", "minutes ago"); }
+    if (h < 48) { return h + " " + OvosWebUI.t("plugins.age.hoursAgo", "hours ago"); }
+    return Math.floor(h / 24) + " " + OvosWebUI.t("plugins.age.daysAgo", "days ago");
+  }
+
+  // "ovos-tts-plugin-piper" is how pip names it, not how a person thinks of
+  // it. Lead with a plain title and keep the pip name as a small footnote.
+  function prettyName(name) {
+    return name
+      .replace(/^ovos-/, "")
+      .replace(/-?(plugin|solver)-?/g, " ")
+      .replace(/^\s*(stt|tts|ww|vad|wakeword|audio2ipa)\b/, " ")
+      .replace(/-/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, function (c) { return c.toUpperCase(); }) || name;
+  }
+
+  function card(r) {
+    var state = r.installed
+      ? '<span class="badge ready">' + OvosWebUI.t("plugins.badge.installed", "installed") + " " + esc(r.version || "") + "</span>"
+      : '<span class="badge">' + OvosWebUI.t("plugins.badge.available", "available") + "</span>";
+    var button = r.installed
+      ? '<button class="secondary" data-remove="' + esc(r.name) + '" aria-label="' + esc(OvosWebUI.t("plugins.button.remove", "Remove") + " " + r.name) + '">' + OvosWebUI.t("plugins.button.remove", "Remove") + '</button>'
+      : '<button data-add="' + esc(r.name) + '" aria-label="' + esc(OvosWebUI.t("plugins.button.install", "Install") + " " + r.name) + '">' + OvosWebUI.t("plugins.button.install", "Install") + '</button>';
+    return '<div class="card"><strong>' + esc(prettyName(r.name)) + "</strong> " + state
+      + '<p class="hint">' + esc(plainLabel(r.kind, kindLabels))
+      + '<code class="slug">' + esc(r.name) + "</code></p>"
+      + '<div class="row">' + button + "</div></div>";
+  }
+
+  function bind() {
+    el("results").querySelectorAll("[data-add]").forEach(function (b) {
+      b.addEventListener("click", function () { run("install", b.getAttribute("data-add")); });
+    });
+    el("results").querySelectorAll("[data-remove]").forEach(function (b) {
+      b.addEventListener("click", function () { run("uninstall", b.getAttribute("data-remove")); });
+    });
+  }
+
+  function search(refresh) {
+    el("results").innerHTML = '<div class="card">' + OvosWebUI.t("plugins.searching", "Searching…") + '</div>';
+    var url = "/api/plugins/search?q=" + encodeURIComponent(el("q").value)
+      + "&kind=" + encodeURIComponent(el("kind").value)
+      + (refresh ? "&refresh=true" : "");
+    api(url).then(function (r) {
+      if (!el("kind").dataset.filled) {
+        el("kind").innerHTML = '<option value="">Any</option>'
+          + r.kinds.map(function (k) { return '<option value="' + esc(k) + '">' + esc(k) + "</option>"; }).join("");
+        el("kind").dataset.filled = "1";
+      }
+      el("cacheinfo").textContent = r.offline
+        ? OvosWebUI.t("plugins.offline", "PyPI could not be reached, so only the plugins already installed are listed.")
+        : OvosWebUI.t("plugins.listUpdated", "List updated") + " " + age(r.cache_age) + ". " + r.total + " " + OvosWebUI.t("plugins.pluginsMatch", "plugin(s) match.")
+          + (r.stale ? " " + OvosWebUI.t("plugins.stale", "PyPI could not be reached, so this list may be old.") : "");
+      el("results").innerHTML = r.results.length
+        ? r.results.map(card).join("")
+        : '<div class="card">' + OvosWebUI.t("plugins.nothingMatched", "Nothing matched.") + '</div>';
+      bind();
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  function run(action, name) {
+    var q = action === "install"
+      ? OvosWebUI.t("plugins.confirm.install", "Install") + " " + name + " " + OvosWebUI.t("plugins.confirm.installSuffix", "on this device?")
+      : OvosWebUI.t("plugins.confirm.remove", "Remove") + " " + name + " " + OvosWebUI.t("plugins.confirm.removeSuffix", "from this device?");
+    if (!OvosWebUI.confirmed(q)) { return; }
+    api("/api/plugins/" + action, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({package: name})
+    }).then(function (job) {
+      el("joblog").textContent = job.lines.join("\n");
+      watch(job.id, job.next);
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  function watch(id, since) {
+    if (poll) { clearTimeout(poll); }
+    api("/api/plugins/jobs/" + encodeURIComponent(id) + "?since=" + since).then(function (job) {
+      if (job.lines.length) { el("joblog").textContent += "\n" + job.lines.join("\n"); }
+      if (job.state === "running") {
+        poll = setTimeout(function () { watch(id, job.next); }, 1000);
+      } else {
+        OvosWebUI.say("msg", job.state === "done"
+          ? OvosWebUI.t("plugins.job.finished", "Finished. Restart the OVOS services to load the change.")
+          : OvosWebUI.t("plugins.job.failed", "The job failed. Read the output above."), job.state !== "done");
+        search(false);
+      }
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  el("go").addEventListener("click", function () { search(false); });
+  el("refresh").addEventListener("click", function () { search(true); });
+  el("q").addEventListener("keydown", function (e) { if (e.key === "Enter") { search(false); } });
+
+  var kindLabels = {
+    skill: OvosWebUI.t("plugins.kind.skill", "Skill"),
+    stt: OvosWebUI.t("plugins.kind.stt", "Speech to text"),
+    tts: OvosWebUI.t("plugins.kind.tts", "Voice"),
+    solver: OvosWebUI.t("plugins.kind.solver", "Answers questions"),
+    wake_word: OvosWebUI.t("plugins.kind.ww", "Wake word"),
+    ww: OvosWebUI.t("plugins.kind.ww", "Wake word"),
+    vad: OvosWebUI.t("plugins.kind.vad", "Voice activity")
+  };
+  var profileLabels = {
+    offline_stt: OvosWebUI.t("plugins.profile.offline_stt", "works offline"),
+    online_stt: OvosWebUI.t("plugins.profile.online_stt", "needs the internet"),
+    offline_male: OvosWebUI.t("plugins.profile.offline_male", "works offline"),
+    offline_female: OvosWebUI.t("plugins.profile.offline_female", "works offline"),
+    online_male: OvosWebUI.t("plugins.profile.online_male", "needs the internet"),
+    online_female: OvosWebUI.t("plugins.profile.online_female", "needs the internet"),
+    gpu: OvosWebUI.t("plugins.profile.gpu", "needs a GPU")
+  };
+
+  function plainLabel(code, map) {
+    return (map && map[code]) || code;
+  }
+
+  api("/api/plugins/recommended").then(function (r) {
+    if (!r.plugins.length) {
+      el("recommended").textContent = OvosWebUI.t("plugins.noRecommendation", "There is no recommendation for") + " " + r.lang + ".";
+      return;
+    }
+    el("recommended").innerHTML = "<ul class='plain'>" + r.plugins.map(function (p) {
+      var installedBadge = p.installed
+        ? ' <span class="badge ready">' + OvosWebUI.t("plugins.badge.installed", "installed") + "</span>"
+        : "";
+      var sectionLabel = plainLabel(p.section, kindLabels);
+      var profileLabel = plainLabel(p.profile, profileLabels);
+      return "<li><strong>" + esc(prettyName(p.module)) + "</strong> — "
+        + esc(sectionLabel) + " <small>(" + esc(profileLabel) + ")</small>" + installedBadge
+        + ' <code class="slug">' + esc(p.module) + "</code></li>";
+    }).join("") + "</ul>";
+  }).catch(function (e) { el("recommended").textContent = e.message; });
+
+  search(false);
+});
+</script>
+</body>
+</html>

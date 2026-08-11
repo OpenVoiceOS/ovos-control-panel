@@ -9,33 +9,49 @@
 <script src="/static/app.js"></script>
 </head>
 <body>
-<div class="banner" id="banner" hidden></div>
-<header><h1>Backup and restore</h1></header>
-<nav>
-  <a href="/">Dashboard</a>
-  <a href="/config">Settings</a>
-  <a href="/skills">Skills</a>
-  <a href="/backup">Backup</a>
-  <a href="/about">About</a>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.backup">Backup and restore</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/config" data-i18n="nav.settings">Settings</a>
+  <a href="/skills" data-i18n="nav.skills">Skills</a>
+  <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
+  <a href="/personas" data-i18n="nav.personas">Personas</a>
+  <a href="/translate" data-i18n="nav.translate">Translate</a>
+  <a href="/backup" data-i18n="nav.backup">Backup</a>
+  <a href="/about" data-i18n="nav.about">About</a>
 </nav>
-<main>
-  <h2>Save a copy</h2>
-  <p class="hint">The file holds your configuration and the settings of every skill.
+<main id="main" tabindex="-1">
+  <h2 data-i18n="backup.save_heading">Save a copy</h2>
+  <p class="hint" data-i18n="backup.save_hint">The file holds your configuration and the settings of every skill.
     Keep it somewhere safe.</p>
-  <div class="row"><button id="download">Download a backup</button></div>
+  <div class="row"><button id="download" data-i18n="backup.download">Download a backup</button></div>
 
-  <h2>Put a copy back</h2>
-  <p class="hint">This replaces your configuration and your skill settings with the ones
+  <h2 data-i18n="backup.restore_heading">Put a copy back</h2>
+  <p class="hint" data-i18n="backup.restore_hint">This replaces your configuration and your skill settings with the ones
     in the file. The current files are kept as backups on the device, so you can undo it.</p>
   <div class="card">
-    <label for="file">Backup file<input type="file" id="file" accept=".gz,.tgz,.tar.gz,application/gzip"></label>
+    <span data-i18n="backup.file_label">Backup file</span>
+    <label class="filepick">
+      <input type="file" id="file" accept=".gz,.tgz,.tar.gz,application/gzip" data-i18n-attr="aria-label:file.choose" aria-label="Choose a file">
+      <span class="file-btn" data-i18n="file.choose">Choose a file</span>
+      <span class="file-name" id="file-name" data-i18n="file.none">No file chosen</span>
+    </label>
   </div>
-  <div class="row"><button id="restore">Restore this file</button></div>
-  <div class="msg" id="msg" hidden></div>
+  <div class="row"><button id="restore" class="danger" data-i18n="backup.restore_button">Restore this file</button></div>
+  <p class="hint" data-i18n="backup.undo_hint">You will be asked to confirm first, and the replaced files are kept on the device, so you can undo this.</p>
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
 </main>
 <script>
 OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el;
+
+  el("file").addEventListener("change", function () {
+    var f = el("file").files[0];
+    el("file-name").textContent = f ? f.name : OvosWebUI.t("file.none", "No file chosen");
+  });
 
   el("download").addEventListener("click", function () {
     // The cookie goes with a normal navigation, so no token in the URL.
@@ -44,13 +60,13 @@ OvosWebUI.ready(function () {
 
   el("restore").addEventListener("click", function () {
     var file = el("file").files[0];
-    if (!file) { OvosWebUI.say("msg", "Choose a backup file first.", true); return; }
-    if (!OvosWebUI.confirmed("Replace the settings on this device with the ones in "
-        + file.name + "? The current files are kept as backups.")) { return; }
+    if (!file) { OvosWebUI.say("msg", OvosWebUI.t("backup.choose_file_first", "Choose a backup file first."), true); return; }
+    if (!OvosWebUI.confirmed(OvosWebUI.t("backup.confirm_restore_prefix", "Replace the settings on this device with the ones in ")
+        + file.name + OvosWebUI.t("backup.confirm_restore_suffix", "? The current files are kept as backups."))) { return; }
     var form = new FormData();
     form.append("file", file);
     api("/api/restore", {method: "POST", body: form}).then(function (r) {
-      OvosWebUI.say("msg", "Restored " + r.restored.length + " file(s).");
+      OvosWebUI.say("msg", OvosWebUI.t("backup.restored_prefix", "Restored ") + r.restored.length + OvosWebUI.t("backup.restored_suffix", " file(s)."));
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   });
 });
