@@ -309,7 +309,7 @@ OvosWebUI.ready(function () {
       el("recommended").textContent = OvosWebUI.t("plugins.noRecommendation", "There is no recommendation for") + " " + r.lang + ".";
       return;
     }
-    el("recommended").innerHTML = "<ul class='plain'>" + r.plugins.map(function (p) {
+    el("recommended").innerHTML = "<ul class='plain rowlist'>" + r.plugins.map(function (p) {
       var installedBadge = p.installed
         ? ' <span class="badge ready">' + OvosWebUI.t("plugins.badge.installed", "installed") + "</span>"
         : "";

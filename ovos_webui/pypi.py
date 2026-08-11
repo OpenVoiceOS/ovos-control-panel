@@ -167,11 +167,13 @@ def index(refresh: bool = False) -> dict[str, Any]:
     if not _INDEX_LOCK.acquire(blocking=False):
         return _stale_or_empty(data, "a package-index update is already running")
     try:
-        if data is not None and time.time() - _INDEX_LAST < _INDEX_MIN_GAP:
-            return data
-        result = fetch_index()
+        # Rate-limit every attempt, not just successful ones and not only when
+        # a cache exists: stamp the time before fetching, so a failing or
+        # cache-less device cannot be driven into back-to-back downloads.
+        if time.time() - _INDEX_LAST < _INDEX_MIN_GAP:
+            return _stale_or_empty(data, "the package index was updated moments ago")
         _INDEX_LAST = time.time()
-        return result
+        return fetch_index()
     except (urllib.error.URLError, OSError, TimeoutError) as err:
         LOG.warning(f"could not read the package index from PyPI: {err}")
         return _stale_or_empty(data, str(err))

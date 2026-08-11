@@ -165,12 +165,14 @@ OvosWebUI.ready(function () {
         el("recommended").textContent = t("plugins.noRecommendation", "There is no recommendation for") + " " + r.lang + ".";
         return;
       }
-      // The first entry offered for each role is the one to pick — mark it so
-      // a beginner is not faced with five identical Install buttons.
+      // The first entry offered for each role is the one to badge, so a
+      // beginner is not faced with five identical Install buttons — but never
+      // steer them onto an engine that is not meant to be a default.
+      var NEVER_DEFAULT = {"ovos-stt-plugin-citrinet": 1};
       var firstOfRole = {};
-      el("recommended").innerHTML = "<ul class='plain'>" + r.plugins.map(function (p) {
-        var recommended = !firstOfRole[p.section];
-        firstOfRole[p.section] = true;
+      el("recommended").innerHTML = "<ul class='plain rowlist'>" + r.plugins.map(function (p) {
+        var recommended = !firstOfRole[p.section] && !NEVER_DEFAULT[p.module];
+        if (recommended) { firstOfRole[p.section] = true; }
         var pick = (recommended && !p.installed)
           ? ' <span class="badge">' + esc(t("setup.recommended", "recommended")) + "</span>" : "";
         var profile = profileLabels[p.profile] ? " <small>(" + esc(profileLabels[p.profile]) + ")</small>" : "";

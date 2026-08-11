@@ -453,14 +453,16 @@ button[disabled] { opacity: 0.55; cursor: not-allowed; }
 /* A button sitting inside a list row (plugin/skill lists) hugs its label
  * instead of stretching to the full width the way form controls do. */
 ul.plain button, ul.picklist button { width: auto; display: inline-block; }
-#recommended li {
+#recommended li, ul.rowlist li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem 0.6rem;
+  min-height: 2.4rem;
 }
-#recommended li .slug { flex-basis: 100%; margin-top: 0.1rem; }
-#recommended li button { margin-inline-start: auto; }
+#recommended li .slug, ul.rowlist li .slug { flex-basis: 100%; margin-top: 0.1rem; }
+#recommended li button, ul.rowlist li button { margin-inline-start: auto; }
+ul.rowlist li .when { color: var(--muted); font-size: 0.85rem; }
 
 /* ── status LEDs ──────────────────────────────────────────────────────────── */
 .badge {

@@ -72,6 +72,11 @@ OvosWebUI.ready(function () {
     el("links").innerHTML = a.links.map(function (l) {
       return '<li><a href="' + esc(l.url) + '">' + esc(l.label) + "</a></li>";
     }).join("");
+    // ovos-webui's own version is already the headline above; listing it again
+    // here (and it can differ mid-upgrade) only invites confusion.
+    a.packages = (a.packages || []).filter(function (p) {
+      return (p.name || "").toLowerCase() !== "ovos-webui";
+    });
     el("packages").innerHTML = a.packages.length
       ? a.packages.map(function (p) { return "<li>" + esc(p.name) + " <code>" + esc(p.version) + "</code></li>"; }).join("")
       : "<li>" + esc(OvosWebUI.t("about.no_package", "No OpenVoiceOS package was found.")) + "</li>";
