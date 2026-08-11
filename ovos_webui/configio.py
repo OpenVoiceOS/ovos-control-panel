@@ -110,6 +110,31 @@ def write_user_config(data: dict[str, Any], bus=None) -> dict[str, Any]:
             "applied": applied}
 
 
+def mutate(change, bus=None) -> dict[str, Any]:
+    """Read-modify-write the user layer atomically.
+
+    ``read_user_config`` → mutate → ``write_user_config`` done as three separate
+    steps is a lost-update race: two requests each read the same file, change a
+    different key, and the second write wins, silently dropping the first change
+    (e.g. two skills toggled at once, or a freshly-set access token reverted).
+    ``atomic_write`` holds ``_WRITE_LOCK`` only for the write itself, not the
+    read, so it does not prevent this.
+
+    ``mutate`` takes the same reentrant lock around the whole read-modify-write,
+    so concurrent callers serialise and never clobber each other. ``change`` is
+    called with the current user-config dict; it may edit it in place, or return
+    a replacement dict.
+    """
+    from ovos_webui.fsutils import _WRITE_LOCK
+
+    with _WRITE_LOCK:
+        data = read_user_config()
+        replaced = change(data)
+        if replaced is not None:
+            data = replaced
+        return write_user_config(data, bus=bus)
+
+
 def _notify(data: dict[str, Any], bus) -> bool:
     """Tell running services that the configuration changed.
 
@@ -275,16 +300,19 @@ def apply_quick_form(values: dict[str, Any], bus=None) -> dict[str, Any]:
         raise ConfigError(f"unknown field(s): {', '.join(unknown)}")
     plugins = plugin_options()
     merged = read_merged_config()
-    user = read_user_config()
-    for name, spec in specs.items():
-        if name not in values:
-            continue
-        value = values[name]
-        if value is None or (isinstance(value, str) and not value.strip()):
-            del_in(user, spec["path"])
-            continue
-        set_in(user, spec["path"], _check_quick_value(name, spec, value, plugins, merged))
-    return write_user_config(user, bus=bus)
+
+    def change(user):
+        for name, spec in specs.items():
+            if name not in values:
+                continue
+            value = values[name]
+            if value is None or (isinstance(value, str) and not value.strip()):
+                del_in(user, spec["path"])
+                continue
+            set_in(user, spec["path"],
+                   _check_quick_value(name, spec, value, plugins, merged))
+
+    return mutate(change, bus=bus)
 
 
 def _check_quick_value(name: str, spec: dict[str, Any], value: Any,

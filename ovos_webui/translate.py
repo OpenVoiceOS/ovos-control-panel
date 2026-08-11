@@ -23,11 +23,13 @@ So this is an override, not a fork, and it survives a skill upgrade.
 from __future__ import annotations
 
 import re
+import time
 from pathlib import Path
 from typing import Any
 
 from ovos_utils.log import LOG
 
+from ovos_webui.deadline import run_with_deadline
 from ovos_webui.fsutils import atomic_write, is_within, validate_skill_id
 
 #: The resource files a user can usefully translate.
@@ -42,6 +44,12 @@ MAX_RESOURCE_BYTES = 256 * 1024
 
 #: Refuse to translate more lines than this in one request.
 MAX_LINES = 500
+
+#: A single plugin translation call is given at most this long before the line
+#: is left as a draft; the whole request is capped at TRANSLATE_BUDGET so a slow
+#: backend cannot pin a worker for MAX_LINES separate timeouts.
+LINE_TIMEOUT = 20.0
+TRANSLATE_BUDGET = 90.0
 
 
 class TranslateError(ValueError):
@@ -80,6 +88,11 @@ def validate_resource_name(name: str) -> str:
         raise TranslateError("the file name is empty")
     if "/" in name or "\\" in name or "\x00" in name:
         raise TranslateError("the file name holds a path separator")
+    # ``read_source`` looks the name up with ``rglob``; a glob metacharacter
+    # would turn a named lookup into a pattern (``*.dialog`` matching the first
+    # file, or creating a file literally named ``*.dialog``). Refuse them.
+    if any(c in name for c in "*?[]"):
+        raise TranslateError("the file name holds a glob character")
     if name.startswith(".") or name in (".", ".."):
         raise TranslateError("the file name starts with a dot")
     if len(name) > 128:
@@ -265,14 +278,25 @@ def machine_translate(lines: list[str], source: str, target: str,
         raise TranslateError(f"the translation plugin '{plugin}' is not installed")
     translator = _load_translator(plugin)
     out = []
+    deadline = time.monotonic() + TRANSLATE_BUDGET
     for line in lines:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             # Keep comments and blank lines as they are.
             out.append({"source": line, "draft": line, "machine": False})
             continue
+        if time.monotonic() >= deadline:
+            # The whole request has spent its budget; stop calling the plugin so
+            # a slow backend cannot pin this worker for MAX_LINES timeouts.
+            out.append({"source": line, "draft": line, "machine": False,
+                        "error": "translation timed out"})
+            continue
         try:
-            draft = translator.translate(line, target=target, source=source)
+            # A plugin call has no timeout of its own; bound each one so a hung
+            # backend fails this line instead of parking the request forever.
+            draft = run_with_deadline(
+                lambda ln=line: translator.translate(ln, target=target, source=source),
+                LINE_TIMEOUT, what=f"the '{plugin}' translation plugin")
         except Exception as err:  # noqa: BLE001 - a plugin can fail on one line
             LOG.warning(f"translation failed for a line: {err}")
             out.append({"source": line, "draft": line, "machine": False,
