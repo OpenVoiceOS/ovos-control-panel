@@ -10,7 +10,7 @@
 <body>
 <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
 <div class="banner" id="banner" role="alert" hidden></div>
-<header><h1>Personas</h1>
+<header><h1 data-i18n="hdr.personas">Personas</h1>
   <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
 <nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
   <a href="/" data-i18n="nav.dashboard">Dashboard</a>
@@ -26,8 +26,12 @@
   <p class="hint" data-i18n="personas.intro">A persona decides who answers your questions. It is a list of
     solvers, tried in order, until one of them can answer.</p>
 
+  <div class="empty" id="pempty" hidden>
+    <strong data-i18n="personas.empty.title">No persona yet</strong>
+    <p data-i18n="personas.empty.hint">Make one below: give it a name and add a solver.</p>
+  </div>
   <div class="card">
-    <label data-i18n="personas.pick.label">Persona<select id="pick"></select></label>
+    <label id="pickwrap" data-i18n="personas.pick.label">Persona<select id="pick"></select></label>
     <div class="row">
       <button class="secondary" id="new" data-i18n="personas.new.button">Make a new persona</button>
       <button class="secondary" id="delete" data-i18n="personas.delete.button">Delete this persona</button>
@@ -52,9 +56,11 @@
       <label data-i18n="personas.addsolver.label">Add a solver<select id="add"></select></label>
     </div>
 
-    <h2 data-i18n="personas.solversettings.title">Solver settings</h2>
-    <p class="hint" data-i18n="personas.solversettings.hint">Only fill these in if a solver needs a key or a model name.</p>
-    <textarea id="raw" spellcheck="false" aria-label="persona JSON" data-i18n-attr="aria-label:personas.raw.arialabel"></textarea>
+    <details class="tech" id="advanced">
+      <summary data-i18n="personas.solversettings.title">Solver settings</summary>
+      <p class="hint" data-i18n="personas.solversettings.hint">Only fill these in if a solver needs a key or a model name.</p>
+      <textarea id="raw" spellcheck="false" aria-label="persona JSON" data-i18n-attr="aria-label:personas.raw.arialabel"></textarea>
+    </details>
 
     <div class="row">
       <button id="save" data-i18n="personas.save.button">Save</button>
@@ -75,33 +81,59 @@ OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc;
   var solvers = [], memories = [], current = null, chosen = [];
 
+  function focusChosen(act, i) {
+    var box = el("chosen");
+    var btn = box.querySelector('[data-act="' + act + '"][data-i="' + i + '"]');
+    // A button that landed at the top (no Up) or bottom (no Down) is disabled,
+    // and .focus() on a disabled control is a silent no-op — so fall back to
+    // another control on the same row, then to "Add a solver", so focus is
+    // never dropped to <body>.
+    if (btn && !btn.disabled) { btn.focus(); return true; }
+    var alt = box.querySelector('[data-i="' + i + '"]:not([disabled])');
+    if (alt) { alt.focus(); return true; }
+    var add = el("add");
+    if (add) { add.focus(); return true; }
+    return false;
+  }
+
   function renderChosen() {
     if (!chosen.length) {
       el("chosen").innerHTML = '<p class="hint">' + OvosWebUI.t("personas.chosen.none", "No solver yet. A persona needs at least one.") + '</p>';
       return;
     }
     el("chosen").innerHTML = "<ul class='plain'>" + chosen.map(function (name, i) {
-      return "<li><strong>" + (i + 1) + ".</strong> <code>" + esc(name) + "</code>"
-        + '<div class="row">'
-        + '<button class="secondary" data-up="' + i + '" ' + (i === 0 ? "disabled" : "") + ">" + OvosWebUI.t("personas.chosen.up", "Up") + "</button>"
-        + '<button class="secondary" data-down="' + i + '" ' + (i === chosen.length - 1 ? "disabled" : "") + ">" + OvosWebUI.t("personas.chosen.down", "Down") + "</button>"
-        + '<button class="secondary" data-rm="' + i + '">' + OvosWebUI.t("personas.chosen.remove", "Remove") + '</button></div></li>';
+      var upLabel = OvosWebUI.t("personas.chosen.up", "Up") + " " + name;
+      var downLabel = OvosWebUI.t("personas.chosen.down", "Down") + " " + name;
+      var rmLabel = OvosWebUI.t("personas.chosen.remove", "Remove") + " " + name;
+      // With a single solver there is nothing to reorder, so the Up/Down
+      // controls are left out rather than shown greyed and confusing.
+      var move = chosen.length > 1
+        ? '<button class="secondary" data-act="up" data-i="' + i + '" aria-label="' + esc(upLabel) + '" ' + (i === 0 ? "disabled" : "") + ">" + OvosWebUI.t("personas.chosen.up", "Up") + "</button>"
+          + '<button class="secondary" data-act="down" data-i="' + i + '" aria-label="' + esc(downLabel) + '" ' + (i === chosen.length - 1 ? "disabled" : "") + ">" + OvosWebUI.t("personas.chosen.down", "Down") + "</button>"
+        : "";
+      return "<li><strong><bdi>" + (i + 1) + ".</bdi></strong> <code>" + esc(name) + "</code>"
+        + '<div class="row">' + move
+        + '<button class="secondary" data-act="rm" data-i="' + i + '" aria-label="' + esc(rmLabel) + '">' + OvosWebUI.t("personas.chosen.remove", "Remove") + '</button></div></li>';
     }).join("") + "</ul>";
-    el("chosen").querySelectorAll("[data-up]").forEach(function (b) {
+    el("chosen").querySelectorAll('[data-act="up"]').forEach(function (b) {
       b.addEventListener("click", function () {
-        var i = +b.getAttribute("data-up");
+        var i = +b.getAttribute("data-i");
         chosen.splice(i - 1, 0, chosen.splice(i, 1)[0]); renderChosen(); syncRaw();
+        focusChosen("up", i - 1);
       });
     });
-    el("chosen").querySelectorAll("[data-down]").forEach(function (b) {
+    el("chosen").querySelectorAll('[data-act="down"]').forEach(function (b) {
       b.addEventListener("click", function () {
-        var i = +b.getAttribute("data-down");
+        var i = +b.getAttribute("data-i");
         chosen.splice(i + 1, 0, chosen.splice(i, 1)[0]); renderChosen(); syncRaw();
+        focusChosen("down", i + 1);
       });
     });
-    el("chosen").querySelectorAll("[data-rm]").forEach(function (b) {
+    el("chosen").querySelectorAll('[data-act="rm"]').forEach(function (b) {
       b.addEventListener("click", function () {
-        chosen.splice(+b.getAttribute("data-rm"), 1); renderChosen(); syncRaw();
+        var i = +b.getAttribute("data-i");
+        chosen.splice(i, 1); renderChosen(); syncRaw();
+        if (!chosen.length || !focusChosen("rm", Math.min(i, chosen.length - 1))) { el("add").focus(); }
       });
     });
   }
@@ -158,6 +190,10 @@ OvosWebUI.ready(function () {
             return '<option value="' + esc(p.persona_id) + '">' + esc(p.name)
               + (p.broken ? " " + OvosWebUI.t("personas.brokenFile", "(broken file)") : "") + "</option>";
           }).join("");
+      var none = !r.personas.length;
+      el("pempty").hidden = !none;
+      el("pickwrap").hidden = none;
+      el("delete").hidden = none;
       if (!solvers.length) {
         OvosWebUI.say("msg", OvosWebUI.t("personas.noSolverInstalled", "No solver plugin is installed. Install one on the")
           + " " + OvosWebUI.t("personas.noSolverInstalled2", "Plugins page first — a persona needs at least one solver."), true);

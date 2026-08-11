@@ -378,7 +378,8 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
 
     @api.get("/config/quick")
     def api_quick_get() -> dict[str, Any]:
-        return {"fields": configio.quick_form()}
+        return {"fields": configio.quick_form(),
+                "path": str(configio.user_config_path())}
 
     @api.post("/config/quick")
     def api_quick_post(body: QuickBody) -> dict[str, Any]:
@@ -471,8 +472,12 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             lang = configio.read_merged_config().get("lang") or "en-us"
         if len(lang) > 32:
             raise HTTPException(400, "that is not a language code")
+        from ovos_webui.pypi import installed_versions
+        have = installed_versions()
+        plugins = [dict(p, installed=p["module"].lower() in have)
+                   for p in recommends.recommended_plugins(lang)]
         return {"lang": lang, "profiles": recommends.for_language(lang),
-                "plugins": recommends.recommended_plugins(lang)}
+                "plugins": plugins}
 
     @privileged.post("/plugins/install")
     def api_install(body: PackageBody) -> dict[str, Any]:

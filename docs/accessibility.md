@@ -14,7 +14,7 @@ The interface is built to be used without sight or a mouse.
   "saved" and error messages, the insecure-network warning — is announced to a
   screen reader as it changes.
 - The colour of a status is never its only signal: each one also carries a
-  word (`ready`, `starting`, `no answer`).
+  word (`ready`, `starting`, `no answer`, `off`, `waiting`).
 - Motion is small, and it is turned off for anyone who asks the system to
   reduce motion.
 

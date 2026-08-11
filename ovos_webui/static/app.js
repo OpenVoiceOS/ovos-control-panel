@@ -62,11 +62,34 @@
   // [data-i18n-attr] (e.g. "placeholder:key;title:key"). The English text
   // already in the page is the fallback, so nothing disappears when a locale
   // has no entry.
+  // Translating a label that wraps a control must not wipe the control:
+  // only the element's own text is replaced, child elements stay.
+  function firstTextNode(node) {
+    for (var i = 0; i < node.childNodes.length; i++) {
+      var c = node.childNodes[i];
+      if (c.nodeType === 3 && c.nodeValue.trim()) { return c; }
+    }
+    return null;
+  }
+
   function applyI18n(root) {
     (root || document).querySelectorAll("[data-i18n]").forEach(function (node) {
       var key = node.getAttribute("data-i18n");
-      var val = t(key, node.textContent);
-      if (val !== undefined) { node.textContent = val; }
+      if (node.children.length === 0) {
+        node.textContent = t(key, node.textContent);
+        return;
+      }
+      var text = firstTextNode(node);
+      if (text) {
+        text.nodeValue = t(key, text.nodeValue);
+      } else {
+        // Only formatting children (e.g. a lone <strong> wrapper): the whole
+        // node is the message, so replace it rather than prepend a duplicate.
+        // Never do this when a control is inside — it must not be destroyed.
+        if (!node.querySelector("input,select,textarea,button")) {
+          node.textContent = t(key, node.textContent);
+        }
+      }
     });
     (root || document).querySelectorAll("[data-i18n-attr]").forEach(function (node) {
       node.getAttribute("data-i18n-attr").split(";").forEach(function (pair) {

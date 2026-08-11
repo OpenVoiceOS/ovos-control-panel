@@ -26,24 +26,35 @@
 <main id="main" tabindex="-1">
   <h2 data-i18n="dash.title">Is the device working?</h2>
   <p class="hint" data-i18n="dash.intro">This page asks each part of OpenVoiceOS if it is running.</p>
-  <div class="card" id="bus" data-i18n="dash.checking">Checking…</div>
+  <div class="summary" id="summary" role="status" aria-live="polite" hidden></div>
+  <div class="card" id="bus" role="status" data-i18n="dash.checking">Checking…</div>
   <div class="grid" id="services" aria-live="polite"></div>
   <div class="row"><button id="refresh" data-i18n="dash.recheck">Check again</button></div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
 
   <h2 data-i18n="dash.down.title">If something is down</h2>
   <div class="card">
+    <p><strong data-i18n="dash.down.ask">If you are not sure what to do, ask whoever set up your device.</strong></p>
+    <p class="hint" data-i18n="dash.down.lead">Otherwise, here is what usually helps.</p>
     <ul class="plain">
-      <li>Read the log of the service:
-        <code>journalctl --user -u ovos-skills -n 100</code>
-        (use <code>ovos-audio</code>, <code>ovos-dinkum-listener</code>,
-        <code>ovos-gui</code> or <code>ovos-phal</code> for the others).</li>
-      <li>Start it again: <code>systemctl --user restart ovos-skills</code>.</li>
-      <li>Watch the messages on the bus with
-        <a id="busmon" href="#">the bus monitor</a>, if it runs on this device.</li>
-      <li>Check your settings on the <a href="/config">Settings</a> page.
-        Every save keeps a backup, so you can go back.</li>
+      <li><span data-i18n="dash.down.busmon">Watch the messages on the bus with</span>
+        <a id="busmon" href="#" data-i18n="dash.down.busmon.link">the bus monitor</a><span data-i18n="dash.down.busmon.tail">, if it runs on this device.</span></li>
+      <li><span data-i18n="dash.down.settings">Check your settings on the</span> <a href="/config" data-i18n="nav.settings">Settings</a>
+        <span data-i18n="dash.down.settings.tail">page. Every save keeps a backup, so you can go back.</span></li>
     </ul>
+    <details class="tech">
+      <summary data-i18n="dash.down.tech.summary">For people comfortable with a terminal</summary>
+      <ul class="plain">
+        <li><span data-i18n="dash.down.tech.log">Read the log of the service:</span>
+          <code>journalctl --user -u ovos-skills -n 100</code>
+          (<span data-i18n="dash.down.tech.log.tail">use</span>
+          <code>ovos-audio</code>, <code>ovos-dinkum-listener</code>,
+          <code>ovos-gui</code> <span data-i18n="dash.down.tech.log.tail2">or</span> <code>ovos-phal</code>
+          <span data-i18n="dash.down.tech.log.tail3">for the others.</span>)</li>
+        <li><span data-i18n="dash.down.tech.restart">Start it again:</span> <code>systemctl --user restart ovos-skills</code></li>
+        <li data-i18n="dash.down.tech.norestart">This page does not restart services itself — it runs no shell commands, by design. See the security notes.</li>
+      </ul>
+    </details>
   </div>
 </main>
 <script>
@@ -64,14 +75,65 @@ OvosWebUI.ready(function () {
       el("bus").innerHTML = h.bus.reachable
         ? "<strong>" + esc(t("dash.bus", "Message bus:")) + "</strong> " + esc(t("dash.bus.ok", "connected."))
         : "<strong>" + esc(t("dash.bus", "Message bus:")) + "</strong> " + esc(t("dash.bus.down",
-            "not reachable. Start ovos-messagebus first; until it runs, no other check can answer."));
+            "not running."));
+      var caveats = {
+        voice: t("service.voice.caveat", "No answer here is normal if this device uses the simpler listener, which does not report its status."),
+        gui_service: t("service.gui_service.caveat", "No answer is normal if this device has no screen."),
+        PHAL: t("service.PHAL.caveat", "No answer is normal if this device has no extra hardware plugins.")
+      };
+      // A service that is normally absent on some devices (the screen, the
+      // hardware layer, the simpler listener) must not make a healthy headless
+      // device read "needs attention". Only the always-present core counts.
+      var essential = {skills: 1, intents: 1, audio: 1};
+      var badCount = 0;
+      h.services.forEach(function (s) {
+        var down = s.state === "no answer" || s.state === "not ready";
+        if (down && essential[s.name]) { badCount++; }
+      });
+      var summary = el("summary");
+      if (summary) {
+        summary.hidden = false;
+        if (!h.bus.reachable) {
+          summary.className = "summary bad";
+          summary.innerHTML = "<strong>" + esc(t("dash.sum.busdown", "Your device isn't responding.")) + "</strong>"
+            + '<div class="sub">' + esc(t("dash.sum.busdown.sub", "The message bus is down, so nothing else can answer. See what to do below.")) + "</div>";
+        } else if (badCount === 0) {
+          summary.className = "summary ok";
+          summary.innerHTML = "<strong>" + esc(t("dash.sum.ok", "Everything looks healthy.")) + "</strong>";
+        } else {
+          summary.className = "summary bad";
+          var badSub = t("dash.sum.bad.sub", "{n} service(s) did not answer.").replace("{n}", badCount);
+          summary.innerHTML = "<strong>" + esc(t("dash.sum.bad", "Some parts need attention.")) + "</strong>"
+            + '<div class="sub">' + esc(badSub) + "</div>";
+        }
+      }
+      var reachable = h.bus.reachable;
       el("services").innerHTML = h.services.map(function (s) {
-        var note = s.state === "no answer"
+        var label = t("service." + s.name + ".label", s.label);
+        var hint = t("service." + s.name + ".hint", s.hint);
+        var down = s.state === "no answer" || s.state === "not ready";
+        // A part that is only absent (screen, hardware, simpler listener) is
+        // not a fault: show it neutral-grey with an "off" chip, never alarm-red,
+        // and only while the bus is up (a down bus explains everything already).
+        var optional = down && reachable && caveats[s.name];
+        // With the bus down every card would repeat the same red alarm the
+        // banner already raised; show quiet "waiting" chips and keep each
+        // part's plain description instead.
+        var badgeHtml = optional
+          ? '<span class="badge na">' + esc(t("state.optional", "off")) + "</span>"
+          : (!reachable
+            ? '<span class="badge na">' + esc(t("state.waiting", "waiting")) + "</span>"
+            : badge(s.state));
+        var note = optional ? ""
+          : esc(!reachable ? hint : (down
           ? t("dash.noanswer", "This service did not answer. It is probably not running.")
-          : esc(s.hint);
-        return '<div class="card"><strong>' + esc(s.label) + "</strong> " + badge(s.state)
-          + '<p class="hint">' + note + "</p>"
-          + "<code>mycroft." + esc(s.name) + ".is_ready</code></div>";
+          : hint));
+        var caveat = optional ? '<p class="hint">' + esc(caveats[s.name]) + "</p>" : "";
+        var stateClass = !reachable ? "" : (optional ? " na" : (down ? " down" : (s.state === "ready" ? " ok" : "")));
+        return '<div class="card' + stateClass + '"><strong>' + esc(label) + "</strong> " + badgeHtml
+          + (note ? '<p class="hint">' + note + "</p>" : "") + caveat
+          + '<details class="tech"><summary data-i18n="dash.techname">' + esc(t("dash.techname", "Technical name")) + "</summary>"
+          + "<code>mycroft." + esc(s.name) + ".is_ready</code></details></div>";
       }).join("");
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   }

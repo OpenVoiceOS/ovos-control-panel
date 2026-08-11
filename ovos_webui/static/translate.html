@@ -10,7 +10,7 @@
 <body>
 <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
 <div class="banner" id="banner" role="alert" hidden></div>
-<header><h1>Translate a skill</h1>
+<header><h1 data-i18n="hdr.translate">Translate a skill</h1>
   <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
 <nav aria-label="Site" data-i18n-attr="aria-label:nav.aria">
   <a href="/" data-i18n="nav.dashboard">Dashboard</a>
@@ -27,11 +27,17 @@
     Your words are saved beside the skill, not inside it, so a skill update
     cannot lose them.</p>
 
-  <div class="card">
+  <div class="card" id="pickercard">
     <label><span data-i18n="translate.skill">Skill</span><select id="skill"></select></label>
     <label><span data-i18n="translate.from">Translate from</span><select id="from"></select></label>
     <label><span data-i18n="translate.to">Translate into </span><small data-i18n="translate.to_example">for example pt-pt</small><input id="to" placeholder="pt-pt"></label>
     <label><span data-i18n="translate.file">File</span><select id="file"></select></label>
+  </div>
+  <div class="empty" id="noskill" hidden>
+    <strong data-i18n="translate.empty.title">Nothing to translate yet</strong>
+    <p data-i18n="translate.no_skill">None of your installed skills has text that can be translated yet.</p>
+    <p><span data-i18n="translate.empty.lead">You can search for more skills on the</span>
+      <a href="/plugins" data-i18n="translate.empty.link">Plugins page</a>.</p>
   </div>
 
   <div id="work" hidden>
@@ -57,6 +63,12 @@ OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc;
   var plugins = [], rows = [];
 
+  function focusAccept(i) {
+    var btn = el("lines").querySelector('[data-ok="' + i + '"]');
+    if (btn) { btn.focus(); return true; }
+    return false;
+  }
+
   function renderRows() {
     if (!rows.length) { el("lines").innerHTML = '<p class="hint">' + esc(OvosWebUI.t("translate.empty_file", "This file is empty.")) + '</p>'; return; }
     el("lines").innerHTML = rows.map(function (r, i) {
@@ -64,10 +76,11 @@ OvosWebUI.ready(function () {
         ? '<span class="badge ready">' + esc(OvosWebUI.t("translate.badge_accepted", "accepted")) + '</span>'
         : (r.machine ? '<span class="badge starting">' + esc(OvosWebUI.t("translate.draft_badge", "draft")) + '</span>'
                      : '<span class="badge">' + esc(OvosWebUI.t("translate.badge_unchanged", "unchanged")) + '</span>');
+      var acceptLabel = OvosWebUI.t("translate.accept", "Accept") + " " + OvosWebUI.t("translate.accept_line", "line") + " " + (i + 1);
       return "<label>" + mark
         + "<small>" + esc(OvosWebUI.t("translate.original_prefix", "original: ")) + esc(r.source) + "</small>"
         + '<input data-i="' + i + '" value="' + esc(r.text) + '">'
-        + '</label><div class="row"><button class="secondary" data-ok="' + i + '">'
+        + '</label><div class="row"><button class="secondary" data-ok="' + i + '" aria-label="' + esc(acceptLabel) + '">'
         + esc(OvosWebUI.t("translate.accept", "Accept")) + '</button></div>';
     }).join("");
     el("lines").querySelectorAll("input[data-i]").forEach(function (input) {
@@ -77,7 +90,9 @@ OvosWebUI.ready(function () {
     });
     el("lines").querySelectorAll("[data-ok]").forEach(function (b) {
       b.addEventListener("click", function () {
-        rows[+b.getAttribute("data-ok")].accepted = true; renderRows();
+        var i = +b.getAttribute("data-ok");
+        rows[i].accepted = true; renderRows();
+        if (!focusAccept(i)) { focusAccept(rows.length - 1); }
       });
     });
   }
@@ -198,7 +213,10 @@ OvosWebUI.ready(function () {
           return '<option value="' + esc(s.skill_id) + '">' + esc(s.skill_id) + "</option>";
         }).join("");
     if (!r.skills.length) {
-      OvosWebUI.say("msg", OvosWebUI.t("translate.no_skill", "No skill is installed on this device yet."), true);
+      el("pickercard").hidden = true;
+      el("noskill").hidden = false;
+    } else {
+      OvosWebUI.say("msg", OvosWebUI.t("translate.choose_to_begin", "Choose a skill to begin."), false);
     }
   }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
 });

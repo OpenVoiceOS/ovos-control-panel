@@ -10,20 +10,36 @@
 <body>
 <header><h1>OpenVoiceOS</h1>
   <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
-<main>
-  <h2>Sign in</h2>
-  <p class="hint">This device asks for a token. It is the value of
-    <code>webui.access_token</code> in <code>mycroft.conf</code>, or the one
-    passed with <code>--token</code>.</p>
-  <form class="card" id="form" method="post" action="/api/login">
-    <label>Token<input type="password" id="token" name="token" autocomplete="current-password"></label>
-    <div class="row"><button type="submit">Sign in</button></div>
-  </form>
-  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
-  <noscript><p class="hint">The form above works without JavaScript.</p></noscript>
-  <p class="hint">The token is sent in the body of the request, so it is not
-    written to a log or kept in the address bar. It is then held in a cookie
-    that only this site can send.</p>
+<main id="main" tabindex="-1" class="center">
+  <div class="narrow">
+    <div class="signin-brand">
+      <div class="wave wave-hero" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="brand-name">OpenVoiceOS</p>
+      <p class="hint" data-i18n="login.tagline">Your device. Your network. Your voice.</p>
+    </div>
+    <h2>Sign in</h2>
+    <p><strong data-i18n="login.ask">If someone else set up this device, ask them for the token.</strong></p>
+    <p class="hint">If you set it up yourself, it is the value of
+      <code>webui.access_token</code> in <code>mycroft.conf</code>, or the one
+      passed with <code>--token</code>.</p>
+    <form class="card" id="form" method="post" action="/api/login">
+      <label>Token<input type="password" id="token" name="token" autocomplete="current-password"></label>
+      <div class="row"><button type="submit">Sign in</button></div>
+    </form>
+    <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+    <noscript><p class="hint">The form above works without JavaScript.</p></noscript>
+    <details class="tech">
+      <summary data-i18n="login.token.kept">How the token is kept safe</summary>
+      <p class="hint">The token is sent in the body of the request, so it is not
+        written to a log or kept in the address bar. It is then held in a cookie
+        that only this site can send. A good token is long and random.</p>
+    </details>
+    <details class="tech">
+      <summary data-i18n="login.token.how">How to make a strong token</summary>
+      <p class="hint">For example, the output of
+        <code>python3 -c "import secrets; print(secrets.token_urlsafe(32))"</code>.</p>
+    </details>
+  </div>
 </main>
 <script>
 (function () {
@@ -51,6 +67,8 @@
       if (r.ok) { window.location.href = "/"; return null; }
       return r.json().then(function (b) {
         say(b.detail || "That did not work.", true);
+        var tok = document.getElementById("token");
+        tok.focus(); tok.select();
       });
     }).catch(function (e) { say(e.message, true); });
   });
