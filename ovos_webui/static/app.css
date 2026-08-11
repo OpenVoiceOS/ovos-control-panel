@@ -157,7 +157,7 @@ nav {
   flex-wrap: wrap;
   gap: 0.35rem;
   padding: 0.55rem 0.8rem;
-  background: color-mix(in srgb, var(--card) 90%, transparent);
+  background: var(--card);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
   position: sticky;
@@ -434,9 +434,10 @@ button.secondary:hover { background: var(--accent-wash); border-color: var(--acc
 /* A consequential action (restore, delete): reads as caution, not a twin of a
  * safe action beside it. */
 button.danger {
-  background: transparent;
+  background: color-mix(in srgb, var(--bad) 10%, transparent);
   color: var(--bad);
-  border: 1px solid color-mix(in srgb, var(--bad) 50%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--bad) 55%, var(--line));
+  font-weight: 650;
 }
 button.danger:hover {
   background: color-mix(in srgb, var(--bad) 12%, transparent);
@@ -449,6 +450,14 @@ button[disabled] { opacity: 0.55; cursor: not-allowed; }
 /* A button sitting inside a list row (plugin/skill lists) hugs its label
  * instead of stretching to the full width the way form controls do. */
 ul.plain button, ul.picklist button { width: auto; display: inline-block; }
+#recommended li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+}
+#recommended li .slug { flex-basis: 100%; margin-top: 0.1rem; }
+#recommended li button { margin-inline-start: auto; }
 
 /* ── status LEDs ──────────────────────────────────────────────────────────── */
 .badge {

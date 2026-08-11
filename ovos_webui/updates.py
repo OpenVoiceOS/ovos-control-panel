@@ -122,20 +122,28 @@ def check_updates(refresh: bool = False) -> dict[str, Any]:
     """
     from ovos_webui.pypi import classify, installed_versions
 
-    # One sweep at a time, and no more often than _MIN_SWEEP_GAP: a burst of
-    # refresh=true requests collapses to a single PyPI sweep, so this cannot be
-    # turned into a request amplifier against PyPI or the device.
+    # One sweep at a time, and no more often than _MIN_SWEEP_GAP. The lock is
+    # taken without blocking: a request thread never parks waiting for someone
+    # else's PyPI sweep (that would let concurrent GETs exhaust the worker
+    # pool). If a sweep is already running, serve the cache as-is.
     global _LAST_SWEEP
-    with _CHECK_LOCK:
+    if not _CHECK_LOCK.acquire(blocking=False):
+        # A sweep is already running; report from the cache with no network.
+        return _check_updates_locked(False, classify, installed_versions,
+                                     cache_only=True)
+    try:
         if refresh and time.time() - _LAST_SWEEP < _MIN_SWEEP_GAP:
             refresh = False
         result = _check_updates_locked(refresh, classify, installed_versions)
         if refresh:
             _LAST_SWEEP = time.time()
         return result
+    finally:
+        _CHECK_LOCK.release()
 
 
-def _check_updates_locked(refresh, classify, installed_versions) -> dict[str, Any]:
+def _check_updates_locked(refresh, classify, installed_versions,
+                          cache_only=False) -> dict[str, Any]:
     channel = release_channel()
     cache = _read_cache()
     now = time.time()
@@ -146,7 +154,7 @@ def _check_updates_locked(refresh, classify, installed_versions) -> dict[str, An
         if not classify(name):
             continue
         entry = cache.get(name) or {}
-        if refresh or now - entry.get("fetched", 0) > CACHE_TTL:
+        if not cache_only and (refresh or now - entry.get("fetched", 0) > CACHE_TTL):
             try:
                 entry = {"fetched": now, **latest_versions(name)}
                 cache[name] = entry
@@ -197,13 +205,23 @@ def dependency_conflicts() -> dict[str, Any]:
     is the signal, not an error.
     """
     now = time.time()
-    with _CONFLICTS_LOCK:
+    cached = _CONFLICTS_CACHE.get("result")
+    if cached and now - _CONFLICTS_CACHE.get("at", 0) < CONFLICTS_TTL:
+        return cached
+    # Never park a request thread on a running pip check: if another request
+    # holds the lock, return the last result (or a "checking" placeholder), so
+    # concurrent GETs cannot exhaust the worker pool.
+    if not _CONFLICTS_LOCK.acquire(blocking=False):
+        return cached or {"ok": True, "conflicts": [], "checking": True}
+    try:
         cached = _CONFLICTS_CACHE.get("result")
-        if cached and now - _CONFLICTS_CACHE.get("at", 0) < CONFLICTS_TTL:
+        if cached and time.time() - _CONFLICTS_CACHE.get("at", 0) < CONFLICTS_TTL:
             return cached
         result = _run_pip_check()
-        _CONFLICTS_CACHE.update({"result": result, "at": now})
+        _CONFLICTS_CACHE.update({"result": result, "at": time.time()})
         return result
+    finally:
+        _CONFLICTS_LOCK.release()
 
 
 def _run_pip_check() -> dict[str, Any]:

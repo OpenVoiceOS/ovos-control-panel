@@ -330,6 +330,44 @@ def test_events_route_needs_a_token(token_client):
     assert token_client.get("/api/events").status_code == 401
 
 
+def test_updates_lock_never_blocks_a_request(monkeypatch):
+    # When a sweep is already running, a second caller must return at once from
+    # cache rather than parking on the lock (worker-pool exhaustion defence).
+    updates._CHECK_LOCK.acquire()
+    try:
+        called = {"n": 0}
+        monkeypatch.setattr(updates, "latest_versions",
+                            lambda name: (_ for _ in ()).throw(AssertionError("swept while locked")))
+        # Should not raise and not sweep — it serves the cache.
+        r = updates.check_updates(refresh=True)
+        assert "packages" in r
+    finally:
+        updates._CHECK_LOCK.release()
+
+
+def test_conflicts_lock_never_blocks_a_request():
+    updates._CONFLICTS_CACHE.clear()
+    updates._CONFLICTS_LOCK.acquire()
+    try:
+        r = updates.dependency_conflicts()
+        assert r.get("checking") is True or "conflicts" in r
+    finally:
+        updates._CONFLICTS_LOCK.release()
+
+
+def test_index_refresh_is_single_flight(monkeypatch):
+    from ovos_webui import pypi
+    pypi._INDEX_LOCK.acquire()
+    try:
+        monkeypatch.setattr(pypi, "fetch_index",
+                            lambda: (_ for _ in ()).throw(AssertionError("fetched while locked")))
+        # A refresh while a fetch holds the lock must fall back, not fetch.
+        r = pypi.index(refresh=True)
+        assert isinstance(r, dict)
+    finally:
+        pypi._INDEX_LOCK.release()
+
+
 def test_history_routes(client):
     _make_history()
     listed = client.get("/api/backups").json()["backups"]

@@ -51,7 +51,7 @@
   <div class="card" id="history" data-i18n="backup.history_loading">Looking for backups…</div>
   <div class="card" id="preview-card" tabindex="-1" role="region" aria-labelledby="preview-title" hidden>
     <strong id="preview-title"></strong>
-    <pre id="preview" style="overflow-x:auto"></pre>
+    <pre id="preview" tabindex="0" style="overflow-x:auto"></pre>
     <div class="row">
       <button id="revert" data-i18n="backup.revert_button">Put this version back</button>
       <button class="secondary" id="preview-close" data-i18n="backup.preview_close">Close</button>
@@ -65,7 +65,7 @@
 <script>
 OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
-  var shownId = null;
+  var shownId = null, shownFrom = null;
 
   // "20260811T091210Z" is a machine stamp; show it the way a person reads a
   // date, keeping the raw stamp only as a title for the curious.
@@ -94,7 +94,7 @@ OvosWebUI.ready(function () {
         + (r.backups.length > 20 ? '<p class="hint">'
           + esc(t("backup.history_more", "Only the newest 20 are shown.")) + "</p>" : "");
       el("history").querySelectorAll("[data-show]").forEach(function (b) {
-        b.addEventListener("click", function () { show(b.getAttribute("data-show")); });
+        b.addEventListener("click", function () { shownFrom = b; show(b.getAttribute("data-show")); });
       });
     }).catch(function (e) { el("history").textContent = e.message; });
   }
@@ -113,6 +113,8 @@ OvosWebUI.ready(function () {
   el("preview-close").addEventListener("click", function () {
     el("preview-card").hidden = true;
     shownId = null;
+    // Return focus to the row the preview opened from, not the page body.
+    if (shownFrom) { shownFrom.focus(); }
   });
 
   el("revert").addEventListener("click", function () {
@@ -127,6 +129,7 @@ OvosWebUI.ready(function () {
       el("preview-card").hidden = true;
       shownId = null;
       loadHistory();
+      el("main").focus();  // history is rebuilt; land focus somewhere stable
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   });
 

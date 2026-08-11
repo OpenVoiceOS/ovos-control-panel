@@ -56,7 +56,7 @@
   <h2 data-i18n="tryit.live.title">Live activity</h2>
   <p class="hint" data-i18n="tryit.live.hint">What the device hears and says, as it happens.
     Say the wake word near the device and watch it appear here.</p>
-  <div class="row"><button class="secondary" id="live-toggle" aria-pressed="true" data-i18n="tryit.live.pause">Pause updates</button></div>
+  <div class="row"><button class="secondary" id="live-toggle" data-i18n="tryit.live.pause">Pause updates</button></div>
   <div class="card"><ul class="plain" id="events" aria-live="off" aria-relevant="additions">
     <li class="hint" id="events-empty" data-i18n="tryit.live.empty">Nothing yet. This list fills as the device listens and speaks.</li>
   </ul></div>
@@ -152,7 +152,7 @@ OvosWebUI.ready(function () {
   var running = true, told403 = false;
   el("live-toggle").addEventListener("click", function () {
     running = !running;
-    el("live-toggle").setAttribute("aria-pressed", String(running));
+    // The label carries the state, so no aria-pressed to contradict it.
     el("live-toggle").textContent = running
       ? t("tryit.live.pause", "Pause updates")
       : t("tryit.live.resume", "Resume updates");

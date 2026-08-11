@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -19,6 +20,13 @@ from pathlib import Path
 from typing import Any
 
 from ovos_utils.log import LOG
+
+#: Single-flight for the PyPI index fetch. A request never blocks on it and
+#: never triggers a second concurrent download: if a fetch is already running,
+#: or one finished within _INDEX_MIN_GAP, the caller is served the cache.
+_INDEX_LOCK = threading.Lock()
+_INDEX_MIN_GAP = 30
+_INDEX_LAST = 0.0
 
 SIMPLE_INDEX = "https://pypi.org/simple/"
 PROJECT_JSON = "https://pypi.org/pypi/{name}/json"
@@ -142,21 +150,43 @@ def fetch_index() -> dict[str, Any]:
 
 
 def index(refresh: bool = False) -> dict[str, Any]:
-    """Return the package index, from the cache when it is fresh enough."""
+    """Return the package index, from the cache when it is fresh enough.
+
+    A live fetch is single-flighted and rate-limited so a burst of
+    ``refresh=true`` requests cannot each start a multi-megabyte PyPI download
+    or park a request thread: if another fetch holds the lock, or one ran in
+    the last _INDEX_MIN_GAP seconds, the caller falls back to the cache.
+    """
+    global _INDEX_LAST
     data = read_cache()
     age = cache_age(data)
     if not refresh and data is not None and age is not None and age < CACHE_TTL:
         return data
+    # Do not block a request thread waiting for someone else's fetch, and do
+    # not re-fetch if one just completed — serve the cache instead.
+    if not _INDEX_LOCK.acquire(blocking=False):
+        return _stale_or_empty(data, "a package-index update is already running")
     try:
-        return fetch_index()
+        if data is not None and time.time() - _INDEX_LAST < _INDEX_MIN_GAP:
+            return data
+        result = fetch_index()
+        _INDEX_LAST = time.time()
+        return result
     except (urllib.error.URLError, OSError, TimeoutError) as err:
         LOG.warning(f"could not read the package index from PyPI: {err}")
-        if data is not None:
-            data = dict(data)
-            data["stale"] = True
-            data["error"] = str(err)
-            return data
-        return {"fetched": None, "packages": {}, "error": str(err), "offline": True}
+        return _stale_or_empty(data, str(err))
+    finally:
+        _INDEX_LOCK.release()
+
+
+def _stale_or_empty(data: dict[str, Any] | None, error: str) -> dict[str, Any]:
+    """Return the cache marked stale, or an empty offline index."""
+    if data is not None:
+        data = dict(data)
+        data["stale"] = True
+        data["error"] = error
+        return data
+    return {"fetched": None, "packages": {}, "error": error, "offline": True}
 
 
 def installed_versions() -> dict[str, str]:

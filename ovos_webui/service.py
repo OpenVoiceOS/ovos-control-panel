@@ -496,11 +496,12 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     # ── plugin catalog and installer ─────────────────────────────────────────
     # Reads sit on the ``api`` router (host + cross-site + sign-in). Anything
     # that *changes* the software — install, uninstall, upgrade — sits on
-    # ``privileged``, which adds the always-a-token rule. Two read-only
-    # diagnostics (``/updates`` and ``/updates/conflicts``) do spawn a short pip
-    # subprocess, but each is single-flight and rate-limited in updates.py
-    # (one PyPI sweep per _MIN_SWEEP_GAP, one ``pip check`` per CONFLICTS_TTL),
-    # so they cannot be turned into an amplifier.
+    # ``privileged``, which adds the always-a-token rule. The read-only
+    # diagnostics on ``api`` (``/updates`` sweeps PyPI, ``/updates/conflicts``
+    # runs ``pip check``, ``/plugins/search`` reads the index) each take their
+    # work-lock without blocking and are rate-limited (updates.py, pypi.py), so
+    # a burst of concurrent requests neither amplifies outward nor parks the
+    # worker pool — it just reads the cache.
     @api.get("/plugins/search")
     def api_plugin_search(q: str = "", kind: str = "",
                           refresh: bool = False) -> dict[str, Any]:
