@@ -703,15 +703,16 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             skill_id = fsutils_validate_skill_id(skill_id)
         except UnsafeIdentifier as err:
             raise HTTPException(400, str(err))
-        data = configio.read_user_config()
-        blacklist = list(configio.get_in(data, ["skills", "blacklisted_skills"])
-                         or [])
-        if body.enabled:
-            blacklist = [s for s in blacklist if s != skill_id]
-        elif skill_id not in blacklist:
-            blacklist.append(skill_id)
-        configio.set_in(data, ["skills", "blacklisted_skills"], blacklist)
-        result = configio.write_user_config(data, bus=state["bus"])
+        def change(data):
+            blacklist = list(configio.get_in(data, ["skills", "blacklisted_skills"])
+                             or [])
+            if body.enabled:
+                blacklist = [s for s in blacklist if s != skill_id]
+            elif skill_id not in blacklist:
+                blacklist.append(skill_id)
+            configio.set_in(data, ["skills", "blacklisted_skills"], blacklist)
+
+        result = configio.mutate(change, bus=state["bus"])
         result.update({"skill_id": skill_id, "enabled": body.enabled})
         return result
 
@@ -825,9 +826,10 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         # The persona service matches ``default_persona`` against the *name*
         # a persona declares, so that is what goes in the configuration.
         name = data.get("name") or persona_id
-        user = configio.read_user_config()
-        configio.set_in(user, ["intents", "persona", "default_persona"], name)
-        result = configio.write_user_config(user, bus=state["bus"])
+        result = configio.mutate(
+            lambda user: configio.set_in(
+                user, ["intents", "persona", "default_persona"], name),
+            bus=state["bus"])
         result.update({"active": name, "persona_id": persona_id})
         return result
 

@@ -20,6 +20,10 @@ from ovos_utils.log import LOG
 from ovos_webui.fsutils import atomic_write, is_within, validate_skill_id
 
 #: Keys that are part of the persona itself, not a plugin configuration block.
+#: A persona test call (often an LLM over the network) is given at most this
+#: long before the request gives up, so a hung solver cannot pin a worker.
+PERSONA_TIMEOUT = 30.0
+
 RESERVED_KEYS = {"name", "solvers", "handlers", "memory_module", "catch_phrase",
                  "description", "ignore_plugin_personas"}
 
@@ -222,9 +226,17 @@ def try_persona(persona_id: str, question: str) -> dict[str, Any]:
         raise PersonaError(f"the persona did not load: {err}") from err
     try:
         from ovos_bus_client.session import Session
-        session = Session()
-        messages = persona.get_messages(question, session)
-        answer = persona.chat(messages, session)
+        from ovos_webui.deadline import run_with_deadline
+
+        def ask():
+            session = Session()
+            messages = persona.get_messages(question, session)
+            return persona.chat(messages, session)
+
+        # A solver (often an LLM over the network) has no timeout of its own;
+        # bound it so a hung backend fails the request instead of parking a
+        # worker forever.
+        answer = run_with_deadline(ask, PERSONA_TIMEOUT, what="the persona")
     except Exception as err:  # noqa: BLE001 - a solver can fail at run time
         raise PersonaError(f"the persona did not answer: {err}") from err
     return {"skipped": False, "answer": answer}
