@@ -71,6 +71,7 @@ PAGES = {
     "/setup": "setup.html",
     "/controls": "controls.html",
     "/abilities": "abilities.html",
+    "/network": "network.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -153,6 +154,16 @@ class TokenBody(BaseModel):
 
 class OverrideBody(BaseModel):
     lines: list[str]
+
+
+class WifiConnectBody(BaseModel):
+    ssid: str = Field(..., max_length=64)
+    password: str = Field("", max_length=128)
+    security: str = Field("", max_length=64)
+
+
+class WifiSsidBody(BaseModel):
+    ssid: str = Field(..., max_length=64)
 
 
 def _connect_bus():
@@ -793,6 +804,37 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_mic_mute(body: MuteBody) -> dict[str, Any]:
         from ovos_webui import devicecontrol
         return devicecontrol.set_mic_mute(_need_bus(), body.muted)
+
+    # ── Wi-Fi: scan and join networks over the network-manager PHAL plugin ────
+    # The plugin runs with root (the admin PHAL process) and joining a network
+    # changes device state — and can drop this very browser's link to the
+    # device — so every route sits on the privileged router: a token is always
+    # required, like the installer and the power actions.
+    @privileged.get("/network/status")
+    def api_network_status() -> dict[str, Any]:
+        from ovos_webui import network
+        return network.connected(_need_bus())
+
+    @privileged.post("/network/scan")
+    def api_network_scan() -> dict[str, Any]:
+        # POST, not GET: a scan drives an nmcli rescan on the device.
+        from ovos_webui import network
+        return {"networks": network.scan(_need_bus())}
+
+    @privileged.post("/network/connect")
+    def api_network_connect(body: WifiConnectBody) -> dict[str, Any]:
+        from ovos_webui import network
+        return network.connect(_need_bus(), body.ssid, body.password, body.security)
+
+    @privileged.post("/network/disconnect")
+    def api_network_disconnect(body: WifiSsidBody) -> dict[str, Any]:
+        from ovos_webui import network
+        return network.disconnect(_need_bus(), body.ssid)
+
+    @privileged.post("/network/forget")
+    def api_network_forget(body: WifiSsidBody) -> dict[str, Any]:
+        from ovos_webui import network
+        return network.forget(_need_bus(), body.ssid)
 
     # ── what can it do: the installed skills ─────────────────────────────────
     @api.get("/capabilities")

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Network — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.network">Wi-Fi</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="network.intro">See the networks the device can reach and join one. This runs on the
+    device through its network-manager plugin.</p>
+  <p class="hint" role="note" data-i18n="network.warnNote">Changing the Wi-Fi network can drop this browser's own connection to the
+    device if you are on the same Wi-Fi. If the page stops responding after a change, reconnect to the device's network.</p>
+
+  <!-- Shown instead of the controls when the plugin is not installed. -->
+  <div class="card" id="gate" hidden>
+    <p class="hint" id="gate-note"></p>
+  </div>
+
+  <div id="panel" hidden>
+    <h2 data-i18n="network.current.title">Current network</h2>
+    <div class="card" id="current-card">
+      <p id="current-state" data-i18n="network.checking">Checking…</p>
+      <div class="row">
+        <button class="secondary" id="disconnect" hidden data-i18n="network.disconnect">Disconnect</button>
+        <button class="danger" id="forget" hidden data-i18n="network.forget">Forget this network</button>
+      </div>
+      <div class="msg" id="msg-current" role="status" aria-live="polite" hidden></div>
+    </div>
+
+    <h2 data-i18n="network.available.title">Available networks</h2>
+    <div class="card" id="scan-card">
+      <div class="row">
+        <button class="secondary" id="scan" data-i18n="network.scan">Scan</button>
+      </div>
+      <div id="scan-list" role="status" aria-live="polite"></div>
+      <div class="msg" id="msg-scan" role="status" aria-live="polite" hidden></div>
+    </div>
+  </div>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
+  var current = {connected: false, ssid: null};
+
+  function prettyName(name) {
+    return name.replace(/^ovos-(phal|PHAL)-plugin-/i, "").replace(/-/g, " ").trim()
+      .replace(/\b\w/g, function (c) { return c.toUpperCase(); }) || name;
+  }
+  function isOpen(security) {
+    var s = (security || "").toString().trim().toLowerCase();
+    return s === "" || s === "open" || s === "none" || s === "--";
+  }
+
+  // ── gate: the network-manager plugin has to be installed ────────────────────
+  function showGate(need) {
+    el("panel").hidden = true;
+    var gate = el("gate"), note = el("gate-note");
+    gate.hidden = false;
+    note.innerHTML = esc(t("network.needsPlugin", "This page needs the network-manager plugin, which is not installed yet:")) + " "
+      + '<button class="secondary" data-inst="' + esc(need.suggest) + '">'
+      + esc(t("network.install", "Install") + " " + prettyName(need.suggest)) + "</button>"
+      + (need.needs_admin ? ' <small>' + esc(t("network.admin", "(runs with the admin service)")) + "</small>" : "");
+    note.querySelector("[data-inst]").addEventListener("click", function () { install(need.suggest); });
+  }
+  function jobWatch(id, since) {
+    api("/api/plugins/jobs/" + encodeURIComponent(id) + "?since=" + since).then(function (job) {
+      if (job.state === "running") { setTimeout(function () { jobWatch(id, job.next); }, 1000); }
+      else if (job.state === "done") {
+        OvosWebUI.sayHtml("msg", esc(t("network.installed.pre", "Installed. "))
+          + '<a href="/controls">' + esc(t("network.installed.link", "Restart the OVOS services")) + "</a>"
+          + esc(t("network.installed.post", ", then reload this page.")));
+      } else {
+        OvosWebUI.say("msg", t("network.installFailed", "That did not install. See the Plugins page for details."), true);
+      }
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+  function install(pkg) {
+    if (!OvosWebUI.confirmed(t("network.confirmInstall", "Install") + " " + pkg + "?")) { return; }
+    api("/api/plugins/install", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({package: pkg})})
+      .then(function (job) { OvosWebUI.say("msg", t("network.installing", "Installing…")); jobWatch(job.id, job.next); })
+      .catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  // ── the currently-joined network ────────────────────────────────────────────
+  function showCurrent(status) {
+    current = status;
+    var d = el("disconnect"), f = el("forget");
+    if (status && status.connected && status.ssid) {
+      el("current-state").textContent = t("network.on", "Connected to") + " " + status.ssid;
+      d.hidden = false; f.hidden = false;
+    } else {
+      el("current-state").textContent = t("network.off", "Not connected to any Wi-Fi network.");
+      d.hidden = true; f.hidden = true;
+    }
+  }
+  function loadCurrent() {
+    api("/api/network/status").then(showCurrent).catch(function (e) {
+      el("current-state").textContent = e.message;
+    });
+  }
+  el("disconnect").addEventListener("click", function () {
+    if (!current.ssid) { return; }
+    if (!OvosWebUI.confirmed(t("network.confirmChange",
+      "This may disconnect you from the device if you are on Wi-Fi. Continue?"))) { return; }
+    api("/api/network/disconnect", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ssid: current.ssid})})
+      .then(function (r) {
+        if (r.ok) { OvosWebUI.say("msg-current", t("network.disconnected", "Disconnected.")); loadCurrent(); }
+        else { OvosWebUI.say("msg-current", r.error || t("network.actionFailed", "That did not work."), true); }
+      })
+      .catch(function (e) { OvosWebUI.say("msg-current", e.message, true); });
+  });
+  el("forget").addEventListener("click", function () {
+    if (!current.ssid) { return; }
+    if (!OvosWebUI.confirmed(t("network.confirmChange",
+      "This may disconnect you from the device if you are on Wi-Fi. Continue?"))) { return; }
+    api("/api/network/forget", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ssid: current.ssid})})
+      .then(function (r) {
+        if (r.ok) { OvosWebUI.say("msg-current", t("network.forgotten", "The network was forgotten.")); loadCurrent(); }
+        else { OvosWebUI.say("msg-current", r.error || t("network.actionFailed", "That did not work."), true); }
+      })
+      .catch(function (e) { OvosWebUI.say("msg-current", e.message, true); });
+  });
+
+  // ── scan and join ───────────────────────────────────────────────────────────
+  function joinForm(li, net) {
+    // Toggle: close an open form on a second click.
+    var existing = li.querySelector(".joinform");
+    if (existing) { existing.remove(); return; }
+    li.querySelectorAll(".joinform").forEach(function (n) { n.remove(); });
+    var open = isOpen(net.security);
+    var form = document.createElement("div");
+    form.className = "joinform";
+    var pwId = "pw-" + Math.random().toString(36).slice(2);
+    form.innerHTML =
+      (open ? "" :
+        '<label for="' + pwId + '">' + esc(t("network.password", "Password")) + "</label>"
+        + '<input type="password" id="' + pwId + '" autocomplete="off">')
+      + '<div class="row"><button data-join="1">'
+      + esc(t("network.connect", "Connect")) + "</button></div>";
+    li.appendChild(form);
+    var pw = form.querySelector("input");
+    if (pw) { pw.focus(); }
+    form.querySelector("[data-join]").addEventListener("click", function () {
+      if (!OvosWebUI.confirmed(t("network.confirmChange",
+        "This may disconnect you from the device if you are on Wi-Fi. Continue?"))) { return; }
+      var body = {ssid: net.ssid, password: pw ? pw.value : "", security: net.security || ""};
+      OvosWebUI.say("msg-scan", t("network.connecting", "Connecting…"));
+      api("/api/network/connect", {method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body)})
+        .then(function (r) {
+          if (r.ok) { OvosWebUI.say("msg-scan", t("network.connected", "Connected.")); form.remove(); loadCurrent(); }
+          else { OvosWebUI.say("msg-scan", r.error || t("network.actionFailed", "That did not work."), true); }
+        })
+        .catch(function (e) { OvosWebUI.say("msg-scan", e.message, true); });
+    });
+  }
+  function renderNetworks(networks) {
+    if (!networks.length) {
+      el("scan-list").innerHTML = '<p class="hint">' + esc(t("network.none", "No networks were found.")) + "</p>";
+      return;
+    }
+    var ul = document.createElement("ul");
+    ul.className = "plain rowlist";
+    networks.forEach(function (net) {
+      var li = document.createElement("li");
+      var open = isOpen(net.security);
+      var lock = open ? '<span class="badge na" aria-hidden="true">○</span>'
+        : '<span class="badge ready" title="' + esc(t("network.secured", "secured")) + '" aria-label="'
+          + esc(t("network.secured", "secured")) + '">🔒</span>';
+      li.innerHTML = '<button class="secondary" data-ssid="1"><strong>' + esc(net.ssid) + "</strong></button> "
+        + lock + ' <small class="slug">' + esc(open ? t("network.openLabel", "open") : (net.security || t("network.secured", "secured"))) + "</small>";
+      li.querySelector("[data-ssid]").addEventListener("click", function () { joinForm(li, net); });
+      ul.appendChild(li);
+    });
+    el("scan-list").innerHTML = "";
+    el("scan-list").appendChild(ul);
+  }
+  el("scan").addEventListener("click", function () {
+    el("scan").disabled = true;
+    OvosWebUI.say("msg-scan", t("network.scanning", "Scanning…"));
+    api("/api/network/scan", {method: "POST"})
+      .then(function (r) {
+        el("msg-scan").hidden = true;
+        renderNetworks(r.networks || []);
+      })
+      .catch(function (e) { OvosWebUI.say("msg-scan", e.message, true); })
+      .then(function () { el("scan").disabled = false; });
+  });
+
+  // ── gate on the plugin, then load ───────────────────────────────────────────
+  api("/api/device/capabilities").then(function (r) {
+    var need = (r.capabilities || {}).network;
+    if (need && !need.installed) { showGate(need); return; }
+    el("gate").hidden = true;
+    el("panel").hidden = false;
+    loadCurrent();
+  }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+});
+</script>
+</body>
+</html>
