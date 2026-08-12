@@ -1050,9 +1050,19 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         response.headers.setdefault("Referrer-Policy", "same-origin")
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
+        # The Send-over-sound page loads ggwave (data-over-sound). Its Emscripten
+        # glue registers JS<->wasm types with new Function(), which a browser only
+        # runs under 'unsafe-eval'. Confine that one relaxation to that page; every
+        # other page keeps the strict script-src with no eval. (A cleaner long-term
+        # fix is to rebuild ggwave.js with Emscripten -sDYNAMIC_EXECUTION=0, which
+        # avoids eval/new Function entirely.)
+        if request.url.path == "/sound":
+            script_src = "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        else:
+            script_src = "script-src 'self' 'unsafe-inline'; "
         response.headers.setdefault(
             "Content-Security-Policy",
-            "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+            "default-src 'self'; " + script_src +
             "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
             "connect-src 'self'; form-action 'self'; frame-ancestors 'none'")
         return response

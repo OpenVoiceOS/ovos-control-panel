@@ -442,6 +442,25 @@ def test_s9_referrer_policy_is_set(client):
     assert "frame-ancestors 'none'" in r.headers.get("content-security-policy", "")
 
 
+def _script_src_tokens(csp: str) -> list[str]:
+    directives = {d.strip().split(None, 1)[0]: d.strip().split()[1:]
+                  for d in csp.split(";") if d.strip()}
+    return directives.get("script-src", [])
+
+
+def test_s9_only_the_sound_page_allows_eval_for_the_ggwave_codec(client):
+    # The CSP is scoped by request path in the middleware, so this holds for the
+    # /sound response itself (do not follow the redirect, which would read another
+    # page's header). The Send-over-sound page needs 'unsafe-eval' for ggwave's
+    # Emscripten glue; every other page stays strict with no eval.
+    sound = client.get("/sound", follow_redirects=False)
+    assert "'unsafe-eval'" in _script_src_tokens(
+        sound.headers.get("content-security-policy", ""))
+    other = client.get("/login", follow_redirects=False)
+    assert "'unsafe-eval'" not in _script_src_tokens(
+        other.headers.get("content-security-policy", ""))
+
+
 def test_s9_status_tells_a_stranger_almost_nothing(token_client):
     body = token_client.get("/api/status").json()
     assert body == {"auth": True, "signed_in": False}
