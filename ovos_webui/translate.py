@@ -23,11 +23,13 @@ So this is an override, not a fork, and it survives a skill upgrade.
 from __future__ import annotations
 
 import re
+import time
 from pathlib import Path
 from typing import Any
 
 from ovos_utils.log import LOG
 
+from ovos_webui.deadline import run_with_deadline
 from ovos_webui.fsutils import atomic_write, is_within, validate_skill_id
 
 #: The resource files a user can usefully translate.
@@ -43,9 +45,32 @@ MAX_RESOURCE_BYTES = 256 * 1024
 #: Refuse to translate more lines than this in one request.
 MAX_LINES = 500
 
+#: A single plugin translation call is given at most this long before the line
+#: is left as a draft; the whole request is capped at TRANSLATE_BUDGET so a slow
+#: backend cannot pin a worker for MAX_LINES separate timeouts.
+LINE_TIMEOUT = 20.0
+TRANSLATE_BUDGET = 90.0
+
 
 class TranslateError(ValueError):
     """Raised when a translation request cannot be served."""
+
+
+def _splitlines(text: str) -> list[str]:
+    """Split on newlines only (``\\r\\n``/``\\r``/``\\n``).
+
+    ``str.splitlines()`` also breaks on the full Unicode set (vertical tab, form
+    feed, U+2028, …), so a resource line legitimately containing one of those
+    would be split and then rejoined with a plain ``\\n`` on write — silently
+    corrupting the override. Split on real line breaks only, while matching
+    ``splitlines()``'s behaviour of not treating a single trailing newline as an
+    extra empty line (otherwise every override would grow a blank line per save).
+    """
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    lines = text.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    return lines
 
 
 def validate_lang(lang: str) -> str:
@@ -80,6 +105,11 @@ def validate_resource_name(name: str) -> str:
         raise TranslateError("the file name is empty")
     if "/" in name or "\\" in name or "\x00" in name:
         raise TranslateError("the file name holds a path separator")
+    # ``read_source`` looks the name up with ``rglob``; a glob metacharacter
+    # would turn a named lookup into a pattern (``*.dialog`` matching the first
+    # file, or creating a file literally named ``*.dialog``). Refuse them.
+    if any(c in name for c in "*?[]"):
+        raise TranslateError("the file name holds a glob character")
     if name.startswith(".") or name in (".", ".."):
         raise TranslateError("the file name starts with a dot")
     if len(name) > 128:
@@ -182,7 +212,7 @@ def read_source(skill_id: str, lang: str, file_name: str) -> list[str]:
             continue
         if path.stat().st_size > MAX_RESOURCE_BYTES:
             raise TranslateError("that resource file is too large")
-        return path.read_text(encoding="utf-8").splitlines()
+        return _splitlines(path.read_text(encoding="utf-8"))
     raise LookupError(f"{file_name} was not found for {lang}")
 
 
@@ -191,7 +221,7 @@ def read_override(skill_id: str, lang: str, file_name: str) -> list[str] | None:
     path = override_path(skill_id, lang, file_name)
     if not path.is_file():
         return None
-    return path.read_text(encoding="utf-8").splitlines()
+    return _splitlines(path.read_text(encoding="utf-8"))
 
 
 def write_override(skill_id: str, lang: str, file_name: str,
@@ -263,16 +293,53 @@ def machine_translate(lines: list[str], source: str, target: str,
     plugin = plugin or available[0]
     if plugin not in available:
         raise TranslateError(f"the translation plugin '{plugin}' is not installed")
+    from ovos_webui.deadline import DeadlineExceeded, GuardPoolExhausted
+
     translator = _load_translator(plugin)
     out = []
+    deadline = time.monotonic() + TRANSLATE_BUDGET
+    # Tolerate a couple of transient timeouts (a network blip, a cold model
+    # load) but stop after MAX_TIMEOUTS so a genuinely hung backend cannot be
+    # hammered line-by-line into draining the shared guard-thread pool. This
+    # caps guard permits used per request without letting one flaky line poison
+    # a whole batch.
+    MAX_TIMEOUTS = 3
+    timeouts = 0
+    stalled = False
     for line in lines:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             # Keep comments and blank lines as they are.
             out.append({"source": line, "draft": line, "machine": False})
             continue
+        if stalled or time.monotonic() >= deadline:
+            # The backend already hung once (or the request spent its budget):
+            # stop calling it for the rest of this request. A per-line retry
+            # against a stuck plugin would burn a fresh guard-thread permit on
+            # every line and could exhaust the whole pool from one request.
+            out.append({"source": line, "draft": line, "machine": False,
+                        "error": "translation timed out"})
+            continue
         try:
-            draft = translator.translate(line, target=target, source=source)
+            # A plugin call has no timeout of its own; bound each one so a hung
+            # backend fails this line instead of parking the request forever.
+            draft = run_with_deadline(
+                lambda ln=line: translator.translate(ln, target=target, source=source),
+                LINE_TIMEOUT, what=f"the '{plugin}' translation plugin")
+        except (DeadlineExceeded, GuardPoolExhausted) as err:
+            # A timeout: count it, and once too many pile up, stop calling the
+            # backend for the rest of the request (that per-line retry against a
+            # stuck plugin is what drains the guard pool).
+            timeouts += 1
+            if timeouts >= MAX_TIMEOUTS:
+                LOG.warning(f"translation backend stalled after {timeouts} "
+                            f"timeouts, stopping: {err}")
+                stalled = True
+            else:
+                LOG.warning(f"translation timed out on a line ({timeouts}): {err}")
+            out.append({"source": line, "draft": line, "machine": False,
+                        "error": "translation timed out"})
+            continue
         except Exception as err:  # noqa: BLE001 - a plugin can fail on one line
             LOG.warning(f"translation failed for a line: {err}")
             out.append({"source": line, "draft": line, "machine": False,

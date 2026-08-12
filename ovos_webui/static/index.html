@@ -24,12 +24,15 @@
   <a href="/translate" data-i18n="nav.translate">Translate</a>
   <a href="/backup" data-i18n="nav.backup">Backup</a>
   <a href="/about" data-i18n="nav.about">About</a>
+  <a href="/controls" data-i18n="nav.controls">Device</a>
+  <a href="/abilities" data-i18n="nav.abilities">Abilities</a>
 </nav>
 <main id="main" tabindex="-1">
   <h2 data-i18n="dash.title">Is the device working?</h2>
   <p class="hint" data-i18n="dash.intro">This page asks each part of OpenVoiceOS if it is running.</p>
   <p class="hint"><span data-i18n="dash.setup.lead">First time here?</span>
     <a href="/setup" data-i18n="dash.setup.link">Set up this device</a>.</p>
+  <div class="msg" id="token-notice" role="status" aria-live="polite" hidden></div>
   <div class="summary" id="summary" role="status" aria-live="polite" hidden></div>
   <div class="card" id="bus" role="status" data-i18n="dash.checking">Checking…</div>
   <div class="grid" id="services" aria-live="polite"></div>
@@ -41,14 +44,14 @@
     <p><strong data-i18n="dash.down.ask">If you are not sure what to do, ask whoever set up your device.</strong></p>
     <p class="hint" data-i18n="dash.down.lead">Otherwise, here is what usually helps.</p>
     <ul class="plain">
-      <li><span data-i18n="dash.down.busmon">Watch the messages on the bus with</span>
-        <a id="busmon" href="#" data-i18n="dash.down.busmon.link">the bus monitor</a><span data-i18n="dash.down.busmon.tail">, if it runs on this device.</span></li>
       <li><span data-i18n="dash.down.settings">Check your settings on the</span> <a href="/config" data-i18n="nav.settings">Settings</a>
         <span data-i18n="dash.down.settings.tail">page. Every save keeps a backup, so you can go back.</span></li>
     </ul>
     <details class="tech">
       <summary data-i18n="dash.down.tech.summary">For people comfortable with a terminal</summary>
       <ul class="plain">
+        <li><span data-i18n="dash.down.busmon">Watch the messages on the bus with</span>
+          <a id="busmon" href="#" data-i18n="dash.down.busmon.link">the bus monitor</a><span data-i18n="dash.down.busmon.tail">, if it runs on this device.</span></li>
         <li><span data-i18n="dash.down.tech.log">Read the log of the service:</span>
           <code>journalctl --user -u ovos-skills -n 100</code>
           (<span data-i18n="dash.down.tech.log.tail">use</span>
@@ -147,6 +150,16 @@ OvosWebUI.ready(function () {
   el("busmon").href = "http://" + window.location.hostname + ":8000/";
   el("refresh").addEventListener("click", load);
   load();
+
+  // A device with no access token yet is reachable but not locked down —
+  // point at the setup wizard's token step rather than staying silent.
+  api("/api/status").then(function (s) {
+    if (s && s.has_token === false) {
+      OvosWebUI.sayHtml("token-notice", esc(t("dash.token.notice",
+        "This device has no access token yet — set one to enable installing, speaking, and device controls. "))
+        + '<a href="/setup#token-step">' + esc(t("dash.token.notice.link", "Set one now")) + "</a>");
+    }
+  }).catch(function () {});
 });
 </script>
 </body>

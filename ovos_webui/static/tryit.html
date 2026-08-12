@@ -24,6 +24,8 @@
   <a href="/translate" data-i18n="nav.translate">Translate</a>
   <a href="/backup" data-i18n="nav.backup">Backup</a>
   <a href="/about" data-i18n="nav.about">About</a>
+  <a href="/controls" data-i18n="nav.controls">Device</a>
+  <a href="/abilities" data-i18n="nav.abilities">Abilities</a>
 </nav>
 <main id="main" tabindex="-1">
   <p class="hint" data-i18n="tryit.intro">Type a sentence and it takes the same path your voice would.
@@ -140,13 +142,15 @@ OvosWebUI.ready(function () {
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({text: text})
     }).then(function () {
-      OvosWebUI.say("msg", t("tryit.speak.sent", "Sent. Listen to the device."));
+      OvosWebUI.sayHtml("msg", esc(t("tryit.speak.sent", "Sent. If you hear nothing, no voice is installed yet — add one on the "))
+        + '<a href="/plugins">' + esc(t("tryit.speak.sent.link", "Plugins page")) + "</a>"
+        + esc(t("tryit.speak.sent.tail", ".")));
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   });
 
   function fmtTime(unix) {
     var d = new Date(unix * 1000);
-    return d.toLocaleTimeString();
+    return d.toLocaleTimeString(document.documentElement.lang || undefined);
   }
 
   var running = true, told403 = false;

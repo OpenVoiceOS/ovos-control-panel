@@ -1,25 +1,27 @@
-"""Install and remove OVOS plugins with pip.
+"""Install and remove OVOS plugins over the message bus.
 
-This is the only part of ovos-webui that starts a process. Everything else
-works on files and on the message bus. The rules that keep it safe:
+The web-ui never runs pip itself. It asks the device's installer service
+(``ovos.pip.install`` / ``ovos.pip.uninstall``, handled by ``ovos-core``) to do
+the work in the process that owns the environment — so a plugin lands where the
+service that needs it imports from, even in a split or containerised
+deployment. With no connected device there is nothing to delegate to and the
+action fails cleanly, rather than touching the web-ui's own environment.
 
-- The command is built as an argument vector. There is no shell, so there is
-  nothing for a `;` or a `|` in a name to break out of.
+The rules that keep it safe:
+
 - The package name must match a strict pattern **and** belong to a known OVOS
   family. A version pin, an extras bracket, an index URL, a path or a VCS URL
-  never reaches pip, because none of them match the pattern.
-- The name must exist on PyPI before an install starts.
-- The interpreter is the one this service runs in, so a plugin lands in the
-  environment that OVOS actually imports from.
+  never travels, because none of them match the pattern. Only that validated
+  name (or ``name==<version>`` for an upgrade, the version from a trusted PyPI
+  lookup) is put in the bus message.
+- The name must exist on PyPI before an install is requested.
 - A token is always required, whatever the bind address is.
 
-One job runs at a time. Its output is kept in memory and streamed to the page.
+One job runs at a time. Its progress is kept in memory and streamed to the page.
 """
 from __future__ import annotations
 
 import re
-import subprocess  # noqa: S404 - argument vectors only, never a shell
-import sys
 import threading
 import time
 import uuid
@@ -40,6 +42,53 @@ MAX_LOG_LINES = 2000
 #: Keep this many finished jobs.
 MAX_JOBS = 20
 
+#: After the first reply to a *broadcast* install, wait this long for other
+#: services to also answer before deciding success/failure.
+BROADCAST_GRACE = 2.0
+
+#: Which service's environment each plugin family loads in — so an install is
+#: targeted at ``ovos.pip.install.<service_name>`` and lands in the right place.
+#: The service names follow ovos_utils.skill_installer.ServiceInstaller's own
+#: documented convention: the service's module/process name with underscores
+#: (``ovos_audio``, ``ovos_gui``, ``ovos_core``, …), which is exactly the
+#: ``service_name`` each service passes when it registers its installer. An
+#: operator can override this per family with the config
+#: ``webui.install_services`` (a value of "" or "broadcast" reverts to the
+#: broadcast topic). A family absent here is broadcast.
+DEFAULT_INSTALL_SERVICE = {
+    "tts": "ovos_audio",
+    "media": "ovos_audio",
+    "audio_transformer": "ovos_audio",
+    "dialog_transformer": "ovos_audio",
+    "stt": "ovos_dinkum_listener",
+    "wake_word": "ovos_dinkum_listener",
+    "vad": "ovos_dinkum_listener",
+    "utterance_transformer": "ovos_core",
+    "skill": "ovos_core",
+    "solver": "ovos_core",
+    "persona": "ovos_core",
+    "lang_detect": "ovos_core",
+    "translate": "ovos_core",
+    "gui": "ovos_gui",
+    "phal": "ovos_PHAL",
+    # The admin PHAL is a *separate root process* (ovos_PHAL/admin.py,
+    # skill_id "PHAL.admin"). Admin plugins — wifi setup, anything needing
+    # root — install into its environment, not the plain PHAL one. Which PHAL
+    # packages are "admin" is taken from phal.CAPABILITIES (admin=True).
+    "phal_admin": "ovos_PHAL_admin",
+}
+
+
+def _admin_phal_packages() -> set[str]:
+    """Lower-cased PHAL package names that belong to the admin (root) service."""
+    from ovos_webui.phal import CAPABILITIES
+
+    out: set[str] = set()
+    for spec in CAPABILITIES.values():
+        if spec.get("admin"):
+            out.update(p.lower() for p in spec.get("plugins", []))
+    return out
+
 
 class UnsafePackageName(ValueError):
     """Raised when a package name is not a plain OVOS package name."""
@@ -47,6 +96,10 @@ class UnsafePackageName(ValueError):
 
 class InstallerBusy(RuntimeError):
     """Raised when a job is already running."""
+
+
+class InstallerUnavailable(RuntimeError):
+    """Raised when there is no connected device to run the install on."""
 
 
 def validate_package_name(name: str) -> str:
@@ -61,7 +114,15 @@ def validate_package_name(name: str) -> str:
         raise UnsafePackageName("the package name is empty")
     if len(name) > 100:
         raise UnsafePackageName("the package name is too long")
-    if not PACKAGE_RE.match(name):
+    # Reject any surrounding/embedded whitespace or control characters up front
+    # (a trailing newline, a leading space) — these never belong in a package
+    # name and would otherwise ride into the bus message and the device log.
+    if name != name.strip() or any(c.isspace() or ord(c) < 0x20 for c in name):
+        raise UnsafePackageName("the package name contains whitespace or control characters")
+    # fullmatch, not match: ``$`` matches before a trailing newline and ``match``
+    # does not anchor the end, so ``PACKAGE_RE.match("ovos-x\n")`` succeeds while
+    # fullmatch correctly refuses it.
+    if not PACKAGE_RE.fullmatch(name):
         raise UnsafePackageName(
             "the package name must be a plain OVOS package name, "
             "with no version, extras, path or URL")
@@ -130,46 +191,75 @@ class Installer:
         return [self._jobs[j].as_dict(since=10 ** 9) for j in reversed(self._order)]
 
     # ── actions ──────────────────────────────────────────────────────────────
-    def install(self, package: str, check_pypi: bool = True) -> Job:
-        """Start an install. The name is checked, then looked up on PyPI."""
+    # Installs are done ONLY over the message bus, through the shared installer
+    # service ``ovos_utils.skill_installer.ServiceInstaller`` (and ovos-core's
+    # older SkillsStore). Running pip in the web-ui process would land the
+    # package in the wrong place in a split or containerised deployment, so it
+    # is not done at all: with no device to delegate to, an install fails
+    # cleanly rather than touching the local env.
+    #
+    # Each service that runs an installer answers a broadcast
+    # ``ovos.pip.install`` *and* a targeted ``ovos.pip.install.<service_name>``.
+    # A plugin is routed to the service whose environment actually loads it
+    # (a voice → the audio service, a listener plugin → the listener, …) so it
+    # installs in the right container; the broadcast topic is the fallback for a
+    # kind with no known home. Either way the reply comes back on the base
+    # ``ovos.pip.install.complete`` / ``.failed`` topics.
+    @staticmethod
+    def _channel_spec(package: str) -> str:
+        """Return ``package==<latest-for-channel>``, or the bare name offline.
+
+        The version comes from a trusted PyPI lookup, never the request. Pinning
+        the channel's latest is what makes the ``alpha`` channel install a
+        pre-release — the installer service otherwise does a plain install that
+        pip resolves to the newest *stable* regardless of the channel setting.
+        """
+        try:
+            from ovos_webui.updates import latest_versions, release_channel
+            latest = latest_versions(package).get(release_channel())
+            if latest:
+                return f"{package}=={latest}"
+        except Exception:  # noqa: BLE001 - offline: ask for a plain install
+            pass
+        return package
+
+    def install(self, package: str, check_pypi: bool = True, bus=None) -> Job:
+        """Ask the right service to install a plugin. Name checked, then PyPI.
+
+        The requested channel is honoured (an ``alpha``-channel install pulls a
+        pre-release), the same as upgrade — otherwise switching to ``alpha`` and
+        installing a new plugin would silently get the stable build.
+        """
         validate_package_name(package)
         if check_pypi:
             from ovos_webui.pypi import details
             details(package)  # raises LookupError when PyPI does not have it
-        return self._start("install", package, [
-            sys.executable, "-m", "pip", "install", "--no-input",
-            "--disable-pip-version-check", *_channel_flags(), "--", package,
-        ])
+        return self._start_bus("install", package, "ovos.pip.install",
+                               bus, [self._channel_spec(package)])
 
-    def upgrade(self, package: str) -> Job:
-        """Start an upgrade of a package that is already installed.
-
-        On the ``alpha`` channel pip may pick a pre-release; on ``stable`` it
-        only moves between releases. The flag is decided here from the
-        configuration — nothing from the request reaches the argument vector
-        except the validated package name.
-        """
+    def upgrade(self, package: str, bus=None) -> Job:
+        """Ask the right service to upgrade a plugin to the channel's latest."""
         validate_package_name(package)
-        from ovos_webui.pypi import installed_versions
-        if package.lower() not in installed_versions():
-            raise LookupError(f"'{package}' is not installed")
-        return self._start("upgrade", package, [
-            sys.executable, "-m", "pip", "install", "--no-input",
-            "--disable-pip-version-check", "--upgrade", *_channel_flags(),
-            "--", package,
-        ])
+        return self._start_bus("upgrade", package, "ovos.pip.install",
+                               bus, [self._channel_spec(package)])
 
-    def uninstall(self, package: str) -> Job:
-        """Start an uninstall. The package must be installed already."""
+    def uninstall(self, package: str, bus=None) -> Job:
+        """Ask the right service to remove a plugin."""
         validate_package_name(package)
-        from ovos_webui.pypi import installed_versions
-        if package.lower() not in installed_versions():
-            raise LookupError(f"'{package}' is not installed")
-        return self._start("uninstall", package, [
-            sys.executable, "-m", "pip", "uninstall", "-y", "--", package,
-        ])
+        return self._start_bus("uninstall", package, "ovos.pip.uninstall",
+                               bus, [package])
 
-    def _start(self, action: str, package: str, argv: list[str]) -> Job:
+    def _start_bus(self, action: str, package: str, reply_base: str,
+                   bus, packages: list[str]) -> Job:
+        from ovos_webui import buswait
+
+        if bus is None or not buswait.is_connected(bus):
+            raise InstallerUnavailable(
+                "installs run on the device, over the message bus, and no "
+                "device is connected. Start OVOS (with 'allow_pip' enabled) "
+                "and try again.")
+        service = _install_service_for(package)
+        emit_type = f"{reply_base}.{service}" if service else reply_base
         with self._lock:
             if self._current is not None and self._current.state == "running":
                 raise InstallerBusy("another job is still running")
@@ -179,61 +269,100 @@ class Installer:
             while len(self._order) > MAX_JOBS:
                 self._jobs.pop(self._order.pop(0), None)
             self._current = job
-        thread = threading.Thread(target=self._run, args=(job, argv), daemon=True)
+        thread = threading.Thread(
+            target=self._run_bus,
+            args=(job, reply_base, emit_type, packages, bus, service),
+            daemon=True)
         thread.start()
         return job
 
-    def _run(self, job: Job, argv: list[str]) -> None:
-        job.append(f"$ {' '.join(argv)}")
+    def _run_bus(self, job: Job, reply_base: str, emit_type: str,
+                 packages: list[str], bus, service: str | None) -> None:
+        """Ask the installer service(s) to do the pip work and wait.
+
+        A targeted request (``service`` set) is answered by exactly one service,
+        so the first reply is the whole answer. A broadcast request may be
+        answered by several services; collect a short grace window and fail if
+        any of them failed.
+        """
+        from ovos_bus_client.message import Message
+
+        job.append(f"Asked {'the ' + service if service else 'every'} "
+                   f"installer service: {emit_type} {' '.join(packages)}")
+        first = threading.Event()
+        results: list[dict[str, Any]] = []
+        lock = threading.Lock()
+        # Every job listens on the SAME base reply topics, so a reply must be
+        # matched to its job or a late/duplicate answer from a previous, already
+        # finished job would complete (or fail) the wrong one. The service copies
+        # the request context into its reply (message.reply), so a per-job nonce
+        # round-trips and lets us ignore replies that are not ours.
+        nonce = job.id
+
+        def _is_ours(message) -> bool:
+            return (getattr(message, "context", None) or {}).get("webui_job") == nonce
+
+        def on_complete(message):
+            if not _is_ours(message):
+                return
+            with lock:
+                results.append({"ok": True})
+            first.set()
+
+        def on_failed(message):
+            if not _is_ours(message):
+                return
+            with lock:
+                results.append({"ok": False, "error": (message.data or {}).get(
+                    "error", "the installer service reported a failure")})
+            first.set()
+
         try:
-            # No shell. argv is a list, so the name is one argument whatever
-            # characters it holds — and the name was checked before we got here.
-            process = subprocess.Popen(  # noqa: S603 - argument vector, no shell
-                argv,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                stdin=subprocess.DEVNULL,
-                text=True,
-                bufsize=1,
-                shell=False,
-            )
-        except OSError as err:
-            job.append(f"could not start pip: {err}")
+            # Register inside the try so a failure between the two registrations
+            # still hits the finally and cannot leak a handler on the shared bus.
+            # Targeted requests still reply on the BASE topic, not a targeted one.
+            bus.on(reply_base + ".complete", on_complete)
+            bus.on(reply_base + ".failed", on_failed)
+            bus.emit(Message(emit_type, {"packages": packages},
+                             {"source": "ovos-webui", "webui_job": nonce}))
+            if not first.wait(JOB_TIMEOUT):
+                job.append("No installer service answered. Is OVOS running with "
+                           "'allow_pip' enabled in its config?")
+                job.state = "error"
+                job.returncode = -1
+                return
+            if service is None:
+                # Broadcast: give slower services a moment to also answer.
+                time.sleep(BROADCAST_GRACE)
+            with lock:
+                failures = [r for r in results if not r.get("ok")]
+            if failures:
+                job.append("Failed: " + str(failures[0].get("error", "")))
+                job.state = "error"
+                job.returncode = 1
+            else:
+                job.append("")
+                job.append("Done. Restart the OVOS services to load the change.")
+                job.state = "done"
+                job.returncode = 0
+                _clear_plugin_caches()
+        except Exception as err:  # noqa: BLE001 - never leave the job "running"
+            job.append(f"The install request failed: {err}")
             job.state = "error"
             job.returncode = -1
+        finally:
+            try:
+                bus.remove(reply_base + ".complete", on_complete)
+                bus.remove(reply_base + ".failed", on_failed)
+            except Exception:  # noqa: BLE001 # pragma: no cover
+                pass
+            # Belt-and-suspenders: an install must never stay "running" and
+            # wedge the single-flight lock, whatever path we left by.
+            if job.state == "running":
+                job.state = "error"
+                job.returncode = -1
             job.finished = time.time()
-            return
-
-        def reader():
-            assert process.stdout is not None
-            for line in process.stdout:
-                job.append(line)
-
-        pump = threading.Thread(target=reader, daemon=True)
-        pump.start()
-        try:
-            process.wait(timeout=JOB_TIMEOUT)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            job.append(f"the job took longer than {JOB_TIMEOUT} seconds and was stopped")
-        pump.join(timeout=5)
-        job.returncode = process.returncode
-        job.state = "done" if process.returncode == 0 else "error"
-        job.finished = time.time()
-        if job.state == "done":
-            job.append("")
-            job.append("Finished. Restart the OVOS services to load the change:")
-            job.append("  systemctl --user restart ovos-skills ovos-audio")
-            _clear_plugin_caches()
-        LOG.info(f"pip {job.action} {job.package} finished with {job.returncode}")
-
-
-def _channel_flags() -> list[str]:
-    """Extra pip flags for the configured release channel."""
-    from ovos_webui.updates import release_channel
-
-    return ["--pre"] if release_channel() == "alpha" else []
-
+        LOG.info(f"bus {job.action} {job.package} finished with {job.returncode}")
 
 def _clear_plugin_caches() -> None:
     """Make the new entrypoints visible to this process."""
@@ -245,6 +374,31 @@ def _clear_plugin_caches() -> None:
             importlib.metadata.MetadataPathFinder.invalidate_caches()
     except Exception as err:  # noqa: BLE001 - never fatal
         LOG.debug(f"could not refresh the package caches: {err}")
+
+
+def _install_service_for(package: str) -> str | None:
+    """Return the service to target for ``package``, or None for broadcast."""
+    from ovos_webui import configio
+    from ovos_webui.pypi import classify
+
+    kind = classify(package)
+    if not kind:
+        return None
+    # A PHAL plugin that needs root belongs to the separate admin process, so
+    # it routes by the "phal_admin" key rather than "phal".
+    if kind == "phal" and package.lower() in _admin_phal_packages():
+        kind = "phal_admin"
+    mapping = dict(DEFAULT_INSTALL_SERVICE)
+    overrides = configio.user_or_merged(["webui", "install_services"])
+    if isinstance(overrides, dict):
+        # Only string overrides are usable as a topic suffix. A non-string value
+        # (an operator typo like {"tts": 123}) would otherwise build a topic no
+        # service answers and hang the job until JOB_TIMEOUT.
+        mapping.update({k: v for k, v in overrides.items() if isinstance(v, str)})
+    service = mapping.get(kind)
+    if not service or service in ("broadcast", "*"):
+        return None
+    return service
 
 
 #: The service uses one installer.

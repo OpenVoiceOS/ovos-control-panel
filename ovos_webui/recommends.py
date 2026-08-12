@@ -129,9 +129,13 @@ def _plugins_in(data: dict[str, Any]) -> list[dict[str, str]]:
     return unique
 
 
-def recommended_plugins(lang: str) -> list[dict[str, str]]:
-    """Return a flat list of the plugins recommended for ``lang``."""
-    data = for_language(lang)
+def recommended_plugins(lang: str, data: dict | None = None) -> list[dict[str, str]]:
+    """Return a flat list of the plugins recommended for ``lang``.
+
+    ``data`` is an already-computed ``for_language(lang)`` result; pass it to
+    avoid recomputing the profile scan when the caller also needs the profiles.
+    """
+    data = for_language(lang) if data is None else data
     if not data.get("available"):
         return []
     out: list[dict[str, str]] = []

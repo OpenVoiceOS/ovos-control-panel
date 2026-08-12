@@ -56,3 +56,7 @@ Every save first copies the old file into `.ovos-webui-backups` beside it.
 On a computer the fields lay out in two columns and the tabs move to a left rail.
 
 ![Settings on a desktop](images/settings-desktop.png)
+
+## Changing the access token
+
+The **Access token** section sets the first token on a device that has none, or changes an existing one (you enter the current token to change it). The session stays signed in afterwards.

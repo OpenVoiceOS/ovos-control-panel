@@ -190,9 +190,9 @@ def set_release_channel(channel: str, bus=None) -> dict[str, Any]:
 
     if channel not in CHANNELS:
         raise ValueError(f"the channel must be one of {', '.join(CHANNELS)}")
-    data = configio.read_user_config()
-    configio.set_in(data, ["webui", "release_channel"], channel)
-    result = configio.write_user_config(data, bus=bus)
+    result = configio.mutate(
+        lambda data: configio.set_in(data, ["webui", "release_channel"], channel),
+        bus=bus)
     result["channel"] = channel
     return result
 

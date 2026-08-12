@@ -24,6 +24,8 @@
   <a href="/translate" data-i18n="nav.translate">Translate</a>
   <a href="/backup" data-i18n="nav.backup">Backup</a>
   <a href="/about" data-i18n="nav.about">About</a>
+  <a href="/controls" data-i18n="nav.controls">Device</a>
+  <a href="/abilities" data-i18n="nav.abilities">Abilities</a>
 </nav>
 <main id="main" tabindex="-1">
   <div class="tabs">
@@ -68,6 +70,27 @@
     </div>
     <div class="msg" id="msg-raw" role="status" aria-live="polite" hidden></div>
   </section>
+
+  <h2 data-i18n="token.title">Access token</h2>
+  <div class="card">
+    <p class="hint" id="token-state" data-i18n="token.checking">Checking…</p>
+    <label id="token-current-wrap" hidden>
+      <span data-i18n="token.current">Current token</span>
+      <input type="password" id="token-current" autocomplete="current-password"></label>
+    <label>
+      <span data-i18n="token.new">New token</span>
+      <input type="password" id="token-new" autocomplete="new-password"></label>
+    <p class="hint" data-i18n="token.hint">A good token is long and random. It is stored in your configuration and
+      needed to sign in. This session stays signed in after you change it.</p>
+    <details class="tech">
+      <summary data-i18n="token.how">How to make a strong one</summary>
+      <p class="hint">For example, the output of
+        <code>python3 -c "import secrets; print(secrets.token_urlsafe(32))"</code>.</p>
+    </details>
+    <div class="row"><button id="token-save" data-i18n="token.save">Save token</button></div>
+    <div class="msg" id="msg-token" role="status" aria-live="polite" hidden></div>
+  </div>
+
   <p class="hint foot"><a data-i18n="foot.manual"
     href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
 </main>
@@ -183,6 +206,31 @@ OvosWebUI.ready(function () {
   });
 
   loadSimple();
+
+  // ── access token: set the first one, or change it ─────────────────────────
+  var hasToken = false;
+  api("/api/status").then(function (s) {
+    hasToken = !!(s && s.auth);
+    el("token-current-wrap").hidden = !hasToken;
+    el("token-state").textContent = hasToken
+      ? OvosWebUI.t("token.set", "This device has a token. Enter the current one to change it.")
+      : OvosWebUI.t("token.none", "This device has no token yet. Setting one locks it down.");
+  }).catch(function () {});
+
+  el("token-save").addEventListener("click", function () {
+    var body = {new: el("token-new").value};
+    if (hasToken) { body.current = el("token-current").value; }
+    api("/api/auth/token", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body)
+    }).then(function () {
+      OvosWebUI.say("msg-token", OvosWebUI.t("token.saved", "Token saved. You are still signed in."));
+      el("token-current").value = ""; el("token-new").value = "";
+      hasToken = true;
+      el("token-current-wrap").hidden = false;
+      el("token-state").textContent = OvosWebUI.t("token.set", "This device has a token. Enter the current one to change it.");
+    }).catch(function (e) { OvosWebUI.say("msg-token", e.message, true); });
+  });
 });
 </script>
 </body>

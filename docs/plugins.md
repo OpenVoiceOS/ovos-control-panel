@@ -35,3 +35,25 @@ OVOS service for the change to take effect.
 > with the plugin name as a single checked argument. A name with a version
 > pin, an extra, an index URL, a path, or a shell character is refused before
 > `pip` is reached.
+
+## Where installs actually run
+
+The web-ui never runs pip itself. It asks the device's installer service over
+the message bus (`ovos.pip.install` / `ovos.pip.uninstall`, handled by
+`ovos-core`'s skill installer and gated by its `allow_pip` config). That service
+runs pip in the process that owns the environment — which is what makes an
+install land in the right place in a split or containerised deployment, where
+pip in the web-ui process would put the package where nothing can import it.
+
+If no device is connected there is nothing to delegate to, so an install fails
+with a clear message (HTTP 503) rather than touching the web-ui's own
+environment. Only the package name — validated the same way as before — travels
+in the bus message.
+
+Each install is **routed to the service whose environment loads that kind of
+plugin** — a voice to the audio service, a listener plugin to the listener, a
+skill to ovos-core, a PHAL plugin to PHAL — using the targeted
+`ovos.pip.install.<service>` topic of `ovos_utils.skill_installer.ServiceInstaller`,
+so it lands in the right container in a split deployment. A kind with no known
+home uses the broadcast topic. Override the routing per family with the config
+`webui.install_services` (a family set to `broadcast` uses the broadcast topic).

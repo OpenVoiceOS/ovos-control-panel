@@ -181,3 +181,20 @@ cannot try many tokens quickly. A single mistyped token barely notices.
   on a tokenless loopback device.
 - `esc()` escapes single quotes as well, so single-quoted attributes built from
   data are safe.
+
+## Phase 5 additions
+
+- **Installs are bus-only.** `ovos.pip.install` / `.uninstall` are handled by
+  the service that owns the environment; the web-ui never runs pip in its own
+  process. With no connected device an install fails (503) instead of falling
+  back to local pip. The only request-derived value that travels is the
+  validated package name (for an upgrade, `name==<version>` where the version
+  comes from a trusted PyPI lookup, never the request).
+- **Access-token rotation** `POST /api/auth/token` sits on the signed-in router.
+  Changing an existing token needs a signed-in session *and* the current token
+  re-supplied in the body; the value is compared in constant time, never logged
+  or reflected, stored via the normal config write, and the session cookie is
+  re-issued so the operator is not locked out.
+- **Device-control writes** (volume, mic mute) are on the privileged
+  token-always router; the reads that expose no secrets are on the signed-in
+  router. Volume is clamped 0–100 and the message types are constants.

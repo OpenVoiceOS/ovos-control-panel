@@ -43,18 +43,32 @@ def ask(bus, utterance: str, lang: str) -> dict[str, Any]:
     failed = threading.Event()
     first_answer = threading.Event()
 
+    def _mine(message) -> bool:
+        # Replies to this utterance carry our ``ident`` back in their context.
+        # Two concurrent tries share the same reply topics, so filter to our own
+        # round trip. A skill that drops the ident (no context) is still counted,
+        # so this never loses a legitimate answer — it only stops cross-talk.
+        mid = (getattr(message, "context", None) or {}).get("ident")
+        return mid is None or mid == ident
+
     def on_speak(message):
+        if not _mine(message):
+            return
         text = (message.data or {}).get("utterance")
         if text:
             spoken.append(str(text))
             first_answer.set()
 
     def on_handler(message):
+        if not _mine(message):
+            return
         name = (message.data or {}).get("name") or (message.data or {}).get("handler")
         if name:
             handlers.append(str(name))
 
-    def on_failure(_message):
+    def on_failure(message):
+        if not _mine(message):
+            return
         failed.set()
         first_answer.set()
 

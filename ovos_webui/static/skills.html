@@ -24,6 +24,8 @@
   <a href="/translate" data-i18n="nav.translate">Translate</a>
   <a href="/backup" data-i18n="nav.backup">Backup</a>
   <a href="/about" data-i18n="nav.about">About</a>
+  <a href="/controls" data-i18n="nav.controls">Device</a>
+  <a href="/abilities" data-i18n="nav.abilities">Abilities</a>
 </nav>
 <main id="main" tabindex="-1">
   <h2 data-i18n="skills.title">Installed skills</h2>
@@ -50,6 +52,7 @@
     <div class="card" id="form"></div>
     <div class="tabs"><button class="secondary" id="toggle-raw" aria-pressed="false" data-i18n="skills.editJson">Edit as JSON</button></div>
     <textarea id="raw" spellcheck="false" aria-label="settings JSON" hidden data-i18n-attr="aria-label:skills.raw.aria"></textarea>
+    <p class="hint" id="raw-note" hidden data-i18n="skills.raw.note">Saving merges your changes: you can add or change values, but removing a key here does not delete it — the skill keeps its own settings.</p>
     <div class="row">
       <button id="save" data-i18n="skills.save">Save</button>
       <button class="secondary" id="reload" data-i18n="skills.undo">Undo my edits</button>
@@ -123,6 +126,7 @@ OvosWebUI.ready(function () {
   el("toggle-raw").addEventListener("click", function () {
     rawMode = !rawMode;
     el("raw").hidden = !rawMode;
+    el("raw-note").hidden = !rawMode;
     el("form").hidden = rawMode;
     el("toggle-raw").setAttribute("aria-pressed", String(rawMode));
     el("toggle-raw").textContent = rawMode ? OvosWebUI.t("skills.backToForm", "Back to the form") : OvosWebUI.t("skills.editJson", "Edit as JSON");
@@ -139,9 +143,19 @@ OvosWebUI.ready(function () {
       settings = JSON.parse(JSON.stringify(current.settings));
       el("form").querySelectorAll("input,select").forEach(function (i) {
         var t = i.getAttribute("data-type");
-        if (t === "bool" || t === "checkbox") { settings[i.name] = i.value === "true"; }
-        else if (t === "number") { settings[i.name] = i.value === "" ? null : Number(i.value); }
-        else { settings[i.name] = i.value; }
+        var original = current.settings[i.name];
+        var coerced;
+        if (t === "bool" || t === "checkbox") { coerced = i.value === "true"; }
+        else if (t === "number") { coerced = i.value === "" ? null : Number(i.value); }
+        else { coerced = i.value; }
+        // Only write back the coerced value for a field the user actually
+        // changed. An untouched field keeps its original value and type, so
+        // e.g. a number typed in the box does not silently become a string
+        // (or an empty box become null) just because the form re-rendered it.
+        var unchanged = original === undefined
+          ? (coerced === "" || coerced === null)
+          : String(original) === i.value;
+        settings[i.name] = unchanged ? original : coerced;
       });
     }
     api("/api/skills/" + encodeURIComponent(current.skill_id), {
@@ -183,7 +197,9 @@ OvosWebUI.ready(function () {
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({enabled: target})
     }).then(function () {
-      OvosWebUI.say("msg-enable", OvosWebUI.t("skills.enable.saved", "Saved. Restart the OVOS services to apply it."));
+      OvosWebUI.sayHtml("msg-enable", esc(OvosWebUI.t("skills.enable.saved.pre", "Saved. "))
+        + '<a href="/controls">' + esc(OvosWebUI.t("skills.enable.saved.link", "Restart the OVOS services")) + "</a>"
+        + esc(OvosWebUI.t("skills.enable.saved.post", " to apply it.")));
       showEnabled(current.skill_id);
     }).catch(function (e) { OvosWebUI.say("msg-enable", e.message, true); });
   });
@@ -219,6 +235,19 @@ OvosWebUI.ready(function () {
         load(b.getAttribute("data-skill"), true);
       });
     });
+    // A deep link from the Abilities page ("Settings" on a given skill) lands
+    // here as #<skill_id>; pick and focus that skill instead of leaving the
+    // person to find it again in the list themselves.
+    try {
+      var wanted = decodeURIComponent((window.location.hash || "").replace(/^#/, ""));
+      if (wanted) {
+        // escape backslash and quote so a malformed #hash can't build an invalid
+        // selector and throw a DOMException that aborts the rest of this handler
+        var safe = wanted.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+        var target = el("skilllist").querySelector('button.pick[data-skill="' + safe + '"]');
+        if (target) { target.click(); }
+      }
+    } catch (e) { /* bad hash — just don't deep-link */ }
   }).catch(function (e) {
     el("checking").hidden = true;
     OvosWebUI.say("msg", e.message, true);

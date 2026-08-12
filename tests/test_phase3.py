@@ -149,13 +149,24 @@ def test_channel_round_trip():
     assert updates.release_channel() == "stable"
 
 
-def test_channel_controls_the_pip_flags():
-    from ovos_webui.installer import _channel_flags
+def test_channel_selects_the_upgrade_version(monkeypatch):
+    # Installs go over the bus now; the channel picks which version is pinned
+    # for an upgrade (stable vs newest incl. pre-release).
+    from ovos_utils.fakebus import FakeBus
+    from ovos_webui import installer
 
-    updates.set_release_channel("stable")
-    assert _channel_flags() == []
+    monkeypatch.setattr(updates, "latest_versions",
+                        lambda name: {"stable": "1.0.0", "alpha": "1.1.0a1"})
+    seen = {}
+    bus = FakeBus()
+    bus.on("ovos.pip.install.ovos_audio", lambda m: seen.setdefault("pkgs", m.data.get("packages")))
     updates.set_release_channel("alpha")
-    assert _channel_flags() == ["--pre"]
+    installer.Installer().upgrade("ovos-tts-plugin-piper", bus=bus)
+    import time as _t
+    for _ in range(100):
+        if "pkgs" in seen: break
+        _t.sleep(0.01)
+    assert seen["pkgs"] == ["ovos-tts-plugin-piper==1.1.0a1"]
     updates.set_release_channel("stable")
 
 
@@ -175,11 +186,11 @@ def test_upgrade_route_needs_a_token(token_client):
     assert r.status_code == 401
 
 
-def test_upgrade_refuses_a_package_that_is_not_installed():
-    from ovos_webui.installer import Installer
+def test_upgrade_without_a_device_is_unavailable():
+    from ovos_webui.installer import Installer, InstallerUnavailable
 
-    with pytest.raises(LookupError):
-        Installer().upgrade("ovos-tts-plugin-surely-not-installed")
+    with pytest.raises(InstallerUnavailable):
+        Installer().upgrade("ovos-tts-plugin-piper", bus=None)
 
 
 def test_upgrade_refuses_an_unsafe_name():

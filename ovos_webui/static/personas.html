@@ -23,6 +23,8 @@
   <a href="/translate" data-i18n="nav.translate">Translate</a>
   <a href="/backup" data-i18n="nav.backup">Backup</a>
   <a href="/about" data-i18n="nav.about">About</a>
+  <a href="/controls" data-i18n="nav.controls">Device</a>
+  <a href="/abilities" data-i18n="nav.abilities">Abilities</a>
 </nav>
 <main id="main" tabindex="-1">
   <p class="hint" data-i18n="personas.intro">A persona decides who answers your questions. It is a list of
@@ -76,7 +78,7 @@
     <div class="card">
       <label data-i18n="personas.ask.label">Ask something<input id="question" placeholder="what is the capital of Portugal?" data-i18n-attr="placeholder:personas.ask.placeholder"></label>
       <div class="row"><button class="secondary" id="try" data-i18n="personas.ask.button">Ask</button></div>
-      <p class="hint" id="answer"></p>
+      <p class="hint" id="answer" role="status" aria-live="polite" aria-atomic="true"></p>
     </div>
   </div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
@@ -124,25 +126,37 @@ OvosWebUI.ready(function () {
     }).join("") + "</ul>";
     el("chosen").querySelectorAll('[data-act="up"]').forEach(function (b) {
       b.addEventListener("click", function () {
-        var i = +b.getAttribute("data-i");
+        var i = +b.getAttribute("data-i"), name = chosen[i];
         chosen.splice(i - 1, 0, chosen.splice(i, 1)[0]); renderChosen(); syncRaw();
+        announceChosen("moved", name);
         focusChosen("up", i - 1);
       });
     });
     el("chosen").querySelectorAll('[data-act="down"]').forEach(function (b) {
       b.addEventListener("click", function () {
-        var i = +b.getAttribute("data-i");
+        var i = +b.getAttribute("data-i"), name = chosen[i];
         chosen.splice(i + 1, 0, chosen.splice(i, 1)[0]); renderChosen(); syncRaw();
+        announceChosen("moved", name);
         focusChosen("down", i + 1);
       });
     });
     el("chosen").querySelectorAll('[data-act="rm"]').forEach(function (b) {
       b.addEventListener("click", function () {
-        var i = +b.getAttribute("data-i");
+        var i = +b.getAttribute("data-i"), name = chosen[i];
         chosen.splice(i, 1); renderChosen(); syncRaw();
+        announceChosen("removed", name);
         if (!chosen.length || !focusChosen("rm", Math.min(i, chosen.length - 1))) { el("add").focus(); }
       });
     });
+  }
+
+  // A short status for the #msg live region whenever the solver list changes,
+  // so a screen-reader user hears the effect of add/remove/reorder without
+  // having to re-read the whole list.
+  function announceChosen(action, name) {
+    var verb = OvosWebUI.t("personas.chosen." + action, action === "added" ? "Added" : (action === "removed" ? "Removed" : "Moved"));
+    OvosWebUI.say("msg", verb + " " + name + " — " + chosen.length + " "
+      + OvosWebUI.t("personas.chosen.countSuffix", "answer source(s) now."), false);
   }
 
   function build() {
@@ -218,7 +232,9 @@ OvosWebUI.ready(function () {
 
   el("add").addEventListener("change", function () {
     if (this.value && chosen.indexOf(this.value) === -1) {
-      chosen.push(this.value); renderChosen(); syncRaw();
+      var name = this.value;
+      chosen.push(name); renderChosen(); syncRaw();
+      announceChosen("added", name);
     }
     this.value = "";
   });
@@ -249,7 +265,10 @@ OvosWebUI.ready(function () {
         ? " " + OvosWebUI.t("personas.missingSolvers", "These solvers are not installed yet:") + " " + r.missing_solvers.join(", ") + "."
         : "";
       OvosWebUI.say("msg", OvosWebUI.t("personas.saved", "Saved.") + extra, r.missing_solvers.length > 0);
-      refresh(pid).then(function () { load(pid); });
+      // the outer .catch only guards the PUT; the chained refresh needs its own,
+      // or a failed reload leaves the picker/editor stale with no error shown
+      refresh(pid).then(function () { load(pid); })
+        .catch(function (e) { OvosWebUI.say("msg", e.message, true); });
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   });
 

@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Device — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.controls">Device controls</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/tryit" data-i18n="nav.tryit">Try it</a>
+  <a href="/controls" data-i18n="nav.controls">Device</a>
+  <a href="/config" data-i18n="nav.settings">Settings</a>
+  <a href="/skills" data-i18n="nav.skills">Skills</a>
+  <a href="/abilities" data-i18n="nav.abilities">Abilities</a>
+  <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
+  <a href="/personas" data-i18n="nav.personas">Personas</a>
+  <a href="/translate" data-i18n="nav.translate">Translate</a>
+  <a href="/backup" data-i18n="nav.backup">Backup</a>
+  <a href="/about" data-i18n="nav.about">About</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="controls.intro">Loudness, the microphone, and power. Some of these need a companion
+    plugin on the device; where one is missing, you can install it here.</p>
+
+  <h2 data-i18n="controls.volume.title">Volume</h2>
+  <div class="card" id="volume-card">
+    <p class="hint" id="volume-need" hidden></p>
+    <label for="volume" data-i18n="controls.volume.label">Loudness</label>
+    <input type="range" id="volume" min="0" max="100" step="1" value="50" aria-describedby="volume-value">
+    <p class="hint"><span id="volume-value">—</span></p>
+    <div class="row">
+      <button class="secondary" id="mute" aria-pressed="false" data-i18n="controls.volume.mute">Mute</button>
+    </div>
+    <div class="msg" id="msg-volume" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="controls.mic.title">Microphone</h2>
+  <div class="card" id="mic-card">
+    <p id="mic-state" data-i18n="controls.mic.checking">Checking…</p>
+    <div class="row">
+      <button class="secondary" id="mic-toggle" hidden></button>
+    </div>
+    <p class="hint" data-i18n="controls.mic.hint">Muting the microphone stops the device from listening until you turn it back on.</p>
+    <div class="msg" id="msg-mic" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="controls.power.title">Power</h2>
+  <div class="card" id="power-card">
+    <p class="hint" id="power-need" hidden></p>
+    <p data-i18n="about.power_lead">Restart the voice services if the device has stopped answering. Rebooting
+      restarts the whole device and takes a minute or two to come back.</p>
+    <p class="hint" data-i18n="about.power_confirm_note">You will be asked to confirm first.</p>
+    <div class="row">
+      <button class="secondary" id="restart-services" data-i18n="about.power_restart">Restart the voice services</button>
+      <button class="danger" id="reboot" data-i18n="about.power_reboot">Reboot the device</button>
+    </div>
+    <div class="msg" id="msg-power" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="controls.plugins.title">Companion plugins</h2>
+  <p class="hint" data-i18n="controls.plugins.hint">These add abilities that are not part of the core device. Some need the
+    admin service to run with the right permissions.</p>
+  <div class="card" id="capabilities" tabindex="-1" data-i18n="controls.loading">Loading…</div>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
+  var caps = {};
+
+  function prettyName(name) {
+    return name.replace(/^ovos-(phal|PHAL)-plugin-/i, "").replace(/-/g, " ").trim()
+      .replace(/\b\w/g, function (c) { return c.toUpperCase(); }) || name;
+  }
+
+  // ── volume ────────────────────────────────────────────────────────────────
+  function showVolume(v) {
+    if (v.percent === null || v.percent === undefined) {
+      el("volume-value").textContent = t("controls.volume.unknown", "The device did not report a volume.");
+      return;
+    }
+    el("volume").value = v.percent;
+    el("volume-value").textContent = v.percent + "%";
+    if (v.muted) {
+      volMuted = true;
+      el("volume-value").textContent += " · " + t("controls.volume.muted", "muted");
+      reflectMute();
+    }
+  }
+  api("/api/device/volume").then(showVolume).catch(function () {});
+
+  var volTimer = null;
+  el("volume").addEventListener("input", function () {
+    el("volume-value").textContent = el("volume").value + "%";
+    if (volTimer) { clearTimeout(volTimer); }
+    volTimer = setTimeout(function () {
+      api("/api/device/volume", {method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({percent: parseInt(el("volume").value, 10)})})
+        .catch(function (e) { OvosWebUI.say("msg-volume", e.message, true); });
+    }, 300);
+  });
+  var volMuted = false;
+  function reflectMute() {
+    var b = el("mute");
+    b.setAttribute("aria-pressed", String(volMuted));
+    b.textContent = volMuted ? t("controls.volume.unmute", "Unmute") : t("controls.volume.mute", "Mute");
+  }
+  el("mute").addEventListener("click", function () {
+    volMuted = !volMuted;
+    api("/api/device/volume/mute", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({muted: volMuted})})
+      .then(function () {
+        reflectMute();
+        OvosWebUI.say("msg-volume", volMuted ? t("controls.volume.mutedMsg", "Sound is muted. Press Unmute to turn it back on.")
+          : t("controls.volume.unmutedMsg", "Sound is on."));
+      })
+      .catch(function (e) { volMuted = !volMuted; OvosWebUI.say("msg-volume", e.message, true); });
+  });
+
+  // ── microphone ─────────────────────────────────────────────────────────────
+  function showMic(m) {
+    var b = el("mic-toggle");
+    if (m.muted === null || m.muted === undefined) {
+      el("mic-state").textContent = t("controls.mic.unknown", "The listener did not report the microphone.");
+      b.hidden = true;
+      return;
+    }
+    b.hidden = false;
+    el("mic-state").textContent = m.muted
+      ? t("controls.mic.off", "The microphone is muted — the device is not listening.")
+      : t("controls.mic.on", "The microphone is on.");
+    b.textContent = m.muted ? t("controls.mic.turnOn", "Turn the microphone on")
+      : t("controls.mic.turnOff", "Mute the microphone");
+    b.setAttribute("aria-pressed", String(!!m.muted));
+    b.dataset.muted = m.muted ? "1" : "";
+  }
+  api("/api/device/mic").then(showMic).catch(function () {});
+  el("mic-toggle").addEventListener("click", function () {
+    var wantMuted = !el("mic-toggle").dataset.muted;
+    api("/api/device/mic/mute", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({muted: wantMuted})})
+      .then(function () { showMic({muted: wantMuted}); })
+      .catch(function (e) { OvosWebUI.say("msg-mic", e.message, true); });
+  });
+
+  // ── power ──────────────────────────────────────────────────────────────────
+  function power(action, question) {
+    if (!OvosWebUI.confirmed(question)) { return; }
+    api("/api/system/" + action, {method: "POST"})
+      .then(function () { OvosWebUI.say("msg-power", t("about.power_sent", "Sent. If the system plugin is installed, it happens now.")); })
+      .catch(function (e) { OvosWebUI.say("msg-power", e.message, true); });
+  }
+  el("restart-services").addEventListener("click", function () {
+    power("restart_services", t("about.power_confirm_restart", "Restart the voice services? The device stops answering for a moment."));
+  });
+  el("reboot").addEventListener("click", function () {
+    power("reboot", t("about.power_confirm_reboot", "Reboot the whole device? It goes quiet for a minute or two."));
+  });
+
+  // ── capability status: what is installed, what each needs ───────────────────
+  function jobWatch(id, since) {
+    api("/api/plugins/jobs/" + encodeURIComponent(id) + "?since=" + since).then(function (job) {
+      if (job.state === "running") { setTimeout(function () { jobWatch(id, job.next); }, 1000); }
+      else {
+        if (job.state === "done") {
+          OvosWebUI.sayHtml("msg", esc(t("controls.installed.pre", "Installed. "))
+            + '<a href="/controls">' + esc(t("controls.installed.link", "Restart the OVOS services")) + "</a>"
+            + esc(t("controls.installed.post", ", then reload this page.")));
+        } else {
+          OvosWebUI.say("msg", t("controls.installFailed", "That did not install. See the Plugins page for details."), true);
+        }
+        loadCaps(true);
+      }
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+  function install(pkg) {
+    if (!OvosWebUI.confirmed(t("controls.confirmInstall", "Install") + " " + pkg + "?")) { return; }
+    api("/api/plugins/install", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({package: pkg})})
+      .then(function (job) { OvosWebUI.say("msg", t("controls.installing", "Installing…")); jobWatch(job.id, job.next); })
+      .catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  function setDisabled(card, off) {
+    // A gated control is really disabled, not just dimmed, so a keyboard or
+    // screen-reader user cannot operate something that will silently fail.
+    card.querySelectorAll("input, button").forEach(function (c) {
+      if (c.hasAttribute("data-inst")) { return; }  // the install prompt stays live
+      c.disabled = off;
+      if (off) { c.setAttribute("aria-disabled", "true"); } else { c.removeAttribute("aria-disabled"); }
+    });
+  }
+
+  function applyGate(key, need) {
+    // Grey out a control whose plugin is missing and explain why.
+    var card = el(key + "-card"), note = el(key + "-need");
+    if (!card || !note) { return; }
+    if (need.installed) { note.hidden = true; card.classList.remove("gated"); setDisabled(card, false); return; }
+    card.classList.add("gated");
+    setDisabled(card, true);
+    note.hidden = false;
+    note.innerHTML = esc(t("controls.needsPlugin", "This needs a small helper plugin that is not installed yet:")) + " "
+      + '<button class="secondary" data-inst="' + esc(need.suggest) + '">'
+      + esc(t("controls.button.install", "Install") + " " + prettyName(need.suggest)) + "</button>"
+      + (need.needs_admin ? ' <small>' + esc(t("controls.admin", "(runs with the admin service)")) + "</small>" : "");
+    note.querySelector("[data-inst]").addEventListener("click", function () { install(need.suggest); });
+  }
+
+  function loadCaps(focusAfter) {
+    api("/api/device/capabilities").then(function (r) {
+      caps = r.capabilities;
+      if (caps.volume) { applyGate("volume", caps.volume); }
+      if (caps.power) { applyGate("power", caps.power); }
+      // Volume and Power have their own control cards above, with an inline
+      // install prompt, so the panel only shows their status — no second
+      // Install button. Capabilities with no dedicated control (Wi-Fi) keep it.
+      var hasOwnControl = {volume: 1, power: 1};
+      var list = Object.keys(caps).map(function (k) {
+        var c = caps[k];
+        var status;
+        if (c.installed) {
+          status = '<span class="badge ready">' + esc(t("controls.present", "installed")) + "</span>"
+            + ' <code class="slug">' + esc(c.provider) + "</code>";
+        } else if (hasOwnControl[k]) {
+          status = '<span class="badge na">' + esc(t("controls.absent", "not installed")) + "</span>"
+            + ' <code class="slug">' + esc(c.suggest) + "</code>";
+        } else {
+          status = '<button class="secondary" data-inst="' + esc(c.suggest) + '">'
+            + esc(t("controls.button.install", "Install") + " " + prettyName(c.suggest)) + "</button>"
+            + ' <code class="slug">' + esc(c.suggest) + "</code>";
+        }
+        return "<li><strong>" + esc(c.label) + "</strong>"
+          + (c.needs_admin ? ' <small>' + esc(t("controls.admin", "(runs with the admin service)")) + "</small>" : "")
+          + " " + status + '<p class="hint">' + esc(c.hint) + "</p></li>";
+      }).join("");
+      el("capabilities").innerHTML = "<ul class='plain rowlist'>" + list + "</ul>";
+      el("capabilities").querySelectorAll("[data-inst]").forEach(function (b) {
+        b.addEventListener("click", function () { install(b.getAttribute("data-inst")); });
+      });
+      if (focusAfter) { el("capabilities").focus(); }
+    }).catch(function (e) { el("capabilities").textContent = e.message; });
+  }
+  loadCaps();
+});
+</script>
+</body>
+</html>

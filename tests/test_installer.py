@@ -3,8 +3,6 @@
 The installer is the only part of ovos-webui that starts a process, so the
 injection vectors are tested here first and hardest.
 """
-import subprocess
-import sys
 import time
 
 import pytest
@@ -42,6 +40,10 @@ INJECTION = [
     " ovos-tts-plugin-mimic3",
     "ovos-",
     "ovos-x\x00",
+    "ovos-tts-plugin-mimic3\n",     # trailing newline: $ + re.match would accept it
+    "ovos-skill-news\n",
+    "ovos-skill-news\r",
+    "ovos-skill-news\t",
     "",
     "x" * 200,
 ]
@@ -108,83 +110,79 @@ def test_install_with_a_wrong_token_is_refused(token_client):
     assert r.status_code == 401
 
 
-def test_uninstall_refuses_a_package_that_is_not_installed(token_client):
+def test_uninstall_delegates_to_the_device(token_client):
+    # Whether the package is present is decided by the service that owns the
+    # environment, so a valid name is delegated (job started), not pre-judged.
     r = token_client.post("/api/plugins/uninstall",
                           json={"package": "ovos-tts-plugin-doesnotexist"},
                           headers={"Authorization": "Bearer s3cret-token"})
-    assert r.status_code == 404
+    assert r.status_code == 200
+    assert r.json()["action"] == "uninstall"
 
 
-def test_the_command_never_uses_a_shell(monkeypatch):
-    """A pip run must be an argument vector with shell=False."""
+def test_install_emits_a_plain_packages_list(monkeypatch):
+    """No shell, no subprocess — the name travels as one bus-message field."""
+    from ovos_utils.fakebus import FakeBus
+    from ovos_webui import updates
+    monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    monkeypatch.setattr(updates, "latest_versions", lambda name: {})  # offline: bare name
+    bus = FakeBus()
     seen = {}
-
-    class FakeProcess:
-        returncode = 0
-        stdout = iter(["ok\n"])
-
-        def wait(self, timeout=None):
-            return 0
-
-    def fake_popen(argv, **kwargs):
-        seen["argv"] = argv
-        seen["kwargs"] = kwargs
-        return FakeProcess()
-
-    monkeypatch.setattr(subprocess, "Popen", fake_popen)
-    inst = installer.Installer()
-    job = inst._start("install", "ovos-tts-plugin-mimic3",
-                      [sys.executable, "-m", "pip", "install", "--", "ovos-tts-plugin-mimic3"])
+    bus.on("ovos.pip.install.ovos_audio", lambda m: seen.setdefault("packages", m.data.get("packages")))
+    installer.Installer().install("ovos-tts-plugin-mimic3", bus=bus)
     for _ in range(100):
+        if "packages" in seen:
+            break
+        time.sleep(0.01)
+    assert seen["packages"] == ["ovos-tts-plugin-mimic3"]
+
+
+def test_install_delegates_to_the_device(monkeypatch):
+    """A plugin must land where OVOS imports from — so the device installs it."""
+    from ovos_utils.fakebus import FakeBus
+    monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    bus = FakeBus()
+    seen = {}
+    bus.on("ovos.pip.install.ovos_audio", lambda m: (seen.update(got=True),
+           bus.emit(m.reply("ovos.pip.install.complete"))))
+    job = installer.Installer().install("ovos-tts-plugin-mimic3", bus=bus)
+    for _ in range(200):
         if job.state != "running":
             break
         time.sleep(0.01)
-    assert isinstance(seen["argv"], list)
-    assert seen["kwargs"]["shell"] is False
-    assert seen["argv"][0] == sys.executable
-    assert seen["argv"][-1] == "ovos-tts-plugin-mimic3"
-    assert "--" in seen["argv"], "pip must be told the name is not an option"
+    assert seen.get("got") and job.state == "done"
 
 
-def test_install_uses_this_interpreter(monkeypatch):
-    """A plugin must land where OVOS imports from, not in another environment."""
-    captured = {}
-    monkeypatch.setattr(installer.Installer, "_start",
-                        lambda self, a, p, argv: captured.update(argv=argv) or object())
-    monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
-    installer.Installer().install("ovos-tts-plugin-mimic3")
-    assert captured["argv"][:3] == [sys.executable, "-m", "pip"]
-
-
-def test_install_checks_pypi_before_running(monkeypatch):
-    """A name that PyPI does not know must never reach pip."""
-    started = []
-    monkeypatch.setattr(installer.Installer, "_start",
-                        lambda self, a, p, argv: started.append(argv))
+def test_install_checks_pypi_before_delegating(monkeypatch):
+    """A name that PyPI does not know must never be sent to the device."""
+    from ovos_utils.fakebus import FakeBus
+    bus = FakeBus()
+    emitted = []
+    bus.on("ovos.pip.install.ovos_audio", lambda m: emitted.append(m))
+    bus.on("ovos.pip.install", lambda m: emitted.append(m))
 
     def missing(name):
         raise LookupError("no such package")
-
     monkeypatch.setattr(pypi, "details", missing)
     with pytest.raises(LookupError):
-        installer.Installer().install("ovos-tts-plugin-nope")
-    assert started == []
+        installer.Installer().install("ovos-tts-plugin-nope", bus=bus)
+    assert emitted == []
 
 
 def test_only_one_job_runs_at_a_time(monkeypatch):
-    class SlowProcess:
-        returncode = 0
-        stdout = iter([])
-
-        def wait(self, timeout=None):
-            time.sleep(0.5)
-            return 0
-
-    monkeypatch.setattr(subprocess, "Popen", lambda argv, **kw: SlowProcess())
+    from ovos_utils.fakebus import FakeBus
+    monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    bus = FakeBus()  # no responder, so the first job stays running
     inst = installer.Installer()
-    inst._start("install", "ovos-tts-plugin-a", ["true"])
+    inst.install("ovos-tts-plugin-a", bus=bus)
     with pytest.raises(installer.InstallerBusy):
-        inst._start("install", "ovos-tts-plugin-b", ["true"])
+        inst.install("ovos-tts-plugin-b", bus=bus)
+
+
+def test_install_without_a_device_is_unavailable(monkeypatch):
+    monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    with pytest.raises(installer.InstallerUnavailable):
+        installer.Installer().install("ovos-tts-plugin-a", bus=None)
 
 
 def test_job_log_is_bounded():
@@ -206,16 +204,11 @@ def test_job_paging():
 
 
 def test_finished_job_tells_the_user_to_restart(monkeypatch):
-    class FakeProcess:
-        returncode = 0
-        stdout = iter(["done\n"])
-
-        def wait(self, timeout=None):
-            return 0
-
-    monkeypatch.setattr(subprocess, "Popen", lambda argv, **kw: FakeProcess())
-    inst = installer.Installer()
-    job = inst._start("install", "ovos-tts-plugin-a", ["true"])
+    from ovos_utils.fakebus import FakeBus
+    monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    bus = FakeBus()
+    bus.on("ovos.pip.install.ovos_audio", lambda m: bus.emit(m.reply("ovos.pip.install.complete")))
+    job = installer.Installer().install("ovos-tts-plugin-a", bus=bus)
     for _ in range(200):
         if job.state != "running":
             break

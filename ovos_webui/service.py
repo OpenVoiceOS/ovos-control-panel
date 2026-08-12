@@ -69,6 +69,8 @@ PAGES = {
     "/translate": "translate.html",
     "/tryit": "tryit.html",
     "/setup": "setup.html",
+    "/controls": "controls.html",
+    "/abilities": "abilities.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -134,6 +136,19 @@ class BackupIdBody(BaseModel):
 
 class EnabledBody(BaseModel):
     enabled: bool
+
+
+class VolumeBody(BaseModel):
+    percent: int = Field(ge=0, le=100)
+
+
+class MuteBody(BaseModel):
+    muted: bool
+
+
+class TokenBody(BaseModel):
+    current: str | None = Field(None, max_length=512)
+    new: str = Field(max_length=512)
 
 
 class OverrideBody(BaseModel):
@@ -225,8 +240,9 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         if not policy.token:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="this needs a token. Set webui.access_token in "
-                       "mycroft.conf, or start the service with --token.")
+                detail="This device has no access token yet. Set one on the "
+                       "Settings page to enable installing, speaking, and "
+                       "device controls.")
         policy.check(request)
         return policy
 
@@ -267,6 +283,10 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             "signed_in": True,
             "insecure": policy.insecure,
             "warning": policy.warning,
+            # No token yet means device controls / installs / speak will 403;
+            # the UI uses this to prompt the owner to set one during onboarding,
+            # even on loopback where `insecure` is False.
+            "has_token": bool(policy.token),
             "lang": lang,
         }
 
@@ -528,19 +548,21 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             raise HTTPException(400, "that is not a language code")
         from ovos_webui.pypi import installed_versions
         have = installed_versions()
+        data = recommends.for_language(lang)  # computed once, reused below
         plugins = [dict(p, installed=p["module"].lower() in have)
-                   for p in recommends.recommended_plugins(lang)]
-        return {"lang": lang, "profiles": recommends.for_language(lang),
-                "plugins": plugins}
+                   for p in recommends.recommended_plugins(lang, data)]
+        return {"lang": lang, "profiles": data, "plugins": plugins}
 
     @privileged.post("/plugins/install")
     def api_install(body: PackageBody) -> dict[str, Any]:
         try:
-            return installer.INSTALLER.install(body.package).as_dict()
+            return installer.INSTALLER.install(body.package, bus=state["bus"]).as_dict()
         except installer.UnsafePackageName as err:
             raise HTTPException(400, str(err))
         except installer.InstallerBusy as err:
             raise HTTPException(409, str(err))
+        except installer.InstallerUnavailable as err:
+            raise HTTPException(503, str(err))
         except LookupError as err:
             raise HTTPException(404, str(err))
         except OSError as err:
@@ -549,11 +571,13 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     @privileged.post("/plugins/uninstall")
     def api_uninstall(body: PackageBody) -> dict[str, Any]:
         try:
-            return installer.INSTALLER.uninstall(body.package).as_dict()
+            return installer.INSTALLER.uninstall(body.package, bus=state["bus"]).as_dict()
         except installer.UnsafePackageName as err:
             raise HTTPException(400, str(err))
         except installer.InstallerBusy as err:
             raise HTTPException(409, str(err))
+        except installer.InstallerUnavailable as err:
+            raise HTTPException(503, str(err))
         except LookupError as err:
             raise HTTPException(404, str(err))
 
@@ -579,11 +603,13 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     @privileged.post("/plugins/upgrade")
     def api_upgrade(body: PackageBody) -> dict[str, Any]:
         try:
-            return installer.INSTALLER.upgrade(body.package).as_dict()
+            return installer.INSTALLER.upgrade(body.package, bus=state["bus"]).as_dict()
         except installer.UnsafePackageName as err:
             raise HTTPException(400, str(err))
         except installer.InstallerBusy as err:
             raise HTTPException(409, str(err))
+        except installer.InstallerUnavailable as err:
+            raise HTTPException(503, str(err))
         except LookupError as err:
             raise HTTPException(404, str(err))
 
@@ -682,15 +708,16 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             skill_id = fsutils_validate_skill_id(skill_id)
         except UnsafeIdentifier as err:
             raise HTTPException(400, str(err))
-        data = configio.read_user_config()
-        blacklist = list(configio.get_in(data, ["skills", "blacklisted_skills"])
-                         or [])
-        if body.enabled:
-            blacklist = [s for s in blacklist if s != skill_id]
-        elif skill_id not in blacklist:
-            blacklist.append(skill_id)
-        configio.set_in(data, ["skills", "blacklisted_skills"], blacklist)
-        result = configio.write_user_config(data, bus=state["bus"])
+        def change(data):
+            blacklist = list(configio.get_in(data, ["skills", "blacklisted_skills"])
+                             or [])
+            if body.enabled:
+                blacklist = [s for s in blacklist if s != skill_id]
+            elif skill_id not in blacklist:
+                blacklist.append(skill_id)
+            configio.set_in(data, ["skills", "blacklisted_skills"], blacklist)
+
+        result = configio.mutate(change, bus=state["bus"])
         result.update({"skill_id": skill_id, "enabled": body.enabled})
         return result
 
@@ -705,6 +732,83 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         from ovos_bus_client.message import Message
         state["bus"].emit(Message(message_type, {}, {"source": "ovos-webui"}))
         return {"sent": message_type}
+
+    def _need_bus():
+        if state["bus"] is None or not health.bus_reachable(state["bus"]):
+            raise HTTPException(503, "the message bus is not reachable")
+        return state["bus"]
+
+    # ── device controls: volume, microphone, and what each needs ─────────────
+    @api.get("/device/capabilities")
+    def api_capabilities_status() -> dict[str, Any]:
+        from ovos_webui import phal
+        return phal.capability_status()
+
+    @api.get("/device/volume")
+    def api_volume_get() -> dict[str, Any]:
+        from ovos_webui import devicecontrol
+        return devicecontrol.get_volume(_need_bus())
+
+    @privileged.post("/device/volume")
+    def api_volume_set(body: VolumeBody) -> dict[str, Any]:
+        from ovos_webui import devicecontrol
+        try:
+            return devicecontrol.set_volume(_need_bus(), body.percent)
+        except ValueError as err:
+            raise HTTPException(400, str(err))
+
+    @privileged.post("/device/volume/mute")
+    def api_volume_mute(body: MuteBody) -> dict[str, Any]:
+        from ovos_webui import devicecontrol
+        return devicecontrol.set_mute(_need_bus(), body.muted)
+
+    @api.get("/device/mic")
+    def api_mic_get() -> dict[str, Any]:
+        from ovos_webui import devicecontrol
+        return devicecontrol.get_mic(_need_bus())
+
+    @privileged.post("/device/mic/mute")
+    def api_mic_mute(body: MuteBody) -> dict[str, Any]:
+        from ovos_webui import devicecontrol
+        return devicecontrol.set_mic_mute(_need_bus(), body.muted)
+
+    # ── what can it do: the installed skills ─────────────────────────────────
+    @api.get("/capabilities")
+    def api_abilities() -> dict[str, Any]:
+        from ovos_webui import capabilities
+        return capabilities.list_capabilities()
+
+    # ── access token: set the first one, or rotate it ────────────────────────
+    # On a device that already has a token, changing it needs a signed-in
+    # session (the ``api`` guard) AND the current token re-supplied in the body.
+    # On a device with no token yet, the ``api`` router is open to the same
+    # callers that can already write it through ``PUT /api/config`` — setting a
+    # token here only tightens the device, so it is allowed on the same terms.
+    @api.post("/auth/token")
+    def api_set_token(body: TokenBody, response: Response) -> dict[str, Any]:
+        from ovos_webui.auth import MIN_TOKEN_LENGTH
+
+        new = (body.new or "").strip()
+        had_token = bool(policy.token)
+        if len(new) < MIN_TOKEN_LENGTH:
+            raise HTTPException(400, f"the token must be at least "
+                                     f"{MIN_TOKEN_LENGTH} characters")
+        if policy.token:
+            # Changing an existing token needs the current one, so a walk-up to
+            # an unlocked session cannot silently lock the owner out.
+            if not policy.matches((body.current or "").strip()):
+                raise HTTPException(403, "the current token is not right")
+        # Route through mutate so a concurrent config save cannot revert the
+        # token (or the token save clobber another change) — the lost-update
+        # race configio.mutate exists to close.
+        configio.mutate(
+            lambda user: configio.set_in(user, ["webui", "access_token"], new),
+            bus=state["bus"])
+        policy.token = new  # take effect at once for the rest of this process
+        # Keep this session signed in under the new token.
+        response.set_cookie(COOKIE_NAME, new, httponly=True, samesite="strict",
+                            path="/", max_age=30 * 24 * 3600)
+        return {"ok": True, "had_token": had_token}
 
     # ── personas ─────────────────────────────────────────────────────────────
     @api.get("/personas")
@@ -730,10 +834,14 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         # The persona service matches ``default_persona`` against the *name*
         # a persona declares, so that is what goes in the configuration.
         name = data.get("name") or persona_id
-        user = configio.read_user_config()
-        configio.set_in(user, ["intents", "persona", "default_persona"], name)
-        result = configio.write_user_config(user, bus=state["bus"])
-        result.update({"active": name, "persona_id": persona_id})
+        result = configio.mutate(
+            lambda user: configio.set_in(
+                user, ["intents", "persona", "default_persona"], name),
+            bus=state["bus"])
+        # Warn if the persona's solvers are not installed — activating it is the
+        # moment the user commits, so a silently-broken persona must be flagged.
+        result.update({"active": name, "persona_id": persona_id,
+                       "missing_solvers": personas.missing_solvers(data)})
         return result
 
     @api.get("/personas/{persona_id}")
