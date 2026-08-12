@@ -61,6 +61,9 @@ services next restart. Turning it on removes the entry again.
 
 ## If it doesn't work
 
-If a skill does not show up here, it has no settings directory yet — check the
+If a skill does not show up here, it has no settings directory yet. Check the
 [Abilities](abilities.md) page to confirm it is installed. For anything else,
 see [troubleshooting.md](troubleshooting.md).
+
+---
+[← Settings](configuration.md) · [Home](README.md) · [Abilities →](abilities.md)

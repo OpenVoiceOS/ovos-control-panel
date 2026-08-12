@@ -10,11 +10,11 @@ how the device listens and what it says, so treat the address like a key.
 
 ## Common tasks
 
-- **Let yourself in from your phone, not just the device** — set a token
+- **Let yourself in from your phone, not just the device**: set a token
   first (see "Set a token"), then start the service with `--host 0.0.0.0`.
-- **Set a token for the first time** — see "Set a token" below.
-- **Change an existing token** — use the Access token section on the
-  [Settings](configuration.md) page; you need the current token to change it.
+- **Set a token for the first time**: see "Set a token" below.
+- **Change an existing token**: use the Access token section on the
+  [Settings](configuration.md) page. You need the current token to change it.
 
 ## Default
 
@@ -57,12 +57,12 @@ With a token set, every page, every asset and every API call needs a sign in.
 Only these few things answer without one, and none of them read or change
 anything:
 
-- `GET /api/status` — says only whether a token is needed
+- `GET /api/status`: says only whether a token is needed
 - `POST /api/login` and `POST /api/logout`
-- `GET /login` — the sign in page
-- `GET /healthz` — the word `ok`, for a service monitor
-- `GET /static/app.css` — the stylesheet the sign-in page needs; it ships in
-  the package, so anyone can already read it on PyPI
+- `GET /login`: the sign in page
+- `GET /healthz`: the word `ok`, for a service monitor
+- `GET /static/app.css`: the stylesheet the sign-in page needs. It ships in
+  the package, so anyone can already read it on PyPI.
 
 The interactive documentation and the OpenAPI schema are turned off.
 
@@ -73,10 +73,10 @@ cannot read the answer, but a write does not need one, so without a check any
 site could rewrite your configuration.
 
 Every request that changes something must prove where it came from. If the
-browser sends `Sec-Fetch-Site` it must say `same-origin`; failing that, an
+browser sends `Sec-Fetch-Site`, it must say `same-origin`. Failing that, an
 `Origin` or `Referer` header must match the host. A request that carries none
 of these headers is refused unless it authenticates with an
-`Authorization: Bearer` header — a web page cannot make a browser attach one
+`Authorization: Bearer` header. A web page cannot make a browser attach one
 to a cross-site request without a preflight, and no preflight is ever
 approved, so that is what keeps `curl` and other programs working.
 
@@ -92,7 +92,7 @@ your device's address, so the browser believes their page and your device share
 an origin and reports every request as same-origin.
 
 The one thing the attacker cannot change is the name the browser puts in the
-`Host` header — it is still their domain. So every request, a read as much as a
+`Host` header: it is still their domain. So every request, a read as much as a
 write, must carry a `Host` this service answers to. A numeric IP address and
 the loopback names (`localhost`, `127.0.0.1`, `::1`) are always accepted,
 because that is how you reach the device yourself. Any other name is refused
@@ -110,7 +110,7 @@ A request for any other host name is answered with `400`.
 ## The token
 
 When you set a token it must be at least eight characters. There is no account
-and no lock-out, so a short token could be guessed over the network; the
+and no lock-out, so a short token could be guessed over the network. The
 service refuses to start with one that is too short. Use a long random string.
 
 Every refused sign in is written to the log, and each wrong token in a row
@@ -157,7 +157,7 @@ rebinding" below). For anything else, see
   device, or who can write to your configuration file another way.
 - The page trusts the browser's `Sec-Fetch-Site` and `Origin` headers. A very
   old browser that sends neither, driven by a hostile page, is refused a write
-  outright — its requests carry no `Authorization` header either — so it loses
+  outright. Its requests carry no `Authorization` header either, so it loses
   the page rather than the check.
 - Restoring a backup replaces your settings. It checks that every file in the
   archive is where it should be and that it parses, but it cannot tell whether
@@ -173,21 +173,21 @@ rebinding" below). For anything else, see
   `system.mycroft.service.restart`). The action name is a dictionary key, not
   a string that reaches the bus. Token always required.
 - `POST /api/plugins/upgrade` and `POST /api/updates/channel` are privileged.
-  The channel only adds a constant `--pre` flag; nothing from a request ever
+  The channel only adds a constant `--pre` flag. Nothing from a request ever
   reaches the pip argument vector except the validated package name.
 - `pip check` runs with a constant argument vector and no shell.
 - Backup history identifiers must resolve inside the configuration home, in a
   `.ovos-webui-backups` directory, to a real `*.bak` file that is not a
   symlink. Reverts go through the atomic writer, so they are themselves
   backed up.
-- The web-app manifest and its two icons are served without a sign in — they
+- The web-app manifest and its two icons are served without a sign in. They
   ship in the package, and a browser fetches a manifest without cookies.
 
 ## Phase 3 hardening round
 
-- The read-only diagnostics on the signed-in router that do real work —
+- The read-only diagnostics on the signed-in router that do real work,
   `/api/updates` (PyPI sweep), `/api/updates/conflicts` (`pip check`), and the
-  plugin catalog `/api/plugins/search` (index fetch) — each take their
+  plugin catalog `/api/plugins/search` (index fetch), each take their
   work-lock **without blocking** and are rate-limited. A burst of concurrent
   requests neither amplifies outward (one PyPI sweep / index download per
   rate-limit window, one `pip check` per TTL) nor parks the worker pool: a
@@ -202,17 +202,20 @@ rebinding" below). For anything else, see
 
 ## Phase 5 additions
 
-- **Installs are bus-only.** `ovos.pip.install` / `.uninstall` are handled by
-  the service that owns the environment; the web-ui never runs pip in its own
+- **Installs are bus-only.** The service that owns the environment handles
+  `ovos.pip.install` / `.uninstall`. The web-ui never runs pip in its own
   process. With no connected device an install fails (503) instead of falling
   back to local pip. The only request-derived value that travels is the
   validated package name (for an upgrade, `name==<version>` where the version
   comes from a trusted PyPI lookup, never the request).
 - **Access-token rotation** `POST /api/auth/token` sits on the signed-in router.
   Changing an existing token needs a signed-in session *and* the current token
-  re-supplied in the body; the value is compared in constant time, never logged
+  re-supplied in the body. The value is compared in constant time, never logged
   or reflected, stored via the normal config write, and the session cookie is
   re-issued so the operator is not locked out.
 - **Device-control writes** (volume, mic mute) are on the privileged
-  token-always router; the reads that expose no secrets are on the signed-in
+  token-always router. The reads that expose no secrets are on the signed-in
   router. Volume is clamped 0–100 and the message types are constants.
+
+---
+[← About](about.md) · [Home](README.md) · [Accessibility →](accessibility.md)
