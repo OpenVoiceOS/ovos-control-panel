@@ -344,18 +344,30 @@ def test_s8_every_route_needs_a_sign_in_except_the_known_few(bus):
             probe = probe.replace("{skill_id}", "x").replace("{persona_id}", "x")
             if "{" in probe:
                 continue
-            r = c.get(probe)
+            r = c.get(probe, follow_redirects=False)
             checked += 1
-            assert r.status_code == 401, f"{probe} answered {r.status_code} with no token"
+            # denied without a token: an API/static route answers 401, an HTML
+            # page redirects (303) to the login screen. Either way it serves no
+            # content — a 200 would be the hole this guards against.
+            if r.status_code == 303:
+                assert r.headers["location"] == "/login", probe
+            else:
+                assert r.status_code == 401, f"{probe} answered {r.status_code} with no token"
     assert checked >= 8
 
 
 def test_s8_pages_need_a_sign_in(token_client):
+    # an unauthenticated HTML page redirects a browser to the login screen (303),
+    # not a bare 401 — but it still serves no page content without a token
     for page in ("/", "/config", "/skills", "/backup", "/about"):
-        assert token_client.get(page).status_code == 401, page
+        r = token_client.get(page, follow_redirects=False)
+        assert r.status_code == 303, page
+        assert r.headers["location"] == "/login", page
 
 
 def test_s8_static_assets_need_a_sign_in(token_client):
+    # a static asset keeps the plain 401 (a js/css/img fetch must not be
+    # answered with an HTML login redirect)
     assert token_client.get("/static/app.js").status_code == 401
 
 

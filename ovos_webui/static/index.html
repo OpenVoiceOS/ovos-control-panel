@@ -82,8 +82,8 @@ OvosWebUI.ready(function () {
       var wave = el("wave");
       if (wave) { wave.classList.toggle("flat", !h.bus.reachable); }
       el("bus").innerHTML = h.bus.reachable
-        ? "<strong>" + esc(t("dash.bus", "Message bus:")) + "</strong> " + esc(t("dash.bus.ok", "connected."))
-        : "<strong>" + esc(t("dash.bus", "Message bus:")) + "</strong> " + esc(t("dash.bus.down",
+        ? "<strong>" + esc(t("dash.bus", "System connection:")) + "</strong> " + esc(t("dash.bus.ok", "connected."))
+        : "<strong>" + esc(t("dash.bus", "System connection:")) + "</strong> " + esc(t("dash.bus.down",
             "not running."));
       var caveats = {
         voice: t("service.voice.caveat", "No answer here is normal if this device uses the simpler listener, which does not report its status."),

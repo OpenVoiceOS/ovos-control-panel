@@ -30,7 +30,7 @@ CAPABILITIES: dict[str, dict[str, Any]] = {
         "hint": "Restart the services or reboot the device.",
     },
     "network": {
-        "plugins": ["ovos-phal-plugin-wifi-setup", "ovos-PHAL-plugin-wifi-setup"],
+        "plugins": ["ovos-phal-plugin-network-manager", "ovos-PHAL-plugin-network-manager"],
         "admin": True,
         "label": "Wi-Fi setup",
         "hint": "Wi-Fi setup happens on the device screen, not here — this only "

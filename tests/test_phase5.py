@@ -232,9 +232,10 @@ def test_routing_maps_kind_to_service(monkeypatch):
 
 def test_admin_phal_plugin_routes_to_the_admin_process():
     from ovos_webui import installer
-    # wifi-setup needs root -> the separate admin PHAL process, not the plain one
-    assert installer._install_service_for("ovos-PHAL-plugin-wifi-setup") == "ovos_PHAL_admin"
-    assert installer._install_service_for("ovos-phal-plugin-wifi-setup") == "ovos_PHAL_admin"
+    # network-manager needs root -> the separate admin PHAL process, not the plain
+    # one (wifi-setup, which this used to name, is archived)
+    assert installer._install_service_for("ovos-PHAL-plugin-network-manager") == "ovos_PHAL_admin"
+    assert installer._install_service_for("ovos-phal-plugin-network-manager") == "ovos_PHAL_admin"
     # a non-admin PHAL plugin stays on the plain PHAL process
     assert installer._install_service_for("ovos-PHAL-plugin-alsa") == "ovos_PHAL"
 

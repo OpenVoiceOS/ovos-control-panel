@@ -42,7 +42,7 @@
     <div class="msg" id="msg-channel" role="status" aria-live="polite" hidden></div>
   </div>
   <details class="tech">
-    <summary data-i18n="plugins.conflicts.summary">Dependency health</summary>
+    <summary data-i18n="plugins.conflicts.summary">Package check</summary>
     <p class="hint" data-i18n="plugins.conflicts.envCaveat">This reflects the web UI's own environment. On a device where the
       web UI runs separately from the assistant (a split or containerized setup), it can differ from the device's environment.</p>
     <div class="card" id="conflicts" data-i18n="plugins.loading">Loading…</div>
@@ -300,8 +300,8 @@ OvosWebUI.ready(function () {
 
   api("/api/updates/conflicts").then(function (r) {
     el("conflicts").innerHTML = r.ok
-      ? esc(OvosWebUI.t("plugins.conflicts.ok", "pip reports no conflicts between the installed packages."))
-      : "<strong>" + esc(OvosWebUI.t("plugins.conflicts.bad", "pip found problems:")) + "</strong>"
+      ? esc(OvosWebUI.t("plugins.conflicts.ok", "No conflicts between the installed packages."))
+      : "<strong>" + esc(OvosWebUI.t("plugins.conflicts.bad", "Found a problem:")) + "</strong>"
         + "<ul class='plain'>" + (r.conflicts.length ? r.conflicts : [r.error || ""]).map(function (line) {
           return "<li><code>" + esc(line) + "</code></li>";
         }).join("") + "</ul>"
