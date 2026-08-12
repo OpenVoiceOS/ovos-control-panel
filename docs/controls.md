@@ -47,4 +47,4 @@ A control that shows "unknown" has no plugin answering. Install the one it
 names, or see [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Try it](tryit.md) · [Home](README.md) · [Backup →](backup-restore.md)
+[← Try it](tryit.md) · [Home](README.md) · [Network →](network.md)
