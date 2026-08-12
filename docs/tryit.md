@@ -10,15 +10,15 @@ would.
 
 ## Common tasks
 
-- **Test a skill without talking out loud** — type a sentence and press ask;
+- **Test a skill without talking out loud**: type a sentence, press ask, and
   read the answer on the page.
-- **Hear a voice before you pick it in Settings** — use "Speak it out loud".
-- **Watch what the device hears while you talk to it** — use "Live activity"
+- **Hear a voice before you pick it in Settings**: use "Speak it out loud".
+- **Watch what the device hears while you talk to it**: use "Live activity"
   and say the wake word near the device.
 
 ## Ask the device
 
-The sentence goes over the message bus as `recognizer_loop:utterance` — the
+The sentence goes over the message bus as `recognizer_loop:utterance`, the
 same message the listener sends after it transcribes your speech. The page
 then reports:
 
@@ -36,10 +36,10 @@ before settling on it in Settings, or to check the speaker works at all.
 
 ## Live activity
 
-The service keeps a small ring buffer of the voice traffic it sees — wake
+The service keeps a small ring buffer of the voice traffic it sees: wake
 word, listening, what was heard, what was said. The page polls it, so you can
 say the wake word near the device and watch the exchange appear. The buffer
-holds the last 100 events as plain text; no audio is kept.
+holds the last 100 events as plain text. No audio is kept.
 
 ## Security
 
@@ -50,6 +50,9 @@ introduced anywhere on this page.
 
 ## If it doesn't work
 
-"complete_intent_failure" means no skill matched — try rephrasing, or check
+"complete_intent_failure" means no skill matched. Try rephrasing, or check
 the [Abilities](abilities.md) page for what the device can do. For anything
 else, see [troubleshooting.md](troubleshooting.md).
+
+---
+[← Translate](translate.md) · [Home](README.md) · [Device controls →](controls.md)

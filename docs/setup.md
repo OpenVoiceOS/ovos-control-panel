@@ -28,3 +28,6 @@ Installing plugins needs the access token, like every install — see
 
 If a plugin fails to install or the device stays silent, see
 [troubleshooting.md](troubleshooting.md).
+
+---
+[← Dashboard](dashboard.md) · [Home](README.md) · [Settings →](configuration.md)

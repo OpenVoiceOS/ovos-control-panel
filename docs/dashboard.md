@@ -106,3 +106,6 @@ banner to "needs attention"; their own cards still show and explain the state.
 
 Still stuck after restarting a service and reading its log? See
 [troubleshooting.md](troubleshooting.md).
+
+---
+[Home](README.md) · [Setup →](setup.md)

@@ -109,3 +109,6 @@ From here:
 
 If anything along the way did not behave as described, go to
 [Troubleshooting](troubleshooting.md).
+
+---
+[Home](README.md)

@@ -9,11 +9,11 @@ sources, in order, until one of them can answer. The Personas page makes and edi
 
 ## Common tasks
 
-- **Make a new persona** — open the **Persona** box, type a new name, add
+- **Make a new persona**: open the **Persona** box, type a new name, add
   answer sources, and **Save**.
-- **Change which persona answers by default** — pick it, then press "Use this
+- **Change which persona answers by default**: pick it, then press "Use this
   persona".
-- **Check a persona before relying on it** — press **Try it** and read the
+- **Check a persona before relying on it**: press **Try it** and read the
   answer.
 
 ## Choose or make one
@@ -23,11 +23,11 @@ The **Persona** box at the top picks the persona to edit, or makes a new one.
 
 ## Name
 
-- **File name** — how the persona is stored. Letters, digits, dot, dash and
+- **File name**: how the persona is stored. Letters, digits, dot, dash and
   underscore only.
-- **Shown name** — the name people see.
-- **Catch phrase** — optional; the words that switch to this persona.
-- **Memory** — an optional memory plugin, if one is installed.
+- **Shown name**: the name people see.
+- **Catch phrase**: optional. The words that switch to this persona.
+- **Memory**: an optional memory plugin, if one is installed.
 
 ## Answer sources, in order
 
@@ -42,20 +42,23 @@ or a model name. Leave it empty for the rest.
 
 ## Save and try
 
-**Save** writes the persona; it is checked first, so a persona that cannot work
+**Save** checks the persona first, then writes it. A persona that cannot work
 is refused before it is saved. **Try it** sends a question through the persona
 as it stands, so you can see who answers before you rely on it.
 
 ## Making a persona answer
 
 "Use this persona" writes the persona's name into
-`intents.persona.default_persona` in your configuration layer — the key the
-persona service reads to decide who answers when you do not name a persona.
-The page shows which persona is answering now. The change takes effect when
-the OVOS services next restart.
+`intents.persona.default_persona` in your configuration layer. This is the key
+the persona service reads to decide who answers when you do not name a
+persona. The page shows which persona is answering now. The change takes
+effect when the OVOS services next restart.
 
 ## If it doesn't work
 
 If **Save** refuses a persona, an answer source you named is missing or
-broken — the page marks which one; install it from the [Plugins](plugins.md)
+broken. The page marks which one. Install it from the [Plugins](plugins.md)
 page. For anything else, see [troubleshooting.md](troubleshooting.md).
+
+---
+[← Plugins](plugins.md) · [Home](README.md) · [Translate →](translate.md)

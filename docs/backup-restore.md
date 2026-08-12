@@ -73,6 +73,9 @@ home; nothing else on the disk is reachable, and symlinks are refused.
 
 ## If it doesn't work
 
-If a restore is refused, the archive fails one of the checks listed above —
-the page tells you which one. For anything else, see
+If a restore is refused, the archive fails one of the checks listed above.
+The page tells you which one. For anything else, see
 [troubleshooting.md](troubleshooting.md).
+
+---
+[← Device controls](controls.md) · [Home](README.md) · [About →](about.md)
