@@ -73,6 +73,7 @@ PAGES = {
     "/controls": "controls.html",
     "/abilities": "abilities.html",
     "/network": "network.html",
+    "/media": "media.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -148,6 +149,10 @@ class GgwaveListenBody(BaseModel):
 
 
 class VolumeBody(BaseModel):
+    percent: int = Field(ge=0, le=100)
+
+
+class MediaVolumeBody(BaseModel):
     percent: int = Field(ge=0, le=100)
 
 
@@ -843,6 +848,74 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_network_forget(body: WifiSsidBody) -> dict[str, Any]:
         from ovos_webui import network
         return network.forget(_need_bus(), body.ssid)
+
+    # ── media: now-playing, transport, and volume over OCP / ovos-media ──────
+    # All /media/* routes are privileged: even the reads (status, available,
+    # volume) expose what's playing and current device state, so they should
+    # not be readable on a token-less device, matching the transport and
+    # volume-set/mute routes that change state.
+    @privileged.get("/media/status")
+    def api_media_status() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.status(_need_bus())
+
+    @privileged.get("/media/available")
+    def api_media_available() -> dict[str, Any]:
+        from ovos_webui import media
+        return {"available": media.available(_need_bus())}
+
+    @privileged.post("/media/play_pause")
+    def api_media_play_pause() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.play_pause(_need_bus())
+
+    @privileged.post("/media/pause")
+    def api_media_pause() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.pause(_need_bus())
+
+    @privileged.post("/media/resume")
+    def api_media_resume() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.resume(_need_bus())
+
+    @privileged.post("/media/stop")
+    def api_media_stop() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.stop(_need_bus())
+
+    @privileged.post("/media/next")
+    def api_media_next() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.next(_need_bus())
+
+    @privileged.post("/media/previous")
+    def api_media_previous() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.previous(_need_bus())
+
+    @privileged.get("/media/volume")
+    def api_media_volume_get() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.get_volume(_need_bus())
+
+    @privileged.post("/media/volume")
+    def api_media_volume_set(body: MediaVolumeBody) -> dict[str, Any]:
+        from ovos_webui import media
+        try:
+            return media.set_volume(_need_bus(), body.percent)
+        except ValueError as err:
+            raise HTTPException(400, str(err))
+
+    @privileged.post("/media/mute")
+    def api_media_mute() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.mute(_need_bus())
+
+    @privileged.post("/media/unmute")
+    def api_media_unmute() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.unmute(_need_bus())
 
     # ── ggwave listener: turn the device's sound receiver on or off ──────────
     # Fire-and-forget, like /system/{action} — the ggwave audio transformer

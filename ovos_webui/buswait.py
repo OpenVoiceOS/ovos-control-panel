@@ -185,15 +185,20 @@ def emit(bus: Any, message: Any, timeout: float = DEFAULT_TIMEOUT) -> bool:
     return result is not sentinel
 
 
-def wait_for_response(bus: Any, message: Any, timeout: float = DEFAULT_TIMEOUT) -> Any:
+def wait_for_response(bus: Any, message: Any, timeout: float = DEFAULT_TIMEOUT,
+                      reply_type: str | None = None) -> Any:
     """Send ``message`` and wait for its reply, with a hard deadline.
 
     The client's own timeout only covers the waiting, not the emit that comes
-    first, so the whole call is wrapped.
+    first, so the whole call is wrapped. ``reply_type`` is passed straight
+    through to the underlying client for the rare reply that does not land on
+    the usual ``<message_type>.response`` topic (e.g. the OCP ping/pong probe,
+    which replies on the literal ``ovos.common_play.pong`` topic).
     """
     if not is_connected(bus):
         return None
-    return call(lambda: bus.wait_for_response(message, timeout=timeout),
+    return call(lambda: bus.wait_for_response(message, reply_type=reply_type,
+                                              timeout=timeout),
                 timeout=timeout + 1.0, default=None)
 
 

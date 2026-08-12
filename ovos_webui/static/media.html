@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Media — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.media">Media</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="media.intro">See what is playing and control it. This runs on the device through the
+    media service (OCP).</p>
+  <p class="hint" role="note" data-i18n="media.liveNote">The track position does not update on its own. Use Refresh to
+    see the latest now-playing information.</p>
+
+  <!-- Shown instead of the controls when no media service answers. -->
+  <div class="card" id="gate" hidden>
+    <p class="hint" id="gate-note" data-i18n="media.unavailable">No media service is running. Install and start
+      ovos-media (or the OCP audio plugin) to use this page.</p>
+  </div>
+
+  <div id="panel" hidden>
+    <h2 data-i18n="media.nowPlaying.title">Now playing</h2>
+    <div class="card" id="now-playing-card">
+      <div class="row" id="np-row">
+        <img id="np-image" alt="" hidden>
+        <div>
+          <p id="np-title" class="strong"></p>
+          <p id="np-artist" class="hint"></p>
+          <span class="badge" id="np-state"></span>
+        </div>
+      </div>
+      <div class="row">
+        <button class="secondary" id="refresh" data-i18n="media.refresh">Refresh</button>
+      </div>
+      <div class="msg" id="msg-np" role="status" aria-live="polite" hidden></div>
+    </div>
+
+    <h2 data-i18n="media.transport.title">Transport</h2>
+    <div class="card" id="transport-card">
+      <div class="row">
+        <button class="secondary" id="previous" data-i18n="media.previous">Previous</button>
+        <button id="play-pause" data-i18n="media.playPause">Play / Pause</button>
+        <button class="secondary" id="next" data-i18n="media.next">Next</button>
+        <button class="secondary" id="stop" data-i18n="media.stop">Stop</button>
+      </div>
+      <div class="msg" id="msg-transport" role="status" aria-live="polite" hidden></div>
+    </div>
+
+    <h2 data-i18n="media.volume.title">Volume</h2>
+    <div class="card" id="volume-card">
+      <div class="row">
+        <label for="volume-slider" data-i18n="media.volume.label">Volume</label>
+        <input type="range" id="volume-slider" min="0" max="100" step="1" value="50">
+        <span id="volume-value">50%</span>
+        <button class="secondary" id="mute-toggle" data-i18n="media.mute">Mute</button>
+      </div>
+      <div class="msg" id="msg-volume" role="status" aria-live="polite" hidden></div>
+    </div>
+  </div>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
+  var muted = false;
+
+  // ── gate: something has to answer the OCP ping ──────────────────────────────
+  function showGate() {
+    el("panel").hidden = true;
+    el("gate").hidden = false;
+  }
+
+  // ── now playing ──────────────────────────────────────────────────────────
+  var STATE_LABEL = {
+    playing: function () { return t("media.state.playing", "Playing"); },
+    paused: function () { return t("media.state.paused", "Paused"); },
+    stopped: function () { return t("media.state.stopped", "Stopped"); }
+  };
+  function showStatus(s) {
+    var img = el("np-image");
+    if (s.image) { img.src = s.image; img.hidden = false; }
+    else { img.hidden = true; img.removeAttribute("src"); }
+    el("np-title").textContent = s.title || t("media.nowPlaying.none", "Nothing is playing.");
+    el("np-artist").textContent = s.artist || "";
+    var label = (STATE_LABEL[s.state] || STATE_LABEL.stopped)();
+    var badge = el("np-state");
+    badge.textContent = label;
+    badge.className = "badge " + (s.state === "playing" ? "ready" : (s.state === "paused" ? "na" : ""));
+  }
+  function loadStatus() {
+    api("/api/media/status").then(showStatus).catch(function (e) {
+      OvosWebUI.say("msg-np", e.message, true);
+    });
+  }
+  el("refresh").addEventListener("click", loadStatus);
+
+  // ── transport ────────────────────────────────────────────────────────────
+  function act(path) {
+    api("/api/media/" + path, {method: "POST"})
+      .then(function (r) {
+        if (!r.ok) { OvosWebUI.say("msg-transport", t("media.actionFailed", "That did not work."), true); }
+        else { el("msg-transport").hidden = true; }
+        loadStatus();
+      })
+      .catch(function (e) { OvosWebUI.say("msg-transport", e.message, true); });
+  }
+  el("play-pause").addEventListener("click", function () { act("play_pause"); });
+  el("previous").addEventListener("click", function () { act("previous"); });
+  el("next").addEventListener("click", function () { act("next"); });
+  el("stop").addEventListener("click", function () { act("stop"); });
+
+  // ── volume ───────────────────────────────────────────────────────────────
+  function showVolume(v) {
+    if (typeof v.percent === "number") {
+      el("volume-slider").value = v.percent;
+      el("volume-value").textContent = v.percent + "%";
+    }
+    if (typeof v.muted === "boolean") {
+      muted = v.muted;
+      el("mute-toggle").textContent = muted ? t("media.unmute", "Unmute") : t("media.mute", "Mute");
+    }
+  }
+  function loadVolume() {
+    api("/api/media/volume").then(showVolume).catch(function (e) {
+      OvosWebUI.say("msg-volume", e.message, true);
+    });
+  }
+  var slider = el("volume-slider");
+  slider.addEventListener("change", function () {
+    var percent = parseInt(slider.value, 10);
+    el("volume-value").textContent = percent + "%";
+    api("/api/media/volume", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({percent: percent})})
+      .then(function (r) {
+        if (!r.ok) { OvosWebUI.say("msg-volume", t("media.actionFailed", "That did not work."), true); }
+        else { el("msg-volume").hidden = true; }
+      })
+      .catch(function (e) { OvosWebUI.say("msg-volume", e.message, true); });
+  });
+  el("mute-toggle").addEventListener("click", function () {
+    var path = muted ? "/api/media/unmute" : "/api/media/mute";
+    api(path, {method: "POST"})
+      .then(function (r) {
+        if (!r.ok) { OvosWebUI.say("msg-volume", t("media.actionFailed", "That did not work."), true); return; }
+        muted = !!r.muted;
+        el("mute-toggle").textContent = muted ? t("media.unmute", "Unmute") : t("media.mute", "Mute");
+        el("msg-volume").hidden = true;
+      })
+      .catch(function (e) { OvosWebUI.say("msg-volume", e.message, true); });
+  });
+
+  // ── gate on the media service, then load ────────────────────────────────
+  api("/api/media/available").then(function (r) {
+    if (!r.available) { showGate(); return; }
+    el("gate").hidden = true;
+    el("panel").hidden = false;
+    loadStatus();
+    loadVolume();
+  }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+});
+</script>
+</body>
+</html>
