@@ -78,4 +78,4 @@ The page tells you which one. For anything else, see
 [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Device controls](controls.md) · [Home](README.md) · [About →](about.md)
+[← Network](network.md) · [Home](README.md) · [About →](about.md)
