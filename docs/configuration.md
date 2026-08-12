@@ -1,9 +1,22 @@
 # Settings
 
+The Settings page changes your own layer of `mycroft.conf` — the file that
+controls how the device behaves. Use it to change language, voice, or wake
+word without touching a file by hand.
 
-The Settings page changes your own layer of `mycroft.conf`.
+![The Settings page](images/config-wide.png)
 
-![The simple settings form on a phone](images/configuration.png)
+![The same page on a phone](images/config-mobile.png)
+
+## Common tasks
+
+- **Change the wake word or voice** — open the Simple tab, pick the new value
+  from the list, and it saves right away.
+- **Switch the device to your language** — set Language on the Simple tab.
+- **Edit a setting the Simple tab does not show** — use the Advanced tab; see
+  below.
+- **Undo a change** — leave the field empty, or choose "Use the standard
+  value"; every save is also backed up automatically, see "After a save".
 
 ## The layers
 
@@ -60,3 +73,9 @@ On a computer the fields lay out in two columns and the tabs move to a left rail
 ## Changing the access token
 
 The **Access token** section sets the first token on a device that has none, or changes an existing one (you enter the current token to change it). The session stays signed in afterwards.
+
+## If it doesn't work
+
+If a save is refused, check that your JSON or YAML on the Advanced tab is
+valid — the page tells you what is wrong. For anything else, see
+[troubleshooting.md](troubleshooting.md).

@@ -3,7 +3,18 @@
 A persona decides who answers your questions. It is a list of solvers, tried
 in order, until one of them can answer. The Personas page makes and edits them.
 
-![The persona editor on a phone](images/personas.png)
+![The Personas page](images/personas-wide.png)
+
+![The same page on a phone](images/personas-mobile.png)
+
+## Common tasks
+
+- **Make a new persona** — open the **Persona** box, type a new name, add
+  solvers, and **Save**.
+- **Change which persona answers by default** — pick it, then press "Use this
+  persona".
+- **Check a persona before relying on it** — press **Try it** and read the
+  answer.
 
 ## Choose or make one
 
@@ -41,3 +52,9 @@ as it stands, so you can see who answers before you rely on it.
 persona service reads to decide who answers when you do not name a persona.
 The page shows which persona is answering now. The change takes effect when
 the OVOS services next restart.
+
+## If it doesn't work
+
+If **Save** refuses a persona, a solver you named is missing or broken — the
+page marks which one; install it from the [Plugins](plugins.md) page. For
+anything else, see [troubleshooting.md](troubleshooting.md).

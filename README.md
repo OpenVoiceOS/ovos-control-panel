@@ -6,7 +6,9 @@ if the device works, it lets you change the settings, and it makes backups.
 There is no cloud account and no internet connection. Every file the page needs
 is in the package.
 
-![The dashboard and the settings page on a phone](docs/images/dashboard.png)
+![The dashboard, showing every service ready](docs/images/dashboard-wide.png)
+
+**[Read the full guide — start here](docs/README.md)**
 
 ## What you can do
 
@@ -107,11 +109,8 @@ are kept. To undo a change, copy a backup back over the file.
 
 ## Documentation
 
-- [Dashboard](docs/dashboard.md)
-- [Settings](docs/configuration.md)
-- [Skill settings](docs/skill-settings.md)
-- [Backup and restore](docs/backup-restore.md)
-- [Security](docs/security.md)
+The full guide, with a page-by-page navigation table and a first-run
+walkthrough, lives in [docs/README.md](docs/README.md).
 
 ## Development
 

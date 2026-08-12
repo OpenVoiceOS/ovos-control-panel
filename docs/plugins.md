@@ -1,8 +1,20 @@
 # Plugins
 
-The Plugins page finds OVOS plugins and installs them on the device.
+The Plugins page finds OVOS plugins — the voices, listeners and other add-ons
+a device needs — and installs or removes them.
 
-![The Plugins page on a phone](images/plugins.png)
+![The Plugins page](images/plugins-wide.png)
+
+![The same page on a phone](images/plugins-mobile.png)
+
+## Common tasks
+
+- **Add a voice or a speech-to-text engine** — check "Recommended for your
+  language" first, or search by name below.
+- **Remove a plugin you no longer need** — find it in the list and press
+  **Remove**.
+- **See what needs a token** — every install and remove does; see
+  [security.md](security.md) if you have not set one yet.
 
 ## Recommended for your language
 
@@ -57,3 +69,9 @@ skill to ovos-core, a PHAL plugin to PHAL — using the targeted
 so it lands in the right container in a split deployment. A kind with no known
 home uses the broadcast topic. Override the routing per family with the config
 `webui.install_services` (a family set to `broadcast` uses the broadcast topic).
+
+## If it doesn't work
+
+An install that fails with "no device connected" means nothing is listening
+on the message bus — check the [Dashboard](dashboard.md) first. For anything
+else, see [troubleshooting.md](troubleshooting.md).

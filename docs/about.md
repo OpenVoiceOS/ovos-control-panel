@@ -2,7 +2,16 @@
 
 The About page shows what is installed on this device and where to get help.
 
-![The About page on a phone](images/about.png)
+![The About page](images/about-wide.png)
+
+![The same page on a phone](images/about-mobile.png)
+
+## Common tasks
+
+- **Report a problem** — open this page and copy the version list into your
+  report; see "When to use it" below.
+- **Find the documentation or chat** — use the links on this page.
+- **Restart or reboot the device** — see "Device power" below.
 
 ## What it shows
 
@@ -25,3 +34,8 @@ message is ignored and nothing happens. Both need the access token and a
 confirmation, and the page never runs a shell command itself.
 
 ![The device power section](images/about-power.png)
+
+## If it doesn't work
+
+If a version is missing from the list, that package is not installed on this
+device. For anything else, see [troubleshooting.md](troubleshooting.md).
