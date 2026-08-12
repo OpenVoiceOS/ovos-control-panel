@@ -36,6 +36,7 @@ If something is not working, go straight to
 | Device controls | Volume, microphone mute, restart and reboot. | [controls.md](controls.md) |
 | Media | Shows what is playing and controls playback and volume. | [media.md](media.md) |
 | Network | Shows nearby Wi-Fi and lets you join, leave or forget a network. | [network.md](network.md) |
+| Mark-1 faceplate | Controls the Mark-1's eyes and mouth, draws an image for the mouth, and previews it in the browser. | [mark1.md](mark1.md) |
 | Backup | Downloads a copy of your settings, and puts a copy back. | [backup-restore.md](backup-restore.md) |
 | About | Shows the installed package versions and useful links. | [about.md](about.md) |
 | Sign in | The page you see when a token is set. | [security.md](security.md) |
