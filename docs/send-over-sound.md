@@ -4,6 +4,10 @@ This page sends data to a nearby OVOS device by playing a sound. It needs no
 network. The other device hears the sound with its microphone and acts on
 it.
 
+![The Send over sound page](img/sound-wide.png)
+
+![The same page on a phone](img/sound-mobile.png)
+
 ## What it needs
 
 The receiving device needs the `ovos-audio-transformer-plugin-ggwave` plugin
