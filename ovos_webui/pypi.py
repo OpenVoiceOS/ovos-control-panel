@@ -48,14 +48,24 @@ FAMILIES: list[tuple[str, str]] = [
     (r"^ovos-stt-plugin-[a-z0-9-]+$", "stt"),
     (r"^ovos-ww-plugin-[a-z0-9-]+$", "wake_word"),
     (r"^ovos-vad-plugin-[a-z0-9-]+$", "vad"),
+    # the modern intent stack: ovos-adapt-pipeline-plugin, ovos-padatious-
+    # pipeline-plugin, ovos-ocp-pipeline-plugin, ovos-common-query-pipeline-
+    # plugin, ovos-ollama-intent-pipeline-plugin, ...
+    (r"^ovos-[a-z0-9-]+-pipeline-plugin$", "pipeline"),
     (r"^ovos-(phal|PHAL)-plugin-[a-z0-9-]+$", "phal"),
     (r"^ovos-audio-transformer-plugin-[a-z0-9-]+$", "audio_transformer"),
     (r"^ovos-dialog-transformer-plugin-[a-z0-9-]+$", "dialog_transformer"),
     (r"^ovos-utterance-transformer-plugin-[a-z0-9-]+$", "utterance_transformer"),
     (r"^ovos-solver-[a-z0-9-]+-plugin$", "solver"),
     (r"^ovos-solver-plugin-[a-z0-9-]+$", "solver"),
+    # second convention: ovos-ddg-solver-plugin
+    (r"^ovos-[a-z0-9-]+-solver-plugin$", "solver"),
     (r"^ovos-translate-plugin-[a-z0-9-]+$", "translate"),
+    # second convention: ovos-google-translate-plugin, ovos-gguf-translate-plugin
+    (r"^ovos-[a-z0-9-]+-translate-plugin$", "translate"),
     (r"^ovos-lang-detect-plugin-[a-z0-9-]+$", "lang_detect"),
+    # second convention: ovos-lang-detector-classics-plugin, -fasttext-plugin
+    (r"^ovos-lang-detector-[a-z0-9-]+-plugin$", "lang_detect"),
     (r"^ovos-persona-[a-z0-9-]+$", "persona"),
     (r"^ovos-media-plugin-[a-z0-9-]+$", "media"),
     (r"^ovos-gui-plugin-[a-z0-9-]+$", "gui"),

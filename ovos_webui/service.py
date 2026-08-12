@@ -235,14 +235,17 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
 
         Host and cross-site failures stay hard blocks (a real attack), only the
         missing/invalid-token case becomes a redirect, so typing the device URL
-        lands on the login page rather than an error.
+        lands on the login page rather than an error. A static asset (js/css/img)
+        keeps the plain 401 — a non-navigation fetch must not be answered with an
+        HTML login page.
         """
         check_host(policy, request)
         check_csrf(request)
         try:
             policy.check(request)
         except HTTPException as err:
-            if err.status_code == status.HTTP_401_UNAUTHORIZED:
+            if (err.status_code == status.HTTP_401_UNAUTHORIZED
+                    and not request.url.path.startswith("/static/")):
                 raise HTTPException(
                     status_code=status.HTTP_303_SEE_OTHER,
                     headers={"Location": "/login"}) from None

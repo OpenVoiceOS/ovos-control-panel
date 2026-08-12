@@ -64,6 +64,7 @@ DEFAULT_INSTALL_SERVICE = {
     "wake_word": "ovos_dinkum_listener",
     "vad": "ovos_dinkum_listener",
     "utterance_transformer": "ovos_core",
+    "pipeline": "ovos_core",
     "skill": "ovos_core",
     "solver": "ovos_core",
     "persona": "ovos_core",

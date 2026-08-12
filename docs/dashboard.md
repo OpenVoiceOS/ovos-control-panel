@@ -27,11 +27,11 @@ Then there is one card for each service:
 | Card | Service | Message it answers |
 | --- | --- | --- |
 | Skills | ovos-core skill manager | `mycroft.skills.is_ready` |
-| Intents | ovos-core intent service | `mycroft.intents.is_ready` |
+| Understanding | ovos-core intent service | `mycroft.intents.is_ready` |
 | Audio | ovos-audio or ovos-media | `mycroft.audio.is_ready` |
 | Listener | ovos-dinkum-listener | `mycroft.voice.is_ready` |
-| GUI | ovos-gui | `mycroft.gui_service.is_ready` |
-| PHAL | ovos-PHAL | `mycroft.PHAL.is_ready` |
+| Screen | ovos-gui | `mycroft.gui_service.is_ready` |
+| Hardware controls (PHAL) | ovos-PHAL | `mycroft.PHAL.is_ready` |
 
 ## What each state means
 
@@ -44,9 +44,10 @@ Then there is one card for each service:
 | off | The part is absent on this device, which is normal. Shown grey, not red. |
 | waiting | The message bus is down, so the service could not be asked. |
 
-A device without a screen has no GUI service, and a device without hardware
-plugins has no PHAL. Their cards show a grey "off" chip with a one-line
-explanation instead of a red alarm, and they never turn the summary banner red.
+A device without a screen has no Screen service, and a device without
+hardware plugins has no Hardware controls (PHAL). Their cards show a grey
+"off" chip with a one-line explanation instead of a red alarm, and they
+never turn the summary banner red.
 
 `ovos-simple-listener` does not register a status handler at all, so a device
 that uses it instead of `ovos-dinkum-listener` shows the same neutral "off"

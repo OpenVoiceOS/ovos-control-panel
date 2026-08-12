@@ -1,7 +1,7 @@
 # Personas
 
-A persona decides who answers your questions. It is a list of solvers, tried
-in order, until one of them can answer. The Personas page makes and edits them.
+A persona decides who answers your questions. It tries a list of answer
+sources, in order, until one of them can answer. The Personas page makes and edits them.
 
 ![The Personas page](images/personas-wide.png)
 
@@ -10,7 +10,7 @@ in order, until one of them can answer. The Personas page makes and edits them.
 ## Common tasks
 
 - **Make a new persona** — open the **Persona** box, type a new name, add
-  solvers, and **Save**.
+  answer sources, and **Save**.
 - **Change which persona answers by default** — pick it, then press "Use this
   persona".
 - **Check a persona before relying on it** — press **Try it** and read the
@@ -29,15 +29,16 @@ The **Persona** box at the top picks the persona to edit, or makes a new one.
 - **Catch phrase** — optional; the words that switch to this persona.
 - **Memory** — an optional memory plugin, if one is installed.
 
-## Solvers, in order
+## Answer sources, in order
 
-Add the solvers this persona should use, and order them. The first solver that
-can answer wins, so put the fast, certain ones first and a general one last.
-**Up**, **Down** and **Remove** change the order. A solver you name that is not
-installed is marked, so you can install it from the [Plugins](plugins.md) page.
+Add the answer sources this persona should use, and order them. The first one
+that can answer wins, so put the fast, certain ones first and a general one
+last. **Up**, **Down** and **Remove** change the order. An answer source you
+name that is not installed is marked, so you can install it from the
+[Plugins](plugins.md) page.
 
-**Solver settings** is a JSON box for the few solvers that need a key or a
-model name. Leave it empty for the rest.
+**Advanced settings** is a JSON box for the few answer sources that need a key
+or a model name. Leave it empty for the rest.
 
 ## Save and try
 
@@ -55,6 +56,6 @@ the OVOS services next restart.
 
 ## If it doesn't work
 
-If **Save** refuses a persona, a solver you named is missing or broken — the
-page marks which one; install it from the [Plugins](plugins.md) page. For
-anything else, see [troubleshooting.md](troubleshooting.md).
+If **Save** refuses a persona, an answer source you named is missing or
+broken — the page marks which one; install it from the [Plugins](plugins.md)
+page. For anything else, see [troubleshooting.md](troubleshooting.md).
