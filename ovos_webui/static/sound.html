@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Send over sound — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+<script src="/static/vendor/ggwave/ggwave.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.sound">Send over sound</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+  <a href="/tryit" data-i18n="nav.tryit">Try it</a>
+  <a href="/controls" data-i18n="nav.controls">Device</a>
+  <a href="/config" data-i18n="nav.settings">Settings</a>
+  <a href="/skills" data-i18n="nav.skills">Skills</a>
+  <a href="/abilities" data-i18n="nav.abilities">Abilities</a>
+  <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
+  <a href="/personas" data-i18n="nav.personas">Personas</a>
+  <a href="/translate" data-i18n="nav.translate">Translate</a>
+  <a href="/sound" data-i18n="nav.sound">Send over sound</a>
+  <a href="/backup" data-i18n="nav.backup">Backup</a>
+  <a href="/about" data-i18n="nav.about">About</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="sound.intro">Play a short sound to send data to a nearby OVOS device — no
+    network needed. The device needs the ggwave listener installed and turned on, and its microphone
+    needs to hear this speaker.</p>
+  <div class="card" role="note" id="sound-warning">
+    <strong data-i18n="sound.warning.title">Before you play a sound</strong>
+    <ul class="plain">
+      <li data-i18n="sound.warning.anyone">Anything within earshot of the speaker can hear it, including
+        other people's devices. Do not send anything you would not say out loud.</li>
+      <li data-i18n="sound.warning.listener">The receiving device only acts on this if its ggwave listener
+        is enabled. If nothing happens, that is probably why.</li>
+      <li data-i18n="sound.warning.wifi">A Wi-Fi password sent this way is sent as sound, in the clear, to
+        anyone listening.</li>
+    </ul>
+  </div>
+
+  <h2 data-i18n="sound.listen.title">Device listening</h2>
+  <div class="card" id="ggwave-card">
+    <p class="hint" id="ggwave-need" hidden></p>
+    <p class="hint" data-i18n="sound.listen.intro">The receiving device only acts on a sound if its ggwave
+      listener is turned on. The listener is off by default: anything within earshot could otherwise
+      trigger the device. Turn it on only while you send something.</p>
+    <label for="ggwave-timeout" data-i18n="sound.listen.durationLabel">Stop listening after
+      <select id="ggwave-timeout">
+        <option value="60" data-i18n="sound.listen.d1">1 minute</option>
+        <option value="300" selected data-i18n="sound.listen.d5">5 minutes (default)</option>
+        <option value="900" data-i18n="sound.listen.d15">15 minutes</option>
+        <option value="0" data-i18n="sound.listen.dNever">Until I stop it</option>
+      </select>
+    </label>
+    <p class="hint" data-i18n="sound.listen.safety">For safety the device stops listening on its own after
+      the time you pick.</p>
+    <div class="row">
+      <button id="ggwave-start" data-i18n="sound.listen.start">Start listening</button>
+      <button class="secondary" id="ggwave-stop" data-i18n="sound.listen.stop">Stop listening</button>
+    </div>
+    <p class="hint" id="ggwave-state" role="status" aria-live="polite"></p>
+    <p class="hint" data-i18n="sound.listen.alt">You can also turn the listener on or off by voice — say
+      "enable ggwave" or "disable ggwave". The always-on and default-timeout behavior live in the
+      ovos-audio-transformer-plugin-ggwave configuration, as start_enabled and listen_timeout.</p>
+  </div>
+
+  <h2 data-i18n="sound.action.title">What to send</h2>
+  <div class="card">
+    <label data-i18n="sound.action.label">Action
+      <select id="action">
+        <option value="wifi" data-i18n="sound.action.wifi">Send Wi-Fi credentials</option>
+        <option value="pip" data-i18n="sound.action.pip">Install a plugin</option>
+        <option value="rmpip" data-i18n="sound.action.rmpip">Uninstall a plugin</option>
+        <option value="ghs" data-i18n="sound.action.ghs">Install a skill (GitHub)</option>
+        <option value="speak" data-i18n="sound.action.speak">Say something</option>
+        <option value="utt" data-i18n="sound.action.utt">Send a command</option>
+      </select>
+    </label>
+
+    <div id="fields-wifi" class="fields">
+      <label data-i18n="sound.wifi.ssid">Network name (SSID)<input id="wifi-ssid" type="text" autocomplete="off"></label>
+      <label class="check"><input type="checkbox" id="wifi-open"> <span data-i18n="sound.wifi.open">This is an open network (no password)</span></label>
+      <label data-i18n="sound.wifi.password">Password<input id="wifi-password" type="password" autocomplete="off"></label>
+    </div>
+
+    <div id="fields-pip" class="fields" hidden>
+      <label data-i18n="sound.pip.label">PyPI package name<input id="pip-name" type="text" placeholder="ovos-tts-plugin-piper"></label>
+    </div>
+
+    <div id="fields-rmpip" class="fields" hidden>
+      <label data-i18n="sound.rmpip.label">PyPI package name<input id="rmpip-name" type="text" placeholder="ovos-tts-plugin-piper"></label>
+    </div>
+
+    <div id="fields-ghs" class="fields" hidden>
+      <label data-i18n="sound.ghs.label">GitHub skill (owner/repo, or the full URL)<input id="ghs-name" type="text" placeholder="OpenVoiceOS/skill-example"></label>
+    </div>
+
+    <div id="fields-speak" class="fields" hidden>
+      <label data-i18n="sound.speak.label">Text for the device to say<textarea id="speak-text" rows="3"></textarea></label>
+    </div>
+
+    <div id="fields-utt" class="fields" hidden>
+      <label data-i18n="sound.utt.label">Command, as if spoken<textarea id="utt-text" rows="3"></textarea></label>
+    </div>
+
+    <details class="tech">
+      <summary data-i18n="sound.advanced.summary">Advanced</summary>
+      <label data-i18n="sound.advanced.busType">Bus message type<input id="advanced-type" type="text" placeholder="mycroft.volume.increase"></label>
+      <p class="hint" data-i18n="sound.advanced.busTypeHint">Sends an empty bus message of this type. No data, just the trigger.</p>
+      <div class="row"><button class="secondary" id="advanced-bus-play" data-i18n="sound.advanced.busPlay">Play this bus message</button></div>
+
+      <label data-i18n="sound.advanced.json">Bus message (JSON)<textarea id="advanced-json" rows="4" placeholder='{"type": "speak", "data": {"utterance": "hello"}}'></textarea></label>
+      <p class="hint" data-i18n="sound.advanced.jsonHint">Sends the full serialized message. This is the general-purpose carrier —
+        anything the bus can express can be sent this way.</p>
+      <div class="row"><button class="secondary" id="advanced-json-play" data-i18n="sound.advanced.jsonPlay">Play this bus message</button></div>
+    </details>
+
+    <h2 data-i18n="sound.settings.title">Sound settings</h2>
+    <label for="volume" data-i18n="sound.settings.volume">Volume</label>
+    <input type="range" id="volume" min="1" max="100" step="1" value="50" aria-describedby="volume-value">
+    <p class="hint"><span id="volume-value">50%</span></p>
+    <label class="check"><input type="checkbox" id="ultrasound"> <span data-i18n="sound.settings.ultrasound">Near-silent (ultrasound) — harder to hear, needs a device with a good microphone</span></label>
+
+    <p class="hint" data-i18n="sound.hold">Hold this device close to the other device's microphone, in a quiet room, and keep both still while the sound plays.</p>
+
+    <div class="row">
+      <button id="play" data-i18n="sound.play">Play sound</button>
+    </div>
+    <p class="hint" id="play-state" role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
+
+  // ── device listening toggle ──────────────────────────────────────────────
+  function listeningOnMessage(timeoutSeconds) {
+    if (timeoutSeconds === 0) { return t("sound.listen.onUntilStopped", "Listening — until you stop it."); }
+    var minutes = Math.round(timeoutSeconds / 60);
+    return t("sound.listen.onTimed", "Listening — stops on its own after {minutes} min.").replace("{minutes}", minutes);
+  }
+  function setListening(enabled) {
+    var body = {enabled: enabled};
+    if (enabled) { body.timeout = parseInt(el("ggwave-timeout").value, 10); }
+    api("/api/ggwave/listen", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body)})
+      .then(function () {
+        OvosWebUI.say("ggwave-state", enabled
+          ? listeningOnMessage(body.timeout)
+          : t("sound.listen.off", "Listening disabled."));
+      })
+      .catch(function (e) { OvosWebUI.say("ggwave-state", e.message, true); });
+  }
+  el("ggwave-start").addEventListener("click", function () { setListening(true); });
+  el("ggwave-stop").addEventListener("click", function () { setListening(false); });
+
+  api("/api/device/capabilities").then(function (r) {
+    var need = r.capabilities && r.capabilities.ggwave;
+    if (!need || need.installed) { return; }
+    el("ggwave-start").disabled = true;
+    el("ggwave-stop").disabled = true;
+    var note = el("ggwave-need");
+    note.hidden = false;
+    note.textContent = t("sound.listen.needsPlugin",
+      "This needs the ggwave plugin, which is not installed: ") + need.suggest;
+  }).catch(function () {});
+
+  // ── ggwave setup ─────────────────────────────────────────────────────────
+  var ggwave = null, ggwaveInstance = null, ready = false;
+  var GGWAVE_SAMPLE_RATE = 48000;
+
+  window.ggwave_factory().then(function (instance) {
+    ggwave = instance;
+    var parameters = ggwave.getDefaultParameters();
+    parameters.sampleRateInp = GGWAVE_SAMPLE_RATE;
+    parameters.sampleRateOut = GGWAVE_SAMPLE_RATE;
+    ggwaveInstance = ggwave.init(parameters);
+    ready = true;
+  }).catch(function (e) {
+    OvosWebUI.say("msg", t("sound.err.load", "Could not load the sound engine in this browser."), true);
+    console.error(e);
+  });
+
+  // ── field visibility ─────────────────────────────────────────────────────
+  var FIELD_IDS = ["wifi", "pip", "rmpip", "ghs", "speak", "utt"];
+  function showFields() {
+    var action = el("action").value;
+    FIELD_IDS.forEach(function (id) {
+      el("fields-" + id).hidden = id !== action;
+    });
+  }
+  el("action").addEventListener("change", showFields);
+  showFields();
+
+  el("wifi-open").addEventListener("change", function () {
+    el("wifi-password").disabled = el("wifi-open").checked;
+    if (el("wifi-open").checked) { el("wifi-password").value = ""; }
+  });
+
+  el("volume").addEventListener("input", function () {
+    el("volume-value").textContent = el("volume").value + "%";
+  });
+
+  // ── encode + play ────────────────────────────────────────────────────────
+  function protocolId() {
+    // Fast protocols keep a short transmission short; the ultrasound variant
+    // is the same speed class, just outside most people's hearing range.
+    return el("ultrasound").checked
+      ? ggwave.ProtocolId.GGWAVE_PROTOCOL_ULTRASOUND_FAST
+      : ggwave.ProtocolId.GGWAVE_PROTOCOL_AUDIBLE_FAST;
+  }
+
+  // ggwave hands back an Int8Array that is really a view over raw float32
+  // bytes (its default output sample format); re-view the same buffer as
+  // Float32Array rather than converting sample values.
+  function toFloat32(typedArray) {
+    var buffer = new ArrayBuffer(typedArray.byteLength);
+    new typedArray.constructor(buffer).set(typedArray);
+    return new Float32Array(buffer);
+  }
+
+  function encode(text) {
+    var waveform = ggwave.encode(ggwaveInstance, text, protocolId(), parseInt(el("volume").value, 10));
+    return toFloat32(waveform);
+  }
+
+  var audioCtx = null;
+  function context() {
+    if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: GGWAVE_SAMPLE_RATE}); }
+    return audioCtx;
+  }
+
+  function playBuffer(samples) {
+    return new Promise(function (resolve, reject) {
+      var ctx = context();
+      var buffer = ctx.createBuffer(1, samples.length, GGWAVE_SAMPLE_RATE);
+      buffer.copyToChannel(samples, 0);
+      var source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.onended = resolve;
+      try { source.start(); } catch (e) { reject(e); }
+    });
+  }
+
+  function playText(text) {
+    return playBuffer(encode(text));
+  }
+
+  // Wi-Fi needs two sequential transmissions: the device stores the SSID and
+  // only acts once the password (or an empty one, for an open network)
+  // arrives right after it.
+  function playWifi(ssid, password) {
+    return playText("SSID:" + ssid).then(function () {
+      return playText("PSWD:" + password);
+    });
+  }
+
+  function setPlaying(on) {
+    el("play").disabled = on;
+    el("play-state").textContent = on ? t("sound.playing", "Playing…") : "";
+  }
+
+  function currentPayload() {
+    var action = el("action").value;
+    if (action === "wifi") {
+      var ssid = el("wifi-ssid").value.trim();
+      if (!ssid) { throw new Error(t("sound.err.ssid", "Enter a network name.")); }
+      return {wifi: {ssid: ssid, password: el("wifi-open").checked ? "" : el("wifi-password").value}};
+    }
+    if (action === "pip") {
+      var pkg = el("pip-name").value.trim();
+      if (!pkg) { throw new Error(t("sound.err.package", "Enter a package name.")); }
+      return {text: "PIP:" + pkg};
+    }
+    if (action === "rmpip") {
+      var rmpkg = el("rmpip-name").value.trim();
+      if (!rmpkg) { throw new Error(t("sound.err.package", "Enter a package name.")); }
+      return {text: "RMPIP:" + rmpkg};
+    }
+    if (action === "ghs") {
+      var repo = el("ghs-name").value.trim();
+      if (!repo) { throw new Error(t("sound.err.repo", "Enter a GitHub repo.")); }
+      return {text: "GHS:" + repo};
+    }
+    if (action === "speak") {
+      var say = el("speak-text").value.trim();
+      if (!say) { throw new Error(t("sound.err.text", "Enter some text.")); }
+      return {text: "SPEAK:" + say};
+    }
+    // "utt"
+    var cmd = el("utt-text").value.trim();
+    if (!cmd) { throw new Error(t("sound.err.text", "Enter some text.")); }
+    return {text: "UTT:" + cmd};
+  }
+
+  function run(promiseFactory) {
+    if (!ready) { OvosWebUI.say("msg", t("sound.err.notReady", "The sound engine has not finished loading yet."), true); return; }
+    el("msg").hidden = true;
+    setPlaying(true);
+    Promise.resolve().then(promiseFactory).then(function () {
+      setPlaying(false);
+      OvosWebUI.say("msg", t("sound.done", "Done."));
+    }).catch(function (e) {
+      setPlaying(false);
+      OvosWebUI.say("msg", e.message, true);
+    });
+  }
+
+  el("play").addEventListener("click", function () {
+    var payload;
+    try { payload = currentPayload(); } catch (e) { OvosWebUI.say("msg", e.message, true); return; }
+    run(function () {
+      return payload.wifi ? playWifi(payload.wifi.ssid, payload.wifi.password) : playText(payload.text);
+    });
+  });
+
+  el("advanced-bus-play").addEventListener("click", function () {
+    var msgType = el("advanced-type").value.trim();
+    if (!msgType) { OvosWebUI.say("msg", t("sound.err.busType", "Enter a bus message type."), true); return; }
+    run(function () { return playText("BUS:" + msgType); });
+  });
+
+  el("advanced-json-play").addEventListener("click", function () {
+    var json = el("advanced-json").value.trim();
+    if (!json) { OvosWebUI.say("msg", t("sound.err.json", "Enter a bus message as JSON.")); return; }
+    try { JSON.parse(json); } catch (e) { OvosWebUI.say("msg", t("sound.err.jsonInvalid", "That is not valid JSON."), true); return; }
+    run(function () { return playText("JSON:" + json); });
+  });
+});
+</script>
+</body>
+</html>

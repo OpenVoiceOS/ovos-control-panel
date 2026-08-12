@@ -36,6 +36,16 @@ CAPABILITIES: dict[str, dict[str, Any]] = {
         "hint": "Scan for and join Wi-Fi networks from the Network page. Needs "
                 "this plugin, which runs with the admin service.",
     },
+    # Not a PHAL plugin — it is an audio transformer plugin that listens for
+    # ggwave sound. It still fits this table: one package, no admin service,
+    # a plain "is it there" check for the UI to gate the listening toggle on.
+    "ggwave": {
+        "plugins": ["ovos-audio-transformer-plugin-ggwave"],
+        "admin": False,
+        "label": "Send over sound listener",
+        "hint": "Lets this device hear data sent over sound from the Send over "
+                "sound page.",
+    },
 }
 
 #: The microphone mute lives in the listener, not a PHAL plugin, so it has no

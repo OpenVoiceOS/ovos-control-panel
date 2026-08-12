@@ -160,6 +160,7 @@
     ["/plugins", "nav.plugins", "Plugins"],
     ["/personas", "nav.personas", "Personas"],
     ["/translate", "nav.translate", "Translate"],
+    ["/sound", "nav.sound", "Send over sound"],
     ["/backup", "nav.backup", "Backup"],
     ["/about", "nav.about", "About"]
   ];

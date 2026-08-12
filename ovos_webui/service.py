@@ -67,6 +67,7 @@ PAGES = {
     "/plugins": "plugins.html",
     "/personas": "personas.html",
     "/translate": "translate.html",
+    "/sound": "sound.html",
     "/tryit": "tryit.html",
     "/setup": "setup.html",
     "/controls": "controls.html",
@@ -137,6 +138,13 @@ class BackupIdBody(BaseModel):
 
 class EnabledBody(BaseModel):
     enabled: bool
+
+
+class GgwaveListenBody(BaseModel):
+    enabled: bool
+    # 0 is a real, meaningful value here ("never auto-disable"), so the floor
+    # is 0, not 1 — only a negative timeout is rejected.
+    timeout: int | None = Field(None, ge=0)
 
 
 class VolumeBody(BaseModel):
@@ -835,6 +843,21 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_network_forget(body: WifiSsidBody) -> dict[str, Any]:
         from ovos_webui import network
         return network.forget(_need_bus(), body.ssid)
+
+    # ── ggwave listener: turn the device's sound receiver on or off ──────────
+    # Fire-and-forget, like /system/{action} — the ggwave audio transformer
+    # plugin does not answer a query, it just starts or stops listening.
+    @privileged.post("/ggwave/listen")
+    def api_ggwave_listen(body: GgwaveListenBody) -> dict[str, Any]:
+        from ovos_bus_client.message import Message
+        if body.enabled:
+            # timeout is optional: leave it out and the plugin falls back to
+            # its own configured "listen_timeout"; 0 means never auto-disable.
+            data = {"timeout": body.timeout} if body.timeout is not None else {}
+            _need_bus().emit(Message("ovos.ggwave.enable", data, {"source": "ovos-webui"}))
+            return {"ok": True, "sent": "ovos.ggwave.enable", "timeout": body.timeout}
+        _need_bus().emit(Message("ovos.ggwave.disable", {}, {"source": "ovos-webui"}))
+        return {"ok": True, "sent": "ovos.ggwave.disable"}
 
     # ── what can it do: the installed skills ─────────────────────────────────
     @api.get("/capabilities")

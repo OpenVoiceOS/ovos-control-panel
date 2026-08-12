@@ -55,4 +55,4 @@ the [Abilities](abilities.md) page for what the device can do. For anything
 else, see [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Translate](translate.md) · [Home](README.md) · [Device controls →](controls.md)
+[← Send over sound](send-over-sound.md) · [Home](README.md) · [Device controls →](controls.md)
