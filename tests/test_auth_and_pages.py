@@ -112,3 +112,22 @@ def test_app_starts_and_stops_without_a_bus():
     app = create_app(bus=None, host="127.0.0.1", connect_bus=False)
     with TestClient(app, base_url="http://127.0.0.1:8500") as c:
         assert c.get("/").status_code == 200
+
+
+def test_unauthenticated_page_redirects_to_login(token_client):
+    # a browser hitting a token-protected device at / must land on the login
+    # page, not a bare JSON 401 (found by live-testing on ser9)
+    r = token_client.get("/", headers={"sec-fetch-site": "same-origin"},
+                         follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/login"
+
+
+def test_login_page_itself_stays_public(token_client):
+    assert token_client.get("/login", headers={"sec-fetch-site": "same-origin"}).status_code == 200
+
+
+def test_authenticated_page_still_serves(token_client):
+    r = token_client.get("/", headers={"Authorization": "Bearer s3cret-token",
+                                       "sec-fetch-site": "same-origin"})
+    assert r.status_code == 200
