@@ -33,8 +33,8 @@ CAPABILITIES: dict[str, dict[str, Any]] = {
         "plugins": ["ovos-phal-plugin-network-manager", "ovos-PHAL-plugin-network-manager"],
         "admin": True,
         "label": "Wi-Fi setup",
-        "hint": "Wi-Fi setup happens on the device screen, not here — this only "
-                "shows whether the plugin is present.",
+        "hint": "Scan for and join Wi-Fi networks from the Network page. Needs "
+                "this plugin, which runs with the admin service.",
     },
 }
 

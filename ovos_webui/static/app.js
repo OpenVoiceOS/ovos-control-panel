@@ -153,6 +153,7 @@
     ["/", "nav.dashboard", "Dashboard"],
     ["/tryit", "nav.tryit", "Try it"],
     ["/controls", "nav.controls", "Device"],
+    ["/network", "nav.network", "Network"],
     ["/config", "nav.settings", "Settings"],
     ["/skills", "nav.skills", "Skills"],
     ["/abilities", "nav.abilities", "Abilities"],
