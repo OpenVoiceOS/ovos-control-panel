@@ -84,7 +84,7 @@ def test_capability_status_shape():
     from ovos_webui import phal
 
     r = phal.capability_status()
-    assert set(r["capabilities"]) == {"volume", "power", "network"}
+    assert set(r["capabilities"]) == {"volume", "power", "network", "ggwave"}
     for cap in r["capabilities"].values():
         assert set(cap) >= {"installed", "provider", "needs_admin", "suggest", "label", "hint"}
     assert r["capabilities"]["network"]["needs_admin"] is True

@@ -31,6 +31,7 @@ If something is not working, go straight to
 | Plugins | Finds OVOS plugins and installs or removes them on the device. | [plugins.md](plugins.md) |
 | Personas | Makes and edits personas — the ordered list of solvers that answer you. | [personas.md](personas.md) |
 | Translate | Translates what a skill says and hears into your language. | [translate.md](translate.md) |
+| Send over sound | Sends Wi-Fi credentials, installs, or commands to a nearby device by playing a sound. | [send-over-sound.md](send-over-sound.md) |
 | Try it | Sends a typed question through the device, the way a spoken one would go. | [tryit.md](tryit.md) |
 | Device controls | Volume, microphone mute, restart and reboot. | [controls.md](controls.md) |
 | Backup | Downloads a copy of your settings, and puts a copy back. | [backup-restore.md](backup-restore.md) |

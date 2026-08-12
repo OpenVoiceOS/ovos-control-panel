@@ -47,4 +47,4 @@ If the skill list is empty, install a skill first from the
 [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Personas](personas.md) · [Home](README.md) · [Try it →](tryit.md)
+[← Personas](personas.md) · [Home](README.md) · [Send over sound →](send-over-sound.md)

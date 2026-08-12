@@ -715,6 +715,10 @@ details.tech[open] > summary { margin-bottom: 0.5rem; }
 }
 .tabs button[aria-pressed="false"]:hover, .tabs button:not([aria-pressed]):not([aria-current="true"]):hover { color: var(--ink); background: var(--accent-wash); }
 
+/* ── a checkbox next to its own label text, inline rather than stacked ────── */
+label.check { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; }
+label.check input[type="checkbox"] { width: auto; margin: 0; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before { animation: none !important; transition: none !important; }
 }
