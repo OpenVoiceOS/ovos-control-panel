@@ -1,6 +1,20 @@
 # Backup and restore
 
-![The backup and restore page on a phone](images/backup-restore.png)
+This page saves your device's configuration and skill settings to a file, and
+puts them back if something goes wrong.
+
+![The Backup and restore page](images/backup-wide.png)
+
+![The same page on a phone](images/backup-mobile.png)
+
+## Common tasks
+
+- **Save your setup before making a big change** — press **Download a
+  backup**, and keep the file somewhere else than the device.
+- **Move your setup to a new device** — download a backup on the old one,
+  then open this page on the new one and restore it.
+- **Undo a change you didn't mean to make** — see "Go back to an earlier
+  save" below.
 
 ## What is in a backup
 
@@ -56,3 +70,9 @@ being replaced is itself backed up first — a revert can always be reverted.
 A backup is addressed only by a checked identifier that must resolve to a
 `*.bak` file inside a `.ovos-webui-backups` directory under the configuration
 home; nothing else on the disk is reachable, and symlinks are refused.
+
+## If it doesn't work
+
+If a restore is refused, the archive fails one of the checks listed above —
+the page tells you which one. For anything else, see
+[troubleshooting.md](troubleshooting.md).

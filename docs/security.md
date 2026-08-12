@@ -1,9 +1,20 @@
 # Security
 
-This page changes the configuration of your device. Anyone who can open it can
-change how the device listens and what it says. Treat the address like a key.
+This page explains how sign-in works, and how to protect a device that other
+people on your network could reach. Anyone who can open the web-ui can change
+how the device listens and what it says, so treat the address like a key.
 
-![The sign in page](images/login.png)
+![The sign in page](images/login-wide.png)
+
+![The same page on a phone](images/login-mobile.png)
+
+## Common tasks
+
+- **Let yourself in from your phone, not just the device** — set a token
+  first (see "Set a token"), then start the service with `--host 0.0.0.0`.
+- **Set a token for the first time** — see "Set a token" below.
+- **Change an existing token** — use the Access token section on the
+  [Settings](configuration.md) page; you need the current token to change it.
 
 ## Default
 
@@ -105,6 +116,13 @@ service refuses to start with one that is too short. Use a long random string.
 Every refused sign in is written to the log, and each wrong token in a row
 makes the next attempt wait a little longer, up to a few seconds, so a script
 cannot try many tokens quickly. A single mistyped token barely notices.
+
+## If it doesn't work
+
+If sign-in is refused, check you copied the whole token, and that any reverse
+proxy or hostname you use is listed under `webui.hostnames` (see "DNS
+rebinding" below). For anything else, see
+[troubleshooting.md](troubleshooting.md).
 
 ## What the service does not do
 

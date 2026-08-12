@@ -4,7 +4,17 @@ Loudness, the microphone, and power — the things you reach for on a real
 device. Some of these are carried by companion **PHAL plugins**, and the page
 tells you when one is missing and offers to install it.
 
-![The Device controls page](images/controls.png)
+![The Device controls page](images/controls-wide.png)
+
+![The same page on a phone](images/controls-mobile.png)
+
+## Common tasks
+
+- **Turn the device up or down, or mute it** — use the volume slider on this
+  page.
+- **Stop the device from listening for a moment** — mute the microphone.
+- **Restart or reboot the device** — use the buttons under Power, and confirm
+  when asked.
 
 ## Volume and microphone
 
@@ -30,3 +40,8 @@ capabilities without a dedicated control, like Wi-Fi setup — an install button
 Some plugins need the **admin service** (`ovos-PHAL-admin`) to run with the
 right permissions; those are labelled, because installing the package is not
 enough on its own for an admin plugin.
+
+## If it doesn't work
+
+A control that shows "unknown" has no plugin answering — install the one it
+names, or see [troubleshooting.md](troubleshooting.md).

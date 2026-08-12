@@ -1,8 +1,20 @@
 # Dashboard
 
-The dashboard answers one question: does this device work?
+The dashboard answers one question: does this device work? Open it first when
+you are not sure something is running.
 
-![The dashboard on a phone, every service ready](images/dashboard.png)
+![The dashboard, every service ready](images/dashboard-wide.png)
+
+![The same page on a phone](images/dashboard-mobile.png)
+
+## Common tasks
+
+- **Check the device is healthy** — open the dashboard. A green banner at the
+  top means the core services are up. A red one names what is wrong.
+- **Find out why a skill will not answer** — look for a card that is not
+  "ready" and follow "If something is down" below.
+- **Watch a service finish starting** — leave the page open; it keeps checking
+  and the chip changes from "starting" to "ready" on its own.
 
 ## What it shows
 
@@ -88,3 +100,8 @@ The summary banner at the top reflects only the core services — skills, intent
 and audio. The screen, the hardware layer (PHAL) and the listener can be
 legitimately absent on a given device, so their being quiet never turns the
 banner to "needs attention"; their own cards still show and explain the state.
+
+## If it doesn't work
+
+Still stuck after restarting a service and reading its log? See
+[troubleshooting.md](troubleshooting.md).

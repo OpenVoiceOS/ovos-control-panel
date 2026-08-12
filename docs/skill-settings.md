@@ -1,9 +1,19 @@
 # Skill settings
 
-Each skill keeps its own settings. The Skills page lists the skills that have a
-settings directory on this device, and lets you change them.
+This page changes what an individual skill is configured to do — for example
+an API key it needs, or a city it should use by default. It lists the skills
+that have settings on this device.
 
-![The skill settings page on a phone](images/skill-settings.png)
+![The Skill settings page](images/skills-wide.png)
+
+![The same page on a phone](images/skills-mobile.png)
+
+## Common tasks
+
+- **Change what a skill does** — pick the skill from the list, fill in the
+  form, and save.
+- **Edit a value the form does not show** — use the "Edit as JSON" button.
+- **Turn a skill off without removing it** — see "Turning a skill off" below.
 
 ## Where the files are
 
@@ -48,3 +58,9 @@ off or back on. Off means the skill id is added to
 `skills.blacklisted_skills` in your configuration layer: the skill stays
 installed and keeps its settings, it just does not load after the OVOS
 services next restart. Turning it on removes the entry again.
+
+## If it doesn't work
+
+If a skill does not show up here, it has no settings directory yet — check the
+[Abilities](abilities.md) page to confirm it is installed. For anything else,
+see [troubleshooting.md](troubleshooting.md).
