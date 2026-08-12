@@ -229,6 +229,25 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         check_host(policy, request)
         check_csrf(request)
 
+    def guard_page(request: Request) -> None:
+        """Guard an HTML page: same checks as ``guard``, but an unauthenticated
+        browser is sent to the login screen instead of getting a bare JSON 401.
+
+        Host and cross-site failures stay hard blocks (a real attack), only the
+        missing/invalid-token case becomes a redirect, so typing the device URL
+        lands on the login page rather than an error.
+        """
+        check_host(policy, request)
+        check_csrf(request)
+        try:
+            policy.check(request)
+        except HTTPException as err:
+            if err.status_code == status.HTTP_401_UNAUTHORIZED:
+                raise HTTPException(
+                    status_code=status.HTTP_303_SEE_OTHER,
+                    headers={"Location": "/login"}) from None
+            raise
+
     def guard_privileged(request: Request) -> AuthPolicy:
         """Anything that changes the software on the device.
 
@@ -247,7 +266,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         return policy
 
     public = APIRouter(dependencies=[Depends(guard_public)])
-    pages = APIRouter(dependencies=[Depends(guard)], include_in_schema=False)
+    pages = APIRouter(dependencies=[Depends(guard_page)], include_in_schema=False)
     api = APIRouter(prefix="/api", dependencies=[Depends(guard)])
     # Privileged routes inherit the host and cross-site checks from ``guard``
     # and add the always-a-token rule on top.
