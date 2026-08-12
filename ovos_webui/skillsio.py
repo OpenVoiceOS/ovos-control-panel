@@ -48,6 +48,10 @@ def list_skills() -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     if not root.is_dir():
         return out
+    # Scan the installed plugins ONCE and reuse it for every skill, instead of
+    # importing all skill packages twice per skill (loaded check + settingsmeta).
+    plugins = _skill_plugins()
+    installed = set(plugins)
     for child in sorted(root.iterdir()):
         if not child.is_dir() or child.name.startswith("."):
             continue
@@ -59,28 +63,34 @@ def list_skills() -> list[dict[str, Any]]:
         out.append({
             "skill_id": child.name,
             "has_settings": settings.is_file(),
-            "has_meta": find_settingsmeta(child.name) is not None,
-            "loaded": child.name in _installed_skill_ids(),
+            "has_meta": find_settingsmeta(child.name, plugins) is not None,
+            "loaded": child.name in installed,
         })
     return out
 
 
-def _installed_skill_ids() -> set:
-    """Return the skill ids that are installed as plugins."""
+def _skill_plugins() -> dict:
+    """Return the installed skill plugins map (id -> class).
+
+    ``find_plugins`` scans entry points and imports every skill package, so it
+    is expensive — callers that need it more than once (e.g. ``list_skills``)
+    must call this ONCE and thread the result through, not per skill.
+    """
     try:
         from ovos_plugin_manager.utils import PluginTypes, find_plugins
-        return set(find_plugins(PluginTypes.SKILL) or {})
+        return find_plugins(PluginTypes.SKILL) or {}
     except Exception:  # noqa: BLE001 # pragma: no cover - a broken plugin is not fatal
-        return set()
+        return {}
 
 
-def _skill_source_dir(skill_id: str) -> Path | None:
+def _installed_skill_ids(plugins: dict | None = None) -> set:
+    """Return the skill ids that are installed as plugins."""
+    return set(_skill_plugins() if plugins is None else plugins)
+
+
+def _skill_source_dir(skill_id: str, plugins: dict | None = None) -> Path | None:
     """Return the directory the skill package was installed into."""
-    try:
-        from ovos_plugin_manager.utils import PluginTypes, find_plugins
-        plugins = find_plugins(PluginTypes.SKILL) or {}
-    except Exception:  # noqa: BLE001 # pragma: no cover
-        return None
+    plugins = _skill_plugins() if plugins is None else plugins
     clazz = plugins.get(skill_id)
     if clazz is None:
         return None
@@ -91,17 +101,20 @@ def _skill_source_dir(skill_id: str) -> Path | None:
         return None
 
 
-def find_settingsmeta(skill_id: str) -> dict[str, Any] | None:
+def find_settingsmeta(skill_id: str,
+                      plugins: dict | None = None) -> dict[str, Any] | None:
     """Return the settingsmeta of ``skill_id``, or ``None``.
 
     The file is looked for in the skill settings directory first, then in the
-    directory the skill package was installed into.
+    directory the skill package was installed into. ``plugins`` is the
+    already-scanned installed-plugins map; pass it to avoid re-importing every
+    skill on each call.
     """
     validate_skill_id(skill_id)
     candidates: list[Path] = []
     sdir = skills_root() / skill_id
     candidates += [sdir / "settingsmeta.json", sdir / "settingsmeta.yaml", sdir / "settingsmeta.yml"]
-    src = _skill_source_dir(skill_id)
+    src = _skill_source_dir(skill_id, plugins)
     if src is not None:
         candidates += [src / "settingsmeta.json", src / "settingsmeta.yaml", src / "settingsmeta.yml"]
     for path in candidates:
@@ -149,11 +162,36 @@ def settings_meta(skill_id: str) -> dict[str, Any]:
 
 
 def write_settings(skill_id: str, data: dict[str, Any]) -> dict[str, Any]:
-    """Replace the settings of ``skill_id``. Returns the paths that changed."""
+    """Merge ``data`` into the settings of ``skill_id``. Returns changed paths.
+
+    ``settings.json`` is co-owned: the running skill process also writes it
+    (OAuth tokens, refresh tokens, first-run flags, counters). The page's data
+    is a snapshot taken when the form was opened, so replacing the whole file
+    would silently revert any runtime write the skill made in the meantime.
+    Instead, read the current file under the write lock and layer the page's
+    keys over it, so keys the page never showed are kept. The lock is
+    in-process, so this narrows — but cannot fully close — the window against
+    the separate skill process; a skill write landing between this read and
+    write is still lost. (A key removed in the raw editor is also kept, since a
+    merge cannot express deletion; the UI notes this.)
+    """
     if not isinstance(data, dict):
         raise SkillSettingsError("settings must be a mapping")
     path = settings_path(skill_id)
-    backup = atomic_write(path, json.dumps(data, indent=2, ensure_ascii=False))
+    from ovos_webui.fsutils import _WRITE_LOCK
+
+    with _WRITE_LOCK:
+        current: dict[str, Any] = {}
+        if path.exists():
+            try:
+                on_disk = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(on_disk, dict):
+                    current = on_disk
+            except (OSError, ValueError):
+                current = {}
+        merged = {**current, **data}
+        backup = atomic_write(path, json.dumps(merged, indent=2,
+                                               ensure_ascii=False))
     return {"path": str(path), "backup": str(backup) if backup else None}
 
 

@@ -23,6 +23,8 @@
   <a href="/translate" data-i18n="nav.translate">Translate</a>
   <a href="/backup" data-i18n="nav.backup">Backup</a>
   <a href="/about" data-i18n="nav.about">About</a>
+  <a href="/controls" data-i18n="nav.controls">Device</a>
+  <a href="/abilities" data-i18n="nav.abilities">Abilities</a>
 </nav>
 <main id="main" tabindex="-1">
   <p class="hint" data-i18n="plugins.what">Plugins add abilities to your device — a voice, a way to hear you, a way to answer.</p>
@@ -41,6 +43,8 @@
   </div>
   <details class="tech">
     <summary data-i18n="plugins.conflicts.summary">Dependency health</summary>
+    <p class="hint" data-i18n="plugins.conflicts.envCaveat">This reflects the web UI's own environment. On a device where the
+      web UI runs separately from the assistant (a split or containerized setup), it can differ from the device's environment.</p>
     <div class="card" id="conflicts" data-i18n="plugins.loading">Loading…</div>
   </details>
 
@@ -183,9 +187,16 @@ OvosWebUI.ready(function () {
       if (job.state === "running") {
         poll = setTimeout(function () { watch(id, job.next); }, 1000);
       } else {
-        OvosWebUI.say("msg", job.state === "done"
-          ? OvosWebUI.t("plugins.job.finished", "Finished. Restart the OVOS services to load the change.")
-          : OvosWebUI.t("plugins.job.failed", "The job failed. Read the output above."), job.state !== "done");
+        if (job.state === "done") {
+          OvosWebUI.sayHtml("msg", esc(OvosWebUI.t("plugins.job.finished.pre", "Finished. "))
+            + '<a href="/controls">' + esc(OvosWebUI.t("plugins.job.finished.link", "Restart the OVOS services")) + "</a>"
+            + esc(OvosWebUI.t("plugins.job.finished.post", " to load the change. "))
+            + esc(OvosWebUI.t("plugins.job.finished.settings.pre", "Then open "))
+            + '<a href="/config">' + esc(OvosWebUI.t("plugins.job.finished.settings.link", "Settings")) + "</a>"
+            + esc(OvosWebUI.t("plugins.job.finished.settings.post", " to make it active for its section.")));
+        } else {
+          OvosWebUI.say("msg", OvosWebUI.t("plugins.job.failed", "The job failed. Read the output above."), true);
+        }
         search(false);
       }
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });

@@ -123,7 +123,9 @@ def test_uninstall_delegates_to_the_device(token_client):
 def test_install_emits_a_plain_packages_list(monkeypatch):
     """No shell, no subprocess — the name travels as one bus-message field."""
     from ovos_utils.fakebus import FakeBus
+    from ovos_webui import updates
     monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    monkeypatch.setattr(updates, "latest_versions", lambda name: {})  # offline: bare name
     bus = FakeBus()
     seen = {}
     bus.on("ovos.pip.install.ovos_audio", lambda m: seen.setdefault("packages", m.data.get("packages")))

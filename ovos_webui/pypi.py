@@ -195,19 +195,48 @@ def _stale_or_empty(data: dict[str, Any] | None, error: str) -> dict[str, Any]:
     return {"fetched": None, "packages": {}, "error": error, "offline": True}
 
 
+#: A full ``distributions()`` walk of site-packages costs tens of ms and several
+#: handlers call ``installed_versions()`` more than once per request. Cache it
+#: briefly — the installed set only changes on an install, which prompts a
+#: service restart anyway.
+import threading as _threading
+
+_INSTALLED_CACHE: dict[str, Any] = {"ts": 0.0, "val": None}
+_INSTALLED_TTL = 15.0
+_INSTALLED_LOCK = _threading.Lock()
+
+
 def installed_versions() -> dict[str, str]:
     """Return the installed distribution names and versions, lowercased."""
+    import time
     from importlib.metadata import distributions
 
-    out: dict[str, str] = {}
-    for dist in distributions():
-        try:
-            name = dist.metadata["Name"]
-        except (KeyError, TypeError):  # pragma: no cover - broken metadata
-            continue
-        if name:
-            out[name.lower().replace("_", "-")] = dist.version or "unknown"
-    return out
+    def _fresh(now: float) -> bool:
+        cached = _INSTALLED_CACHE["val"]
+        return cached is not None and now - _INSTALLED_CACHE["ts"] <= _INSTALLED_TTL
+
+    now = time.monotonic()
+    if _fresh(now):
+        return _INSTALLED_CACHE["val"]
+
+    # Serialise the fill so a burst of concurrent first-requests does not each
+    # walk site-packages; the double-check inside the lock means only one thread
+    # does the scan and the rest reuse its result.
+    with _INSTALLED_LOCK:
+        now = time.monotonic()
+        if _fresh(now):
+            return _INSTALLED_CACHE["val"]
+        out: dict[str, str] = {}
+        for dist in distributions():
+            try:
+                name = dist.metadata["Name"]
+            except (KeyError, TypeError):  # pragma: no cover - broken metadata
+                continue
+            if name:
+                out[name.lower().replace("_", "-")] = dist.version or "unknown"
+        _INSTALLED_CACHE["val"] = out
+        _INSTALLED_CACHE["ts"] = now
+        return out
 
 
 def search(query: str = "", kind: str = "", refresh: bool = False,

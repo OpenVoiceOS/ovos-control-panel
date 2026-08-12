@@ -174,9 +174,13 @@ OvosWebUI.ready(function () {
     api("/api/plugins/jobs/" + encodeURIComponent(id) + "?since=" + since).then(function (job) {
       if (job.state === "running") { setTimeout(function () { jobWatch(id, job.next); }, 1000); }
       else {
-        OvosWebUI.say("msg", job.state === "done"
-          ? t("controls.installed", "Installed. Restart the OVOS services, then reload this page.")
-          : t("controls.installFailed", "That did not install. See the Plugins page for details."), job.state !== "done");
+        if (job.state === "done") {
+          OvosWebUI.sayHtml("msg", esc(t("controls.installed.pre", "Installed. "))
+            + '<a href="/controls">' + esc(t("controls.installed.link", "Restart the OVOS services")) + "</a>"
+            + esc(t("controls.installed.post", ", then reload this page.")));
+        } else {
+          OvosWebUI.say("msg", t("controls.installFailed", "That did not install. See the Plugins page for details."), true);
+        }
         loadCaps(true);
       }
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });

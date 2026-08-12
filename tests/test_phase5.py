@@ -168,9 +168,10 @@ def _wait_job(job, timeout=5.0):
 
 def test_install_delegates_over_the_bus_when_connected(monkeypatch):
     from ovos_utils.fakebus import FakeBus, Message
-    from ovos_webui import installer, pypi
+    from ovos_webui import installer, pypi, updates
 
     monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    monkeypatch.setattr(updates, "latest_versions", lambda name: {})  # offline: bare name
     bus = FakeBus()
     seen = {}
     # a voice plugin is targeted at the audio service, and it replies on the
@@ -181,6 +182,28 @@ def test_install_delegates_over_the_bus_when_connected(monkeypatch):
     _wait_job(job)
     assert seen["pkgs"] == ["ovos-tts-plugin-mimic3"]  # routed to the audio service
     assert job.state == "done"
+
+
+def test_install_honors_the_release_channel(monkeypatch):
+    import time
+    from ovos_utils.fakebus import FakeBus
+    from ovos_webui import installer, pypi, updates
+
+    monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    monkeypatch.setattr(updates, "latest_versions",
+                        lambda name: {"stable": "0.9.0", "alpha": "1.0.0a1"})
+    monkeypatch.setattr(updates, "release_channel", lambda: "alpha")
+    bus = FakeBus()
+    seen = {}
+    bus.on("ovos.pip.install.ovos_audio",
+           lambda m: seen.setdefault("pkgs", m.data.get("packages")))
+    installer.Installer().install("ovos-tts-plugin-mimic3", bus=bus)
+    for _ in range(200):
+        if "pkgs" in seen:
+            break
+        time.sleep(0.01)
+    # an alpha-channel install pins the pre-release, not the bare name
+    assert seen["pkgs"] == ["ovos-tts-plugin-mimic3==1.0.0a1"]
 
 
 def test_bus_install_reports_the_service_failure(monkeypatch):

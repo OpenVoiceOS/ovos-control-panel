@@ -55,7 +55,7 @@ OvosWebUI.ready(function () {
         ? '<p class="hint">' + esc(s.description) + "</p>"
         : '<p class="hint">' + esc(t("abilities.noDesc", "This skill does not describe itself.")) + "</p>";
       var settings = s.configurable
-        ? ' <a href="/skills" class="small" aria-label="'
+        ? ' <a href="/skills#' + esc(s.id) + '" class="small" aria-label="'
           + esc(t("abilities.settings", "Settings") + " — " + s.name) + '">'
           + esc(t("abilities.settings", "Settings")) + "</a>" : "";
       return "<li><strong>" + esc(s.name) + "</strong>" + settings

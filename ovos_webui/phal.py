@@ -46,12 +46,12 @@ MIC_CAPABILITY = {
 }
 
 
-def installed_phal_plugins() -> list[str]:
+def installed_phal_plugins(have: dict[str, str] | None = None) -> list[str]:
     """Return the installed ``ovos-*PHAL*-plugin-*`` distribution names."""
     from ovos_webui.pypi import classify, installed_versions
 
-    return sorted(name for name in installed_versions()
-                  if classify(name) == "phal")
+    have = installed_versions() if have is None else have
+    return sorted(name for name in have if classify(name) == "phal")
 
 
 def capability_status() -> dict[str, Any]:
@@ -72,4 +72,4 @@ def capability_status() -> dict[str, Any]:
             "needs_admin": spec["admin"],
             "suggest": suggest,
         }
-    return {"capabilities": out, "phal_plugins": installed_phal_plugins()}
+    return {"capabilities": out, "phal_plugins": installed_phal_plugins(have)}

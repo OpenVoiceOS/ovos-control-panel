@@ -205,33 +205,43 @@ class Installer:
     # installs in the right container; the broadcast topic is the fallback for a
     # kind with no known home. Either way the reply comes back on the base
     # ``ovos.pip.install.complete`` / ``.failed`` topics.
+    @staticmethod
+    def _channel_spec(package: str) -> str:
+        """Return ``package==<latest-for-channel>``, or the bare name offline.
+
+        The version comes from a trusted PyPI lookup, never the request. Pinning
+        the channel's latest is what makes the ``alpha`` channel install a
+        pre-release — the installer service otherwise does a plain install that
+        pip resolves to the newest *stable* regardless of the channel setting.
+        """
+        try:
+            from ovos_webui.updates import latest_versions, release_channel
+            latest = latest_versions(package).get(release_channel())
+            if latest:
+                return f"{package}=={latest}"
+        except Exception:  # noqa: BLE001 - offline: ask for a plain install
+            pass
+        return package
+
     def install(self, package: str, check_pypi: bool = True, bus=None) -> Job:
-        """Ask the right service to install a plugin. Name checked, then PyPI."""
+        """Ask the right service to install a plugin. Name checked, then PyPI.
+
+        The requested channel is honoured (an ``alpha``-channel install pulls a
+        pre-release), the same as upgrade — otherwise switching to ``alpha`` and
+        installing a new plugin would silently get the stable build.
+        """
         validate_package_name(package)
         if check_pypi:
             from ovos_webui.pypi import details
             details(package)  # raises LookupError when PyPI does not have it
         return self._start_bus("install", package, "ovos.pip.install",
-                               bus, [package])
+                               bus, [self._channel_spec(package)])
 
     def upgrade(self, package: str, bus=None) -> Job:
-        """Ask the right service to upgrade a plugin.
-
-        The installer service does a plain install, so the newest version is
-        pinned here (from a trusted PyPI lookup, never from the request) to
-        force the move; on the ``alpha`` channel that may be a pre-release.
-        """
+        """Ask the right service to upgrade a plugin to the channel's latest."""
         validate_package_name(package)
-        spec = package
-        try:
-            from ovos_webui.updates import latest_versions, release_channel
-            latest = latest_versions(package).get(release_channel())
-            if latest:
-                spec = f"{package}=={latest}"
-        except Exception:  # noqa: BLE001 - offline: ask for a plain install
-            pass
         return self._start_bus("upgrade", package, "ovos.pip.install",
-                               bus, [spec])
+                               bus, [self._channel_spec(package)])
 
     def uninstall(self, package: str, bus=None) -> Job:
         """Ask the right service to remove a plugin."""

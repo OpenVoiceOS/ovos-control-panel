@@ -56,6 +56,16 @@
     box.hidden = false;
   }
 
+  // Like say(), but the caller has already escaped/built the markup (e.g. to
+  // include a link). Used sparingly, only where a message needs an inline link.
+  function sayHtml(id, html, bad) {
+    var box = el(id);
+    if (!box) { return; }
+    box.innerHTML = html;
+    box.className = "msg " + (bad ? "err" : "ok");
+    box.hidden = false;
+  }
+
   function esc(value) {
     return String(value === null || value === undefined ? "" : value)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -213,11 +223,10 @@
     if (b && status && status.warning) { b.textContent = status.warning; b.hidden = false; }
   }
 
-  // One date renderer for the whole UI: "11 Aug 2026, 10:12" — never a locale
-  // DD/MM vs MM/DD guess, never trailing seconds. Accepts a Date, epoch ms, or
-  // a "YYYYMMDDTHHMMSSZ" backup stamp.
-  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  // One date renderer for the whole UI: locale-aware ("11 Aug 2026, 10:12" in
+  // English, but the device's own language elsewhere — never a hardcoded
+  // English month name). Accepts a Date, epoch ms, or a "YYYYMMDDTHHMMSSZ"
+  // backup stamp.
   function fmtDateTime(value) {
     var d;
     if (value instanceof Date) {
@@ -229,13 +238,15 @@
       if (!m) { return String(value); }
       d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
     }
-    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
-    return d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear()
-      + ", " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+    // The device language, the same one applyI18n/setLangDir put on <html
+    // lang>; undefined falls back to the browser's own locale.
+    var lang = document.documentElement.lang || undefined;
+    return d.toLocaleDateString(lang, {day: "numeric", month: "short", year: "numeric"})
+      + ", " + d.toLocaleTimeString(lang, {hour: "2-digit", minute: "2-digit"});
   }
 
   window.OvosWebUI = {
-    api: api, el: el, say: say, esc: esc, t: t, applyI18n: applyI18n,
+    api: api, el: el, say: say, sayHtml: sayHtml, esc: esc, t: t, applyI18n: applyI18n,
     fmtDateTime: fmtDateTime,
     ready: function (fn) {
       document.addEventListener("DOMContentLoaded", function () {

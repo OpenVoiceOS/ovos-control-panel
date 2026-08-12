@@ -240,8 +240,9 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         if not policy.token:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="this needs a token. Set webui.access_token in "
-                       "mycroft.conf, or start the service with --token.")
+                detail="This device has no access token yet. Set one on the "
+                       "Settings page to enable installing, speaking, and "
+                       "device controls.")
         policy.check(request)
         return policy
 
@@ -282,6 +283,10 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             "signed_in": True,
             "insecure": policy.insecure,
             "warning": policy.warning,
+            # No token yet means device controls / installs / speak will 403;
+            # the UI uses this to prompt the owner to set one during onboarding,
+            # even on loopback where `insecure` is False.
+            "has_token": bool(policy.token),
             "lang": lang,
         }
 
@@ -543,10 +548,10 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             raise HTTPException(400, "that is not a language code")
         from ovos_webui.pypi import installed_versions
         have = installed_versions()
+        data = recommends.for_language(lang)  # computed once, reused below
         plugins = [dict(p, installed=p["module"].lower() in have)
-                   for p in recommends.recommended_plugins(lang)]
-        return {"lang": lang, "profiles": recommends.for_language(lang),
-                "plugins": plugins}
+                   for p in recommends.recommended_plugins(lang, data)]
+        return {"lang": lang, "profiles": data, "plugins": plugins}
 
     @privileged.post("/plugins/install")
     def api_install(body: PackageBody) -> dict[str, Any]:
@@ -793,9 +798,12 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             # an unlocked session cannot silently lock the owner out.
             if not policy.matches((body.current or "").strip()):
                 raise HTTPException(403, "the current token is not right")
-        configdata = configio.read_user_config()
-        configio.set_in(configdata, ["webui", "access_token"], new)
-        configio.write_user_config(configdata, bus=state["bus"])
+        # Route through mutate so a concurrent config save cannot revert the
+        # token (or the token save clobber another change) — the lost-update
+        # race configio.mutate exists to close.
+        configio.mutate(
+            lambda user: configio.set_in(user, ["webui", "access_token"], new),
+            bus=state["bus"])
         policy.token = new  # take effect at once for the rest of this process
         # Keep this session signed in under the new token.
         response.set_cookie(COOKIE_NAME, new, httponly=True, samesite="strict",
@@ -830,7 +838,10 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             lambda user: configio.set_in(
                 user, ["intents", "persona", "default_persona"], name),
             bus=state["bus"])
-        result.update({"active": name, "persona_id": persona_id})
+        # Warn if the persona's solvers are not installed — activating it is the
+        # moment the user commits, so a silently-broken persona must be flagged.
+        result.update({"active": name, "persona_id": persona_id,
+                       "missing_solvers": personas.missing_solvers(data)})
         return result
 
     @api.get("/personas/{persona_id}")

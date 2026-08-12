@@ -410,6 +410,24 @@ input[type="range"] {
   accent-color: var(--accent);
   height: 1.6rem;
 }
+/* The default thumb (~16px in most browsers) sits under the 24px WCAG touch
+ * target floor; size it explicitly in both engines. */
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+input[type=range]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
 /* The quiet per-page footer that points at the technical manual. */
 .foot { margin-top: 2.2rem; text-align: center; }
 /* Every in-page link wears the brand red — no browser-default blue. */
@@ -570,7 +588,7 @@ ul.rowlist li .when { color: var(--muted); font-size: 0.85rem; }
 
 /* ── lists and code ───────────────────────────────────────────────────────── */
 ul.plain { list-style: none; padding: 0; margin: 0; }
-ul.plain li { padding: 0.6rem 0; border-bottom: 1px solid var(--line); }
+ul.plain li { padding: 0.6rem 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 ul.plain li:last-child { border-bottom: none; }
 /* A pick list: each row is a quiet text button, not a red action button. */
 ul.picklist button.pick {
