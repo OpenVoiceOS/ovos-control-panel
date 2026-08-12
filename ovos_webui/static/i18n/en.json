@@ -515,7 +515,7 @@
  "dash.token.notice": "This device has no access token yet — set one to enable installing, speaking, and device controls. ",
  "dash.token.notice.link": "Set one now",
  "skills.raw.note": "Saving merges your changes: you can add or change values, but removing a key here does not delete it — the skill keeps its own settings.",
- "about.ai_assisted": "Parts of this interface were built with AI assistance.",
+ "about.ai_assisted": "Made with the help of AI.",
  "nav.network": "Network",
  "hdr.network": "Wi-Fi",
  "network.intro": "See the networks the device can reach and join one. This runs on the device through its network-manager plugin.",
