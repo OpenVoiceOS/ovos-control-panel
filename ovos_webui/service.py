@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import time
 import mimetypes
 import os
 from contextlib import asynccontextmanager
@@ -59,6 +60,10 @@ TOO_LARGE = getattr(status, "HTTP_413_CONTENT_TOO_LARGE",
                     getattr(status, "HTTP_413_REQUEST_ENTITY_TOO_LARGE", 413))
 
 STATIC_DIR = Path(__file__).parent / "static"
+
+#: A quiet spell at least this long resets the failed-login count (module level
+#: so tests can shorten it).
+THROTTLE_DECAY = 30.0
 PAGES = {
     "/": "index.html",
     "/config": "config.html",
@@ -388,26 +393,25 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             "lang": lang,
         }
 
-    #: Wrong tokens in a row, PER SOURCE, so one caller's guessing cannot slow
-    #: the delay another (the real owner) pays on their own first mistake.
-    login_throttle: dict[str, int] = {}
+    #: Wrong tokens in a row, across all callers, to slow a token guesser. Kept
+    #: global on purpose: a per-source count is defeated by a reverse proxy (every
+    #: request then carries the proxy's IP) and by IPv6 source rotation. The count
+    #: decays after a quiet spell, so an honest typo made once the guessing has
+    #: stopped barely waits at all.
+    login_throttle = {"fails": 0, "last": 0.0}
     #: The longest a failed sign in ever waits.
     MAX_LOGIN_DELAY = 5.0
-    #: Cap the number of tracked sources so the map cannot grow without bound.
-    MAX_THROTTLE_KEYS = 256
-
-    def _client_key(request: Request) -> str:
-        return request.client.host if request.client else "?"
 
     async def _throttle_after_failed_login(request: Request) -> None:
-        key = _client_key(request)
-        if key not in login_throttle and len(login_throttle) >= MAX_THROTTLE_KEYS:
-            login_throttle.clear()  # crude bound: a flood of sources resets all
-        fails = login_throttle.get(key, 0) + 1
-        login_throttle[key] = fails
-        LOG.warning(f"ovos-webui: a sign in was refused from {key} "
-                    f"({fails} in a row)")
-        delay = min(fails * 0.5, MAX_LOGIN_DELAY)
+        now = time.monotonic()
+        if now - login_throttle["last"] > THROTTLE_DECAY:
+            login_throttle["fails"] = 0
+        login_throttle["fails"] += 1
+        login_throttle["last"] = now
+        who = request.client.host if request.client else "?"
+        LOG.warning(f"ovos-webui: a sign in was refused from {who} "
+                    f"({login_throttle['fails']} in a row)")
+        delay = min(login_throttle["fails"] * 0.5, MAX_LOGIN_DELAY)
         await asyncio.sleep(delay)
 
     @public.post("/api/login")
@@ -432,7 +436,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
                 return RedirectResponse("/login?bad=1", status_code=303)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                 detail="that token is not right")
-        login_throttle.pop(_client_key(request), None)
+        login_throttle["fails"] = 0
         answer = _login_answer(request, from_form, {"ok": True, "auth": True})
         answer.set_cookie(COOKIE_NAME, supplied, httponly=True,
                           samesite="strict", path="/", max_age=30 * 24 * 3600)

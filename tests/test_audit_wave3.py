@@ -38,23 +38,27 @@ def test_machine_translate_caps_the_total_size():
     assert "too much text" in str(exc.value)
 
 
-def test_login_throttle_is_per_source():
+def test_login_throttle_decays_after_a_quiet_spell(monkeypatch):
+    # The throttle is global (proxy- and IP-rotation-safe) but its count decays
+    # after a quiet spell, so an honest typo once the guessing has stopped waits
+    # barely at all. Shorten the decay window so the quiet spell is real but fast.
+    import time as perf
     from starlette.testclient import TestClient
     from ovos_utils.fakebus import FakeBus
+    from ovos_webui import service
     from ovos_webui.service import create_app
 
+    monkeypatch.setattr(service, "THROTTLE_DECAY", 0.15, raising=False)
     app = create_app(bus=FakeBus(), host="0.0.0.0", token="realtoken",
                      connect_bus=False, hostnames=("testserver",))
     hdrs = {"Origin": "http://testserver", "Sec-Fetch-Site": "same-origin"}
-    attacker = TestClient(app, client=("10.0.0.9", 5000))
-    owner = TestClient(app, client=("10.0.0.5", 5000))
-    # The attacker burns three wrong tokens from its own source (a global
-    # counter would then make any next failure wait ~2s).
-    for _ in range(3):
-        attacker.post("/api/login", json={"token": "WRONG"}, headers=hdrs)
-    # The owner's very first mistyped token must pay only its own small delay
-    # (~0.5s), not the attacker's accumulated one.
-    start = time.monotonic()
-    owner.post("/api/login", json={"token": "also-wrong-once"}, headers=hdrs)
-    elapsed = time.monotonic() - start
-    assert elapsed < 1.0, f"owner paid {elapsed:.2f}s for its first mistake"
+    c = TestClient(app)
+    for _ in range(2):  # escalate the count
+        c.post("/api/login", json={"token": "WRONG"}, headers=hdrs)
+    perf.sleep(0.25)  # a quiet spell longer than THROTTLE_DECAY passes
+    start = perf.perf_counter()
+    c.post("/api/login", json={"token": "wrong-again"}, headers=hdrs)
+    elapsed = perf.perf_counter() - start
+    # After the decay the count is back to one, so this waits ~0.5s, not the
+    # ~1.5s a never-resetting counter (the old per-source code) would inflict.
+    assert elapsed < 1.0, f"decayed delay should be small, was {elapsed:.2f}s"
