@@ -387,17 +387,26 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             "lang": lang,
         }
 
-    #: How many wrong tokens in a row we have seen, to slow a guesser down.
-    login_throttle = {"fails": 0}
+    #: Wrong tokens in a row, PER SOURCE, so one caller's guessing cannot slow
+    #: the delay another (the real owner) pays on their own first mistake.
+    login_throttle: dict[str, int] = {}
     #: The longest a failed sign in ever waits.
     MAX_LOGIN_DELAY = 5.0
+    #: Cap the number of tracked sources so the map cannot grow without bound.
+    MAX_THROTTLE_KEYS = 256
+
+    def _client_key(request: Request) -> str:
+        return request.client.host if request.client else "?"
 
     async def _throttle_after_failed_login(request: Request) -> None:
-        login_throttle["fails"] += 1
-        LOG.warning("ovos-webui: a sign in was refused from "
-                    f"{request.client.host if request.client else '?'} "
-                    f"({login_throttle['fails']} in a row)")
-        delay = min(login_throttle["fails"] * 0.5, MAX_LOGIN_DELAY)
+        key = _client_key(request)
+        if key not in login_throttle and len(login_throttle) >= MAX_THROTTLE_KEYS:
+            login_throttle.clear()  # crude bound: a flood of sources resets all
+        fails = login_throttle.get(key, 0) + 1
+        login_throttle[key] = fails
+        LOG.warning(f"ovos-webui: a sign in was refused from {key} "
+                    f"({fails} in a row)")
+        delay = min(fails * 0.5, MAX_LOGIN_DELAY)
         await asyncio.sleep(delay)
 
     @public.post("/api/login")
@@ -413,14 +422,16 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             return _login_answer(request, from_form, {"ok": True, "auth": False})
         if not policy.matches(supplied):
             # There is no account lock-out, so slow a guesser down: each wrong
-            # try in a row waits a little longer, up to a few seconds. A single
-            # mistyped token barely notices; a script trying thousands cannot.
+            # try in a row from the SAME source waits a little longer, up to a
+            # few seconds. One caller's mistyped token barely notices; a script
+            # trying thousands from one place cannot, and it cannot make another
+            # caller's first mistake pay its accumulated delay.
             await _throttle_after_failed_login(request)
             if from_form:
                 return RedirectResponse("/login?bad=1", status_code=303)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                 detail="that token is not right")
-        login_throttle["fails"] = 0
+        login_throttle.pop(_client_key(request), None)
         answer = _login_answer(request, from_form, {"ok": True, "auth": True})
         answer.set_cookie(COOKIE_NAME, supplied, httponly=True,
                           samesite="strict", path="/", max_age=30 * 24 * 3600)

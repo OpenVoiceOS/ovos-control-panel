@@ -285,6 +285,11 @@ def machine_translate(lines: list[str], source: str, target: str,
         raise TranslateError("send a list of lines")
     if len(lines) > MAX_LINES:
         raise TranslateError("that is too many lines")
+    # Cap the total size too, the same way write_override does — this is the one
+    # path that dispatches each line to a live (possibly paid/quota) translation
+    # backend, so an oversized body must be refused before it is sent.
+    if sum(len(line.encode("utf-8")) for line in lines) > MAX_RESOURCE_BYTES:
+        raise TranslateError("that is too much text to translate at once")
     available = translation_plugins()
     if not available:
         raise TranslateError(
