@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Sensors — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.sensors">Sensors</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="sensors.intro">Live readings from the sensors on the device — temperature, CPU
+    load, battery, and anything else a sensor plugin reports. The device sends a reading whenever a sensor
+    changes, so values fill in and update on their own. This needs the ovos-PHAL-sensors plugin.</p>
+
+  <section class="card" id="section-sensors">
+    <ul class="plain rowlist" id="sensor-list"></ul>
+    <p class="hint" id="sensor-updated"></p>
+    <div class="msg" id="msg-sensors" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t, say = OvosWebUI.say;
+  var timer = null;
+
+  function unit(s) {
+    var a = s.attributes || {};
+    return a.unit_of_measurement || a.unit || "";
+  }
+
+  function stateText(s) {
+    if (s.kind === "binary") {
+      var on = s.state === true || s.state === "on" || s.state === "true" || s.state === 1;
+      return on ? t("sensors.on", "on") : t("sensors.off", "off");
+    }
+    var u = unit(s);
+    return esc(s.state) + (u ? " " + esc(u) : "");
+  }
+
+  function render(list) {
+    var ul = el("sensor-list");
+    ul.innerHTML = "";
+    if (!list.length) {
+      var li = document.createElement("li");
+      li.className = "hint";
+      li.textContent = t("sensors.none",
+        "No sensors yet. Install ovos-PHAL-sensors on the device, or wait for the first reading.");
+      ul.appendChild(li);
+      return;
+    }
+    list.forEach(function (s) {
+      var li = document.createElement("li");
+      var label = (s.device_name ? s.device_name + " · " : "") + (s.name || s.sensor_id);
+      li.innerHTML = '<span class="name">' + esc(label) + "</span> "
+        + '<span class="slug">' + stateText(s) + "</span>";
+      ul.appendChild(li);
+    });
+  }
+
+  function load() {
+    api("/api/sensors").then(function (d) {
+      el("msg-sensors").hidden = true;
+      render(d.sensors || []);
+      el("sensor-updated").textContent = (d.sensors && d.sensors.length)
+        ? t("sensors.updated", "Updates on their own as the device reports.") : "";
+    }).catch(function (e) {
+      say("msg-sensors", e.message, true);
+    });
+  }
+
+  load();
+  timer = setInterval(load, 5000);
+  window.addEventListener("beforeunload", function () { if (timer) { clearInterval(timer); } });
+});
+</script>
+</body>
+</html>

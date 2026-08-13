@@ -908,5 +908,12 @@
  "text.normal": "normal",
  "text.large": "large",
  "text.xlarge": "largest",
- "transformers.confirmSave": "Save these changes? The current settings are kept as a backup."
+ "transformers.confirmSave": "Save these changes? The current settings are kept as a backup.",
+ "hdr.sensors": "Sensors",
+ "nav.sensors": "Sensors",
+ "sensors.intro": "Live readings from the sensors on the device — temperature, CPU load, battery, and anything else a sensor plugin reports. The device sends a reading whenever a sensor changes, so values fill in and update on their own. This needs the ovos-PHAL-sensors plugin.",
+ "sensors.none": "No sensors yet. Install ovos-PHAL-sensors on the device, or wait for the first reading.",
+ "sensors.on": "on",
+ "sensors.off": "off",
+ "sensors.updated": "Updates on their own as the device reports."
 }
