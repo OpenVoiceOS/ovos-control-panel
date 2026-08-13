@@ -181,21 +181,50 @@ OvosWebUI.ready(function () {
 
   function pipelineValue() { return JSON.parse(el("pipeline-list").dataset.value || "[]"); }
 
+  // Rebuilding the list on every reorder throws keyboard focus back to the
+  // body, and a screen reader hears nothing. So after each change, restore
+  // focus to the same button on the row that moved, and announce what happened
+  // in the pipeline's polite status region.
+  function announcePipeline(stage, pos, total) {
+    OvosWebUI.say("msg-pipeline",
+      t("voice.pipeline.moved", "Moved {n} to position {p} of {t}.")
+        .replace("{n}", stage).replace("{p}", pos).replace("{t}", total));
+  }
+
   el("pipeline-list").addEventListener("click", function (e) {
     var btn = e.target.closest("button");
     if (!btn) { return; }
     var value = pipelineValue();
+    var focusSel = null, announce = null, removed = null;
     if (btn.dataset.up !== undefined) {
       var i = +btn.dataset.up;
-      if (i > 0) { var tmp = value[i - 1]; value[i - 1] = value[i]; value[i] = tmp; }
+      if (i > 0) {
+        var tmp = value[i - 1]; value[i - 1] = value[i]; value[i] = tmp;
+        focusSel = '[data-up="' + (i - 1) + '"]';
+        announce = {stage: value[i - 1], pos: i, total: value.length};
+      }
     } else if (btn.dataset.down !== undefined) {
       var j = +btn.dataset.down;
-      if (j < value.length - 1) { var tmp2 = value[j]; value[j] = value[j + 1]; value[j + 1] = tmp2; }
+      if (j < value.length - 1) {
+        var tmp2 = value[j]; value[j] = value[j + 1]; value[j + 1] = tmp2;
+        focusSel = '[data-down="' + (j + 1) + '"]';
+        announce = {stage: value[j + 1], pos: j + 2, total: value.length};
+      }
     } else if (btn.dataset.remove !== undefined) {
+      removed = value[+btn.dataset.remove];
       value.splice(+btn.dataset.remove, 1);
     }
     current.fields.pipeline.value = value;
     renderPipeline(current.fields.pipeline);
+    if (focusSel) {
+      var again = el("pipeline-list").querySelector(focusSel);
+      if (again) { again.focus(); }
+      if (announce) { announcePipeline(announce.stage, announce.pos, announce.total); }
+    } else if (removed !== null) {
+      el("pipeline-add").focus();
+      OvosWebUI.say("msg-pipeline",
+        t("voice.pipeline.removed", "Removed {n}.").replace("{n}", removed));
+    }
   });
 
   el("pipeline-add").addEventListener("click", function () {

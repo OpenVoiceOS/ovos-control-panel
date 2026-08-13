@@ -895,5 +895,9 @@
  "wallpaper.byUrl": "أو عيّن واحدة بعنوانها",
  "wallpaper.set": "تعيين",
  "wallpaper.setting": "جارٍ التعيين…",
- "wallpaper.setDone": "تم تعيين الخلفية."
+ "wallpaper.setDone": "تم تعيين الخلفية.",
+ "voice.pipeline.moved": "نُقل {n} إلى الموضع {p} من {t}.",
+ "voice.pipeline.removed": "أُزيل {n}.",
+ "wallpaper.setThis": "تعيين الخلفية: {n}",
+ "wallpaper.brokenThumb": "تعذّر تحميل الخلفية: {n}"
 }
