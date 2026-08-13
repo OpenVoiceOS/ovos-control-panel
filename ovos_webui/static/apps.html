@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Apps — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.apps">Apps</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="apps.intro">Launch and close the desktop applications a device with a screen
+    knows about. This needs the app-launcher plugin on the device; without it the list stays empty.</p>
+
+  <section class="card" id="section-apps">
+    <div class="row">
+      <input type="text" id="apps-filter" data-i18n-attr="placeholder:apps.filter"
+        placeholder="filter" autocomplete="off">
+      <button class="secondary" id="apps-reload" data-i18n="apps.reload">Reload</button>
+    </div>
+    <ul class="plain rowlist" id="apps-list"></ul>
+    <div class="msg" id="msg-apps" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t, say = OvosWebUI.say;
+  var all = [];
+
+  function render() {
+    var ul = el("apps-list");
+    var q = el("apps-filter").value.trim().toLowerCase();
+    var apps = q ? all.filter(function (a) { return a.name.toLowerCase().indexOf(q) >= 0; }) : all;
+    ul.innerHTML = "";
+    if (!apps.length) {
+      var li = document.createElement("li");
+      li.className = "hint";
+      li.textContent = all.length
+        ? t("apps.noneMatch", "No application matches that filter.")
+        : t("apps.none", "No applications. Is the app-launcher plugin installed on the device?");
+      ul.appendChild(li);
+      return;
+    }
+    apps.forEach(function (a) {
+      var li = document.createElement("li");
+      li.innerHTML = '<span class="name">' + esc(a.name) + "</span> "
+        + (a.exec ? '<span class="slug">' + esc(a.exec) + "</span> " : "")
+        + '<button data-launch="1">' + esc(t("apps.launch", "Launch")) + "</button> "
+        + '<button class="secondary" data-close="1">' + esc(t("apps.close", "Close")) + "</button>";
+      li.querySelector("[data-launch]").addEventListener("click", function () { act("launch", a.name); });
+      li.querySelector("[data-close]").addEventListener("click", function () { act("close", a.name); });
+      ul.appendChild(li);
+    });
+  }
+
+  function load() {
+    say("msg-apps", t("apps.loading", "Loading…"));
+    api("/api/apps").then(function (d) {
+      if (!d.available) {
+        say("msg-apps", t("apps.unavailable", "The app-launcher did not answer. Is it installed on the device?"), true);
+        all = []; render(); return;
+      }
+      el("msg-apps").hidden = true;
+      all = d.apps || [];
+      render();
+    }).catch(function (e) { say("msg-apps", e.message, true); });
+  }
+
+  function act(which, name) {
+    say("msg-apps", (which === "launch" ? t("apps.launching", "Launching {n}…") : t("apps.closing", "Closing {n}…"))
+      .replace("{n}", name));
+    api("/api/apps/" + which, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({name: name})
+    }).then(function (d) {
+      if (d.success) {
+        say("msg-apps", (which === "launch" ? t("apps.launched", "Launched {n}.") : t("apps.closed", "Closed {n}."))
+          .replace("{n}", d.name));
+      } else {
+        say("msg-apps", d.error || t("apps.unavailable",
+          "The app-launcher did not answer. Is it installed on the device?"), true);
+      }
+    }).catch(function (e) { say("msg-apps", e.message, true); });
+  }
+
+  el("apps-reload").addEventListener("click", load);
+  el("apps-filter").addEventListener("input", render);
+  load();
+});
+</script>
+</body>
+</html>
