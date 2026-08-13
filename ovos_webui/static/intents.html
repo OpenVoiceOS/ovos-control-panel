@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Intents — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.intents">Intents</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="intents.intro">Look inside what the device understands. Try a sentence to see
+    which intent it would match, see which skills are active for a follow-up, and browse every registered
+    intent. Nothing here speaks to you or runs a skill — it only inspects.</p>
+
+  <section class="card" id="section-dry">
+    <h2 data-i18n="intents.dry.title">Try a sentence</h2>
+    <p class="hint" data-i18n="intents.dry.desc">Type a sentence the way you would say it. The device reports
+      the intent it would match, without answering or running the skill.</p>
+    <div class="row">
+      <input type="text" id="dry-utterance" data-i18n-attr="placeholder:intents.dry.placeholder"
+        placeholder="what time is it" autocomplete="off">
+      <button id="dry-run" data-i18n="intents.dry.run">Test</button>
+    </div>
+    <div id="dry-result"></div>
+    <div class="msg" id="msg-dry" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <section class="card" id="section-active">
+    <h2 data-i18n="intents.active.title">Active skills</h2>
+    <p class="hint" data-i18n="intents.active.desc">The skills the device is listening to for a follow-up,
+      most recent first. A skill here can answer a reply that has no wake word.</p>
+    <ul class="plain rowlist" id="active-list"></ul>
+    <div class="row">
+      <input type="text" id="activate-id" data-i18n-attr="placeholder:intents.active.placeholder"
+        placeholder="skill.id" autocomplete="off">
+      <button class="secondary" id="activate" data-i18n="intents.active.activate">Activate</button>
+    </div>
+    <div class="msg" id="msg-active" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <section class="card" id="section-list">
+    <h2 data-i18n="intents.list.title">All intents</h2>
+    <p class="hint" data-i18n="intents.list.desc">Every intent registered on the device, with its skill,
+      language and how it is matched. Filter by a skill id, and open one to see its full definition.</p>
+    <div class="row">
+      <input type="text" id="intent-filter" data-i18n-attr="placeholder:intents.list.filter"
+        placeholder="filter by skill id" autocomplete="off">
+      <button class="secondary" id="intent-load" data-i18n="intents.list.reload">Reload</button>
+    </div>
+    <ul class="plain rowlist" id="intent-list"></ul>
+    <div class="msg" id="msg-list" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t, say = OvosWebUI.say;
+
+  // ── dry run ───────────────────────────────────────────────────────────────
+  function showIntent(data) {
+    var box = el("dry-result");
+    if (!data.available) {
+      box.innerHTML = '<p class="hint">' + esc(t("intents.unavailable",
+        "The intent service did not answer. Is the device running?")) + '</p>';
+      return;
+    }
+    var it = data.intent;
+    if (!it) {
+      box.innerHTML = '<p class="hint">' + esc(t("intents.dry.noMatch", "No intent would match that.")) + '</p>';
+      return;
+    }
+    var rows = [
+      [t("intents.field.skill", "Skill"), it.skill_id],
+      [t("intents.field.intent", "Intent"), it.intent_name],
+      [t("intents.field.service", "Matched by"), it.intent_service],
+      [t("intents.field.handler", "Handler"), it.handler]
+    ];
+    var html = '<dl class="kv">';
+    rows.forEach(function (r) {
+      if (r[1]) { html += '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>'; }
+    });
+    html += '</dl>';
+    box.innerHTML = html;
+  }
+
+  function runDry() {
+    var utt = el("dry-utterance").value.trim();
+    if (!utt) { return; }
+    say("msg-dry", t("intents.dry.testing", "Testing…"));
+    api("/api/intents/dry-run", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({utterance: utt})
+    }).then(function (d) {
+      el("msg-dry").hidden = true;
+      showIntent(d);
+    }).catch(function (e) { say("msg-dry", e.message, true); });
+  }
+
+  // ── active skills ─────────────────────────────────────────────────────────
+  function renderActive(skills) {
+    var ul = el("active-list");
+    ul.innerHTML = "";
+    if (!skills.length) {
+      var li = document.createElement("li");
+      li.className = "hint";
+      li.textContent = t("intents.active.none", "No skills are active right now.");
+      ul.appendChild(li);
+      return;
+    }
+    skills.forEach(function (id) {
+      var li = document.createElement("li");
+      li.innerHTML = '<span class="name">' + esc(id) + '</span> '
+        + '<button class="danger" data-off="1">' + esc(t("intents.active.deactivate", "Deactivate")) + '</button>';
+      li.querySelector("[data-off]").addEventListener("click", function () { setActive(id, false); });
+      ul.appendChild(li);
+    });
+  }
+
+  function loadActive() {
+    api("/api/intents/active").then(function (d) {
+      if (!d.available) { say("msg-active", t("intents.unavailable",
+        "The intent service did not answer. Is the device running?"), true); renderActive([]); return; }
+      el("msg-active").hidden = true;
+      renderActive(d.skills || []);
+    }).catch(function (e) { say("msg-active", e.message, true); });
+  }
+
+  function setActive(id, active) {
+    say("msg-active", t("transformers.saving", "Saving…"));
+    api("/api/intents/skills/" + encodeURIComponent(id) + "/active", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({active: active})
+    }).then(function () {
+      // The change is a broadcast; give the service a moment, then re-read.
+      setTimeout(loadActive, 300);
+    }).catch(function (e) { say("msg-active", e.message, true); });
+  }
+
+  // ── manifest list ─────────────────────────────────────────────────────────
+  function describeRow(li, it) {
+    var open = li.querySelector(".def");
+    if (open) { open.remove(); return; }
+    api("/api/intents/describe", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({skill_id: it.skill_id, intent_name: it.intent_name, lang: it.lang})
+    }).then(function (d) {
+      var pre = document.createElement("pre");
+      pre.className = "def";
+      pre.textContent = (d.available && d.ok)
+        ? JSON.stringify(d.definitions, null, 1)
+        : (d.error || t("intents.unavailable", "The intent service did not answer. Is the device running?"));
+      li.appendChild(pre);
+    }).catch(function (e) { say("msg-list", e.message, true); });
+  }
+
+  function renderList(items) {
+    var ul = el("intent-list");
+    ul.innerHTML = "";
+    if (!items.length) {
+      var li = document.createElement("li");
+      li.className = "hint";
+      li.textContent = t("intents.list.none", "No intents registered.");
+      ul.appendChild(li);
+      return;
+    }
+    items.forEach(function (it) {
+      var li = document.createElement("li");
+      var badge = it.enabled ? "" : ' <span class="pill">' + esc(t("intents.list.disabled", "off")) + "</span>";
+      li.innerHTML = '<span class="name">' + esc(it.skill_id) + " · " + esc(it.intent_name) + "</span> "
+        + '<span class="slug">' + esc(it.lang) + " · " + esc(it.method) + "</span>" + badge + " "
+        + '<button class="secondary" data-desc="1">' + esc(t("intents.list.describe", "Definition")) + "</button>";
+      li.querySelector("[data-desc]").addEventListener("click", function () { describeRow(li, it); });
+      ul.appendChild(li);
+    });
+  }
+
+  function loadList() {
+    var skill = el("intent-filter").value.trim();
+    say("msg-list", t("intents.list.loading", "Loading…"));
+    api("/api/intents" + (skill ? "?skill_id=" + encodeURIComponent(skill) : "")).then(function (d) {
+      if (!d.available) { say("msg-list", t("intents.unavailable",
+        "The intent service did not answer. Is the device running?"), true); renderList([]); return; }
+      el("msg-list").hidden = true;
+      renderList(d.intents || []);
+    }).catch(function (e) { say("msg-list", e.message, true); });
+  }
+
+  el("dry-run").addEventListener("click", runDry);
+  el("dry-utterance").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); runDry(); }
+  });
+  el("activate").addEventListener("click", function () {
+    var id = el("activate-id").value.trim();
+    if (id) { el("activate-id").value = ""; setActive(id, true); }
+  });
+  el("intent-load").addEventListener("click", loadList);
+  el("intent-filter").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); loadList(); }
+  });
+
+  loadActive();
+  loadList();
+});
+</script>
+</body>
+</html>
