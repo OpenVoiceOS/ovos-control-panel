@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Transformers — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.transformers">Transformers</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="transformers.intro">Transformers are small plugins that change a request as it
+    moves through the device. Each stage below is its own chain. Turn a plugin on or off, set the order the
+    device runs them in, and edit a plugin's own settings. Every change is saved to the configuration file.</p>
+  <p class="hint" role="note" data-i18n="transformers.needsToken">These settings change how the device
+    understands and answers you, so this page needs an access token, like the other device pages.</p>
+
+  <section class="card" id="section-bidi">
+    <h2 data-i18n="transformers.bidi.title">Bidirectional translation</h2>
+    <p class="hint" data-i18n="transformers.bidi.desc">Talk to the device in another language and hear the
+      answer back in the same language. This turns on two translation plugins together: one translates your
+      words into the device's own language, the other translates the reply back.</p>
+    <p class="hint" role="note" id="bidi-missing" hidden data-i18n="transformers.bidi.missing">The
+      ovos-bidirectional-translation-plugin is not installed. Install it on the Plugins page first.</p>
+    <label class="check"><input type="checkbox" id="bidi-enable">
+      <span data-i18n="transformers.bidi.enable">Turn on bidirectional translation</span></label>
+    <label class="stack"><span class="hint" data-i18n="transformers.bidi.langs">Languages to translate to and
+      from, comma separated (for example pt-pt, es-es)</span>
+      <input type="text" id="bidi-langs" placeholder="pt-pt, es-es" autocomplete="off" spellcheck="false"></label>
+    <p class="hint" id="bidi-devlang"></p>
+    <fieldset class="bidi-flags">
+      <legend class="hint" data-i18n="transformers.bidi.options">Options</legend>
+      <label class="check"><input type="checkbox" id="bidi-f-verify_lang">
+        <span data-i18n="transformers.bidi.verify">Trust the detected language over the set one</span></label>
+      <label class="check"><input type="checkbox" id="bidi-f-translate_secondary_langs">
+        <span data-i18n="transformers.bidi.translateSecondary">Also translate the secondary languages</span></label>
+      <label class="check"><input type="checkbox" id="bidi-f-ignore_invalid_langs">
+        <span data-i18n="transformers.bidi.ignoreInvalid">Ignore a detected language that is not recognised</span></label>
+    </fieldset>
+    <div class="row"><button id="bidi-save" data-i18n="transformers.bidi.save">Save translation</button></div>
+    <div class="msg" id="msg-bidi" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <section class="card" id="section-sox">
+    <h2 data-i18n="transformers.sox.title">Voice tuning</h2>
+    <p class="hint" data-i18n="transformers.sox.desc">Change how the spoken voice sounds by applying sound
+      effects to it: pitch, speed, reverb and tone. This uses the SoX speech transformer.</p>
+    <p class="hint" role="note" id="sox-missing" hidden data-i18n="transformers.sox.missing">The
+      ovos-tts-transformer-sox-plugin is not installed. Install it on the Plugins page first.</p>
+    <label class="check"><input type="checkbox" id="sox-enable">
+      <span data-i18n="transformers.sox.enable">Turn on voice tuning</span></label>
+    <div id="sox-controls"></div>
+    <div class="row">
+      <button class="secondary" id="sox-reset" data-i18n="transformers.sox.reset">Reset to neutral</button>
+      <button id="sox-save" data-i18n="transformers.sox.save">Save voice</button>
+    </div>
+    <div class="msg" id="msg-sox" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <div id="chains"></div>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
+
+  // The six chains, in request order. Each row is [config section, title i18n
+  // key, description i18n key, English title, English description]. The English
+  // text is the inline fallback: app.js does not fetch a locale for English, so
+  // the shipped English lives here; other languages override via their i18n key.
+  var CHAINS = [
+    ["utterance_transformers", "transformers.utterance.title", "transformers.utterance.desc",
+     "Utterance transformers", "Change or clean up what you said before the device works out what you mean."],
+    ["metadata_transformers", "transformers.metadata.title", "transformers.metadata.desc",
+     "Metadata transformers", "Add extra information to a request before a skill handles it."],
+    ["intent_transformers", "transformers.intent.title", "transformers.intent.desc",
+     "Intent transformers", "Change a matched intent before the skill runs."],
+    ["audio_transformers", "transformers.audio.title", "transformers.audio.desc",
+     "Audio transformers", "Act on the captured audio, for example to detect a sound or a language."],
+    ["dialog_transformers", "transformers.dialog.title", "transformers.dialog.desc",
+     "Dialog transformers", "Change a reply's text before the device speaks it."],
+    ["tts_transformers", "transformers.tts.title", "transformers.tts.desc",
+     "Speech transformers", "Change the synthesized audio after text-to-speech, for example to tune the voice."]
+  ];
+
+  // Working copy, edited locally and only sent on Save. Each chain holds an
+  // ordered list of {name, active, config} plus the installed plugin names.
+  var state = {};
+
+  function buildCards() {
+    var host = el("chains");
+    host.innerHTML = "";
+    CHAINS.forEach(function (c) {
+      var chain = c[0];
+      var section = document.createElement("section");
+      section.className = "card";
+      section.id = "section-" + chain;
+      section.innerHTML =
+        '<h2 data-i18n="' + c[1] + '">' + esc(c[3]) + '</h2>'
+        + '<p class="hint" data-i18n="' + c[2] + '">' + esc(c[4]) + '</p>'
+        + '<ul class="plain rowlist" id="' + chain + '-list"></ul>'
+        + '<div class="row">'
+        + '  <select id="' + chain + '-add-select" aria-label="' + esc(t("transformers.addPlugin", "Add a plugin")) + '"></select>'
+        + '  <button class="secondary" id="' + chain + '-add" data-i18n="transformers.add">Add</button>'
+        + '</div>'
+        + '<div class="row"><button id="' + chain + '-save" data-i18n="transformers.save">Save chain</button></div>'
+        + '<div class="msg" id="msg-' + chain + '" role="status" aria-live="polite" hidden></div>';
+      host.appendChild(section);
+    });
+  }
+
+  function renderAddOptions(chain) {
+    var sel = el(chain + "-add-select");
+    var have = {};
+    state[chain].plugins.forEach(function (p) { have[p.name] = true; });
+    var options = state[chain].installed.filter(function (n) { return !have[n]; });
+    sel.innerHTML = "";
+    if (!options.length) {
+      var none = document.createElement("option");
+      none.value = "";
+      none.textContent = t("transformers.noneToAdd", "No more installed plugins");
+      none.disabled = true;
+      sel.appendChild(none);
+      el(chain + "-add").disabled = true;
+      return;
+    }
+    el(chain + "-add").disabled = false;
+    options.forEach(function (n) {
+      var o = document.createElement("option");
+      o.value = n; o.textContent = n;
+      sel.appendChild(o);
+    });
+  }
+
+  function render(chain) {
+    var ul = el(chain + "-list");
+    var plugins = state[chain].plugins;
+    ul.innerHTML = "";
+    if (!plugins.length) {
+      var empty = document.createElement("li");
+      empty.className = "hint";
+      empty.textContent = t("transformers.emptyChain", "No plugins configured in this chain.");
+      ul.appendChild(empty);
+      renderAddOptions(chain);
+      return;
+    }
+    plugins.forEach(function (p, i) {
+      var li = document.createElement("li");
+      var cfgId = chain + "-cfg-" + i;
+      li.innerHTML =
+        '<label class="check"><input type="checkbox" data-active="1" ' + (p.active ? "checked" : "") + '> '
+        + '<span class="name">' + esc(p.name) + '</span></label> '
+        + '<button class="secondary" data-up="1" ' + (i === 0 ? "disabled" : "") + '>' + esc(t("transformers.up", "Move up")) + '</button> '
+        + '<button class="secondary" data-down="1" ' + (i === plugins.length - 1 ? "disabled" : "") + '>' + esc(t("transformers.down", "Move down")) + '</button> '
+        + '<button class="secondary" data-toggle="1" aria-expanded="false" aria-controls="' + cfgId + '">' + esc(t("transformers.editConfig", "Settings")) + '</button> '
+        + '<button class="danger" data-remove="1">' + esc(t("transformers.remove", "Remove")) + '</button>'
+        + '<div class="cfg" id="' + cfgId + '" hidden>'
+        + '  <label class="stack"><span class="hint">' + esc(t("transformers.configJson", "This plugin's settings, as JSON")) + '</span>'
+        + '  <textarea rows="5" data-cfg="1" spellcheck="false"></textarea></label>'
+        + '  <div class="row"><button class="secondary" data-savecfg="1" data-i18n="transformers.saveConfig">Save settings</button></div>'
+        + '  <div class="msg" data-cfgmsg="1" role="status" aria-live="polite" hidden></div>'
+        + '</div>';
+      li.querySelector("[data-active]").addEventListener("change", function (e) {
+        p.active = e.target.checked;
+      });
+      li.querySelector("[data-up]").addEventListener("click", function () {
+        if (i === 0) { return; }
+        var tmp = plugins[i - 1]; plugins[i - 1] = plugins[i]; plugins[i] = tmp;
+        render(chain);
+      });
+      li.querySelector("[data-down]").addEventListener("click", function () {
+        if (i === plugins.length - 1) { return; }
+        var tmp = plugins[i + 1]; plugins[i + 1] = plugins[i]; plugins[i] = tmp;
+        render(chain);
+      });
+      li.querySelector("[data-remove]").addEventListener("click", function () {
+        plugins.splice(i, 1);
+        render(chain);
+      });
+      var ta = li.querySelector("[data-cfg]");
+      ta.value = JSON.stringify(p.config || {}, null, 1);
+      var toggle = li.querySelector("[data-toggle]");
+      var box = li.querySelector(".cfg");
+      toggle.addEventListener("click", function () {
+        var open = box.hasAttribute("hidden");
+        if (open) { box.removeAttribute("hidden"); } else { box.setAttribute("hidden", ""); }
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      li.querySelector("[data-savecfg]").addEventListener("click", function () {
+        savePluginConfig(chain, p, ta, li.querySelector("[data-cfgmsg]"));
+      });
+      ul.appendChild(li);
+    });
+    renderAddOptions(chain);
+  }
+
+  function toState(chain, data) {
+    var d = (data.chains && data.chains[chain]) || {};
+    var order = d.order || [];
+    var byName = {};
+    (d.plugins || []).forEach(function (p) { byName[p.name] = p; });
+    // Show the plugins in the configured run order first, then any configured
+    // plugin the order list does not mention, so the display matches the device.
+    var ordered = [];
+    order.forEach(function (n) { if (byName[n]) { ordered.push(byName[n]); delete byName[n]; } });
+    Object.keys(byName).forEach(function (n) { ordered.push(byName[n]); });
+    state[chain] = {
+      installed: d.installed || [],
+      plugins: ordered.map(function (p) {
+        return {name: p.name, active: p.active !== false, config: p.config || {}};
+      })
+    };
+  }
+
+  function load() {
+    api("/api/transformers").then(function (data) {
+      CHAINS.forEach(function (c) { toState(c[0], data); render(c[0]); });
+      // The card titles are built here, after the page's first i18n pass, so
+      // translate them once more now the locale strings are loaded.
+      if (OvosWebUI.applyI18n) { OvosWebUI.applyI18n(document); }
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  function addPlugin(chain) {
+    var sel = el(chain + "-add-select");
+    var name = sel.value;
+    if (!name) { return; }
+    state[chain].plugins.push({name: name, active: true, config: {}});
+    render(chain);
+  }
+
+  function saveChain(chain) {
+    OvosWebUI.say("msg-" + chain, t("transformers.saving", "Saving…"));
+    var enabled = {}, order = [];
+    state[chain].plugins.forEach(function (p) {
+      enabled[p.name] = p.active;
+      order.push(p.name);
+    });
+    api("/api/transformers/" + encodeURIComponent(chain), {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({enabled: enabled, order: order})
+    }).then(function () {
+      OvosWebUI.say("msg-" + chain, t("transformers.saved", "Saved."));
+    }).catch(function (e) { OvosWebUI.say("msg-" + chain, e.message, true); });
+  }
+
+  function savePluginConfig(chain, plugin, textarea, msgEl) {
+    var parsed;
+    try {
+      parsed = JSON.parse(textarea.value || "{}");
+    } catch (err) {
+      msgEl.hidden = false; msgEl.className = "msg error";
+      msgEl.textContent = t("transformers.badJson", "That is not valid JSON.");
+      return;
+    }
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      msgEl.hidden = false; msgEl.className = "msg error";
+      msgEl.textContent = t("transformers.notObject", "Settings must be a JSON object.");
+      return;
+    }
+    msgEl.hidden = false; msgEl.className = "msg";
+    msgEl.textContent = t("transformers.saving", "Saving…");
+    api("/api/transformers/" + encodeURIComponent(chain) + "/" + encodeURIComponent(plugin.name) + "/config", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({config: parsed})
+    }).then(function () {
+      plugin.config = parsed;
+      msgEl.textContent = t("transformers.saved", "Saved.");
+    }).catch(function (e) { msgEl.className = "msg error"; msgEl.textContent = e.message; });
+  }
+
+  var BIDI_FLAGS = ["verify_lang", "translate_secondary_langs", "ignore_invalid_langs"];
+
+  function loadBidi() {
+    api("/api/bidirectional").then(function (d) {
+      el("bidi-enable").checked = !!d.enabled;
+      el("bidi-langs").value = (d.secondary_langs || []).join(", ");
+      var flags = d.flags || {};
+      BIDI_FLAGS.forEach(function (f) { el("bidi-f-" + f).checked = !!flags[f]; });
+      el("bidi-missing").hidden = !!d.installed;
+      if (d.lang) {
+        el("bidi-devlang").textContent =
+          t("transformers.bidi.devlang", "The device's own language is {lang}.").replace("{lang}", d.lang);
+      }
+    }).catch(function (e) { OvosWebUI.say("msg-bidi", e.message, true); });
+  }
+
+  function saveBidi() {
+    var enable = el("bidi-enable").checked;
+    var langs = el("bidi-langs").value.split(",").map(function (s) { return s.trim(); })
+      .filter(function (s) { return s; });
+    // The card is "bidirectional", so the reply is always translated back when on.
+    var flags = {bidirectional: true};
+    BIDI_FLAGS.forEach(function (f) { flags[f] = el("bidi-f-" + f).checked; });
+    OvosWebUI.say("msg-bidi", t("transformers.saving", "Saving…"));
+    api("/api/bidirectional", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({enable: enable, secondary_langs: langs, flags: flags})
+    }).then(function () {
+      OvosWebUI.say("msg-bidi", t("transformers.saved", "Saved."));
+    }).catch(function (e) { OvosWebUI.say("msg-bidi", e.message, true); });
+  }
+
+  // effect, param, min, max, step, neutral, i18n key, English label. A control
+  // left at its neutral value is not written, so it does not touch the sound.
+  var SOX_CONTROLS = [
+    ["pitch", "n_semitones", -12, 12, 0.5, 0, "transformers.sox.pitch", "Pitch (semitones)"],
+    ["tempo", "factor", 0.5, 2, 0.05, 1, "transformers.sox.tempo", "Tempo (speed, same pitch)"],
+    ["speed", "factor", 0.5, 2, 0.05, 1, "transformers.sox.speed", "Speed (changes pitch)"],
+    ["reverb", "reverberance", 0, 100, 1, 0, "transformers.sox.reverb", "Reverb"],
+    ["bass", "gain_db", -20, 20, 1, 0, "transformers.sox.bass", "Bass (dB)"],
+    ["treble", "gain_db", -20, 20, 1, 0, "transformers.sox.treble", "Treble (dB)"],
+    ["gain", "gain_db", -20, 20, 1, 0, "transformers.sox.gain", "Volume (dB)"]
+  ];
+
+  function buildSox() {
+    var host = el("sox-controls");
+    host.innerHTML = "";
+    SOX_CONTROLS.forEach(function (c, i) {
+      var wrap = document.createElement("label");
+      wrap.className = "stack sox-row";
+      wrap.innerHTML =
+        '<span class="hint" data-i18n="' + c[6] + '">' + esc(c[7]) + '</span>'
+        + '<span style="display:flex;align-items:center;gap:0.75rem">'
+        + '<input type="range" id="sox-' + i + '" min="' + c[2]
+        + '" max="' + c[3] + '" step="' + c[4] + '" value="' + c[5]
+        + '" style="flex:1;min-width:0">'
+        + '<output id="soxo-' + i + '" style="min-width:2.5em;text-align:right;'
+        + 'font-variant-numeric:tabular-nums">' + esc(c[5]) + '</output></span>';
+      host.appendChild(wrap);
+      var range = wrap.querySelector("input");
+      range.addEventListener("input", function () { el("soxo-" + i).textContent = range.value; });
+    });
+  }
+
+  function setSoxSlider(i, value) {
+    el("sox-" + i).value = value;
+    el("soxo-" + i).textContent = String(value);
+  }
+
+  function loadSox() {
+    api("/api/sox").then(function (d) {
+      el("sox-enable").checked = !!d.enabled;
+      el("sox-missing").hidden = !!d.installed;
+      var effects = d.effects || {};
+      SOX_CONTROLS.forEach(function (c, i) {
+        var eff = effects[c[0]];
+        var v = (eff && typeof eff[c[1]] === "number") ? eff[c[1]] : c[5];
+        setSoxSlider(i, v);
+      });
+    }).catch(function (e) { OvosWebUI.say("msg-sox", e.message, true); });
+  }
+
+  function resetSox() {
+    SOX_CONTROLS.forEach(function (c, i) { setSoxSlider(i, c[5]); });
+  }
+
+  function saveSox() {
+    var effects = {};
+    SOX_CONTROLS.forEach(function (c, i) {
+      var v = parseFloat(el("sox-" + i).value);
+      if (v !== c[5]) {  // only non-neutral values are applied
+        effects[c[0]] = effects[c[0]] || {};
+        effects[c[0]][c[1]] = v;
+      }
+    });
+    OvosWebUI.say("msg-sox", t("transformers.saving", "Saving…"));
+    api("/api/sox", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({enable: el("sox-enable").checked, effects: effects})
+    }).then(function () {
+      OvosWebUI.say("msg-sox", t("transformers.saved", "Saved."));
+    }).catch(function (e) { OvosWebUI.say("msg-sox", e.message, true); });
+  }
+
+  buildCards();
+  buildSox();
+  OvosWebUI.applyI18n && OvosWebUI.applyI18n(document);
+  el("bidi-save").addEventListener("click", saveBidi);
+  el("sox-save").addEventListener("click", saveSox);
+  el("sox-reset").addEventListener("click", resetSox);
+  loadBidi();
+  loadSox();
+  CHAINS.forEach(function (c) {
+    var chain = c[0];
+    el(chain + "-add").addEventListener("click", function () { addPlugin(chain); });
+    el(chain + "-save").addEventListener("click", function () { saveChain(chain); });
+  });
+  load();
+});
+</script>
+</body>
+</html>
