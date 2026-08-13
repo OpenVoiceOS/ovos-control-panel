@@ -14,6 +14,7 @@ def installed_packages() -> list[dict[str, str]]:
     for dist in distributions():
         try:
             name = dist.metadata["Name"]
+            version = dist.version
         except (KeyError, TypeError):  # pragma: no cover - broken metadata
             continue
         if not name:
@@ -21,7 +22,7 @@ def installed_packages() -> list[dict[str, str]]:
         lowered = name.lower().replace("_", "-")
         if not lowered.startswith(PREFIXES):
             continue
-        seen[lowered] = dist.version or "unknown"
+        seen[lowered] = version or "unknown"
     return [{"name": k, "version": v} for k, v in sorted(seen.items())]
 
 

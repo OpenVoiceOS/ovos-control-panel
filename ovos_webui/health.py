@@ -95,8 +95,11 @@ def snapshot(bus, timeout: float = DEFAULT_TIMEOUT) -> dict[str, Any]:
     return {
         "bus": {"reachable": reachable},
         "services": services,
+        # The essential set must match the dashboard's own (static/index.html:
+        # {skills, intents, audio}), so /api/health and the UI never disagree
+        # about whether the device is healthy.
         "healthy": reachable and all(s["state"] == "ready" for s in services
-                                     if s["name"] in ("skills", "intents")),
+                                     if s["name"] in ("skills", "intents", "audio")),
     }
 
 
