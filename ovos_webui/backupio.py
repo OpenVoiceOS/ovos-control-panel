@@ -171,7 +171,7 @@ def _restore_archive(blob: bytes) -> dict[str, Any]:
         raise RestoreError(f"this is not a gzip tar archive: {err}") from err
 
     # ── stage 1: read and check everything ───────────────────────────────────
-    staged: list[tuple[Path, str]] = []
+    staged: list[tuple[Path, str, Path]] = []
     try:
         with tar:
             for member in _iter_members(tar):
