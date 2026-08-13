@@ -66,7 +66,7 @@ def _describe(bak: Path, root: Path) -> dict[str, Any] | None:
     if bak.is_symlink():  # a planted link is never a real backup
         return None
     try:
-        size = bak.stat().st_size
+        st = bak.stat()
     except OSError:
         return None
     target = bak.parent.parent / match.group("name")
@@ -76,7 +76,11 @@ def _describe(bak: Path, root: Path) -> dict[str, Any] | None:
         "file": match.group("name"),
         "target": str(target),
         "stamp": match.group("stamp"),
-        "size": size,
+        "size": st.st_size,
+        #: Sort key. The stamp string has a one-second resolution and an
+        #: unpadded counter (".9" vs ".10"), so string order is wrong for
+        #: same-second backups; modification time is the real order.
+        "mtime": st.st_mtime_ns,
     }
 
 
@@ -96,7 +100,7 @@ def list_backups() -> list[dict[str, Any]]:
                 entry = _describe(here / filename, root)
                 if entry:
                     found.append(entry)
-    found.sort(key=lambda e: e["stamp"], reverse=True)
+    found.sort(key=lambda e: (e["mtime"], e["id"]), reverse=True)
     return found
 
 

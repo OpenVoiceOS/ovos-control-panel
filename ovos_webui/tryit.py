@@ -26,6 +26,11 @@ SETTLE = 1.0
 
 MAX_UTTERANCE = 500
 
+#: Only one try may listen on the shared reply topics at a time. Two concurrent
+#: tries would otherwise both count a context-less ``speak``/failure event (a
+#: skill that answers without echoing our ident), so serialize the round trips.
+_ASK_LOCK = threading.Lock()
+
 
 def ask(bus, utterance: str, lang: str) -> dict[str, Any]:
     """Send ``utterance`` over the bus and report what the device did."""
@@ -45,9 +50,10 @@ def ask(bus, utterance: str, lang: str) -> dict[str, Any]:
 
     def _mine(message) -> bool:
         # Replies to this utterance carry our ``ident`` back in their context.
-        # Two concurrent tries share the same reply topics, so filter to our own
-        # round trip. A skill that drops the ident (no context) is still counted,
-        # so this never loses a legitimate answer — it only stops cross-talk.
+        # A reply naming a *different* ident is never ours. A reply with no ident
+        # is counted too, so a skill that answers without echoing the context is
+        # not lost — safe because ``_ASK_LOCK`` keeps two tries from waiting at
+        # once (a concurrent test can no longer claim our context-less event).
         mid = (getattr(message, "context", None) or {}).get("ident")
         return mid is None or mid == ident
 
@@ -72,6 +78,10 @@ def ask(bus, utterance: str, lang: str) -> dict[str, Any]:
         failed.set()
         first_answer.set()
 
+    if not _ASK_LOCK.acquire(timeout=ANSWER_TIMEOUT + SETTLE + 2.0):
+        return {"matched": False, "spoken": [], "handler": None,
+                "elapsed": 0.0, "busy": True,
+                "error": "another try is still running — try again in a moment"}
     bus.on("speak", on_speak)
     bus.on("mycroft.skill.handler.start", on_handler)
     bus.on("complete_intent_failure", on_failure)
@@ -89,6 +99,7 @@ def ask(bus, utterance: str, lang: str) -> dict[str, Any]:
         bus.remove("speak", on_speak)
         bus.remove("mycroft.skill.handler.start", on_handler)
         bus.remove("complete_intent_failure", on_failure)
+        _ASK_LOCK.release()
     elapsed = round(time.monotonic() - started, 2)
     if failed.is_set():
         return {"matched": False, "spoken": [], "handler": None,
