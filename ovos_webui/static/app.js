@@ -173,10 +173,25 @@
     ["/backup", "nav.backup", "Backup"],
     ["/about", "nav.about", "About"]
   ];
+  // Simple mode hides the advanced pages, leaving only what a non-technical
+  // owner needs day to day. It is a per-browser choice, off by default, and it
+  // only changes which nav links show — every page still works if reached
+  // directly. The page you are on is always kept in the nav so a link can never
+  // strand you on a hidden page.
+  var SIMPLE_KEY = "ovos-simple";
+  var SIMPLE_PATHS = {"/": 1, "/tryit": 1, "/controls": 1, "/voice": 1,
+                      "/config": 1, "/network": 1, "/backup": 1};
+  function simpleMode() {
+    try { return window.localStorage.getItem(SIMPLE_KEY) === "1"; } catch (e) { return false; }
+  }
   function renderNav() {
     var nav = document.querySelector('nav[aria-label], nav#sitenav');
     if (!nav) { return; }
-    nav.innerHTML = NAV.map(function (item) {
+    var here = window.location.pathname.replace(/\/$/, "") || "/";
+    var items = simpleMode()
+      ? NAV.filter(function (x) { return SIMPLE_PATHS[x[0]] || x[0] === here; })
+      : NAV;
+    nav.innerHTML = items.map(function (item) {
       return '<a href="' + item[0] + '" data-i18n="' + item[1] + '">'
         + esc(t(item[1], item[2])) + "</a>";
     }).join("");
@@ -229,6 +244,43 @@
     header.appendChild(live);
   }
 
+  // A Simple-mode control lives in every header, next to the theme control. It
+  // shows or hides the advanced pages and re-draws the nav in place.
+  function labelSimpleButton(button) {
+    var on = simpleMode();
+    button.textContent = on ? "☰" : "⋯";
+    button.setAttribute("aria-pressed", on ? "true" : "false");
+    var label = on ? t("simple.on", "Simple view on — show all pages")
+      : t("simple.off", "Show only the everyday pages");
+    button.setAttribute("aria-label", label);
+    button.setAttribute("title", label);
+  }
+  function mountSimpleToggle() {
+    var header = document.querySelector("header");
+    if (!header || document.getElementById("simple-toggle")) { return; }
+    var button = document.createElement("button");
+    button.id = "simple-toggle";
+    button.type = "button";
+    button.className = "theme-toggle";
+    var live = document.createElement("span");
+    live.className = "visually-hidden";
+    live.setAttribute("aria-live", "polite");
+    labelSimpleButton(button);
+    button.addEventListener("click", function () {
+      var next = simpleMode() ? "0" : "1";
+      try { window.localStorage.setItem(SIMPLE_KEY, next); } catch (e) { /* ignore */ }
+      labelSimpleButton(button);
+      renderNav();
+      markNav();
+      applyI18n(document.querySelector('nav[aria-label], nav#sitenav'));
+      live.textContent = simpleMode()
+        ? t("simple.nowOn", "Showing only the everyday pages.")
+        : t("simple.nowOff", "Showing all pages.");
+    });
+    header.appendChild(button);
+    header.appendChild(live);
+  }
+
   function showBanner(status) {
     var b = el("banner");
     if (b && status && status.warning) { b.textContent = status.warning; b.hidden = false; }
@@ -264,6 +316,7 @@
         renderNav();
         markNav();
         mountThemeToggle();
+        mountSimpleToggle();
         // One status call drives both the language/direction and the banner,
         // then the page runs with translations already applied.
         api("/api/status").then(function (s) {

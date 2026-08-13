@@ -899,5 +899,9 @@
  "voice.pipeline.moved": "Moved {n} to position {p} of {t}.",
  "voice.pipeline.removed": "Removed {n}.",
  "wallpaper.setThis": "Set wallpaper: {n}",
- "wallpaper.brokenThumb": "Could not load wallpaper: {n}"
+ "wallpaper.brokenThumb": "Could not load wallpaper: {n}",
+ "simple.on": "Simple view on — show all pages",
+ "simple.off": "Show only the everyday pages",
+ "simple.nowOn": "Showing only the everyday pages.",
+ "simple.nowOff": "Showing all pages."
 }
