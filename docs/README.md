@@ -30,6 +30,7 @@ If something is not working, go straight to
 | Skills | Changes the settings of each installed skill, and turns skills off. | [skill-settings.md](skill-settings.md) |
 | Abilities | Lists what the device can do, in plain language. | [abilities.md](abilities.md) |
 | Plugins | Finds OVOS plugins and installs or removes them on the device. | [plugins.md](plugins.md) |
+| Transformers | Turns transformer plugins on or off, orders them, and edits each plugin's settings. | [transformers.md](transformers.md) |
 | Personas | Makes and edits personas — the ordered list of solvers that answer you. | [personas.md](personas.md) |
 | Translate | Translates what a skill says and hears into your language. | [translate.md](translate.md) |
 | Send over sound | Sends Wi-Fi credentials, installs, or commands to a nearby device by playing a sound. | [send-over-sound.md](send-over-sound.md) |

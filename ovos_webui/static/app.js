@@ -163,6 +163,7 @@
     ["/skills", "nav.skills", "Skills"],
     ["/abilities", "nav.abilities", "Abilities"],
     ["/plugins", "nav.plugins", "Plugins"],
+    ["/transformers", "nav.transformers", "Transformers"],
     ["/personas", "nav.personas", "Personas"],
     ["/translate", "nav.translate", "Translate"],
     ["/sound", "nav.sound", "Send over sound"],

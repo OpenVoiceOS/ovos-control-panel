@@ -41,8 +41,8 @@ from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from ovos_webui import (backupio, configio, health, installer, meta, personas,
-                        pypi, recommends, servers, skillsio, translate,
-                        voicecfg)
+                        pypi, recommends, servers, skillsio, transformcfg,
+                        translate, voicecfg)
 from ovos_webui.auth import (
     COOKIE_NAME,
     AuthPolicy,
@@ -85,6 +85,7 @@ PAGES = {
     "/media": "media.html",
     "/mark1": "mark1.html",
     "/servers": "servers.html",
+    "/transformers": "transformers.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -151,6 +152,31 @@ class ChannelBody(BaseModel):
 
 class ServersBody(BaseModel):
     urls: list[str] = Field(default_factory=list, max_length=servers.MAX_URLS)
+
+
+class ChainStateBody(BaseModel):
+    #: plugin name -> on(true)/off(false, kept with ``"active": false``)
+    enabled: dict[str, bool] = Field(default_factory=dict)
+    #: optional run order; an empty list clears it, ``None`` leaves it untouched
+    order: list[str] | None = None
+
+
+class PluginConfigBody(BaseModel):
+    config: dict[str, Any] = Field(default_factory=dict)
+
+
+class BidirectionalBody(BaseModel):
+    enable: bool
+    #: the languages to translate to and from; ``None`` leaves them unchanged
+    secondary_langs: list[str] | None = None
+    #: the utterance plugin's flags; ``None`` leaves them at their defaults
+    flags: dict[str, bool] | None = None
+
+
+class SoxBody(BaseModel):
+    enable: bool
+    #: SoX effects as {effect: {param: number}}; ``None`` leaves them unchanged
+    effects: dict[str, dict[str, float]] | None = None
 
 
 class BackupIdBody(BaseModel):
@@ -626,6 +652,59 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         if "error" in result:
             raise HTTPException(400, result["error"])
         return result
+
+    # ── transformer chains ────────────────────────────────────────────────────
+    # The six transformer chains (utterance/metadata/intent/audio/dialog/tts)
+    # each live in their own config section. These routes turn plugins on and
+    # off, order them, and edit a plugin's own config block — all writes to the
+    # user configuration layer, like /api/config. No feature-specific bus message.
+    @privileged.get("/transformers")
+    def api_transformers_get() -> dict[str, Any]:
+        return transformcfg.get_chains()
+
+    @privileged.post("/transformers/{chain}")
+    def api_transformers_set(chain: str, body: ChainStateBody) -> dict[str, Any]:
+        try:
+            return transformcfg.set_chain_state(chain, body.enabled, body.order,
+                                                bus=state["bus"])
+        except transformcfg.TransformerConfigError as err:
+            raise HTTPException(400, str(err)) from None
+
+    @privileged.post("/transformers/{chain}/{name}/config")
+    def api_transformer_plugin_config(chain: str, name: str,
+                                      body: PluginConfigBody) -> dict[str, Any]:
+        try:
+            return transformcfg.set_plugin_config(chain, name, body.config,
+                                                  bus=state["bus"])
+        except transformcfg.TransformerConfigError as err:
+            raise HTTPException(400, str(err)) from None
+
+    # Bidirectional translation is two transformer plugins plus secondary_langs,
+    # written together so "talk in language X, hear the answer in X" is one switch.
+    @privileged.get("/bidirectional")
+    def api_bidirectional_get() -> dict[str, Any]:
+        return transformcfg.get_bidirectional()
+
+    @privileged.post("/bidirectional")
+    def api_bidirectional_set(body: BidirectionalBody) -> dict[str, Any]:
+        try:
+            return transformcfg.set_bidirectional(
+                body.enable, body.secondary_langs, body.flags, bus=state["bus"])
+        except transformcfg.TransformerConfigError as err:
+            raise HTTPException(400, str(err)) from None
+
+    # SoX voice tuning: a curated view over the tts transformer that applies
+    # sound effects (pitch, tempo, reverb, …) to the synthesized speech.
+    @privileged.get("/sox")
+    def api_sox_get() -> dict[str, Any]:
+        return transformcfg.get_sox()
+
+    @privileged.post("/sox")
+    def api_sox_set(body: SoxBody) -> dict[str, Any]:
+        try:
+            return transformcfg.set_sox(body.enable, body.effects, bus=state["bus"])
+        except transformcfg.TransformerConfigError as err:
+            raise HTTPException(400, str(err)) from None
 
     # ── skill settings ───────────────────────────────────────────────────────
     @api.get("/skills")

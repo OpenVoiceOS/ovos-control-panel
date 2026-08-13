@@ -61,4 +61,4 @@ broken. The page marks which one. Install it from the [Plugins](plugins.md)
 page. For anything else, see [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Plugins](plugins.md) · [Home](README.md) · [Translate →](translate.md)
+[← Transformers](transformers.md) · [Home](README.md) · [Translate →](translate.md)

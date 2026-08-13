@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from ovos_webui.service import create_app
 
 PAGES = ["/", "/config", "/skills", "/plugins", "/personas", "/translate",
-         "/backup", "/about"]
+         "/backup", "/about", "/transformers"]
 
 
 @pytest.mark.parametrize("route", PAGES)
