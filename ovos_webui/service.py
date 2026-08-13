@@ -145,16 +145,17 @@ class EnabledBody(BaseModel):
 class GgwaveListenBody(BaseModel):
     enabled: bool
     # 0 is a real, meaningful value here ("never auto-disable"), so the floor
-    # is 0, not 1 — only a negative timeout is rejected.
-    timeout: int | None = Field(None, ge=0)
+    # is 0, not 1 — only a negative timeout is rejected. Cap at 24h so an
+    # unbounded value cannot ride onto the bus.
+    timeout: int | None = Field(None, ge=0, le=86400, strict=True)
 
 
 class VolumeBody(BaseModel):
-    percent: int = Field(ge=0, le=100)
+    percent: int = Field(ge=0, le=100, strict=True)
 
 
 class MediaVolumeBody(BaseModel):
-    percent: int = Field(ge=0, le=100)
+    percent: int = Field(ge=0, le=100, strict=True)
 
 
 class MuteBody(BaseModel):

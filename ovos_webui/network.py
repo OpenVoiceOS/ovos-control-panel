@@ -58,9 +58,10 @@ def _valid_ssid(ssid: Any) -> bool:
     return not any(ord(c) < 32 or ord(c) == 127 for c in ssid)
 
 
-#: Serializes connect/disconnect/forget so two concurrent mutations never
-#: register handlers on the same reply topics at once (which could let one
-#: request's reply satisfy the other). Reads (scan, connected) stay concurrent.
+#: Serializes connect/disconnect/forget so only one mutation is ever waiting on
+#: the shared reply topics at a time. Cross-request correlation is handled by
+#: ``match`` (a reply naming a different network is ignored); the lock keeps two
+#: of *our own* mutations from overlapping. Reads (scan, connected) stay concurrent.
 _ACTION_LOCK = threading.Lock()
 
 
@@ -73,11 +74,11 @@ def _request(bus, msg_type: str, data: dict[str, Any],
     the bus is down, has no capacity, or nothing answered inside ``timeout``.
     Never raises on a bus problem — the caller turns ``None`` into an error dict.
 
-    ``match``, when given, is ``(key, value)`` and is checked ONLY against a
-    reply on ``reply_topics[0]`` (the success/positive topic): that reply is
-    ignored unless ``message.data.get(key) == value``. Every other topic
-    (typically the failure topic, which the plugin sends with no payload at
-    all) is accepted unconditionally.
+    ``match``, when given, is ``(key, value)``: a reply is ignored when it
+    carries ``key`` in its data and that value is not ``value`` — so a reply
+    naming a different network never satisfies this request. A reply that omits
+    ``key`` (e.g. the failure topics, which the plugin sends with no payload) is
+    accepted, since there is nothing to correlate on.
     """
     from ovos_webui import buswait
     from ovos_bus_client.message import Message
@@ -91,9 +92,13 @@ def _request(bus, msg_type: str, data: dict[str, Any],
 
         def make(topic: str):
             def handler(message):
-                if (match is not None and topic == reply_topics[0]
-                        and (message.data or {}).get(match[0]) != match[1]):
-                    return
+                # Ignore a reply that names a *different* target (on any topic).
+                # A reply with no correlation key is accepted — the failure
+                # topics carry no payload, so there is nothing to match on.
+                if match is not None:
+                    data = message.data or {}
+                    if match[0] in data and data.get(match[0]) != match[1]:
+                        return
                 # The first (matching) reply wins; a plugin only sends one.
                 box.setdefault("reply", (topic, message))
                 got.set()
