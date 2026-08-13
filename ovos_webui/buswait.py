@@ -80,16 +80,31 @@ class _Gate:
     def acquire(self) -> bool:
         return self._semaphore.acquire(blocking=False)
 
-    def release(self) -> None:
+    def release(self, ticket: dict[str, Any] | None = None) -> None:
+        # If the waiter had already given this permit up for lost, it has now
+        # come back after all, so stop counting it abandoned. ``ticket`` is the
+        # per-call dict shared with mark_abandoned; both touch it under the lock.
+        with self._lock:
+            if ticket is not None:
+                ticket["released"] = True
+                if ticket.get("abandoned"):
+                    self._abandoned -= 1
         try:
             self._semaphore.release()
         except ValueError:  # pragma: no cover - released more than acquired
             pass
 
-    def abandon(self) -> None:
-        """Record a permit that will never come back."""
+    def mark_abandoned(self, ticket: dict[str, Any]) -> None:
+        """Count a permit as lost, unless the worker already released it.
+
+        A call that only *missed* its deadline but then finishes is not lost —
+        its ``release`` reconciles the count. Only a call whose worker never
+        returns stays counted here.
+        """
         with self._lock:
-            self._abandoned += 1
+            if not ticket.get("released"):
+                ticket["abandoned"] = True
+                self._abandoned += 1
 
     @property
     def abandoned(self) -> int:
@@ -142,7 +157,6 @@ def call(func: Callable[[], Any], timeout: float = DEFAULT_TIMEOUT,
 
     box: dict[str, Any] = {}
     done = threading.Event()
-    finished = threading.Event()
 
     def runner() -> None:
         try:
@@ -151,11 +165,11 @@ def call(func: Callable[[], Any], timeout: float = DEFAULT_TIMEOUT,
             box["error"] = err
         finally:
             done.set()
-            # The permit is only given back by a call that really finished. A
-            # call still stuck in the bus client never reaches this line, and
-            # that is what keeps the number of stuck threads bounded.
-            finished.set()
-            GATE.release()
+            # Give the permit back. If the waiter already gave up on this call,
+            # release reconciles the abandoned count (the permit came back). A
+            # call still stuck in the bus client never reaches this line, which
+            # is what keeps the number of truly-stuck threads bounded.
+            GATE.release(box)
 
     thread = threading.Thread(target=runner, daemon=True, name="ovos-webui-bus")
     thread.start()
@@ -163,8 +177,9 @@ def call(func: Callable[[], Any], timeout: float = DEFAULT_TIMEOUT,
     if not done.wait(timeout):
         LOG.warning(f"a message bus call did not finish in {timeout}s; giving up")
         GATE.trip()
-        if not finished.is_set():
-            GATE.abandon()
+        # Count the permit as lost unless the worker just released it; if it
+        # finishes later, its release will take it back off the abandoned count.
+        GATE.mark_abandoned(box)
         return default
 
     if "error" in box:
