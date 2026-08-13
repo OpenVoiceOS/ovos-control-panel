@@ -37,6 +37,7 @@ from fastapi.responses import (
 )
 from ovos_utils.log import LOG
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
 from ovos_webui import (backupio, configio, health, installer, meta, personas,
                         pypi, recommends, skillsio, translate)
@@ -617,7 +618,10 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     async def api_restore(request: Request) -> dict[str, Any]:
         blob = await _read_upload(request)
         try:
-            return backupio.restore_archive(blob)
+            # restore_archive does synchronous, fsync-heavy file I/O under a
+            # lock; run it off the event loop so a restore cannot stall every
+            # other request (this is an async route).
+            return await run_in_threadpool(backupio.restore_archive, blob)
         except (backupio.RestoreError, UnsafeIdentifier) as err:
             raise HTTPException(400, str(err)) from None
 

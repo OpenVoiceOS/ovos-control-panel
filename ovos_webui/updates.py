@@ -72,7 +72,8 @@ def _write_cache(data: dict[str, Any]) -> None:
     path = _cache_path()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(data), encoding="utf-8")
+        from ovos_webui.fsutils import atomic_write
+        atomic_write(path, json.dumps(data), backup=False)
     except OSError as err:  # pragma: no cover - disk trouble
         LOG.warning(f"could not write the update cache: {err}")
 

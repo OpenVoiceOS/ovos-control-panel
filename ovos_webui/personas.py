@@ -195,7 +195,7 @@ def delete_persona(persona_id: str) -> dict[str, Any]:
     if not path.is_file():
         raise LookupError(f"there is no persona called {persona_id}")
     backup = make_backup(path)
-    path.unlink()
+    path.unlink(missing_ok=True)
     return {"deleted": str(path), "backup": str(backup) if backup else None}
 
 
