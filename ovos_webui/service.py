@@ -79,6 +79,7 @@ PAGES = {
     "/controls": "controls.html",
     "/abilities": "abilities.html",
     "/network": "network.html",
+    "/system": "system.html",
     "/media": "media.html",
     "/mark1": "mark1.html",
     "/servers": "servers.html",
@@ -190,6 +191,14 @@ class WifiConnectBody(BaseModel):
 
 class WifiSsidBody(BaseModel):
     ssid: str = Field(..., max_length=64)
+
+
+class SshBody(BaseModel):
+    enabled: bool
+
+
+class LanguageBody(BaseModel):
+    lang: str = Field(..., max_length=32)
 
 
 class Mark1DisplayBody(BaseModel):
@@ -859,6 +868,45 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         result = configio.mutate(change, bus=state["bus"])
         result.update({"skill_id": skill_id, "enabled": body.enabled})
         return result
+
+    # ── system: SSH, factory reset, device language, connectivity, IP geo ────
+    # These sit BEFORE the "/system/{action}" wildcard below: FastAPI matches
+    # routes in registration order, and a wildcard registered first would
+    # swallow "/system/ssh" etc. as an unknown action (404) rather than ever
+    # reaching these handlers. Every route sits on the privileged router: SSH
+    # and factory reset change what the device will accept next, and a
+    # factory reset is destructive — a token is always required, like the
+    # network and power actions.
+    @privileged.get("/system/ssh")
+    def api_ssh_status() -> dict[str, Any]:
+        from ovos_webui import system
+        return system.ssh_status(_need_bus())
+
+    @privileged.post("/system/ssh")
+    def api_ssh_set(body: SshBody) -> dict[str, Any]:
+        from ovos_webui import system
+        bus = _need_bus()
+        return system.ssh_enable(bus) if body.enabled else system.ssh_disable(bus)
+
+    @privileged.post("/system/factory-reset")
+    def api_factory_reset() -> dict[str, Any]:
+        from ovos_webui import system
+        return system.factory_reset(_need_bus())
+
+    @privileged.post("/system/language")
+    def api_set_language(body: LanguageBody) -> dict[str, Any]:
+        from ovos_webui import system
+        return system.set_language(_need_bus(), body.lang)
+
+    @privileged.get("/system/connectivity")
+    def api_connectivity() -> dict[str, Any]:
+        from ovos_webui import system
+        return system.connectivity(_need_bus())
+
+    @privileged.post("/system/detect-location")
+    def api_detect_location() -> dict[str, Any]:
+        from ovos_webui import system
+        return system.detect_location(_need_bus())
 
     # ── system actions: bus messages PHAL may act on ─────────────────────────
     @privileged.post("/system/{action}")

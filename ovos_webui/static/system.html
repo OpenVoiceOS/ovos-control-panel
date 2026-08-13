@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>System — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.system">System</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="system.intro">Remote access, the device language, network status, and a factory reset.
+    Some of these need a companion plugin on the device.</p>
+
+  <h2 data-i18n="system.ssh.title">SSH</h2>
+  <div class="card" id="ssh-card">
+    <p class="hint" id="ssh-need" hidden></p>
+    <p id="ssh-state" data-i18n="system.ssh.checking">Checking…</p>
+    <div class="row">
+      <button class="secondary" id="ssh-toggle" hidden></button>
+      <button class="secondary" id="ssh-refresh" data-i18n="system.refresh">Refresh</button>
+    </div>
+    <p class="hint" data-i18n="system.ssh.hint">SSH lets you log into the device over the network with a terminal.
+      Only turn it on if you trust this network.</p>
+    <div class="msg" id="msg-ssh" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="system.language.title">Device language</h2>
+  <div class="card" id="language-card">
+    <label for="language" data-i18n="system.language.label">Language code (e.g. en-US, pt-PT)</label>
+    <div class="row">
+      <input type="text" id="language" maxlength="32" autocomplete="off" placeholder="en-US">
+      <button id="language-set" data-i18n="system.language.set">Set language</button>
+    </div>
+    <p class="hint" data-i18n="system.language.hint">This changes the language the device listens and speaks in.</p>
+    <div class="msg" id="msg-language" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="system.connectivity.title">Connectivity</h2>
+  <div class="card" id="connectivity-card">
+    <p id="connectivity-state" data-i18n="system.connectivity.checking">Checking…</p>
+    <div class="row">
+      <button class="secondary" id="connectivity-refresh" data-i18n="system.refresh">Refresh</button>
+      <button class="secondary" id="detect-location" data-i18n="system.location.button">Detect my location</button>
+    </div>
+    <p class="hint" data-i18n="system.location.hint">Looks up an approximate location from the device's public IP
+      address, and saves it as the device location.</p>
+    <div class="msg" id="msg-connectivity" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="system.factory.title">Factory reset</h2>
+  <div class="card" id="factory-card">
+    <p class="hint" id="factory-need" hidden></p>
+    <p data-i18n="system.factory.warn">This erases all settings, skills, and personal data on the device and
+      returns it to its factory defaults. This cannot be undone.</p>
+    <div class="row">
+      <button class="danger" id="factory-reset" data-i18n="system.factory.button">Factory reset</button>
+    </div>
+    <div class="msg" id="msg-factory" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
+  var sshEnabled = null;
+
+  function setDisabled(card, off) {
+    card.querySelectorAll("input, button").forEach(function (c) {
+      c.disabled = off;
+      if (off) { c.setAttribute("aria-disabled", "true"); } else { c.removeAttribute("aria-disabled"); }
+    });
+  }
+
+  // ── SSH ───────────────────────────────────────────────────────────────────
+  function reflectSsh() {
+    var b = el("ssh-toggle");
+    if (sshEnabled === null) {
+      el("ssh-state").textContent = t("system.ssh.unavailable",
+        "The system plugin did not answer. SSH cannot be checked or changed here.");
+      b.hidden = true;
+      return;
+    }
+    b.hidden = false;
+    el("ssh-state").textContent = sshEnabled
+      ? t("system.ssh.on", "SSH is on. The device accepts remote terminal logins.")
+      : t("system.ssh.off", "SSH is off.");
+    b.textContent = sshEnabled ? t("system.ssh.turnOff", "Turn SSH off") : t("system.ssh.turnOn", "Turn SSH on");
+    b.setAttribute("aria-pressed", String(!!sshEnabled));
+  }
+  function loadSsh() {
+    el("ssh-state").textContent = t("system.ssh.checking", "Checking…");
+    api("/api/system/ssh").then(function (r) {
+      sshEnabled = r.available ? !!r.enabled : null;
+      reflectSsh();
+      setDisabled(el("ssh-card"), !r.available);
+      el("ssh-refresh").disabled = false;
+      var note = el("ssh-need");
+      if (r.available) { note.hidden = true; }
+      else {
+        note.hidden = false;
+        note.textContent = t("system.needsPlugin",
+          "This needs the ovos-PHAL-plugin-system plugin, which is not installed or not answering.");
+      }
+    }).catch(function (e) { el("ssh-state").textContent = e.message; });
+  }
+  el("ssh-refresh").addEventListener("click", loadSsh);
+  el("ssh-toggle").addEventListener("click", function () {
+    var wantEnabled = !sshEnabled;
+    if (!wantEnabled && !OvosWebUI.confirmed(t("system.ssh.confirmOff",
+      "Turn SSH off? You will not be able to log in remotely until you turn it back on."))) { return; }
+    if (wantEnabled && !OvosWebUI.confirmed(t("system.ssh.confirmOn",
+      "Turn SSH on? The device will accept remote terminal logins on this network."))) { return; }
+    api("/api/system/ssh", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({enabled: wantEnabled})})
+      .then(function () {
+        OvosWebUI.say("msg-ssh", wantEnabled ? t("system.ssh.enabling", "SSH is starting…")
+          : t("system.ssh.disabling", "SSH is stopping…"));
+        setTimeout(loadSsh, 1500);
+      })
+      .catch(function (e) { OvosWebUI.say("msg-ssh", e.message, true); });
+  });
+
+  // ── device language ──────────────────────────────────────────────────────
+  el("language-set").addEventListener("click", function () {
+    var lang = el("language").value.trim();
+    if (!lang) { OvosWebUI.say("msg-language", t("system.language.required", "Enter a language code first."), true); return; }
+    api("/api/system/language", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({lang: lang})})
+      .then(function (r) {
+        if (r.ok) { OvosWebUI.say("msg-language", t("system.language.done", "Language set to") + " " + esc(r.lang) + "."); }
+        else { OvosWebUI.say("msg-language", r.error || t("system.actionFailed", "That did not work."), true); }
+      })
+      .catch(function (e) { OvosWebUI.say("msg-language", e.message, true); });
+  });
+
+  // ── connectivity ─────────────────────────────────────────────────────────
+  function stateLabel(state) {
+    if (state === "connected") { return t("system.connectivity.connected", "online"); }
+    if (state === "disconnected") { return t("system.connectivity.disconnected", "offline"); }
+    return t("system.connectivity.unknown", "unknown");
+  }
+  function loadConnectivity() {
+    el("connectivity-state").textContent = t("system.connectivity.checking", "Checking…");
+    api("/api/system/connectivity").then(function (r) {
+      el("connectivity-state").textContent =
+        t("system.connectivity.internet", "Internet:") + " " + stateLabel(r.internet) + " · "
+        + t("system.connectivity.network", "Network:") + " " + stateLabel(r.network);
+    }).catch(function (e) { el("connectivity-state").textContent = e.message; });
+  }
+  el("connectivity-refresh").addEventListener("click", loadConnectivity);
+
+  // ── detect location by IP ────────────────────────────────────────────────
+  el("detect-location").addEventListener("click", function () {
+    if (!OvosWebUI.confirmed(t("system.location.confirm",
+      "Look up an approximate location from this device's public IP address, and save it as the device location?"))) { return; }
+    el("detect-location").disabled = true;
+    OvosWebUI.say("msg-connectivity", t("system.location.working", "Looking up location…"));
+    api("/api/system/detect-location", {method: "POST"})
+      .then(function (r) {
+        if (r.ok) {
+          OvosWebUI.say("msg-connectivity", t("system.location.done",
+            "Location updated. See the Settings page to review it."));
+        } else {
+          OvosWebUI.say("msg-connectivity", r.error || t("system.actionFailed", "That did not work."), true);
+        }
+      })
+      .catch(function (e) { OvosWebUI.say("msg-connectivity", e.message, true); })
+      .then(function () { el("detect-location").disabled = false; });
+  });
+
+  // ── factory reset ────────────────────────────────────────────────────────
+  el("factory-reset").addEventListener("click", function () {
+    var typed = window.prompt(t("system.factory.typePrompt",
+      'This erases all settings and data on the device and cannot be undone. Type RESET to continue:'));
+    if (typed !== "RESET") {
+      if (typed !== null) { OvosWebUI.say("msg-factory", t("system.factory.cancelled", "Factory reset cancelled — the text did not match."), true); }
+      return;
+    }
+    if (!OvosWebUI.confirmed(t("system.factory.confirm",
+      "Are you sure? The device will erase everything and restart."))) { return; }
+    api("/api/system/factory-reset", {method: "POST"})
+      .then(function () {
+        OvosWebUI.say("msg-factory", t("system.factory.sent",
+          "Sent. If the system plugin is installed, the device is wiping now and will restart."));
+      })
+      .catch(function (e) { OvosWebUI.say("msg-factory", e.message, true); });
+  });
+
+  // ── gate factory reset on the same plugin as SSH ─────────────────────────
+  api("/api/device/capabilities").then(function (r) {
+    var need = (r.capabilities || {}).system;
+    if (need && !need.installed) {
+      el("factory-need").hidden = false;
+      el("factory-need").textContent = t("system.needsPlugin",
+        "This needs the ovos-PHAL-plugin-system plugin, which is not installed or not answering.");
+      setDisabled(el("factory-card"), true);
+      el("language").disabled = true;
+      el("language-set").disabled = true;
+    }
+  }).catch(function () {});
+
+  loadSsh();
+  loadConnectivity();
+});
+</script>
+</body>
+</html>
