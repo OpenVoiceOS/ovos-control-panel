@@ -879,5 +879,21 @@
  "apps.launching": "Launching {n}…",
  "apps.closing": "Closing {n}…",
  "apps.launched": "Launched {n}.",
- "apps.closed": "Closed {n}."
+ "apps.closed": "Closed {n}.",
+ "hdr.wallpaper": "Wallpaper",
+ "nav.wallpaper": "Wallpaper",
+ "wallpaper.intro": "Change the wallpaper on a device with a screen. Pick one from the collection, set one by its address, or let the device rotate through them. This needs the wallpaper-manager plugin on the device.",
+ "wallpaper.missing": "The wallpaper manager did not answer. Is it installed on the device?",
+ "wallpaper.current.title": "Current wallpaper",
+ "wallpaper.current.none": "No wallpaper is set.",
+ "wallpaper.next": "Next wallpaper",
+ "wallpaper.rotate": "Rotate through wallpapers automatically",
+ "wallpaper.rotateEvery": "Every {s} seconds.",
+ "wallpaper.choose.title": "Choose a wallpaper",
+ "wallpaper.choose.none": "This source has no wallpapers to show.",
+ "wallpaper.provider": "Source",
+ "wallpaper.byUrl": "Or set one by its address",
+ "wallpaper.set": "Set",
+ "wallpaper.setting": "Setting…",
+ "wallpaper.setDone": "Wallpaper set."
 }

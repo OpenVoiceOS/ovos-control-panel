@@ -159,6 +159,7 @@
     ["/servers", "nav.servers", "Servers"],
     ["/system", "nav.system", "System"],
     ["/mark1", "nav.mark1", "Mark-1 faceplate"],
+    ["/wallpaper", "nav.wallpaper", "Wallpaper"],
     ["/config", "nav.settings", "Settings"],
     ["/voice", "nav.voice", "Voice settings"],
     ["/skills", "nav.skills", "Skills"],

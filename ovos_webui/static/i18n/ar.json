@@ -879,5 +879,21 @@
  "apps.launching": "جارٍ تشغيل {n}…",
  "apps.closing": "جارٍ إغلاق {n}…",
  "apps.launched": "تم تشغيل {n}.",
- "apps.closed": "تم إغلاق {n}."
+ "apps.closed": "تم إغلاق {n}.",
+ "hdr.wallpaper": "الخلفية",
+ "nav.wallpaper": "الخلفية",
+ "wallpaper.intro": "غيّر خلفية جهاز بشاشة. اختر واحدة من المجموعة، أو عيّن واحدة بعنوانها، أو دع الجهاز يتنقّل بينها. يحتاج هذا إلى إضافة مدير الخلفيات على الجهاز.",
+ "wallpaper.missing": "لم يُجب مدير الخلفيات. هل هو مُثبَّت على الجهاز؟",
+ "wallpaper.current.title": "الخلفية الحالية",
+ "wallpaper.current.none": "لا خلفية مُعيَّنة.",
+ "wallpaper.next": "الخلفية التالية",
+ "wallpaper.rotate": "التنقّل بين الخلفيات تلقائياً",
+ "wallpaper.rotateEvery": "كل {s} ثانية.",
+ "wallpaper.choose.title": "اختر خلفية",
+ "wallpaper.choose.none": "لا خلفيات لعرضها من هذا المصدر.",
+ "wallpaper.provider": "المصدر",
+ "wallpaper.byUrl": "أو عيّن واحدة بعنوانها",
+ "wallpaper.set": "تعيين",
+ "wallpaper.setting": "جارٍ التعيين…",
+ "wallpaper.setDone": "تم تعيين الخلفية."
 }

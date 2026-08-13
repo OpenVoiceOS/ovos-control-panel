@@ -45,6 +45,7 @@ from ovos_webui import (backupio, configio, health, installer, meta, personas,
                         translate, voicecfg)
 from ovos_webui import applauncher
 from ovos_webui import intents
+from ovos_webui import wallpaper
 from ovos_webui.auth import (
     COOKIE_NAME,
     AuthPolicy,
@@ -90,6 +91,7 @@ PAGES = {
     "/transformers": "transformers.html",
     "/intents": "intents.html",
     "/apps": "apps.html",
+    "/wallpaper": "wallpaper.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -197,6 +199,16 @@ class SkillActiveBody(BaseModel):
     active: bool
 class AppNameBody(BaseModel):
     name: str = Field(max_length=applauncher.MAX_NAME)
+class WallpaperUrlBody(BaseModel):
+    url: str = Field(max_length=wallpaper.MAX_URL)
+
+
+class WallpaperProviderBody(BaseModel):
+    provider_name: str = Field(max_length=255)
+
+
+class WallpaperRotationBody(BaseModel):
+    enabled: bool
 
 
 class BackupIdBody(BaseModel):
@@ -777,6 +789,33 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             return applauncher.close(_need_bus(), body.name)
         except applauncher.AppLauncherError as err:
             raise HTTPException(400, str(err)) from None
+    # ── wallpaper ─────────────────────────────────────────────────────
+    # Existing ovos-PHAL-plugin-wallpaper-manager bus queries; no new message.
+    @privileged.get("/wallpaper")
+    def api_wallpaper_get() -> dict[str, Any]:
+        return wallpaper.get_state(_need_bus())
+
+    @privileged.post("/wallpaper/set")
+    def api_wallpaper_set(body: WallpaperUrlBody) -> dict[str, Any]:
+        try:
+            return wallpaper.set_wallpaper(_need_bus(), body.url)
+        except wallpaper.WallpaperError as err:
+            raise HTTPException(400, str(err)) from None
+
+    @privileged.post("/wallpaper/next")
+    def api_wallpaper_next() -> dict[str, Any]:
+        return wallpaper.next_wallpaper(_need_bus())
+
+    @privileged.post("/wallpaper/provider")
+    def api_wallpaper_provider(body: WallpaperProviderBody) -> dict[str, Any]:
+        try:
+            return wallpaper.set_provider(_need_bus(), body.provider_name)
+        except wallpaper.WallpaperError as err:
+            raise HTTPException(400, str(err)) from None
+
+    @privileged.post("/wallpaper/rotation")
+    def api_wallpaper_rotation(body: WallpaperRotationBody) -> dict[str, Any]:
+        return wallpaper.set_auto_rotation(_need_bus(), body.enabled)
 
     # ── skill settings ───────────────────────────────────────────────────────
     @api.get("/skills")
