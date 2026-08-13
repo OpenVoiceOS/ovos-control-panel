@@ -159,6 +159,7 @@
     ["/system", "nav.system", "System"],
     ["/mark1", "nav.mark1", "Mark-1 faceplate"],
     ["/config", "nav.settings", "Settings"],
+    ["/voice", "nav.voice", "Voice settings"],
     ["/skills", "nav.skills", "Skills"],
     ["/abilities", "nav.abilities", "Abilities"],
     ["/plugins", "nav.plugins", "Plugins"],

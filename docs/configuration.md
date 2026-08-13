@@ -83,4 +83,4 @@ valid. The page tells you what is wrong. For anything else, see
 [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Setup](setup.md) · [Home](README.md) · [Skill settings →](skill-settings.md)
+[← Setup](setup.md) · [Home](README.md) · [Voice settings →](voice-settings.md)

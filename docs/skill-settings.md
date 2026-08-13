@@ -66,4 +66,4 @@ If a skill does not show up here, it has no settings directory yet. Check the
 see [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Settings](configuration.md) · [Home](README.md) · [Abilities →](abilities.md)
+[← Voice settings](voice-settings.md) · [Home](README.md) · [Abilities →](abilities.md)
