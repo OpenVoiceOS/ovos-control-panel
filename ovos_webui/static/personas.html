@@ -107,7 +107,7 @@ OvosWebUI.ready(function () {
 
   function renderChosen() {
     if (!chosen.length) {
-      el("chosen").innerHTML = '<p class="hint">' + OvosWebUI.t("personas.chosen.none", "Nothing added yet. A persona needs at least one answer source.") + '</p>';
+      el("chosen").innerHTML = '<p class="hint">' + esc(OvosWebUI.t("personas.chosen.none", "Nothing added yet. A persona needs at least one answer source.")) + '</p>';
       return;
     }
     el("chosen").innerHTML = "<ul class='plain'>" + chosen.map(function (name, i) {
@@ -117,12 +117,12 @@ OvosWebUI.ready(function () {
       // With a single solver there is nothing to reorder, so the Up/Down
       // controls are left out rather than shown greyed and confusing.
       var move = chosen.length > 1
-        ? '<button class="secondary" data-act="up" data-i="' + i + '" aria-label="' + esc(upLabel) + '" ' + (i === 0 ? "disabled" : "") + ">" + OvosWebUI.t("personas.chosen.up", "Up") + "</button>"
-          + '<button class="secondary" data-act="down" data-i="' + i + '" aria-label="' + esc(downLabel) + '" ' + (i === chosen.length - 1 ? "disabled" : "") + ">" + OvosWebUI.t("personas.chosen.down", "Down") + "</button>"
+        ? '<button class="secondary" data-act="up" data-i="' + i + '" aria-label="' + esc(upLabel) + '" ' + (i === 0 ? "disabled" : "") + ">" + esc(OvosWebUI.t("personas.chosen.up", "Up")) + "</button>"
+          + '<button class="secondary" data-act="down" data-i="' + i + '" aria-label="' + esc(downLabel) + '" ' + (i === chosen.length - 1 ? "disabled" : "") + ">" + esc(OvosWebUI.t("personas.chosen.down", "Down")) + "</button>"
         : "";
       return "<li><strong><bdi>" + (i + 1) + ".</bdi></strong> <code>" + esc(name) + "</code>"
         + '<div class="row">' + move
-        + '<button class="secondary" data-act="rm" data-i="' + i + '" aria-label="' + esc(rmLabel) + '">' + OvosWebUI.t("personas.chosen.remove", "Remove") + '</button></div></li>';
+        + '<button class="secondary" data-act="rm" data-i="' + i + '" aria-label="' + esc(rmLabel) + '">' + esc(OvosWebUI.t("personas.chosen.remove", "Remove")) + '</button></div></li>';
     }).join("") + "</ul>";
     el("chosen").querySelectorAll('[data-act="up"]').forEach(function (b) {
       b.addEventListener("click", function () {
@@ -200,16 +200,16 @@ OvosWebUI.ready(function () {
   function refresh(select) {
     return api("/api/personas").then(function (r) {
       solvers = r.solvers; memories = r.memory_plugins;
-      el("add").innerHTML = '<option value="">' + OvosWebUI.t("personas.chooseSolver", "Choose an answer source…") + '</option>'
+      el("add").innerHTML = '<option value="">' + esc(OvosWebUI.t("personas.chooseSolver", "Choose an answer source…")) + '</option>'
         + solvers.map(function (s) {
             return '<option value="' + esc(s.name) + '">' + esc(s.name) + "</option>";
           }).join("");
-      el("memory").innerHTML = '<option value="">' + OvosWebUI.t("personas.noMemory", "No memory") + '</option>'
+      el("memory").innerHTML = '<option value="">' + esc(OvosWebUI.t("personas.noMemory", "No memory")) + '</option>'
         + memories.map(function (m) { return '<option value="' + esc(m) + '">' + esc(m) + "</option>"; }).join("");
-      el("pick").innerHTML = '<option value="">' + OvosWebUI.t("personas.choosePersona", "Choose a persona…") + '</option>'
+      el("pick").innerHTML = '<option value="">' + esc(OvosWebUI.t("personas.choosePersona", "Choose a persona…")) + '</option>'
         + r.personas.map(function (p) {
             return '<option value="' + esc(p.persona_id) + '">' + esc(p.name)
-              + (p.broken ? " " + OvosWebUI.t("personas.brokenFile", "(broken file)") : "") + "</option>";
+              + (p.broken ? " " + esc(OvosWebUI.t("personas.brokenFile", "(broken file)")) : "") + "</option>";
           }).join("");
       var none = !r.personas.length;
       el("pempty").hidden = !none;
@@ -295,8 +295,12 @@ OvosWebUI.ready(function () {
 
   el("reload").addEventListener("click", function () { if (current) { load(current); } });
 
+  var trying = false;
   el("try").addEventListener("click", function () {
-    if (!current) { return; }
+    // Guard double-submit with a flag, matching the pattern used on the
+    // Try it page's Ask button.
+    if (!current || trying) { return; }
+    trying = true;
     el("answer").textContent = OvosWebUI.t("personas.asking", "Asking…");
     api("/api/personas/" + encodeURIComponent(el("pid").value) + "/try", {
       method: "POST",
@@ -304,7 +308,8 @@ OvosWebUI.ready(function () {
       body: JSON.stringify({question: el("question").value})
     }).then(function (r) {
       el("answer").textContent = r.skipped ? OvosWebUI.t("personas.notTried", "Not tried here:") + " " + r.reason : r.answer;
-    }).catch(function (e) { el("answer").textContent = e.message; });
+      trying = false;
+    }).catch(function (e) { el("answer").textContent = e.message; trying = false; });
   });
 
   refresh("").catch(function (e) { OvosWebUI.say("msg", e.message, true); });

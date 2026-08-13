@@ -162,8 +162,10 @@ OvosWebUI.ready(function () {
       : t("tryit.live.resume", "Resume updates");
   });
 
+  var inFlight = false;
   function poll() {
-    if (!running) { return; }
+    if (!running || inFlight) { return; }
+    inFlight = true;
     api("/api/events?since=" + last).then(function (r) {
       last = r.next;
       if (!r.events.length) { return; }
@@ -179,6 +181,7 @@ OvosWebUI.ready(function () {
         list.appendChild(li);
       });
       while (list.children.length > 40) { list.removeChild(list.children[1]); }
+      inFlight = false;
     }).catch(function (e) {
       // On a device with a token, this page needs you signed in with it.
       // Say so once instead of leaving the feed silently empty.
@@ -187,6 +190,7 @@ OvosWebUI.ready(function () {
         el("events-empty").textContent = t("tryit.live.needsToken",
           "The live feed needs the device access token. Sign in with it to see activity.");
       }
+      inFlight = false;
     });
   }
   poll();
