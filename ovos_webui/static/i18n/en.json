@@ -903,5 +903,9 @@
  "simple.on": "Simple view on — show all pages",
  "simple.off": "Show only the everyday pages",
  "simple.nowOn": "Showing only the everyday pages.",
- "simple.nowOff": "Showing all pages."
+ "simple.nowOff": "Showing all pages.",
+ "text.label": "Text size:",
+ "text.normal": "normal",
+ "text.large": "large",
+ "text.xlarge": "largest"
 }
