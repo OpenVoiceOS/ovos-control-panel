@@ -41,7 +41,7 @@ from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from ovos_webui import (backupio, configio, health, installer, meta, personas,
-                        pypi, recommends, skillsio, translate)
+                        pypi, recommends, servers, skillsio, translate)
 from ovos_webui.auth import (
     COOKIE_NAME,
     AuthPolicy,
@@ -81,6 +81,7 @@ PAGES = {
     "/network": "network.html",
     "/media": "media.html",
     "/mark1": "mark1.html",
+    "/servers": "servers.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -138,6 +139,10 @@ class UtteranceBody(BaseModel):
 
 class ChannelBody(BaseModel):
     channel: str = Field(max_length=16)
+
+
+class ServersBody(BaseModel):
+    urls: list[str] = Field(default_factory=list, max_length=servers.MAX_URLS)
 
 
 class BackupIdBody(BaseModel):
@@ -572,6 +577,24 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     @api.get("/plugins")
     def api_plugins() -> dict[str, Any]:
         return {"plugins": configio.plugin_options()}
+
+    # ── self-hosted servers (STT / TTS / translate) ─────────────────────────
+    # These write the user configuration layer, exactly like /api/config and
+    # /api/config/quick above — no bus message is specific to this feature.
+    # Reads sit on ``api``; the write changes what the device does, so it sits
+    # on ``privileged`` like the other device-changing routes.
+    @privileged.get("/servers")
+    def api_servers_get() -> dict[str, Any]:
+        return {kind: servers.get_servers(kind) for kind in servers.KINDS}
+
+    @privileged.post("/servers/{kind}")
+    def api_servers_set(kind: str, body: ServersBody) -> dict[str, Any]:
+        if kind not in servers.KINDS:
+            raise HTTPException(404, f"unknown kind '{kind}'")
+        result = servers.set_servers(kind, body.urls)
+        if "error" in result:
+            raise HTTPException(400, result["error"])
+        return result
 
     # ── skill settings ───────────────────────────────────────────────────────
     @api.get("/skills")
