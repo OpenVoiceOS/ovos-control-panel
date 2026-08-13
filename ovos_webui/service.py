@@ -43,6 +43,7 @@ from starlette.concurrency import run_in_threadpool
 from ovos_webui import (backupio, configio, health, installer, meta, personas,
                         pypi, recommends, servers, skillsio, transformcfg,
                         translate, voicecfg)
+from ovos_webui import intents
 from ovos_webui.auth import (
     COOKIE_NAME,
     AuthPolicy,
@@ -86,6 +87,7 @@ PAGES = {
     "/mark1": "mark1.html",
     "/servers": "servers.html",
     "/transformers": "transformers.html",
+    "/intents": "intents.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -177,6 +179,20 @@ class SoxBody(BaseModel):
     enable: bool
     #: SoX effects as {effect: {param: number}}; ``None`` leaves them unchanged
     effects: dict[str, dict[str, float]] | None = None
+
+
+class DescribeIntentBody(BaseModel):
+    skill_id: str = Field(max_length=intents.MAX_SKILL_ID)
+    intent_name: str = Field(max_length=255)
+    lang: str = Field(max_length=16)
+
+
+class DryRunBody(BaseModel):
+    utterance: str = Field(max_length=intents.MAX_UTTERANCE)
+
+
+class SkillActiveBody(BaseModel):
+    active: bool
 
 
 class BackupIdBody(BaseModel):
@@ -704,6 +720,38 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         try:
             return transformcfg.set_sox(body.enable, body.effects, bus=state["bus"])
         except transformcfg.TransformerConfigError as err:
+            raise HTTPException(400, str(err)) from None
+
+    # ── intent inspector ──────────────────────────────────────────────────────
+    # Read-only queries into the intent engine, plus activate/deactivate. Every
+    # one is an existing bus query (see ovos_webui/intents.py); no new message.
+    @privileged.get("/intents")
+    def api_intents_list(skill_id: str | None = None,
+                         lang: str | None = None) -> dict[str, Any]:
+        return intents.list_intents(_need_bus(), skill_id, lang)
+
+    @privileged.get("/intents/active")
+    def api_intents_active() -> dict[str, Any]:
+        return intents.get_active_skills(_need_bus())
+
+    @privileged.post("/intents/describe")
+    def api_intents_describe(body: DescribeIntentBody) -> dict[str, Any]:
+        return intents.describe_intent(_need_bus(), body.skill_id,
+                                       body.intent_name, body.lang)
+
+    @privileged.post("/intents/dry-run")
+    def api_intents_dry_run(body: DryRunBody) -> dict[str, Any]:
+        try:
+            utterance = intents.check_utterance(body.utterance)
+        except intents.IntentError as err:
+            raise HTTPException(400, str(err)) from None
+        return intents.dry_run(_need_bus(), utterance)
+
+    @privileged.post("/intents/skills/{skill_id}/active")
+    def api_intents_skill_active(skill_id: str, body: SkillActiveBody) -> dict[str, Any]:
+        try:
+            return intents.set_skill_active(_need_bus(), skill_id, body.active)
+        except intents.IntentError as err:
             raise HTTPException(400, str(err)) from None
 
     # ── skill settings ───────────────────────────────────────────────────────

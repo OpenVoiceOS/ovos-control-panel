@@ -25,4 +25,4 @@ If a skill you installed is missing from this list, see
 [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Skill settings](skill-settings.md) · [Home](README.md) · [Plugins →](plugins.md)
+[← Skill settings](skill-settings.md) · [Home](README.md) · [Intents →](intents.md)

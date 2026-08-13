@@ -29,6 +29,7 @@ If something is not working, go straight to
 | Voice settings | Pickers for the wake word, listening, speech-to-text, text-to-speech, pipeline order, transformers and language. | [voice-settings.md](voice-settings.md) |
 | Skills | Changes the settings of each installed skill, and turns skills off. | [skill-settings.md](skill-settings.md) |
 | Abilities | Lists what the device can do, in plain language. | [abilities.md](abilities.md) |
+| Intents | Dry-runs a sentence, shows active skills, and browses every registered intent. | [intents.md](intents.md) |
 | Plugins | Finds OVOS plugins and installs or removes them on the device. | [plugins.md](plugins.md) |
 | Transformers | Turns transformer plugins on or off, orders them, and edits each plugin's settings. | [transformers.md](transformers.md) |
 | Personas | Makes and edits personas — the ordered list of solvers that answer you. | [personas.md](personas.md) |

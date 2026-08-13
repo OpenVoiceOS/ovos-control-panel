@@ -162,6 +162,7 @@
     ["/voice", "nav.voice", "Voice settings"],
     ["/skills", "nav.skills", "Skills"],
     ["/abilities", "nav.abilities", "Abilities"],
+    ["/intents", "nav.intents", "Intents"],
     ["/plugins", "nav.plugins", "Plugins"],
     ["/transformers", "nav.transformers", "Transformers"],
     ["/personas", "nav.personas", "Personas"],

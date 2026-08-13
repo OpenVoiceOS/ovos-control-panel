@@ -79,4 +79,4 @@ on the message bus. Check the [Dashboard](dashboard.md) first. For anything
 else, see [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Abilities](abilities.md) · [Home](README.md) · [Transformers →](transformers.md)
+[← Intents](intents.md) · [Home](README.md) · [Transformers →](transformers.md)
