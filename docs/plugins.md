@@ -32,6 +32,12 @@ PyPI** fetches it again.
 
 Only names that start with `ovos-` are shown, and only those can be installed.
 
+The list and the package details come from the public PyPI by default. If you
+run your own package mirror, set `webui.pypi_index` in the configuration to its
+base address (for example a devpi or a private PyPI), and the device reads from
+there instead. A value that is not a web address is ignored, so a mistake never
+sends the request somewhere unexpected.
+
 ## Install and remove
 
 Each result says whether it is already installed. **Install** starts the
