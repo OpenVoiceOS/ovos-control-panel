@@ -102,11 +102,19 @@
 .skip:focus { inset-block-start: 0.5rem; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* Larger-text mode scales the whole UI by scaling the root font size. Almost
+   every size in this stylesheet is in rem, and the body font below is too, so
+   one change here grows text, controls, and spacing together. Default (no
+   attribute) is the normal 16px root; 1.0625rem keeps body at its original
+   17px. */
+:root[data-text="large"] { font-size: 118.75%; }   /* 19px root */
+:root[data-text="xlarge"] { font-size: 137.5%; }    /* 22px root */
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font: 17px/1.55 var(--sans);
+  font: 1.0625rem/1.55 var(--sans);
   padding-bottom: 3rem;
   -webkit-text-size-adjust: 100%;
 }

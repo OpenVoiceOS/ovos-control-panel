@@ -18,6 +18,22 @@
   }
   applyTheme(storedTheme());
 
+  // Larger-text mode, applied at head-parse time too so text never jumps size
+  // after the page paints. Cycles normal → large → larger.
+  var TEXT_KEY = "ovos-text", TEXT_SIZES = ["normal", "large", "xlarge"];
+  function storedText() {
+    try {
+      var v = window.localStorage.getItem(TEXT_KEY);
+      return TEXT_SIZES.indexOf(v) === -1 ? "normal" : v;
+    } catch (e) { return "normal"; }
+  }
+  function applyText(size) {
+    var root = document.documentElement;
+    if (size === "normal") { root.removeAttribute("data-text"); }
+    else { root.setAttribute("data-text", size); }
+  }
+  applyText(storedText());
+
   // The token is never put in a URL. A sign in exchanges it for a cookie that
   // only this site can send, so nothing ends up in an access log or in the
   // browser history.
@@ -281,6 +297,40 @@
     header.appendChild(live);
   }
 
+  // A larger-text control in every header. Cycles normal → large → larger,
+  // persists the choice, and names the current size for a screen reader.
+  var TEXT_NAME = {normal: "normal", large: "large", xlarge: "largest"};
+  function labelTextButton(button, size) {
+    button.textContent = "A";
+    button.style.fontSize = size === "xlarge" ? "1.3em" : (size === "large" ? "1.15em" : "1em");
+    var name = t("text." + size, TEXT_NAME[size]);
+    button.setAttribute("aria-label", t("text.label", "Text size:") + " " + name
+      + " — " + t("theme.change", "change"));
+    button.setAttribute("title", t("text.label", "Text size:") + " " + name);
+  }
+  function mountTextToggle() {
+    var header = document.querySelector("header");
+    if (!header || document.getElementById("text-toggle")) { return; }
+    var button = document.createElement("button");
+    button.id = "text-toggle";
+    button.type = "button";
+    button.className = "theme-toggle";
+    var live = document.createElement("span");
+    live.className = "visually-hidden";
+    live.setAttribute("aria-live", "polite");
+    var size = storedText();
+    labelTextButton(button, size);
+    button.addEventListener("click", function () {
+      size = TEXT_SIZES[(TEXT_SIZES.indexOf(size) + 1) % TEXT_SIZES.length];
+      try { window.localStorage.setItem(TEXT_KEY, size); } catch (e) { /* ignore */ }
+      applyText(size);
+      labelTextButton(button, size);
+      live.textContent = t("text.label", "Text size:") + " " + t("text." + size, TEXT_NAME[size]);
+    });
+    header.appendChild(button);
+    header.appendChild(live);
+  }
+
   function showBanner(status) {
     var b = el("banner");
     if (b && status && status.warning) { b.textContent = status.warning; b.hidden = false; }
@@ -317,6 +367,7 @@
         markNav();
         mountThemeToggle();
         mountSimpleToggle();
+        mountTextToggle();
         // One status call drives both the language/direction and the banner,
         // then the page runs with translations already applied.
         api("/api/status").then(function (s) {

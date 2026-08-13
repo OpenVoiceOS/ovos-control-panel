@@ -903,5 +903,9 @@
  "simple.on": "العرض المبسّط مُفعّل — أظهر كل الصفحات",
  "simple.off": "أظهر الصفحات اليومية فقط",
  "simple.nowOn": "عرض الصفحات اليومية فقط.",
- "simple.nowOff": "عرض كل الصفحات."
+ "simple.nowOff": "عرض كل الصفحات.",
+ "text.label": "حجم النص:",
+ "text.normal": "عادي",
+ "text.large": "كبير",
+ "text.xlarge": "الأكبر"
 }
