@@ -129,7 +129,10 @@ rebinding" below). For anything else, see
 - It never runs a shell command. No handler starts a process.
 - It never writes outside your configuration file and the skill settings
   directory.
-- It never sends anything to the internet. Every asset is in the package.
+- The page's own assets are all in the package. Nothing loads from a CDN.
+  The one exception is the Plugins page: it reads the PyPI index to search for
+  and update plugins, and that request is rate-limited. No other feature reaches
+  the internet on its own.
 
 ## Limits
 

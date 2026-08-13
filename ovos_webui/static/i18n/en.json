@@ -895,5 +895,9 @@
  "wallpaper.byUrl": "Or set one by its address",
  "wallpaper.set": "Set",
  "wallpaper.setting": "Setting…",
- "wallpaper.setDone": "Wallpaper set."
+ "wallpaper.setDone": "Wallpaper set.",
+ "voice.pipeline.moved": "Moved {n} to position {p} of {t}.",
+ "voice.pipeline.removed": "Removed {n}.",
+ "wallpaper.setThis": "Set wallpaper: {n}",
+ "wallpaper.brokenThumb": "Could not load wallpaper: {n}"
 }

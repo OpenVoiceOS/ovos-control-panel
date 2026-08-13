@@ -15,7 +15,9 @@
   .wp-thumb { width: 160px; height: 90px; object-fit: cover; border-radius: 6px;
     cursor: pointer; border: 2px solid transparent; }
   .wp-thumb:hover, .wp-thumb:focus { border-color: currentColor; }
-  .wp-thumb.broken { display: none; }
+  /* A wallpaper that fails to load stays visible as a labeled placeholder box
+     (still focusable, still announced) rather than silently disappearing. */
+  .wp-thumb.broken { object-fit: none; background: var(--muted, #8884); }
 </style>
 </head>
 <body>
@@ -110,8 +112,15 @@ OvosWebUI.ready(function () {
       img.src = url;
       img.alt = "";
       img.tabIndex = 0;
-      img.title = url;
-      img.onerror = function () { img.classList.add("broken"); };
+      img.setAttribute("role", "button");
+      var name = url.split("?")[0].split("/").pop() || url;
+      img.title = name;
+      img.setAttribute("aria-label", t("wallpaper.setThis", "Set wallpaper: {n}").replace("{n}", name));
+      img.onerror = function () {
+        img.classList.add("broken");
+        img.setAttribute("aria-label",
+          t("wallpaper.brokenThumb", "Could not load wallpaper: {n}").replace("{n}", name));
+      };
       img.addEventListener("click", function () { setUrl(url); });
       img.addEventListener("keydown", function (e) {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setUrl(url); }
