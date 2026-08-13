@@ -367,6 +367,12 @@ class Installer:
 
 def _clear_plugin_caches() -> None:
     """Make the new entrypoints visible to this process."""
+    # Drop pypi.installed_versions()'s TTL snapshot FIRST and unconditionally,
+    # or a just-installed package reads as "not installed" for up to 15s. This
+    # must not depend on the importlib refresh below, which can raise on some
+    # Python versions and would otherwise skip the invalidation.
+    from ovos_webui import pypi
+    pypi.invalidate_installed_cache()
     try:
         import importlib
         import importlib.metadata
@@ -389,13 +395,20 @@ def _install_service_for(package: str) -> str | None:
     # it routes by the "phal_admin" key rather than "phal".
     if kind == "phal" and package.lower() in _admin_phal_packages():
         kind = "phal_admin"
-    mapping = dict(DEFAULT_INSTALL_SERVICE)
+    # Broadcast by default. Out of the box no OVOS service subscribes to the
+    # per-service `ovos.pip.install.<name>` topic — only ovos-core answers the
+    # broadcast `ovos.pip.install`, and it installs any plugin family. Targeting
+    # a service that runs no ServiceInstaller would hang the job until
+    # JOB_TIMEOUT. So target ONLY when the operator has opted in by adding a
+    # `webui.install_services` block (i.e. they run a ServiceInstaller per
+    # service); then route by DEFAULT_INSTALL_SERVICE merged with their overrides.
     overrides = configio.user_or_merged(["webui", "install_services"])
-    if isinstance(overrides, dict):
-        # Only string overrides are usable as a topic suffix. A non-string value
-        # (an operator typo like {"tts": 123}) would otherwise build a topic no
-        # service answers and hang the job until JOB_TIMEOUT.
-        mapping.update({k: v for k, v in overrides.items() if isinstance(v, str)})
+    if not isinstance(overrides, dict):
+        return None
+    mapping = dict(DEFAULT_INSTALL_SERVICE)
+    # Only string overrides are usable as a topic suffix; a non-string (an
+    # operator typo like {"tts": 123}) falls back to the default for that kind.
+    mapping.update({k: v for k, v in overrides.items() if isinstance(v, str)})
     service = mapping.get(kind)
     if not service or service in ("broadcast", "*"):
         return None

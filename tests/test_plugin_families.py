@@ -52,6 +52,11 @@ def test_admin_phal_package_set_is_the_live_plugin():
     assert not any("wifi-setup" in p for p in pkgs)
 
 
-def test_pipeline_plugin_routes_to_core():
-    from ovos_webui import installer
+def test_pipeline_plugin_routes_to_core(monkeypatch):
+    from ovos_webui import configio, installer
+
+    # opt in to service targeting (a present webui.install_services block);
+    # otherwise the install broadcasts and there is no per-family routing to assert.
+    monkeypatch.setattr(configio, "user_or_merged",
+                        lambda keys: {} if list(keys) == ["webui", "install_services"] else None)
     assert installer._install_service_for("ovos-adapt-pipeline-plugin") == "ovos_core"
