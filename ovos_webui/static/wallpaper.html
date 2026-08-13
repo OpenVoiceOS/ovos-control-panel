@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Wallpaper — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+<style>
+  .wp-preview { max-width: 100%; border-radius: 8px; display: block; }
+  .wp-gallery { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; }
+  .wp-gallery li { margin: 0; }
+  .wp-thumb { width: 160px; height: 90px; object-fit: cover; border-radius: 6px;
+    cursor: pointer; border: 2px solid transparent; }
+  .wp-thumb:hover, .wp-thumb:focus { border-color: currentColor; }
+  .wp-thumb.broken { display: none; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.wallpaper">Wallpaper</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="wallpaper.intro">Change the wallpaper on a device with a screen. Pick one from
+    the collection, set one by its address, or let the device rotate through them. This needs the
+    wallpaper-manager plugin on the device.</p>
+  <p class="hint" role="note" id="wp-missing" hidden data-i18n="wallpaper.missing">The wallpaper manager did
+    not answer. Is it installed on the device?</p>
+
+  <section class="card" id="section-current">
+    <h2 data-i18n="wallpaper.current.title">Current wallpaper</h2>
+    <img id="wp-current" class="wp-preview" alt="" hidden>
+    <p class="hint" id="wp-current-none" data-i18n="wallpaper.current.none">No wallpaper is set.</p>
+    <div class="row">
+      <button id="wp-next" data-i18n="wallpaper.next">Next wallpaper</button>
+    </div>
+    <label class="check"><input type="checkbox" id="wp-rotate">
+      <span data-i18n="wallpaper.rotate">Rotate through wallpapers automatically</span></label>
+    <p class="hint" id="wp-rotate-time"></p>
+    <div class="msg" id="msg-current" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <section class="card" id="section-choose">
+    <h2 data-i18n="wallpaper.choose.title">Choose a wallpaper</h2>
+    <label class="stack" id="wp-provider-wrap" hidden>
+      <span class="hint" data-i18n="wallpaper.provider">Source</span>
+      <select id="wp-provider"></select>
+    </label>
+    <ul class="wp-gallery" id="wp-gallery"></ul>
+    <label class="stack"><span class="hint" data-i18n="wallpaper.byUrl">Or set one by its address</span>
+      <span class="row">
+        <input type="url" id="wp-url" placeholder="https://example.com/photo.jpg" autocomplete="off">
+        <button class="secondary" id="wp-set" data-i18n="wallpaper.set">Set</button>
+      </span></label>
+    <div class="msg" id="msg-choose" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t, say = OvosWebUI.say;
+
+  function showCurrent(url) {
+    var img = el("wp-current"), none = el("wp-current-none");
+    if (url) {
+      img.src = url; img.hidden = false; none.hidden = true;
+      img.onerror = function () { img.hidden = true; none.hidden = false; };
+    } else {
+      img.hidden = true; none.hidden = false;
+    }
+  }
+
+  function renderProviders(providers, active) {
+    var wrap = el("wp-provider-wrap"), sel = el("wp-provider");
+    if (!providers.length) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    sel.innerHTML = "";
+    providers.forEach(function (p) {
+      var o = document.createElement("option");
+      o.value = p.provider_name;
+      o.textContent = p.provider_display_name;
+      if (p.provider_name === active) { o.selected = true; }
+      sel.appendChild(o);
+    });
+  }
+
+  function renderGallery(urls) {
+    var ul = el("wp-gallery");
+    ul.innerHTML = "";
+    if (!urls.length) {
+      var li = document.createElement("li");
+      li.className = "hint";
+      li.textContent = t("wallpaper.choose.none", "This source has no wallpapers to show.");
+      ul.appendChild(li);
+      return;
+    }
+    urls.forEach(function (url) {
+      var li = document.createElement("li");
+      var img = document.createElement("img");
+      img.className = "wp-thumb";
+      img.src = url;
+      img.alt = "";
+      img.tabIndex = 0;
+      img.title = url;
+      img.onerror = function () { img.classList.add("broken"); };
+      img.addEventListener("click", function () { setUrl(url); });
+      img.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setUrl(url); }
+      });
+      li.appendChild(img);
+      ul.appendChild(li);
+    });
+  }
+
+  function load() {
+    api("/api/wallpaper").then(function (d) {
+      if (!d.available) { el("wp-missing").hidden = false; return; }
+      el("wp-missing").hidden = true;
+      showCurrent(d.current);
+      el("wp-rotate").checked = !!d.auto_rotation;
+      if (d.rotation_time) {
+        el("wp-rotate-time").textContent =
+          t("wallpaper.rotateEvery", "Every {s} seconds.").replace("{s}", d.rotation_time);
+      }
+      renderProviders(d.providers || [], d.active_provider);
+      renderGallery(d.collection || []);
+    }).catch(function (e) { say("msg", e.message, true); });
+  }
+
+  function setUrl(url) {
+    say("msg-choose", t("wallpaper.setting", "Setting…"));
+    api("/api/wallpaper/set", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({url: url})
+    }).then(function (d) {
+      if (d.available) { showCurrent(d.url); say("msg-choose", t("wallpaper.setDone", "Wallpaper set.")); }
+      else { say("msg-choose", t("wallpaper.missing", "The wallpaper manager did not answer. Is it installed on the device?"), true); }
+    }).catch(function (e) { say("msg-choose", e.message, true); });
+  }
+
+  el("wp-next").addEventListener("click", function () {
+    say("msg-current", t("wallpaper.setting", "Setting…"));
+    api("/api/wallpaper/next", {method: "POST"}).then(function () {
+      setTimeout(load, 400);
+      say("msg-current", t("wallpaper.setDone", "Wallpaper set."));
+    }).catch(function (e) { say("msg-current", e.message, true); });
+  });
+
+  el("wp-rotate").addEventListener("change", function () {
+    api("/api/wallpaper/rotation", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({enabled: el("wp-rotate").checked})
+    }).catch(function (e) { say("msg-current", e.message, true); });
+  });
+
+  el("wp-provider").addEventListener("change", function () {
+    api("/api/wallpaper/provider", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({provider_name: el("wp-provider").value})
+    }).then(function () { setTimeout(load, 400); })
+      .catch(function (e) { say("msg-choose", e.message, true); });
+  });
+
+  el("wp-set").addEventListener("click", function () {
+    var url = el("wp-url").value.trim();
+    if (url) { el("wp-url").value = ""; setUrl(url); }
+  });
+
+  load();
+});
+</script>
+</body>
+</html>

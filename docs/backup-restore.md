@@ -78,4 +78,4 @@ The page tells you which one. For anything else, see
 [troubleshooting.md](troubleshooting.md).
 
 ---
-[← System](system.md) · [Home](README.md) · [About →](about.md)
+[← Wallpaper](wallpaper.md) · [Home](README.md) · [About →](about.md)
