@@ -8,6 +8,19 @@ from ovos_webui import configio
 AUTH = {"Authorization": "Bearer s3cret-token"}
 
 
+_real_user_or_merged = configio.user_or_merged
+
+
+def _targeting_on(keys):
+    """Stub for configio.user_or_merged that enables service targeting
+    (an operator-present ``webui.install_services`` block) while leaving
+    every other config lookup (e.g. the release channel) to the real
+    function, key-aware so it only intercepts the routing key."""
+    if list(keys) == ["webui", "install_services"]:
+        return {}  # present (empty) block -> targeting enabled, DEFAULT mapping
+    return _real_user_or_merged(keys)
+
+
 # ── volume / mic over the bus ────────────────────────────────────────────────
 def _volume_bus(percent=0.4, muted=False):
     from ovos_utils.fakebus import FakeBus, Message
@@ -172,6 +185,7 @@ def test_install_delegates_over_the_bus_when_connected(monkeypatch):
 
     monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
     monkeypatch.setattr(updates, "latest_versions", lambda name: {})  # offline: bare name
+    monkeypatch.setattr(configio, "user_or_merged", _targeting_on)  # opt in to routing
     bus = FakeBus()
     seen = {}
     # a voice plugin is targeted at the audio service, and it replies on the
@@ -193,6 +207,7 @@ def test_install_honors_the_release_channel(monkeypatch):
     monkeypatch.setattr(updates, "latest_versions",
                         lambda name: {"stable": "0.9.0", "alpha": "1.0.0a1"})
     monkeypatch.setattr(updates, "release_channel", lambda: "alpha")
+    monkeypatch.setattr(configio, "user_or_merged", _targeting_on)  # opt in to routing
     bus = FakeBus()
     seen = {}
     bus.on("ovos.pip.install.ovos_audio",
@@ -211,6 +226,7 @@ def test_bus_install_reports_the_service_failure(monkeypatch):
     from ovos_webui import installer, pypi
 
     monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    monkeypatch.setattr(configio, "user_or_merged", _targeting_on)  # opt in to routing
     bus = FakeBus()
     bus.on("ovos.pip.install.ovos_audio", lambda m: bus.emit(m.reply(
         "ovos.pip.install.failed", {"error": "pip is disabled"})))
@@ -222,6 +238,7 @@ def test_bus_install_reports_the_service_failure(monkeypatch):
 
 def test_routing_maps_kind_to_service(monkeypatch):
     from ovos_webui import installer
+    monkeypatch.setattr(configio, "user_or_merged", _targeting_on)  # opt in to routing
     # voice -> audio, listener plugins -> listener, skill -> core, phal -> PHAL
     assert installer._install_service_for("ovos-tts-plugin-piper") == "ovos_audio"
     assert installer._install_service_for("ovos-stt-plugin-vosk") == "ovos_dinkum_listener"
@@ -230,8 +247,9 @@ def test_routing_maps_kind_to_service(monkeypatch):
     assert installer._install_service_for("ovos-PHAL-plugin-alsa") == "ovos_PHAL"
 
 
-def test_admin_phal_plugin_routes_to_the_admin_process():
+def test_admin_phal_plugin_routes_to_the_admin_process(monkeypatch):
     from ovos_webui import installer
+    monkeypatch.setattr(configio, "user_or_merged", _targeting_on)  # opt in to routing
     # network-manager needs root -> the separate admin PHAL process, not the plain
     # one (wifi-setup, which this used to name, is archived)
     assert installer._install_service_for("ovos-PHAL-plugin-network-manager") == "ovos_PHAL_admin"
@@ -284,6 +302,7 @@ def test_a_failed_emit_never_wedges_the_installer(monkeypatch):
     from ovos_webui import installer, pypi
 
     monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    monkeypatch.setattr(configio, "user_or_merged", _targeting_on)  # opt in to routing
     bus = FakeBus()
 
     def boom(*_a, **_k):

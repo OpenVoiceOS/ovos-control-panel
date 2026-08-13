@@ -14,6 +14,17 @@ import pytest
 from ovos_webui import configio, updates
 from ovos_webui.fsutils import atomic_write
 
+_real_user_or_merged = configio.user_or_merged
+
+
+def _targeting_on(keys):
+    """Stub for configio.user_or_merged that enables service targeting (an
+    operator-present ``webui.install_services`` block) while leaving every
+    other config lookup (e.g. the release channel) to the real function."""
+    if list(keys) == ["webui", "install_services"]:
+        return {}  # present (empty) block -> targeting enabled, DEFAULT mapping
+    return _real_user_or_merged(keys)
+
 
 # ── try it ───────────────────────────────────────────────────────────────────
 def _answering_bus():
@@ -157,6 +168,7 @@ def test_channel_selects_the_upgrade_version(monkeypatch):
 
     monkeypatch.setattr(updates, "latest_versions",
                         lambda name: {"stable": "1.0.0", "alpha": "1.1.0a1"})
+    monkeypatch.setattr(configio, "user_or_merged", _targeting_on)  # opt in to routing
     seen = {}
     bus = FakeBus()
     bus.on("ovos.pip.install.ovos_audio", lambda m: seen.setdefault("pkgs", m.data.get("packages")))

@@ -123,12 +123,14 @@ def test_uninstall_delegates_to_the_device(token_client):
 def test_install_emits_a_plain_packages_list(monkeypatch):
     """No shell, no subprocess — the name travels as one bus-message field."""
     from ovos_utils.fakebus import FakeBus
-    from ovos_webui import updates
+    from ovos_webui import configio, updates
     monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
     monkeypatch.setattr(updates, "latest_versions", lambda name: {})  # offline: bare name
+    # No operator override -> broadcast (the default the running core answers).
+    monkeypatch.setattr(configio, "user_or_merged", lambda *a, **k: None)
     bus = FakeBus()
     seen = {}
-    bus.on("ovos.pip.install.ovos_audio", lambda m: seen.setdefault("packages", m.data.get("packages")))
+    bus.on("ovos.pip.install", lambda m: seen.setdefault("packages", m.data.get("packages")))
     installer.Installer().install("ovos-tts-plugin-mimic3", bus=bus)
     for _ in range(100):
         if "packages" in seen:
@@ -140,10 +142,12 @@ def test_install_emits_a_plain_packages_list(monkeypatch):
 def test_install_delegates_to_the_device(monkeypatch):
     """A plugin must land where OVOS imports from — so the device installs it."""
     from ovos_utils.fakebus import FakeBus
+    from ovos_webui import configio
     monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    monkeypatch.setattr(configio, "user_or_merged", lambda *a, **k: None)
     bus = FakeBus()
     seen = {}
-    bus.on("ovos.pip.install.ovos_audio", lambda m: (seen.update(got=True),
+    bus.on("ovos.pip.install", lambda m: (seen.update(got=True),
            bus.emit(m.reply("ovos.pip.install.complete"))))
     job = installer.Installer().install("ovos-tts-plugin-mimic3", bus=bus)
     for _ in range(200):
@@ -205,9 +209,11 @@ def test_job_paging():
 
 def test_finished_job_tells_the_user_to_restart(monkeypatch):
     from ovos_utils.fakebus import FakeBus
+    from ovos_webui import configio
     monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    monkeypatch.setattr(configio, "user_or_merged", lambda *a, **k: None)
     bus = FakeBus()
-    bus.on("ovos.pip.install.ovos_audio", lambda m: bus.emit(m.reply("ovos.pip.install.complete")))
+    bus.on("ovos.pip.install", lambda m: bus.emit(m.reply("ovos.pip.install.complete")))
     job = installer.Installer().install("ovos-tts-plugin-a", bus=bus)
     for _ in range(200):
         if job.state != "running":
@@ -216,3 +222,52 @@ def test_finished_job_tells_the_user_to_restart(monkeypatch):
     assert job.state == "done"
     assert any("restart" in line.lower() for line in job.lines)
     assert job.as_dict()["restart_hint"] is True
+
+
+def test_default_install_broadcasts_not_targeted(monkeypatch):
+    """With no operator override, install broadcasts ovos.pip.install — the
+    topic the running core actually answers — and does NOT emit a per-service
+    topic (which nothing subscribes to and would hang the job)."""
+    from ovos_utils.fakebus import FakeBus
+    from ovos_webui import configio
+    monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    monkeypatch.setattr(configio, "user_or_merged", lambda *a, **k: None)
+    bus = FakeBus()
+    targeted, broadcast = [], []
+    bus.on("ovos.pip.install.ovos_audio", lambda m: targeted.append(m))
+    bus.on("ovos.pip.install", lambda m: broadcast.append(m))
+    installer.Installer().install("ovos-tts-plugin-mimic3", bus=bus)
+    for _ in range(100):
+        if broadcast:
+            break
+        time.sleep(0.01)
+    assert broadcast and not targeted
+
+
+def test_install_targets_a_service_when_the_operator_opts_in(monkeypatch):
+    """An operator who runs a ServiceInstaller opts a kind in via
+    webui.install_services; then that kind is addressed to its service."""
+    from ovos_utils.fakebus import FakeBus
+    from ovos_webui import configio, updates
+    monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
+    monkeypatch.setattr(updates, "latest_versions", lambda name: {})  # offline: bare name
+    monkeypatch.setattr(configio, "user_or_merged",
+                        lambda *a, **k: {"tts": "ovos_audio"})
+    bus = FakeBus()
+    targeted = []
+    bus.on("ovos.pip.install.ovos_audio", lambda m: targeted.append(m.data.get("packages")))
+    installer.Installer().install("ovos-tts-plugin-mimic3", bus=bus)
+    for _ in range(100):
+        if targeted:
+            break
+        time.sleep(0.01)
+    assert targeted == [["ovos-tts-plugin-mimic3"]]
+
+
+def test_clear_plugin_caches_invalidates_the_installed_snapshot():
+    """A just-installed package must not read as 'not installed' for 15s."""
+    import time as _time
+    pypi._INSTALLED_CACHE["val"] = {"ovos-utils": "1.0"}
+    pypi._INSTALLED_CACHE["ts"] = _time.monotonic()
+    installer._clear_plugin_caches()
+    assert pypi._INSTALLED_CACHE["val"] is None

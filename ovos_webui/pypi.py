@@ -213,6 +213,16 @@ import threading as _threading
 
 _INSTALLED_CACHE: dict[str, Any] = {"ts": 0.0, "val": None}
 _INSTALLED_TTL = 15.0
+
+
+def invalidate_installed_cache() -> None:
+    """Drop the installed-packages snapshot so the next read is fresh.
+
+    Called after an install/uninstall so a just-changed package is reflected
+    right away instead of waiting out the TTL.
+    """
+    _INSTALLED_CACHE["val"] = None
+    _INSTALLED_CACHE["ts"] = 0.0
 _INSTALLED_LOCK = _threading.Lock()
 
 
