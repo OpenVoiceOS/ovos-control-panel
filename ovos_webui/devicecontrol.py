@@ -31,8 +31,16 @@ def get_volume(bus) -> dict[str, Any]:
         return {"percent": None, "muted": None}
     data = reply.data or {}
     percent = data.get("percent")
+    if isinstance(percent, (int, float)) and not isinstance(percent, bool):
+        # Most plugins report a 0.0-1.0 fraction, but some already report a
+        # 0-100 percent — treat anything above 1 as already scaled rather than
+        # multiplying it into e.g. 7500%.
+        value = percent if percent > 1 else percent * 100
+        percent_out = round(max(0, min(100, value)))
+    else:
+        percent_out = None
     return {
-        "percent": round(percent * 100) if isinstance(percent, (int, float)) else None,
+        "percent": percent_out,
         "muted": bool(data.get("muted")) if "muted" in data else None,
     }
 
