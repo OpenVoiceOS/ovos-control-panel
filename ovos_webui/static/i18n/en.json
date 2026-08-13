@@ -304,6 +304,8 @@
  "cfg.opt.MDY": "month / day / year",
  "cfg.opt.YMD": "year / month / day",
  "login.token.kept": "How the token is kept safe",
+ "login.err.badToken": "That token is not right.",
+ "login.err.failed": "That did not work.",
  "backup.undo_hint": "You will be asked to confirm first, and the replaced files are kept on the device, so you can undo this.",
  "skills.count": "skills can be set up here. Choose one:",
  "personas.empty.title": "No persona yet",

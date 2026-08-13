@@ -63,8 +63,22 @@
     msg.hidden = false;
   }
 
+  // Before sign in the device language is not disclosed, so the sign in page
+  // follows the browser's own language, the same one it uses for direction
+  // below. This page deliberately stays dependency-free (no app.js) and
+  // needs no token, since a static /static/i18n/<base>.json asset is public.
+  var STRINGS = {};
+  function t(key, fallback) {
+    return Object.prototype.hasOwnProperty.call(STRINGS, key) ? STRINGS[key] : fallback;
+  }
+  function applyI18n() {
+    document.querySelectorAll("[data-i18n]").forEach(function (node) {
+      node.textContent = t(node.getAttribute("data-i18n"), node.textContent);
+    });
+  }
+
   if (new URLSearchParams(window.location.search).get("bad")) {
-    say("That token is not right.", true);
+    say(t("login.err.badToken", "That token is not right."), true);
   }
 
   form.addEventListener("submit", function (event) {
@@ -76,7 +90,7 @@
     }).then(function (r) {
       if (r.ok) { window.location.href = "/"; return null; }
       return r.json().then(function (b) {
-        say(b.detail || "That did not work.", true);
+        say(b.detail || t("login.err.failed", "That did not work."), true);
         var tok = document.getElementById("token");
         tok.focus(); tok.select();
       });
@@ -84,12 +98,17 @@
   });
 
   // A device with no token set does not need this page.
-  // Before sign in the device language is not disclosed, so the sign in page
-  // follows the browser's own language for its direction.
   var RTL = {ar:1, he:1, fa:1, ur:1, ps:1, sd:1, ug:1, yi:1, dv:1, ckb:1};
   var base = String(navigator.language || "en").toLowerCase().split("-")[0];
   document.documentElement.lang = navigator.language || "en";
   document.documentElement.dir = RTL[base] ? "rtl" : "ltr";
+
+  if (base !== "en") {
+    fetch("/static/i18n/" + base + ".json", {credentials: "same-origin"})
+      .then(function (r) { return r.ok ? r.json() : {}; })
+      .then(function (dict) { STRINGS = dict || {}; applyI18n(); })
+      .catch(function () { /* keep the English already on the page */ });
+  }
 
   fetch("/api/status").then(function (r) { return r.json(); }).then(function (s) {
     if (!s.auth) { window.location.href = "/"; }

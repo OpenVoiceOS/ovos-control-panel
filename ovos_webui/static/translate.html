@@ -68,6 +68,10 @@
 OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc;
   var plugins = [], rows = [];
+  // A slow earlier response must never overwrite a newer selection's data —
+  // each loader captures the generation it started with and drops its result
+  // if a newer selection has since started (seq moved on).
+  var seq = 0;
 
   function focusAccept(i) {
     var btn = el("lines").querySelector('[data-ok="' + i + '"]');
@@ -106,10 +110,12 @@ OvosWebUI.ready(function () {
   }
 
   function loadFile() {
+    var mine = ++seq;
     var s = el("skill").value, l = el("from").value, f = el("file").value;
     if (!s || !l || !f) { el("work").hidden = true; return; }
     api("/api/translate/" + encodeURIComponent(s) + "/" + encodeURIComponent(l)
         + "/file/" + encodeURIComponent(f)).then(function (r) {
+      if (mine !== seq) { return; }
       var existing = r.override;
       rows = r.source.map(function (line, i) {
         var have = existing && existing[i] !== undefined && existing[i] !== line;
@@ -124,32 +130,36 @@ OvosWebUI.ready(function () {
           + "yourself, or install a plugin whose name starts with "
           + "ovos-translate-plugin- on the Plugins page.");
       el("machine").disabled = !plugins.length;
-    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+    }).catch(function (e) { if (mine === seq) { OvosWebUI.say("msg", e.message, true); } });
   }
 
   function loadFiles() {
+    var mine = ++seq;
     var s = el("skill").value, l = el("from").value;
     if (!s || !l) { return; }
     api("/api/translate/" + encodeURIComponent(s) + "/" + encodeURIComponent(l) + "/files")
       .then(function (r) {
+        if (mine !== seq) { return; }
         el("file").innerHTML = '<option value="">' + esc(OvosWebUI.t("translate.choose_file", "Choose a file…")) + '</option>'
           + r.files.map(function (f) {
               return '<option value="' + esc(f.file) + '">' + esc(f.file)
                 + (f.translated ? esc(OvosWebUI.t("translate.translated_suffix", " (translated)")) : "") + "</option>";
             }).join("");
         el("work").hidden = true;
-      }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+      }).catch(function (e) { if (mine === seq) { OvosWebUI.say("msg", e.message, true); } });
   }
 
   function loadLangs() {
+    var mine = ++seq;
     var s = el("skill").value;
     if (!s) { return; }
     api("/api/translate/" + encodeURIComponent(s) + "/languages").then(function (r) {
+      if (mine !== seq) { return; }
       el("from").innerHTML = r.languages.map(function (l) {
         return '<option value="' + esc(l) + '">' + esc(l) + "</option>";
       }).join("") || '<option value="">' + esc(OvosWebUI.t("translate.no_resources", "no resources found")) + '</option>';
       loadFiles();
-    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+    }).catch(function (e) { if (mine === seq) { OvosWebUI.say("msg", e.message, true); } });
   }
 
   el("skill").addEventListener("change", loadLangs);

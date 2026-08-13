@@ -140,7 +140,7 @@ OvosWebUI.ready(function () {
         + "</div>";
       // still fetch once to fill the kind list, without drawing the catalog
       if (!el("kind").dataset.filled) {
-        api("/api/plugins/search?q=&kind=").then(function (r) { fillKinds(r.kinds); }).catch(function () {});
+        return api("/api/plugins/search?q=&kind=").then(function (r) { fillKinds(r.kinds); }).catch(function () {});
       }
       return;
     }
@@ -148,7 +148,7 @@ OvosWebUI.ready(function () {
     var url = "/api/plugins/search?q=" + encodeURIComponent(el("q").value)
       + "&kind=" + encodeURIComponent(el("kind").value)
       + (refresh ? "&refresh=true" : "");
-    api(url).then(function (r) {
+    return api(url).then(function (r) {
       fillKinds(r.kinds);
       var shown = r.results.slice(0, MAX_RESULTS);
       var more = r.results.length - shown.length;
@@ -163,6 +163,23 @@ OvosWebUI.ready(function () {
         : '<div class="card">' + OvosWebUI.t("plugins.nothingMatched", "Nothing matched.") + '</div>';
       bind();
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  // A fast double-click or an Enter-then-click on the search trigger must not
+  // fire two concurrent searches, so the button is disabled for the duration
+  // of the request and re-enabled once it settles either way.
+  var searching = false;
+  function triggerSearch(refresh) {
+    if (searching) { return; }
+    searching = true;
+    el("go").disabled = true;
+    Promise.resolve(search(refresh)).then(function () {
+      searching = false;
+      el("go").disabled = false;
+    }, function () {
+      searching = false;
+      el("go").disabled = false;
+    });
   }
 
   function run(action, name) {
@@ -202,9 +219,9 @@ OvosWebUI.ready(function () {
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   }
 
-  el("go").addEventListener("click", function () { search(false); });
+  el("go").addEventListener("click", function () { triggerSearch(false); });
   el("refresh").addEventListener("click", function () { search(true); });
-  el("q").addEventListener("keydown", function (e) { if (e.key === "Enter") { search(false); } });
+  el("q").addEventListener("keydown", function (e) { if (e.key === "Enter") { triggerSearch(false); } });
 
   var kindLabels = {
     skill: OvosWebUI.t("plugins.kind.skill", "Skill"),
