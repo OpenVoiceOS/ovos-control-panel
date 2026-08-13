@@ -907,5 +907,6 @@
  "text.label": "حجم النص:",
  "text.normal": "عادي",
  "text.large": "كبير",
- "text.xlarge": "الأكبر"
+ "text.xlarge": "الأكبر",
+ "transformers.confirmSave": "حفظ هذه التغييرات؟ تُحفَظ الإعدادات الحالية كنسخة احتياطية."
 }

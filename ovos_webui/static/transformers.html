@@ -241,7 +241,11 @@ OvosWebUI.ready(function () {
     render(chain);
   }
 
+  var CONFIRM = "transformers.confirmSave";
+  var CONFIRM_EN = "Save these changes? The current settings are kept as a backup.";
+
   function saveChain(chain) {
+    if (!OvosWebUI.confirmed(t(CONFIRM, CONFIRM_EN))) { return; }
     OvosWebUI.say("msg-" + chain, t("transformers.saving", "Saving…"));
     var enabled = {}, order = [];
     state[chain].plugins.forEach(function (p) {
@@ -270,6 +274,7 @@ OvosWebUI.ready(function () {
       msgEl.textContent = t("transformers.notObject", "Settings must be a JSON object.");
       return;
     }
+    if (!OvosWebUI.confirmed(t(CONFIRM, CONFIRM_EN))) { return; }
     msgEl.hidden = false; msgEl.className = "msg";
     msgEl.textContent = t("transformers.saving", "Saving…");
     api("/api/transformers/" + encodeURIComponent(chain) + "/" + encodeURIComponent(plugin.name) + "/config", {
@@ -298,6 +303,7 @@ OvosWebUI.ready(function () {
   }
 
   function saveBidi() {
+    if (!OvosWebUI.confirmed(t(CONFIRM, CONFIRM_EN))) { return; }
     var enable = el("bidi-enable").checked;
     var langs = el("bidi-langs").value.split(",").map(function (s) { return s.trim(); })
       .filter(function (s) { return s; });
@@ -368,6 +374,7 @@ OvosWebUI.ready(function () {
   }
 
   function saveSox() {
+    if (!OvosWebUI.confirmed(t(CONFIRM, CONFIRM_EN))) { return; }
     var effects = {};
     SOX_CONTROLS.forEach(function (c, i) {
       var v = parseFloat(el("sox-" + i).value);

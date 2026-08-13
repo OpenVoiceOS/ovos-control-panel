@@ -907,5 +907,6 @@
  "text.label": "Text size:",
  "text.normal": "normal",
  "text.large": "large",
- "text.xlarge": "largest"
+ "text.xlarge": "largest",
+ "transformers.confirmSave": "Save these changes? The current settings are kept as a backup."
 }
