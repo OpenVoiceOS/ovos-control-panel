@@ -26,6 +26,7 @@ If something is not working, go straight to
 | Dashboard | Shows if the message bus and each OVOS service answer. | [dashboard.md](dashboard.md) |
 | Setup | Walks a fresh device through language, plugins and a first question. | [setup.md](setup.md) |
 | Settings | Changes your layer of `mycroft.conf`, as a form or as raw JSON or YAML. | [configuration.md](configuration.md) |
+| Voice settings | Pickers for the wake word, listening, speech-to-text, text-to-speech, pipeline order, transformers and language. | [voice-settings.md](voice-settings.md) |
 | Skills | Changes the settings of each installed skill, and turns skills off. | [skill-settings.md](skill-settings.md) |
 | Abilities | Lists what the device can do, in plain language. | [abilities.md](abilities.md) |
 | Plugins | Finds OVOS plugins and installs or removes them on the device. | [plugins.md](plugins.md) |
@@ -50,7 +51,7 @@ If something is not working, go straight to
 
 - **Set an access token** → [Getting started](getting-started.md)
 - **The device isn't responding** → [Troubleshooting](troubleshooting.md)
-- **Change the wake word** → [Settings](configuration.md)
+- **Change the wake word, voice, or speech-to-text plugin** → [Voice settings](voice-settings.md)
 - **Install a voice** → [Plugins](plugins.md)
 - **Turn a skill off** → [Skills](skill-settings.md)
 - **Make a backup before changing anything** → [Backup](backup-restore.md)

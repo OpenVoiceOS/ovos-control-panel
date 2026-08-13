@@ -41,7 +41,8 @@ from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from ovos_webui import (backupio, configio, health, installer, meta, personas,
-                        pypi, recommends, servers, skillsio, translate)
+                        pypi, recommends, servers, skillsio, translate,
+                        voicecfg)
 from ovos_webui.auth import (
     COOKIE_NAME,
     AuthPolicy,
@@ -67,6 +68,7 @@ THROTTLE_DECAY = 30.0
 PAGES = {
     "/": "index.html",
     "/config": "config.html",
+    "/voice": "voice.html",
     "/skills": "skills.html",
     "/backup": "backup.html",
     "/about": "about.html",
@@ -105,6 +107,11 @@ class ConfigBody(BaseModel):
 
 class QuickBody(BaseModel):
     values: dict[str, Any]
+
+
+class VoiceBody(BaseModel):
+    key: str
+    value: Any = None
 
 
 class SettingsBody(BaseModel):
@@ -581,6 +588,21 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         try:
             return configio.apply_quick_form(body.values, bus=state["bus"])
         except configio.ConfigError as err:
+            raise HTTPException(400, str(err)) from None
+
+    # ── voice settings ───────────────────────────────────────────────────────
+    # Wake word, VAD, STT/TTS (+ fallback), pipeline order, transformers and
+    # language change how the device listens and speaks, so both routes sit on
+    # ``privileged``, like the plugin installer and the device controls.
+    @privileged.get("/voice")
+    def api_voice_get() -> dict[str, Any]:
+        return voicecfg.get_settings()
+
+    @privileged.post("/voice")
+    def api_voice_post(body: VoiceBody) -> dict[str, Any]:
+        try:
+            return voicecfg.set_value(body.key, body.value, bus=state["bus"])
+        except voicecfg.VoiceConfigError as err:
             raise HTTPException(400, str(err)) from None
 
     @api.get("/plugins")

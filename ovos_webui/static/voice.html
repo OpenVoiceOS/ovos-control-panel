@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Voice settings — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="voice.title">Voice settings</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria"></nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="voice.intro">These are the settings that decide how the device listens and speaks: the
+    wake word, how it tells speech from silence, the plugins that turn speech into text and text into speech, the
+    order it tries to understand a command, and the language. Every change is written into your own layer of
+    <code>mycroft.conf</code>, the same file the Settings page's Advanced tab edits — this page just gives each
+    setting a plain picker.</p>
+  <p class="hint" data-i18n="voice.restart">A running service keeps its old value until it is told about the change,
+    or until the device restarts. Most services pick a new value up right away; a few need a restart. If something
+    does not take effect, restart the device.</p>
+  <p class="hint"><span data-i18n="config.simple.file">Your changes are stored in your own layer of this file:</span>
+    <code id="path" dir="ltr"></code></p>
+
+  <div id="voice-body">
+
+  <h2 data-i18n="voice.ww.title">Wake word</h2>
+  <p class="hint" data-i18n="voice.ww.hint">The name the device listens for before it pays attention to you. Only wake
+    words already set up in the <code>hotwords</code> section can be chosen here.</p>
+  <div class="card">
+    <label><span data-i18n="voice.ww.label">Wake word</span><span id="wake_word-select"></span></label>
+    <p class="hint" id="ww-empty" hidden data-i18n="voice.ww.empty">No wake words are set up on this device yet. Add
+      one in the Advanced tab of Settings, or install a wake-word plugin on the Plugins page.</p>
+    <div class="row"><button data-save="wake_word" data-i18n="config.save">Save</button></div>
+    <div class="msg" id="msg-wake_word" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="voice.vad.title">Listening (voice activity)</h2>
+  <p class="hint" data-i18n="voice.vad.hint">The plugin that decides where your speech starts and stops, once the
+    wake word has fired.</p>
+  <div class="card">
+    <label><span data-i18n="voice.vad.label">Voice activity plugin</span><span id="vad_module-select"></span></label>
+    <p class="hint" id="vad_module-empty" hidden data-i18n="voice.vad.empty">No voice-activity plugins are installed.
+      Install one on the Plugins page; the current value is kept until you change it.</p>
+    <div class="row"><button data-save="vad_module" data-i18n="config.save">Save</button></div>
+    <div class="msg" id="msg-vad_module" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="voice.stt.title">Speech to text</h2>
+  <p class="hint" data-i18n="voice.stt.hint">The plugin that turns what you say into text. A fallback is tried only
+    when the primary one fails.</p>
+  <div class="card">
+    <label><span data-i18n="voice.stt.primary">Primary</span><span id="stt_module-select"></span></label>
+    <p class="hint" id="stt_module-empty" hidden data-i18n="voice.stt.empty">No speech-to-text plugins are installed.
+      Install one on the Plugins page.</p>
+    <label><span data-i18n="voice.stt.fallback">Fallback (optional)</span><span id="stt_fallback-select"></span></label>
+    <div class="row"><button data-save="stt_module" data-i18n="config.save">Save</button></div>
+    <div class="msg" id="msg-stt_module" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="voice.tts.title">Text to speech</h2>
+  <p class="hint" data-i18n="voice.tts.hint">The plugin that speaks the device's replies. A fallback is tried only
+    when the primary one fails.</p>
+  <div class="card">
+    <label><span data-i18n="voice.tts.primary">Primary</span><span id="tts_module-select"></span></label>
+    <p class="hint" id="tts_module-empty" hidden data-i18n="voice.tts.empty">No text-to-speech plugins are installed.
+      Install one on the Plugins page.</p>
+    <label><span data-i18n="voice.tts.fallback">Fallback (optional)</span><span id="tts_fallback-select"></span></label>
+    <div class="row"><button data-save="tts_module" data-i18n="config.save">Save</button></div>
+    <div class="msg" id="msg-tts_module" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="voice.pipeline.title">Pipeline order</h2>
+  <p class="hint" data-i18n="voice.pipeline.hint">When you speak, the device tries each of these in order and stops
+    at the first one that understands you. Move an entry up to have it tried sooner.</p>
+  <div class="card">
+    <ol id="pipeline-list"></ol>
+    <div class="row">
+      <select id="pipeline-add-select"></select>
+      <button id="pipeline-add" type="button" data-i18n="voice.pipeline.add">Add stage</button>
+    </div>
+    <div class="row"><button data-save="pipeline" data-i18n="config.save">Save</button></div>
+    <div class="msg" id="msg-pipeline" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="voice.transformers.title">Transformers</h2>
+  <p class="hint" data-i18n="voice.transformers.hint">Utterance transformers clean up or change what you said before
+    the device tries to understand it. Metadata transformers add extra information to a request before it is
+    handled. Turn one on or off below.</p>
+  <div class="card">
+    <h3 data-i18n="voice.transformers.utterance">Utterance transformers</h3>
+    <div id="utterance_transformers-list"></div>
+    <p class="hint" id="utterance_transformers-empty" hidden data-i18n="voice.transformers.utteranceEmpty">No
+      utterance-transformer plugins are installed.</p>
+    <div class="row"><button data-save="utterance_transformers" data-i18n="config.save">Save</button></div>
+    <div class="msg" id="msg-utterance_transformers" role="status" aria-live="polite" hidden></div>
+
+    <h3 data-i18n="voice.transformers.metadata">Metadata transformers</h3>
+    <div id="metadata_transformers-list"></div>
+    <p class="hint" id="metadata_transformers-empty" hidden data-i18n="voice.transformers.metadataEmpty">No
+      metadata-transformer plugins are installed.</p>
+    <div class="row"><button data-save="metadata_transformers" data-i18n="config.save">Save</button></div>
+    <div class="msg" id="msg-metadata_transformers" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="voice.lang.title">Language</h2>
+  <p class="hint" data-i18n="voice.lang.hint">The language the device speaks and listens in, for example
+    <code>en-us</code> or <code>pt-pt</code>. Extra languages can be added below; the device also tries to understand
+    those, alongside the main one.</p>
+  <div class="card">
+    <label><span data-i18n="voice.lang.label">Main language</span>
+      <input id="lang-input" data-i18n-attr="aria-label:voice.lang.label"></label>
+    <label><span data-i18n="voice.lang.secondary">Extra languages (comma separated)</span>
+      <input id="secondary-input" data-i18n-attr="aria-label:voice.lang.secondary"></label>
+    <div class="row"><button data-save="lang" data-i18n="config.save">Save</button></div>
+    <div class="msg" id="msg-lang" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  </div>
+
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t, say = OvosWebUI.say;
+  var current = null; // last /api/voice response
+
+  function selectHtml(name, field, allowEmpty) {
+    var value = field.value === null || field.value === undefined ? "" : field.value;
+    var opts = [];
+    if (allowEmpty) {
+      opts.push('<option value="">' + esc(t("voice.opt.default", "Use the standard value")) + '</option>');
+    }
+    (field.options || []).forEach(function (o) {
+      opts.push('<option value="' + esc(o) + '"' + (o === value ? " selected" : "") + '>' + esc(o) + '</option>');
+    });
+    if (value && (field.options || []).indexOf(value) === -1) {
+      opts.push('<option value="' + esc(value) + '" selected>' + esc(value) + ' '
+        + esc(t("config.field.notInstalled", "(not installed)")) + '</option>');
+    }
+    return '<select id="' + name + '-input" data-i18n-attr="aria-label:voice.' + name + '.label">'
+      + opts.join("") + '</select>';
+  }
+
+  function inUse(field) {
+    var raw = field.effective;
+    return raw === null || raw === undefined ? t("config.field.notSet", "not set") : String(raw);
+  }
+
+  function renderPlugin(name, field, emptyId) {
+    el(name + "-select").innerHTML = selectHtml(name, field, name.indexOf("fallback") !== -1)
+      + '<small>' + esc(t("config.field.inUse", "In use now:")) + ' <bdi>' + esc(inUse(field)) + '</bdi></small>';
+    var noOptions = !(field.options || []).length && !field.value;
+    if (el(emptyId)) { el(emptyId).hidden = !noOptions; }
+  }
+
+  function renderPipeline(field) {
+    var value = (field.value && field.value.length) ? field.value.slice() : (field.effective || []).slice();
+    var list = el("pipeline-list");
+    list.innerHTML = value.map(function (stage, i) {
+      return '<li data-stage="' + esc(stage) + '"><bdi>' + esc(stage) + '</bdi> '
+        + '<button type="button" class="secondary" data-up="' + i + '" data-i18n="voice.pipeline.up">'
+        + esc(t("voice.pipeline.up", "Move up")) + '</button> '
+        + '<button type="button" class="secondary" data-down="' + i + '" data-i18n="voice.pipeline.down">'
+        + esc(t("voice.pipeline.down", "Move down")) + '</button> '
+        + '<button type="button" class="secondary" data-remove="' + i + '" data-i18n="voice.pipeline.remove">'
+        + esc(t("voice.pipeline.remove", "Remove")) + '</button></li>';
+    }).join("");
+    var remaining = (field.options || []).filter(function (o) { return value.indexOf(o) === -1; });
+    el("pipeline-add-select").innerHTML = remaining.map(function (o) {
+      return '<option value="' + esc(o) + '">' + esc(o) + '</option>';
+    }).join("");
+    list.dataset.value = JSON.stringify(value);
+  }
+
+  function pipelineValue() { return JSON.parse(el("pipeline-list").dataset.value || "[]"); }
+
+  el("pipeline-list").addEventListener("click", function (e) {
+    var btn = e.target.closest("button");
+    if (!btn) { return; }
+    var value = pipelineValue();
+    if (btn.dataset.up !== undefined) {
+      var i = +btn.dataset.up;
+      if (i > 0) { var tmp = value[i - 1]; value[i - 1] = value[i]; value[i] = tmp; }
+    } else if (btn.dataset.down !== undefined) {
+      var j = +btn.dataset.down;
+      if (j < value.length - 1) { var tmp2 = value[j]; value[j] = value[j + 1]; value[j + 1] = tmp2; }
+    } else if (btn.dataset.remove !== undefined) {
+      value.splice(+btn.dataset.remove, 1);
+    }
+    current.fields.pipeline.value = value;
+    renderPipeline(current.fields.pipeline);
+  });
+
+  el("pipeline-add").addEventListener("click", function () {
+    var name = el("pipeline-add-select").value;
+    if (!name) { return; }
+    var value = pipelineValue();
+    value.push(name);
+    current.fields.pipeline.value = value;
+    renderPipeline(current.fields.pipeline);
+  });
+
+  function renderTransformers(name, field, emptyId) {
+    var value = field.value !== null && field.value !== undefined
+      ? Object.keys(field.value) : Object.keys(field.effective || {});
+    var options = (field.options || []).slice();
+    value.forEach(function (v) { if (options.indexOf(v) === -1) { options.push(v); } });
+    options.sort();
+    var box = el(name + "-list");
+    box.innerHTML = options.map(function (o) {
+      var checked = value.indexOf(o) !== -1;
+      return '<label class="check"><input type="checkbox" value="' + esc(o) + '"'
+        + (checked ? " checked" : "") + '> ' + esc(o) + '</label>';
+    }).join("");
+    if (el(emptyId)) { el(emptyId).hidden = options.length > 0; }
+  }
+
+  function transformerValue(name) {
+    var out = [];
+    el(name + "-list").querySelectorAll("input:checked").forEach(function (i) { out.push(i.value); });
+    return out;
+  }
+
+  function renderLang(field, secondary) {
+    el("lang-input").value = field.value || "";
+    el("lang-input").placeholder = inUse(field);
+    var value = secondary.value !== null && secondary.value !== undefined ? secondary.value
+      : (secondary.effective || []);
+    el("secondary-input").value = (value || []).join(", ");
+  }
+
+  function load() {
+    api("/api/voice").then(function (r) {
+      current = r;
+      el("path").textContent = r.path;
+      renderPlugin("wake_word", r.fields.wake_word, "ww-empty");
+      renderPlugin("vad_module", r.fields.vad_module, "vad_module-empty");
+      renderPlugin("stt_module", r.fields.stt_module, "stt_module-empty");
+      renderPlugin("stt_fallback", r.fields.stt_fallback, null);
+      renderPlugin("tts_module", r.fields.tts_module, "tts_module-empty");
+      renderPlugin("tts_fallback", r.fields.tts_fallback, null);
+      renderPipeline(r.fields.pipeline);
+      renderTransformers("utterance_transformers", r.fields.utterance_transformers, "utterance_transformers-empty");
+      renderTransformers("metadata_transformers", r.fields.metadata_transformers, "metadata_transformers-empty");
+      renderLang(r.fields.lang, r.fields.secondary_langs);
+      el("voice-body").hidden = false;
+    }).catch(function (e) { say("msg-wake_word", e.message, true); });
+  }
+
+  function saveField(key, value) {
+    if (!OvosWebUI.confirmed(t("voice.confirm.save", "Save this setting? The old file is kept as a backup."))) { return; }
+    api("/api/voice", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({key: key, value: value})
+    }).then(function (r) {
+      say("msg-" + key, savedMessage(r), r.applied === false);
+      load();
+    }).catch(function (e) { say("msg-" + key, e.message, true); });
+  }
+
+  function savedMessage(r) {
+    var base = t("config.saved", "Saved. Backup:") + " " + (r.backup || t("config.saved.noBackup", "none was needed."));
+    if (r.applied === false) {
+      return base + " " + t("config.saved.notLive", "The running services could not be told, so this is not "
+        + "live yet; it takes effect when the device is next restarted.");
+    }
+    return base;
+  }
+
+  document.querySelectorAll("[data-save]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var key = btn.dataset.save;
+      if (key === "wake_word" || key === "vad_module") {
+        saveField(key, el(key + "-input").value);
+      } else if (key === "stt_module") {
+        saveField("stt_module", el("stt_module-input").value);
+        saveField("stt_fallback", el("stt_fallback-input").value);
+      } else if (key === "tts_module") {
+        saveField("tts_module", el("tts_module-input").value);
+        saveField("tts_fallback", el("tts_fallback-input").value);
+      } else if (key === "pipeline") {
+        saveField("pipeline", pipelineValue());
+      } else if (key === "utterance_transformers" || key === "metadata_transformers") {
+        saveField(key, transformerValue(key));
+      } else if (key === "lang") {
+        saveField("lang", el("lang-input").value);
+        var secondary = el("secondary-input").value.split(",").map(function (s) { return s.trim(); })
+          .filter(function (s) { return s; });
+        saveField("secondary_langs", secondary);
+      }
+    });
+  });
+
+  el("voice-body").hidden = true;
+  load();
+});
+</script>
+</body>
+</html>
