@@ -899,5 +899,9 @@
  "voice.pipeline.moved": "نُقل {n} إلى الموضع {p} من {t}.",
  "voice.pipeline.removed": "أُزيل {n}.",
  "wallpaper.setThis": "تعيين الخلفية: {n}",
- "wallpaper.brokenThumb": "تعذّر تحميل الخلفية: {n}"
+ "wallpaper.brokenThumb": "تعذّر تحميل الخلفية: {n}",
+ "simple.on": "العرض المبسّط مُفعّل — أظهر كل الصفحات",
+ "simple.off": "أظهر الصفحات اليومية فقط",
+ "simple.nowOn": "عرض الصفحات اليومية فقط.",
+ "simple.nowOff": "عرض كل الصفحات."
 }
