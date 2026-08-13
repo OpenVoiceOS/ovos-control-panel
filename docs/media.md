@@ -34,4 +34,4 @@ Move the slider to set the volume from 0 to 100. Select **Mute** to silence the
 device, and **Unmute** to restore the sound.
 
 ---
-[← Device controls](controls.md) · [Home](README.md) · [Network →](network.md)
+[← Device controls](controls.md) · [Home](README.md) · [Apps →](apps.md)

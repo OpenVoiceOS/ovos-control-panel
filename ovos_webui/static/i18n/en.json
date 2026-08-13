@@ -864,5 +864,20 @@
  "intents.list.none": "No intents registered.",
  "intents.list.describe": "Definition",
  "intents.list.disabled": "off",
- "intents.list.loading": "Loading…"
+ "intents.list.loading": "Loading…",
+ "hdr.apps": "Apps",
+ "nav.apps": "Apps",
+ "apps.intro": "Launch and close the desktop applications a device with a screen knows about. This needs the app-launcher plugin on the device; without it the list stays empty.",
+ "apps.filter": "filter",
+ "apps.reload": "Reload",
+ "apps.launch": "Launch",
+ "apps.close": "Close",
+ "apps.none": "No applications. Is the app-launcher plugin installed on the device?",
+ "apps.noneMatch": "No application matches that filter.",
+ "apps.loading": "Loading…",
+ "apps.unavailable": "The app-launcher did not answer. Is it installed on the device?",
+ "apps.launching": "Launching {n}…",
+ "apps.closing": "Closing {n}…",
+ "apps.launched": "Launched {n}.",
+ "apps.closed": "Closed {n}."
 }

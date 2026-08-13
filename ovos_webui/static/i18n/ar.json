@@ -864,5 +864,20 @@
  "intents.list.none": "لا مقاصد مُسجَّلة.",
  "intents.list.describe": "التعريف",
  "intents.list.disabled": "معطّل",
- "intents.list.loading": "جارٍ التحميل…"
+ "intents.list.loading": "جارٍ التحميل…",
+ "hdr.apps": "التطبيقات",
+ "nav.apps": "التطبيقات",
+ "apps.intro": "شغّل وأغلق تطبيقات سطح المكتب التي يعرفها جهاز بشاشة. يحتاج هذا إلى إضافة مُشغّل التطبيقات على الجهاز؛ بدونها تبقى القائمة فارغة.",
+ "apps.filter": "ترشيح",
+ "apps.reload": "إعادة تحميل",
+ "apps.launch": "تشغيل",
+ "apps.close": "إغلاق",
+ "apps.none": "لا تطبيقات. هل إضافة مُشغّل التطبيقات مُثبَّتة على الجهاز؟",
+ "apps.noneMatch": "لا يوجد تطبيق يطابق ذلك الترشيح.",
+ "apps.loading": "جارٍ التحميل…",
+ "apps.unavailable": "لم يُجب مُشغّل التطبيقات. هل هو مُثبَّت على الجهاز؟",
+ "apps.launching": "جارٍ تشغيل {n}…",
+ "apps.closing": "جارٍ إغلاق {n}…",
+ "apps.launched": "تم تشغيل {n}.",
+ "apps.closed": "تم إغلاق {n}."
 }

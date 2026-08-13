@@ -154,6 +154,7 @@
     ["/tryit", "nav.tryit", "Try it"],
     ["/controls", "nav.controls", "Device"],
     ["/media", "nav.media", "Media"],
+    ["/apps", "nav.apps", "Apps"],
     ["/network", "nav.network", "Network"],
     ["/servers", "nav.servers", "Servers"],
     ["/system", "nav.system", "System"],

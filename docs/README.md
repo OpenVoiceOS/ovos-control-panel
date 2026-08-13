@@ -38,6 +38,7 @@ If something is not working, go straight to
 | Try it | Sends a typed question through the device, the way a spoken one would go. | [tryit.md](tryit.md) |
 | Device controls | Volume, microphone mute, restart and reboot. | [controls.md](controls.md) |
 | Media | Shows what is playing and controls playback and volume. | [media.md](media.md) |
+| Apps | Launches and closes desktop applications on a device with a screen. | [apps.md](apps.md) |
 | Network | Shows nearby Wi-Fi and lets you join, leave or forget a network. | [network.md](network.md) |
 | Servers | Points speech-to-text, text-to-speech, and translation at self-hosted servers, with failover. | [servers.md](servers.md) |
 | Mark-1 faceplate | Controls the Mark-1's eyes and mouth, draws an image for the mouth, and previews it in the browser. | [mark1.md](mark1.md) |

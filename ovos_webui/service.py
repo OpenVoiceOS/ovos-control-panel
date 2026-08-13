@@ -43,6 +43,7 @@ from starlette.concurrency import run_in_threadpool
 from ovos_webui import (backupio, configio, health, installer, meta, personas,
                         pypi, recommends, servers, skillsio, transformcfg,
                         translate, voicecfg)
+from ovos_webui import applauncher
 from ovos_webui import intents
 from ovos_webui.auth import (
     COOKIE_NAME,
@@ -88,6 +89,7 @@ PAGES = {
     "/servers": "servers.html",
     "/transformers": "transformers.html",
     "/intents": "intents.html",
+    "/apps": "apps.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -193,6 +195,8 @@ class DryRunBody(BaseModel):
 
 class SkillActiveBody(BaseModel):
     active: bool
+class AppNameBody(BaseModel):
+    name: str = Field(max_length=applauncher.MAX_NAME)
 
 
 class BackupIdBody(BaseModel):
@@ -752,6 +756,26 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         try:
             return intents.set_skill_active(_need_bus(), skill_id, body.active)
         except intents.IntentError as err:
+            raise HTTPException(400, str(err)) from None
+
+    # ── application launcher ──────────────────────────────────────────
+    # Existing ovos-PHAL-plugin-app-launcher bus queries; no new message.
+    @privileged.get("/apps")
+    def api_apps_list() -> dict[str, Any]:
+        return applauncher.list_apps(_need_bus())
+
+    @privileged.post("/apps/launch")
+    def api_apps_launch(body: AppNameBody) -> dict[str, Any]:
+        try:
+            return applauncher.launch(_need_bus(), body.name)
+        except applauncher.AppLauncherError as err:
+            raise HTTPException(400, str(err)) from None
+
+    @privileged.post("/apps/close")
+    def api_apps_close(body: AppNameBody) -> dict[str, Any]:
+        try:
+            return applauncher.close(_need_bus(), body.name)
+        except applauncher.AppLauncherError as err:
             raise HTTPException(400, str(err)) from None
 
     # ── skill settings ───────────────────────────────────────────────────────
