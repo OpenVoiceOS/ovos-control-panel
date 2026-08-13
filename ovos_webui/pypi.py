@@ -159,7 +159,8 @@ def fetch_index() -> dict[str, Any]:
     data = {"fetched": time.time(), "packages": packages}
     path = cache_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data), encoding="utf-8")
+    from ovos_webui.fsutils import atomic_write
+    atomic_write(path, json.dumps(data), backup=False)
     return data
 
 

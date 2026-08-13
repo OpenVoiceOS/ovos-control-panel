@@ -10,8 +10,14 @@ from __future__ import annotations
 import io
 import json
 import tarfile
+import threading
 from pathlib import Path
 from typing import Any
+
+#: Only one restore may run at a time. A restore commits many files one by one;
+#: two overlapping restores would otherwise interleave at file granularity and
+#: leave a mix of both archives on disk.
+_RESTORE_LOCK = threading.Lock()
 
 from ovos_webui.configio import user_config_path
 from ovos_webui.fsutils import (
@@ -138,6 +144,12 @@ def _validate_payload(name: str, raw: bytes) -> str:
 
 
 def restore_archive(blob: bytes) -> dict[str, Any]:
+    """Unpack ``blob`` over the live files, serialized so two restores never mix."""
+    with _RESTORE_LOCK:
+        return _restore_archive(blob)
+
+
+def _restore_archive(blob: bytes) -> dict[str, Any]:
     """Unpack ``blob`` over the live files, after checking every member.
 
     The work happens in three stages, so a failure never leaves the device with

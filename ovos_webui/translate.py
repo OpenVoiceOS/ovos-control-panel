@@ -247,7 +247,7 @@ def delete_override(skill_id: str, lang: str, file_name: str) -> dict[str, Any]:
     if not path.is_file():
         raise LookupError("there is no translation to remove")
     backup = make_backup(path)
-    path.unlink()
+    path.unlink(missing_ok=True)
     return {"deleted": str(path), "backup": str(backup) if backup else None}
 
 
