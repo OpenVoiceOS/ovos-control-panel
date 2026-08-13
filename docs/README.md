@@ -43,6 +43,7 @@ If something is not working, go straight to
 | Servers | Points speech-to-text, text-to-speech, and translation at self-hosted servers, with failover. | [servers.md](servers.md) |
 | Mark-1 faceplate | Controls the Mark-1's eyes and mouth, draws an image for the mouth, and previews it in the browser. | [mark1.md](mark1.md) |
 | System | SSH, the device language, network status, detect-location-by-IP, and a factory reset. | [system.md](system.md) |
+| Sensors | Live readings from the device's sensors, if a sensor plugin is installed. | [sensors.md](sensors.md) |
 | Wallpaper | Sets the background on a device with a screen, from a collection or by address. | [wallpaper.md](wallpaper.md) |
 | Backup | Downloads a copy of your settings, and puts a copy back. | [backup-restore.md](backup-restore.md) |
 | About | Shows the installed package versions and useful links. | [about.md](about.md) |

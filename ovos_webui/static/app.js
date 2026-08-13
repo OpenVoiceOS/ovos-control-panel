@@ -174,6 +174,7 @@
     ["/network", "nav.network", "Network"],
     ["/servers", "nav.servers", "Servers"],
     ["/system", "nav.system", "System"],
+    ["/sensors", "nav.sensors", "Sensors"],
     ["/mark1", "nav.mark1", "Mark-1 faceplate"],
     ["/wallpaper", "nav.wallpaper", "Wallpaper"],
     ["/config", "nav.settings", "Settings"],

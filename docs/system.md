@@ -49,4 +49,4 @@ plugin it names on the [Plugins](plugins.md) page and restart the PHAL
 service. For anything else, see [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Mark-1 faceplate](mark1.md) · [Home](README.md) · [Backup →](backup-restore.md)
+[← Mark-1 faceplate](mark1.md) · [Home](README.md) · [Sensors →](sensors.md)

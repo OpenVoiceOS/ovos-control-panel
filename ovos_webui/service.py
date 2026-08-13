@@ -45,6 +45,7 @@ from ovos_webui import (backupio, configio, health, installer, meta, personas,
                         translate, voicecfg)
 from ovos_webui import applauncher
 from ovos_webui import intents
+from ovos_webui import sensors as sensorlog
 from ovos_webui import wallpaper
 from ovos_webui.auth import (
     COOKIE_NAME,
@@ -92,6 +93,7 @@ PAGES = {
     "/intents": "intents.html",
     "/apps": "apps.html",
     "/wallpaper": "wallpaper.html",
+    "/sensors": "sensors.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -817,7 +819,15 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_wallpaper_rotation(body: WallpaperRotationBody) -> dict[str, Any]:
         return wallpaper.set_auto_rotation(_need_bus(), body.enabled)
 
-    # ── skill settings ───────────────────────────────────────────────────────
+    # ── sensors ───────────────────────────────────────────────────────
+    # ovos-PHAL-sensors only broadcasts readings, so the app listens and keeps
+    # the latest of each. Read-only; nothing is sent. No new message type.
+    @api.get("/sensors")
+    def api_sensors_get() -> dict[str, Any]:
+        sensorlog.attach(_need_bus())
+        return sensorlog.snapshot()
+
+        # ── skill settings ───────────────────────────────────────────────────────
     @api.get("/skills")
     def api_skills() -> dict[str, Any]:
         return {"skills": skillsio.list_skills()}
