@@ -29,6 +29,12 @@ CAPABILITIES: dict[str, dict[str, Any]] = {
         "label": "Power",
         "hint": "Restart the services or reboot the device.",
     },
+    "system": {
+        "plugins": ["ovos-phal-plugin-system", "ovos-PHAL-plugin-system"],
+        "admin": False,
+        "label": "System",
+        "hint": "SSH, factory reset, and the device language, from the System page.",
+    },
     "network": {
         "plugins": ["ovos-phal-plugin-network-manager", "ovos-PHAL-plugin-network-manager"],
         "admin": True,

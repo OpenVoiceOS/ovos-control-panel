@@ -156,6 +156,7 @@
     ["/media", "nav.media", "Media"],
     ["/network", "nav.network", "Network"],
     ["/servers", "nav.servers", "Servers"],
+    ["/system", "nav.system", "System"],
     ["/mark1", "nav.mark1", "Mark-1 faceplate"],
     ["/config", "nav.settings", "Settings"],
     ["/skills", "nav.skills", "Skills"],

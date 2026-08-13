@@ -78,4 +78,4 @@ The page tells you which one. For anything else, see
 [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Mark-1 faceplate](mark1.md) · [Home](README.md) · [About →](about.md)
+[← System](system.md) · [Home](README.md) · [About →](about.md)

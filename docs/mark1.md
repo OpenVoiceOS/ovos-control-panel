@@ -75,4 +75,4 @@ that, check that the plugin is running. For anything else, see
 [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Servers](servers.md) · [Home](README.md) · [Backup →](backup-restore.md)
+[← Servers](servers.md) · [Home](README.md) · [System →](system.md)
