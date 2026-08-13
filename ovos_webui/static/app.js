@@ -155,6 +155,7 @@
     ["/controls", "nav.controls", "Device"],
     ["/media", "nav.media", "Media"],
     ["/network", "nav.network", "Network"],
+    ["/mark1", "nav.mark1", "Mark-1 faceplate"],
     ["/config", "nav.settings", "Settings"],
     ["/skills", "nav.skills", "Skills"],
     ["/abilities", "nav.abilities", "Abilities"],

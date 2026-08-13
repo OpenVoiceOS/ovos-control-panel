@@ -44,4 +44,4 @@ finds no networks, wait a few seconds and press **Scan** again. For
 anything else, see [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Media](media.md) · [Home](README.md) · [Backup →](backup-restore.md)
+[← Media](media.md) · [Home](README.md) · [Mark-1 faceplate →](mark1.md)

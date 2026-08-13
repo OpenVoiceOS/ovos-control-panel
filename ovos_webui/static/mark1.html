@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Mark-1 faceplate — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+<style>
+  #mark1-canvas { display: block; margin: 0.75rem 0; background: #000; border-radius: 6px;
+    cursor: pointer; touch-action: none; max-width: 100%; height: auto; }
+  .mark1-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0.5rem 0; }
+  .mark1-controls label { display: flex; align-items: center; gap: 0.35rem; }
+  .mark1-controls input[type="range"] { width: 10rem; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.mark1">Mark-1 faceplate</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="mark1.intro">Design the Mark-1's eyes and mouth, preview them right here in the
+    browser, and send the result to a real device.</p>
+
+  <div class="card" id="gate" hidden>
+    <p class="hint" id="gate-note"></p>
+  </div>
+
+  <h2 data-i18n="mark1.simulator.title">Simulator</h2>
+  <p class="hint" data-i18n="mark1.simulator.hint">This preview runs entirely in your browser. It works even
+    without a Mark-1 connected — use it to design before you send anything to the device.</p>
+  <canvas id="mark1-canvas" width="480" height="200" role="img" aria-label="Mark-1 faceplate preview"></canvas>
+
+  <h2 data-i18n="mark1.mouth.title">Mouth</h2>
+  <p class="hint" data-i18n="mark1.mouth.hint">Click or drag on the grid above to draw. Each square is one pixel
+    of the mouth display (8 rows by 32 columns).</p>
+  <div class="mark1-controls">
+    <button class="secondary" id="mouth-clear" data-i18n="mark1.mouth.clear">Clear</button>
+    <button class="secondary" id="mouth-invert" data-i18n="mark1.mouth.invert">Invert</button>
+    <button class="secondary" id="preset-heart" data-i18n="mark1.mouth.presetHeart">Heart</button>
+    <button class="secondary" id="preset-note" data-i18n="mark1.mouth.presetNote">Music note</button>
+    <button class="secondary" id="preset-smile" data-i18n="mark1.mouth.presetSmile">Smile</button>
+    <button id="mouth-send" data-i18n="mark1.mouth.send">Send drawing to device</button>
+  </div>
+  <div class="mark1-controls">
+    <label for="mouth-text-input" data-i18n="mark1.mouth.textLabel">Scrolling text</label>
+    <input type="text" id="mouth-text-input" maxlength="500">
+    <button class="secondary" id="mouth-text-send" data-i18n="mark1.mouth.textSend">Scroll text</button>
+    <button class="secondary" id="mouth-reset" data-i18n="mark1.mouth.reset">Reset mouth</button>
+  </div>
+  <div class="mark1-controls" role="group" aria-label="Visemes">
+    <span data-i18n="mark1.mouth.visemes">Visemes</span>
+    <button class="secondary" data-viseme="0">0</button>
+    <button class="secondary" data-viseme="1">1</button>
+    <button class="secondary" data-viseme="2">2</button>
+    <button class="secondary" data-viseme="3">3</button>
+    <button class="secondary" data-viseme="4">4</button>
+    <button class="secondary" data-viseme="5">5</button>
+    <button class="secondary" data-viseme="6">6</button>
+  </div>
+  <div class="mark1-controls" role="group" aria-label="Animations">
+    <button class="secondary" data-anim="talk" data-i18n="mark1.mouth.animTalk">Talk</button>
+    <button class="secondary" data-anim="think" data-i18n="mark1.mouth.animThink">Think</button>
+    <button class="secondary" data-anim="listen" data-i18n="mark1.mouth.animListen">Listen</button>
+    <button class="secondary" data-anim="smile" data-i18n="mark1.mouth.animSmile">Smile</button>
+  </div>
+  <div class="msg" id="msg-mouth" role="status" aria-live="polite" hidden></div>
+
+  <h2 data-i18n="mark1.eyes.title">Eyes</h2>
+  <div class="mark1-controls">
+    <label for="eyes-color" data-i18n="mark1.eyes.colorLabel">Color</label>
+    <input type="color" id="eyes-color" value="#00c8ff">
+    <button class="secondary" id="eyes-on" data-i18n="mark1.eyes.on">On</button>
+    <button class="secondary" id="eyes-off" data-i18n="mark1.eyes.off">Off</button>
+    <button class="secondary" id="eyes-reset" data-i18n="mark1.eyes.reset">Reset</button>
+    <button class="secondary" id="eyes-narrow" data-i18n="mark1.eyes.narrow">Narrow</button>
+    <button class="secondary" id="eyes-spin" data-i18n="mark1.eyes.spin">Spin</button>
+  </div>
+  <div class="mark1-controls" role="group" aria-label="Blink">
+    <span data-i18n="mark1.eyes.blink">Blink</span>
+    <button class="secondary" data-blink="l" data-i18n="mark1.eyes.left">Left</button>
+    <button class="secondary" data-blink="r" data-i18n="mark1.eyes.right">Right</button>
+    <button class="secondary" data-blink="b" data-i18n="mark1.eyes.both">Both</button>
+  </div>
+  <div class="mark1-controls" role="group" aria-label="Look">
+    <span data-i18n="mark1.eyes.look">Look</span>
+    <button class="secondary" data-look="l" data-i18n="mark1.eyes.left">Left</button>
+    <button class="secondary" data-look="r" data-i18n="mark1.eyes.right">Right</button>
+    <button class="secondary" data-look="u" data-i18n="mark1.eyes.up">Up</button>
+    <button class="secondary" data-look="d" data-i18n="mark1.eyes.down">Down</button>
+    <button class="secondary" data-look="c" data-i18n="mark1.eyes.center">Center</button>
+  </div>
+  <div class="mark1-controls">
+    <label for="eyes-brightness" data-i18n="mark1.eyes.brightness">Brightness</label>
+    <input type="range" id="eyes-brightness" min="1" max="30" value="30">
+    <label for="eyes-fill" data-i18n="mark1.eyes.fill">Fill</label>
+    <input type="range" id="eyes-fill" min="0" max="100" value="100">
+  </div>
+  <div class="msg" id="msg-eyes" role="status" aria-live="polite" hidden></div>
+
+  <h2 data-i18n="mark1.system.title">System</h2>
+  <div class="mark1-controls">
+    <button class="secondary" id="system-reset" data-i18n="mark1.system.reset">Reset</button>
+    <button class="secondary" id="system-mute" data-i18n="mark1.system.mute">Mute</button>
+    <button class="secondary" id="system-unmute" data-i18n="mark1.system.unmute">Unmute</button>
+    <button class="secondary" id="system-blink" data-i18n="mark1.system.blink">Blink</button>
+  </div>
+  <div class="msg" id="msg-system" role="status" aria-live="polite" hidden></div>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
+
+  var ROWS = 8, COLS = 32;
+  var grid = [];
+  for (var gy = 0; gy < ROWS; gy++) {
+    var row = [];
+    for (var gx = 0; gx < COLS; gx++) { row.push(0); }
+    grid.push(row);
+  }
+
+  var PRESETS = {
+    heart: [
+      "00011000011000000000000000000000",
+      "00111100111100000000000000000000",
+      "01111111111110000000000000000000",
+      "01111111111110000000000000000000",
+      "00111111111100000000000000000000",
+      "00011111111000000000000000000000",
+      "00001111110000000000000000000000",
+      "00000011000000000000000000000000"
+    ],
+    note: [
+      "00000000000110000000000000000000",
+      "00000000000110000000000000000000",
+      "00000000000110000000000000000000",
+      "00000000000110000000000000000000",
+      "00000001111110000000000000000000",
+      "00000111000000000000000000000000",
+      "00001111000000000000000000000000",
+      "00000110000000000000000000000000"
+    ],
+    smile: [
+      "00000000000000000000000000000000",
+      "00011000000000000001100000000000",
+      "00011000000000000001100000000000",
+      "00000000000000000000000000000000",
+      "01000000000000000000000010000000",
+      "00110000000000000000001100000000",
+      "00001111111111111111110000000000",
+      "00000000000000000000000000000000"
+    ]
+  };
+
+  var eyesOn = true, eyesColor = {r: 0, g: 200, b: 255};
+  var canDevice = false;
+
+  // ── simulator canvas ────────────────────────────────────────────────────
+  var canvas = el("mark1-canvas"), ctx = canvas.getContext("2d");
+  var EYE_H = 60, MOUTH_TOP = 70, CELL = Math.floor(canvas.width / COLS);
+
+  function draw() {
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // eyes: two blocks near the top
+    var col = eyesOn ? ("rgb(" + eyesColor.r + "," + eyesColor.g + "," + eyesColor.b + ")") : "#111";
+    ctx.fillStyle = col;
+    ctx.fillRect(canvas.width * 0.18, 8, 60, EYE_H);
+    ctx.fillRect(canvas.width * 0.82 - 60, 8, 60, EYE_H);
+    // mouth: the pixel grid
+    for (var y = 0; y < ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        ctx.fillStyle = grid[y][x] ? "#39ff88" : "#0a0a0a";
+        ctx.fillRect(x * CELL, MOUTH_TOP + y * CELL, CELL - 1, CELL - 1);
+      }
+    }
+  }
+  draw();
+
+  function toggleAt(clientX, clientY, val) {
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+    var px = (clientX - rect.left) * scaleX, py = (clientY - rect.top) * scaleY;
+    if (py < MOUTH_TOP) { return; }
+    var gx = Math.floor(px / CELL), gy = Math.floor((py - MOUTH_TOP) / CELL);
+    if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) { return; }
+    grid[gy][gx] = val === undefined ? (grid[gy][gx] ? 0 : 1) : val;
+    draw();
+  }
+  var painting = false, paintValue = 1;
+  canvas.addEventListener("pointerdown", function (e) {
+    painting = true;
+    var rect = canvas.getBoundingClientRect();
+    var scaleY = canvas.height / rect.height;
+    var py = (e.clientY - rect.top) * scaleY;
+    if (py >= MOUTH_TOP) {
+      var gy = Math.floor((py - MOUTH_TOP) / CELL);
+      var scaleX = canvas.width / rect.width;
+      var gx = Math.floor((e.clientX - rect.left) * scaleX / CELL);
+      if (gy >= 0 && gy < ROWS && gx >= 0 && gx < COLS) { paintValue = grid[gy][gx] ? 0 : 1; }
+    }
+    toggleAt(e.clientX, e.clientY, paintValue);
+  });
+  canvas.addEventListener("pointermove", function (e) {
+    if (painting) { toggleAt(e.clientX, e.clientY, paintValue); }
+  });
+  window.addEventListener("pointerup", function () { painting = false; });
+
+  el("mouth-clear").addEventListener("click", function () {
+    for (var y = 0; y < ROWS; y++) { for (var x = 0; x < COLS; x++) { grid[y][x] = 0; } }
+    draw();
+  });
+  el("mouth-invert").addEventListener("click", function () {
+    for (var y = 0; y < ROWS; y++) { for (var x = 0; x < COLS; x++) { grid[y][x] = grid[y][x] ? 0 : 1; } }
+    draw();
+  });
+  function loadPreset(name) {
+    var rows = PRESETS[name];
+    for (var y = 0; y < ROWS; y++) {
+      for (var x = 0; x < COLS; x++) { grid[y][x] = rows[y].charAt(x) === "1" ? 1 : 0; }
+    }
+    draw();
+  }
+  el("preset-heart").addEventListener("click", function () { loadPreset("heart"); });
+  el("preset-note").addEventListener("click", function () { loadPreset("note"); });
+  el("preset-smile").addEventListener("click", function () { loadPreset("smile"); });
+
+  function needDevice() {
+    if (!canDevice) {
+      OvosWebUI.say("msg-mouth", t("mark1.needsDevice",
+        "No Mark-1 is connected — this only works with real hardware."), true);
+      return true;
+    }
+    return false;
+  }
+
+  el("mouth-send").addEventListener("click", function () {
+    if (needDevice()) { return; }
+    api("/api/mark1/display", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({grid: grid, x: 0, y: 0, clear: true})})
+      .then(function (r) {
+        if (r.ok) { OvosWebUI.say("msg-mouth", t("mark1.sent", "Sent.")); }
+        else { OvosWebUI.say("msg-mouth", r.error || t("mark1.failed", "That did not work."), true); }
+      })
+      .catch(function (e) { OvosWebUI.say("msg-mouth", e.message, true); });
+  });
+  el("mouth-text-send").addEventListener("click", function () {
+    if (needDevice()) { return; }
+    api("/api/mark1/mouth/text", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({text: el("mouth-text-input").value || ""})})
+      .then(function (r) {
+        if (r.ok) { OvosWebUI.say("msg-mouth", t("mark1.sent", "Sent.")); }
+        else { OvosWebUI.say("msg-mouth", r.error || t("mark1.failed", "That did not work."), true); }
+      })
+      .catch(function (e) { OvosWebUI.say("msg-mouth", e.message, true); });
+  });
+  el("mouth-reset").addEventListener("click", function () {
+    if (needDevice()) { return; }
+    api("/api/mark1/mouth/reset", {method: "POST"})
+      .then(function () { OvosWebUI.say("msg-mouth", t("mark1.sent", "Sent.")); })
+      .catch(function (e) { OvosWebUI.say("msg-mouth", e.message, true); });
+  });
+  document.querySelectorAll("[data-viseme]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (needDevice()) { return; }
+      api("/api/mark1/mouth/viseme", {method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({code: parseInt(b.getAttribute("data-viseme"), 10)})})
+        .then(function (r) {
+          if (r.ok) { OvosWebUI.say("msg-mouth", t("mark1.sent", "Sent.")); }
+          else { OvosWebUI.say("msg-mouth", r.error || t("mark1.failed", "That did not work."), true); }
+        })
+        .catch(function (e) { OvosWebUI.say("msg-mouth", e.message, true); });
+    });
+  });
+  document.querySelectorAll("[data-anim]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (needDevice()) { return; }
+      api("/api/mark1/mouth/anim", {method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({kind: b.getAttribute("data-anim")})})
+        .then(function (r) {
+          if (r.ok) { OvosWebUI.say("msg-mouth", t("mark1.sent", "Sent.")); }
+          else { OvosWebUI.say("msg-mouth", r.error || t("mark1.failed", "That did not work."), true); }
+        })
+        .catch(function (e) { OvosWebUI.say("msg-mouth", e.message, true); });
+    });
+  });
+
+  // ── eyes ─────────────────────────────────────────────────────────────────
+  function hexToRgb(hex) {
+    var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+    if (!m) { return {r: 0, g: 0, b: 0}; }
+    return {r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16)};
+  }
+  el("eyes-color").addEventListener("input", function () {
+    eyesColor = hexToRgb(el("eyes-color").value);
+    draw();
+  });
+  el("eyes-color").addEventListener("change", function () {
+    if (needsDeviceEyes()) { return; }
+    api("/api/mark1/eyes/color", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(eyesColor)})
+      .then(function (r) {
+        if (!r.ok) { OvosWebUI.say("msg-eyes", r.error || t("mark1.failed", "That did not work."), true); }
+      })
+      .catch(function (e) { OvosWebUI.say("msg-eyes", e.message, true); });
+  });
+  function needsDeviceEyes() {
+    if (!canDevice) {
+      OvosWebUI.say("msg-eyes", t("mark1.needsDevice",
+        "No Mark-1 is connected — this only works with real hardware."), true);
+      return true;
+    }
+    return false;
+  }
+  function eyesAction(path, body) {
+    if (needsDeviceEyes()) { return; }
+    api(path, {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body || {})})
+      .then(function (r) {
+        if (!r.ok) { OvosWebUI.say("msg-eyes", r.error || t("mark1.failed", "That did not work."), true); }
+      })
+      .catch(function (e) { OvosWebUI.say("msg-eyes", e.message, true); });
+  }
+  el("eyes-on").addEventListener("click", function () { eyesOn = true; draw(); eyesAction("/api/mark1/eyes/on"); });
+  el("eyes-off").addEventListener("click", function () { eyesOn = false; draw(); eyesAction("/api/mark1/eyes/off"); });
+  el("eyes-reset").addEventListener("click", function () { eyesAction("/api/mark1/eyes/reset"); });
+  el("eyes-narrow").addEventListener("click", function () { eyesAction("/api/mark1/eyes/narrow"); });
+  el("eyes-spin").addEventListener("click", function () { eyesAction("/api/mark1/eyes/spin"); });
+  document.querySelectorAll("[data-blink]").forEach(function (b) {
+    b.addEventListener("click", function () { eyesAction("/api/mark1/eyes/blink", {side: b.getAttribute("data-blink")}); });
+  });
+  document.querySelectorAll("[data-look]").forEach(function (b) {
+    b.addEventListener("click", function () { eyesAction("/api/mark1/eyes/look", {side: b.getAttribute("data-look")}); });
+  });
+  el("eyes-brightness").addEventListener("change", function () {
+    eyesAction("/api/mark1/eyes/brightness", {level: parseInt(el("eyes-brightness").value, 10)});
+  });
+  el("eyes-fill").addEventListener("change", function () {
+    eyesAction("/api/mark1/eyes/fill", {percentage: parseInt(el("eyes-fill").value, 10)});
+  });
+
+  // ── system ───────────────────────────────────────────────────────────────
+  function systemAction(path, body) {
+    if (!canDevice) {
+      OvosWebUI.say("msg-system", t("mark1.needsDevice",
+        "No Mark-1 is connected — this only works with real hardware."), true);
+      return;
+    }
+    api(path, {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body || {})})
+      .then(function (r) {
+        if (!r.ok) { OvosWebUI.say("msg-system", r.error || t("mark1.failed", "That did not work."), true); }
+      })
+      .catch(function (e) { OvosWebUI.say("msg-system", e.message, true); });
+  }
+  el("system-reset").addEventListener("click", function () { systemAction("/api/mark1/system/reset"); });
+  el("system-mute").addEventListener("click", function () { systemAction("/api/mark1/system/mute"); });
+  el("system-unmute").addEventListener("click", function () { systemAction("/api/mark1/system/unmute"); });
+  el("system-blink").addEventListener("click", function () { systemAction("/api/mark1/system/blink", {times: 3}); });
+
+  // ── capability gate ──────────────────────────────────────────────────────
+  api("/api/mark1/available").then(function (r) {
+    canDevice = !!(r && r.available);
+    if (!canDevice) {
+      var gate = el("gate"), note = el("gate-note");
+      gate.hidden = false;
+      note.textContent = t("mark1.needsPlugin",
+        "No Mark-1 was found. Install ovos-PHAL-plugin-mk1 on the device to send drawings and controls to "
+        + "real hardware. The simulator and editor below still work without it.");
+    }
+  }).catch(function () { canDevice = false; });
+});
+</script>
+</body>
+</html>

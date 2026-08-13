@@ -18,7 +18,7 @@ import mimetypes
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import (
     APIRouter,
@@ -74,6 +74,7 @@ PAGES = {
     "/abilities": "abilities.html",
     "/network": "network.html",
     "/media": "media.html",
+    "/mark1": "mark1.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -177,6 +178,55 @@ class WifiConnectBody(BaseModel):
 
 class WifiSsidBody(BaseModel):
     ssid: str = Field(..., max_length=64)
+
+
+class Mark1DisplayBody(BaseModel):
+    # Bound both dimensions so a huge nested body is rejected during validation
+    # rather than fully materialized (the faceplate is exactly 8 rows x 32 cols;
+    # mark1._valid_grid re-checks the exact shape).
+    grid: Annotated[list[Annotated[list[int], Field(max_length=32)]],
+                    Field(max_length=8)]
+    x: int = Field(0, ge=-64, le=64)
+    y: int = Field(0, ge=-64, le=64)
+    clear: bool = True
+
+
+class Mark1TextBody(BaseModel):
+    text: str = Field("", max_length=500)
+
+
+class Mark1AnimBody(BaseModel):
+    kind: str = Field(..., max_length=16)
+
+
+class Mark1VisemeBody(BaseModel):
+    code: int = Field(ge=0, le=6)
+
+
+class Mark1ColorBody(BaseModel):
+    r: int = Field(ge=0, le=255)
+    g: int = Field(ge=0, le=255)
+    b: int = Field(ge=0, le=255)
+
+
+class Mark1SideBody(BaseModel):
+    side: str = Field(..., max_length=8)
+
+
+class Mark1PercentBody(BaseModel):
+    percentage: int = Field(ge=0, le=100)
+
+
+class Mark1LevelBody(BaseModel):
+    level: int = Field(ge=1, le=30)
+
+
+class Mark1VolumeBody(BaseModel):
+    volume: int = Field(ge=0, le=11)
+
+
+class Mark1TimesBody(BaseModel):
+    times: int = Field(ge=1, le=20)
 
 
 def _connect_bus():
@@ -916,6 +966,114 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_media_unmute() -> dict[str, Any]:
         from ovos_webui import media
         return media.unmute(_need_bus())
+
+    # ── Mark-1 faceplate: eyes + mouth over enclosure.* ───────────────────────
+    # Every route changes what the faceplate shows, so all of it sits on the
+    # privileged router, like the network and system controls.
+    @privileged.get("/mark1/available")
+    def api_mark1_available() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.available(_need_bus())
+
+    @privileged.post("/mark1/display")
+    def api_mark1_display(body: Mark1DisplayBody) -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.display_grid(_need_bus(), body.grid, body.x, body.y, body.clear)
+
+    @privileged.post("/mark1/mouth/text")
+    def api_mark1_mouth_text(body: Mark1TextBody) -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.mouth_text(_need_bus(), body.text)
+
+    @privileged.post("/mark1/mouth/reset")
+    def api_mark1_mouth_reset() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.mouth_reset(_need_bus())
+
+    @privileged.post("/mark1/mouth/anim")
+    def api_mark1_mouth_anim(body: Mark1AnimBody) -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.mouth_anim(_need_bus(), body.kind)
+
+    @privileged.post("/mark1/mouth/viseme")
+    def api_mark1_mouth_viseme(body: Mark1VisemeBody) -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.mouth_viseme(_need_bus(), body.code)
+
+    @privileged.post("/mark1/eyes/color")
+    def api_mark1_eyes_color(body: Mark1ColorBody) -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.eyes_color(_need_bus(), body.r, body.g, body.b)
+
+    @privileged.post("/mark1/eyes/on")
+    def api_mark1_eyes_on() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.eyes_on(_need_bus())
+
+    @privileged.post("/mark1/eyes/off")
+    def api_mark1_eyes_off() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.eyes_off(_need_bus())
+
+    @privileged.post("/mark1/eyes/reset")
+    def api_mark1_eyes_reset() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.eyes_reset(_need_bus())
+
+    @privileged.post("/mark1/eyes/narrow")
+    def api_mark1_eyes_narrow() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.eyes_narrow(_need_bus())
+
+    @privileged.post("/mark1/eyes/spin")
+    def api_mark1_eyes_spin() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.eyes_spin(_need_bus())
+
+    @privileged.post("/mark1/eyes/blink")
+    def api_mark1_eyes_blink(body: Mark1SideBody) -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.eyes_blink(_need_bus(), body.side)
+
+    @privileged.post("/mark1/eyes/look")
+    def api_mark1_eyes_look(body: Mark1SideBody) -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.eyes_look(_need_bus(), body.side)
+
+    @privileged.post("/mark1/eyes/fill")
+    def api_mark1_eyes_fill(body: Mark1PercentBody) -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.eyes_fill(_need_bus(), body.percentage)
+
+    @privileged.post("/mark1/eyes/brightness")
+    def api_mark1_eyes_brightness(body: Mark1LevelBody) -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.eyes_brightness(_need_bus(), body.level)
+
+    @privileged.post("/mark1/eyes/volume")
+    def api_mark1_eyes_volume(body: Mark1VolumeBody) -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.eyes_volume(_need_bus(), body.volume)
+
+    @privileged.post("/mark1/system/reset")
+    def api_mark1_system_reset() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.system_reset(_need_bus())
+
+    @privileged.post("/mark1/system/mute")
+    def api_mark1_system_mute() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.system_mute(_need_bus())
+
+    @privileged.post("/mark1/system/unmute")
+    def api_mark1_system_unmute() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.system_unmute(_need_bus())
+
+    @privileged.post("/mark1/system/blink")
+    def api_mark1_system_blink(body: Mark1TimesBody) -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.system_blink(_need_bus(), body.times)
 
     # ── ggwave listener: turn the device's sound receiver on or off ──────────
     # Fire-and-forget, like /system/{action} — the ggwave audio transformer
