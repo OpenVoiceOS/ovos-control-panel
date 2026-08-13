@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Servers — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.servers">Servers</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="servers.intro">Point speech-to-text, text-to-speech, and translation at servers you run
+    yourself, instead of the public defaults. List more than one server and the device tries them in order,
+    moving to the next one if a server does not answer — that is the redundancy.</p>
+  <p class="hint" role="note" data-i18n="servers.needsPlugin">Each list only takes effect when the device is
+    configured to use that engine's <em>server</em> plugin (for example ovos-stt-plugin-server). Set the plugin
+    on the Settings page first.</p>
+  <p class="hint" role="note" data-i18n="servers.publicNote">Leaving a list empty is fine: the matching server
+    plugin then falls back to its own built-in public servers.</p>
+
+  <section class="card" id="section-stt">
+    <h2 data-i18n="servers.stt.title">Speech-to-text</h2>
+    <p class="hint" id="stt-module"></p>
+    <ul class="plain rowlist" id="stt-list"></ul>
+    <div class="row">
+      <input type="url" id="stt-input" data-i18n-attr="placeholder:servers.addPlaceholder"
+        placeholder="https://stt.example.com" autocomplete="off">
+      <button class="secondary" id="stt-add" data-i18n="servers.add">Add</button>
+    </div>
+    <div class="row">
+      <button id="stt-save" data-i18n="servers.save">Save</button>
+    </div>
+    <div class="msg" id="msg-stt" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <section class="card" id="section-tts">
+    <h2 data-i18n="servers.tts.title">Text-to-speech</h2>
+    <p class="hint" id="tts-module"></p>
+    <ul class="plain rowlist" id="tts-list"></ul>
+    <div class="row">
+      <input type="url" id="tts-input" data-i18n-attr="placeholder:servers.addPlaceholder"
+        placeholder="https://tts.example.com" autocomplete="off">
+      <button class="secondary" id="tts-add" data-i18n="servers.add">Add</button>
+    </div>
+    <div class="row">
+      <button id="tts-save" data-i18n="servers.save">Save</button>
+    </div>
+    <div class="msg" id="msg-tts" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <section class="card" id="section-translate">
+    <h2 data-i18n="servers.translate.title">Translation</h2>
+    <p class="hint" id="translate-module"></p>
+    <ul class="plain rowlist" id="translate-list"></ul>
+    <div class="row">
+      <input type="url" id="translate-input" data-i18n-attr="placeholder:servers.addPlaceholder"
+        placeholder="https://translate.example.com" autocomplete="off">
+      <button class="secondary" id="translate-add" data-i18n="servers.add">Add</button>
+    </div>
+    <div class="row">
+      <button id="translate-save" data-i18n="servers.save">Save</button>
+    </div>
+    <div class="msg" id="msg-translate" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
+
+  // In-memory ordered list per engine kind, edited locally and only sent to
+  // the device when Save is pressed — so a mistyped URL never reaches the
+  // device config until the user is done editing.
+  var state = {stt: [], tts: [], translate: []};
+
+  function moveLabel(dir) {
+    return dir < 0 ? t("servers.up", "Move up") : t("servers.down", "Move down");
+  }
+
+  function render(kind) {
+    var ul = el(kind + "-list");
+    ul.innerHTML = "";
+    var urls = state[kind];
+    if (!urls.length) {
+      var empty = document.createElement("li");
+      empty.className = "hint";
+      empty.textContent = t("servers.empty", "No servers set. The plugin's own public defaults apply.");
+      ul.appendChild(empty);
+      return;
+    }
+    urls.forEach(function (url, i) {
+      var li = document.createElement("li");
+      li.innerHTML =
+        '<span class="slug">' + esc(i + 1) + ".</span> "
+        + '<span class="url">' + esc(url) + "</span> "
+        + '<button class="secondary" data-up="1" ' + (i === 0 ? "disabled" : "") + '>' + esc(moveLabel(-1)) + "</button> "
+        + '<button class="secondary" data-down="1" ' + (i === urls.length - 1 ? "disabled" : "") + '>' + esc(moveLabel(1)) + "</button> "
+        + '<button class="danger" data-remove="1">' + esc(t("servers.remove", "Remove")) + "</button>";
+      li.querySelector("[data-up]").addEventListener("click", function () {
+        if (i === 0) { return; }
+        var tmp = urls[i - 1]; urls[i - 1] = urls[i]; urls[i] = tmp;
+        render(kind);
+      });
+      li.querySelector("[data-down]").addEventListener("click", function () {
+        if (i === urls.length - 1) { return; }
+        var tmp = urls[i + 1]; urls[i + 1] = urls[i]; urls[i] = tmp;
+        render(kind);
+      });
+      li.querySelector("[data-remove]").addEventListener("click", function () {
+        urls.splice(i, 1);
+        render(kind);
+      });
+      ul.appendChild(li);
+    });
+  }
+
+  function moduleLine(kind, data) {
+    if (kind === "translate") {
+      return t("servers.translate.modules", "Applies to the detection plugin ({d}) and the translation plugin ({m}).")
+        .replace("{d}", data.detection_module || "?").replace("{m}", data.translation_module || "?");
+    }
+    return t("servers.moduleLine", "Applies to the {kind} plugin: {module}")
+      .replace("{kind}", kind.toUpperCase()).replace("{module}", data.module || "?");
+  }
+
+  function load() {
+    api("/api/servers").then(function (data) {
+      ["stt", "tts", "translate"].forEach(function (kind) {
+        var d = data[kind] || {};
+        if (d.error) {
+          OvosWebUI.say("msg-" + kind, d.error, true);
+          state[kind] = [];
+        } else {
+          state[kind] = (d.urls || []).slice();
+          el(kind + "-module").textContent = moduleLine(kind, d);
+        }
+        render(kind);
+      });
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+
+  function addUrl(kind) {
+    var input = el(kind + "-input");
+    var value = input.value.trim();
+    if (!value) { return; }
+    state[kind].push(value);
+    input.value = "";
+    render(kind);
+  }
+
+  function save(kind) {
+    OvosWebUI.say("msg-" + kind, t("servers.saving", "Saving…"));
+    api("/api/servers/" + encodeURIComponent(kind), {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({urls: state[kind]})
+    }).then(function (d) {
+      state[kind] = (d.urls || []).slice();
+      render(kind);
+      OvosWebUI.say("msg-" + kind, t("servers.saved", "Saved."));
+    }).catch(function (e) { OvosWebUI.say("msg-" + kind, e.message, true); });
+  }
+
+  ["stt", "tts", "translate"].forEach(function (kind) {
+    el(kind + "-add").addEventListener("click", function () { addUrl(kind); });
+    el(kind + "-input").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); addUrl(kind); }
+    });
+    el(kind + "-save").addEventListener("click", function () { save(kind); });
+  });
+
+  load();
+});
+</script>
+</body>
+</html>
