@@ -28,9 +28,39 @@ _INDEX_LOCK = threading.Lock()
 _INDEX_MIN_GAP = 30
 _INDEX_LAST = 0.0
 
+#: The public index, used when nothing else is configured.
+DEFAULT_INDEX_BASE = "https://pypi.org"
 SIMPLE_INDEX = "https://pypi.org/simple/"
 PROJECT_JSON = "https://pypi.org/pypi/{name}/json"
 USER_AGENT = "ovos-webui"
+
+
+def _index_base() -> str:
+    """The package index to read, as a base URL without a trailing slash.
+
+    A self-hoster can point the device at their own mirror by setting
+    ``webui.pypi_index`` in the configuration (for example a devpi or a private
+    PyPI). Anything that is not an http(s) URL is ignored and the public index
+    is used, so a bad value can never send a request somewhere unexpected.
+    """
+    try:
+        from ovos_webui import configio
+        base = configio.user_or_merged(["webui", "pypi_index"])
+    except Exception:  # noqa: BLE001 - never let config reading break a fetch
+        base = None
+    if isinstance(base, str):
+        base = base.strip()
+        if base.startswith(("http://", "https://")):
+            return base.rstrip("/")
+    return DEFAULT_INDEX_BASE
+
+
+def _simple_index_url() -> str:
+    return _index_base() + "/simple/"
+
+
+def _project_json_url(name: str) -> str:
+    return _index_base() + "/pypi/" + urllib.parse.quote(name, safe="") + "/json"
 
 #: How long a cached index stays usable, in seconds.
 CACHE_TTL = 24 * 60 * 60
@@ -131,7 +161,7 @@ def fetch_index() -> dict[str, Any]:
     packages: dict[str, str] = {}
     read = 0
     tail = b""
-    with _open(SIMPLE_INDEX) as response:
+    with _open(_simple_index_url()) as response:
         while True:
             chunk = response.read(1 << 16)
             if not chunk:
@@ -313,7 +343,7 @@ def details(name: str) -> dict[str, Any]:
     from ovos_webui.installer import validate_package_name
 
     validate_package_name(name)
-    url = PROJECT_JSON.format(name=urllib.parse.quote(name, safe=""))
+    url = _project_json_url(name)
     try:
         with _open(url) as response:
             body = json.loads(response.read().decode("utf-8"))
