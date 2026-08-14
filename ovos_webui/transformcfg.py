@@ -138,11 +138,11 @@ def get_chains() -> dict[str, Any]:
             installed = []
         merged_section = _section(merged, chain)
         user_section = _section(user, chain)
-        # ``read_mycroft_config`` only surfaces top-level sections that the
-        # default schema already has, so a user-only chain (audio, dialog, tts,
-        # metadata by default) is dropped from the merged view. Union the two,
+        # The merged config comes from a cached singleton, so a section the user
+        # just wrote may not be reflected in it yet. The user layer, read from
+        # the file, is the fresh record of what the user set. Union the two,
         # letting the user layer win per plugin, so both the default plugins and
-        # the user's own show up.
+        # the user's own always show up regardless of the cache.
         user_plugins = _plugins_of(user_section)
         configured = {**_plugins_of(merged_section), **user_plugins}
         plugins = []
