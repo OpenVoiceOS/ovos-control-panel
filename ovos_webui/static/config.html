@@ -33,6 +33,11 @@
     <button id="tab-raw" data-i18n="config.tab.advanced">Advanced</button>
   </div>
 
+  <div class="row">
+    <button class="secondary" id="config-undo" data-i18n="config.undo">Undo my last change</button>
+  </div>
+  <div class="msg" id="msg-undo" role="status" aria-live="polite" hidden></div>
+
   <section id="simple">
     <h2 data-i18n="config.simple.title">Common settings</h2>
     <p class="hint" data-i18n="config.simple.reassure">You usually don't need to change anything here.</p>
@@ -171,6 +176,21 @@ OvosWebUI.ready(function () {
     }).catch(function (e) { OvosWebUI.say("msg-simple", e.message, true); });
   });
   el("reload-simple").addEventListener("click", loadSimple);
+
+  el("config-undo").addEventListener("click", function () {
+    if (!OvosWebUI.confirmed(OvosWebUI.t("config.undo.confirm",
+      "Undo your last change and go back to the previous settings?"))) { return; }
+    OvosWebUI.say("msg-undo", OvosWebUI.t("config.undo.doing", "Restoring…"));
+    OvosWebUI.api("/api/config/undo", {method: "POST"}).then(function (r) {
+      if (r && r.undone) {
+        OvosWebUI.say("msg-undo", OvosWebUI.t("config.undo.done", "Restored the previous settings."));
+        loadSimple(); loadRaw();
+      } else {
+        OvosWebUI.say("msg-undo", OvosWebUI.t("config.undo.none",
+          "There is no earlier version to go back to yet."), true);
+      }
+    }).catch(function (e) { OvosWebUI.say("msg-undo", e.message, true); });
+  });
 
   function savedMessage(r) {
     var base = OvosWebUI.t("config.saved", "Saved. Backup:") + " " + (r.backup || OvosWebUI.t("config.saved.noBackup", "none was needed."));

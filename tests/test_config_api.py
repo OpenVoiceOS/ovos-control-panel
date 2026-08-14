@@ -177,3 +177,22 @@ def test_wake_word_field_offers_the_configured_hotwords(client):
     ww = fields["listener.wake_word"]
     assert ww["kind"] == "hotword"
     assert "hey_mycroft" in ww["options"], ww["options"]
+
+
+def test_undo_restores_the_previous_config(token_client):
+    auth = {"Authorization": "Bearer s3cret-token"}
+    from ovos_webui import configio
+    token_client.put("/api/config", headers=auth,
+                     json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    token_client.put("/api/config", headers=auth,
+                     json={"text": '{"lang": "es-es"}', "format": "json"})
+    assert configio.read_user_config().get("lang") == "es-es"
+    r = token_client.post("/api/config/undo", headers=auth)
+    assert r.status_code == 200 and r.json()["undone"] is True
+    assert configio.read_user_config().get("lang") == "pt-pt"
+
+
+def test_undo_with_no_backup_reports_nothing_to_do(token_client):
+    auth = {"Authorization": "Bearer s3cret-token"}
+    r = token_client.post("/api/config/undo", headers=auth)
+    assert r.status_code == 200 and r.json()["undone"] is False

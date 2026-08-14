@@ -634,6 +634,13 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             raise HTTPException(400, str(err)) from None
         return configio.write_user_config(data, bus=state["bus"])
 
+    @api.post("/config/undo")
+    def api_config_undo() -> dict[str, Any]:
+        try:
+            return configio.undo_last(bus=state["bus"])
+        except configio.ConfigError as err:
+            raise HTTPException(400, str(err)) from None
+
     @api.get("/config/merged")
     def api_config_merged() -> dict[str, Any]:
         return {"config": configio.read_merged_config()}
