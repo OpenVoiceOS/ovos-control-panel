@@ -14,11 +14,6 @@ import threading
 from pathlib import Path
 from typing import Any
 
-#: Only one restore may run at a time. A restore commits many files one by one;
-#: two overlapping restores would otherwise interleave at file granularity and
-#: leave a mix of both archives on disk.
-_RESTORE_LOCK = threading.Lock()
-
 from ovos_webui.configio import user_config_path
 from ovos_webui.fsutils import (
     MAX_UPLOAD_BYTES,
@@ -29,6 +24,11 @@ from ovos_webui.fsutils import (
     validate_skill_id,
 )
 from ovos_webui.skillsio import SkillSettingsError, settings_path, skills_root
+
+#: Only one restore may run at a time. A restore commits many files one by one;
+#: two overlapping restores would otherwise interleave at file granularity and
+#: leave a mix of both archives on disk.
+_RESTORE_LOCK = threading.Lock()
 
 CONFIG_MEMBER = "config/mycroft.conf"
 SKILLS_PREFIX = "skills/"
