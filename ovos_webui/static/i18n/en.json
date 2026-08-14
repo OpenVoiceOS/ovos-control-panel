@@ -951,5 +951,10 @@
  "voice.lang.bidiTail": "on the Transformers page.",
  "transformers.bidi.voiceLead": "These are the same as the extra languages on the",
  "transformers.bidi.voiceLink": "Voice settings",
- "transformers.bidi.voiceTail": "page."
+ "transformers.bidi.voiceTail": "page.",
+ "voice.tts.preview": "Hear the current voice",
+ "voice.tts.previewNote": "This plays a sample on the device using the voice that is in use now. To hear a new choice, save it first, then press it again.",
+ "voice.tts.previewSending": "Speaking a sample on the device…",
+ "voice.tts.previewDone": "Sent. If you heard nothing, no voice is installed yet, or save your choice and try again.",
+ "voice.tts.sample": "Hello, this is how I sound."
 }
