@@ -937,5 +937,10 @@
  "config.undo.confirm": "التراجع عن آخر تغيير والعودة إلى الإعدادات السابقة؟",
  "config.undo.doing": "جارٍ الاستعادة…",
  "config.undo.done": "تمت استعادة الإعدادات السابقة.",
- "config.undo.none": "لا توجد نسخة أقدم للعودة إليها بعد."
+ "config.undo.none": "لا توجد نسخة أقدم للعودة إليها بعد.",
+ "dash.mysetup.title": "إعداداتك",
+ "dash.mysetup.wake": "كلمة التنبيه",
+ "dash.mysetup.stt": "تحويل الكلام إلى نص",
+ "dash.mysetup.tts": "الصوت",
+ "dash.mysetup.lang": "اللغة"
 }
