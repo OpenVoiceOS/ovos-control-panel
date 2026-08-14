@@ -942,5 +942,14 @@
  "dash.mysetup.wake": "كلمة التنبيه",
  "dash.mysetup.stt": "تحويل الكلام إلى نص",
  "dash.mysetup.tts": "الصوت",
- "dash.mysetup.lang": "اللغة"
+ "dash.mysetup.lang": "اللغة",
+ "voice.transformers.moreLead": "لكل سلاسل المحوّلات الستّ وترتيبها وإعدادات كل إضافة، استخدم صفحة",
+ "voice.transformers.moreLink": "المحوّلات",
+ "voice.transformers.moreTail": ".",
+ "voice.lang.bidiLead": "لكي يردّ الجهاز بلغة إضافية أيضاً، لا أن يفهمها فقط، فعِّل",
+ "voice.lang.bidiLink": "الترجمة ثنائية الاتجاه",
+ "voice.lang.bidiTail": "في صفحة المحوّلات.",
+ "transformers.bidi.voiceLead": "هذه نفس اللغات الإضافية في صفحة",
+ "transformers.bidi.voiceLink": "إعدادات الصوت",
+ "transformers.bidi.voiceTail": "."
 }

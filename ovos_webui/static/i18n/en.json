@@ -942,5 +942,14 @@
  "dash.mysetup.wake": "Wake word",
  "dash.mysetup.stt": "Speech to text",
  "dash.mysetup.tts": "Voice",
- "dash.mysetup.lang": "Language"
+ "dash.mysetup.lang": "Language",
+ "voice.transformers.moreLead": "For all six transformer chains, their order, and each plugin's own settings, use the",
+ "voice.transformers.moreLink": "Transformers",
+ "voice.transformers.moreTail": "page.",
+ "voice.lang.bidiLead": "To have the device answer back in an extra language, not just understand it, turn on",
+ "voice.lang.bidiLink": "bidirectional translation",
+ "voice.lang.bidiTail": "on the Transformers page.",
+ "transformers.bidi.voiceLead": "These are the same as the extra languages on the",
+ "transformers.bidi.voiceLink": "Voice settings",
+ "transformers.bidi.voiceTail": "page."
 }

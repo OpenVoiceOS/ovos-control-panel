@@ -96,6 +96,10 @@
   <p class="hint" data-i18n="voice.transformers.hint">Utterance transformers clean up or change what you said before
     the device tries to understand it. Metadata transformers add extra information to a request before it is
     handled. Turn one on or off below.</p>
+  <p class="hint"><span data-i18n="voice.transformers.moreLead">For all six transformer chains, their order,
+    and each plugin's own settings, use the</span>
+    <a href="/transformers" data-i18n="voice.transformers.moreLink">Transformers</a>
+    <span data-i18n="voice.transformers.moreTail">page.</span></p>
   <div class="card">
     <h3 data-i18n="voice.transformers.utterance">Utterance transformers</h3>
     <div id="utterance_transformers-list"></div>
@@ -122,6 +126,10 @@
       <input id="lang-input" data-i18n-attr="aria-label:voice.lang.label"></label>
     <label><span data-i18n="voice.lang.secondary">Extra languages (comma separated)</span>
       <input id="secondary-input" data-i18n-attr="aria-label:voice.lang.secondary"></label>
+    <p class="hint"><span data-i18n="voice.lang.bidiLead">To have the device answer back in an extra language,
+      not just understand it, turn on</span>
+      <a href="/transformers" data-i18n="voice.lang.bidiLink">bidirectional translation</a>
+      <span data-i18n="voice.lang.bidiTail">on the Transformers page.</span></p>
     <div class="row"><button data-save="lang" data-i18n="config.save">Save</button></div>
     <div class="msg" id="msg-lang" role="status" aria-live="polite" hidden></div>
   </div>
