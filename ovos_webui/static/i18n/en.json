@@ -915,5 +915,7 @@
  "sensors.none": "No sensors yet. Install ovos-PHAL-sensors on the device, or wait for the first reading.",
  "sensors.on": "on",
  "sensors.off": "off",
- "sensors.updated": "Updates on their own as the device reports."
+ "sensors.updated": "Updates on their own as the device reports.",
+ "voice.advanced": "Advanced — pipeline order and transformers",
+ "voice.advancedHint": "Most people never need to change these. They decide how the device works out what you mean."
 }
