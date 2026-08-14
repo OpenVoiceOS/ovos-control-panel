@@ -36,7 +36,15 @@ def test_a_stranger_is_not_told_the_language(token_client):
     assert "lang" not in token_client.get("/api/status").json()
 
 
-@pytest.mark.parametrize("code", ["en", "ar"])
+def _locale_codes():
+    """Every shipped locale, by its file name (en, ar, pt, es, …)."""
+    from pathlib import Path
+
+    from ovos_webui.service import STATIC_DIR
+    return sorted(p.stem for p in (Path(STATIC_DIR) / "i18n").glob("*.json"))
+
+
+@pytest.mark.parametrize("code", _locale_codes())
 def test_the_locale_files_are_served_and_valid(client, code):
     r = client.get(f"/static/i18n/{code}.json")
     assert r.status_code == 200
@@ -44,10 +52,14 @@ def test_the_locale_files_are_served_and_valid(client, code):
     assert data["nav.dashboard"] and data["dash.title"]
 
 
-def test_english_and_arabic_have_the_same_keys(client):
+@pytest.mark.parametrize("code", [c for c in _locale_codes() if c != "en"])
+def test_every_locale_has_the_same_keys_as_english(client, code):
     en = client.get("/static/i18n/en.json").json()
-    ar = client.get("/static/i18n/ar.json").json()
-    assert set(en) == set(ar), "the Arabic locale is missing keys English has"
+    other = client.get(f"/static/i18n/{code}.json").json()
+    assert set(en) == set(other), (
+        f"the {code} locale does not have exactly the keys English has: "
+        f"missing {sorted(set(en) - set(other))}, extra {sorted(set(other) - set(en))}"
+    )
 
 
 def test_every_i18n_key_used_on_a_page_exists_in_the_locales():
