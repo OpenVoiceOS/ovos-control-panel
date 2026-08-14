@@ -1,4 +1,4 @@
-# ovos-webui
+# ovos-control-panel
 
 A local web page for an OpenVoiceOS device. It runs on the device. It shows you
 if the device works, it lets you change the settings, and it makes backups.
@@ -32,16 +32,16 @@ The page works on a phone. It follows the light or dark setting of your device.
 ## Install
 
 ```bash
-pip install ovos-webui
+pip install ovos-control-panel
 ```
 
 ## Run
 
 ```bash
-ovos-webui                        # 127.0.0.1:8500, this device only
-ovos-webui --host 0.0.0.0 --token my-secret   # reachable from your phone
-ovos-webui --port 9000
-ovos-webui --no-bus               # do not connect to the message bus
+ovos-control-panel                        # 127.0.0.1:8500, this device only
+ovos-control-panel --host 0.0.0.0 --token my-secret   # reachable from your phone
+ovos-control-panel --port 9000
+ovos-control-panel --no-bus               # do not connect to the message bus
 ```
 
 Then open `http://<the address of your device>:8500/`. If a token is set, the
@@ -49,7 +49,7 @@ page asks you to sign in once and then remembers you in a cookie.
 
 ## Run it as a service
 
-Write this to `~/.config/systemd/user/ovos-webui.service`:
+Write this to `~/.config/systemd/user/ovos-control-panel.service`:
 
 ```ini
 [Unit]
@@ -59,7 +59,7 @@ Wants=ovos-messagebus.service
 
 [Service]
 Type=simple
-ExecStart=%h/.venvs/ovos/bin/ovos-webui --host 0.0.0.0 --port 8500 --token CHANGE-ME
+ExecStart=%h/.venvs/ovos/bin/ovos-control-panel --host 0.0.0.0 --port 8500 --token CHANGE-ME
 Restart=on-failure
 RestartSec=5
 
@@ -71,8 +71,8 @@ Then start it:
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable --now ovos-webui
-journalctl --user -u ovos-webui -f
+systemctl --user enable --now ovos-control-panel
+journalctl --user -u ovos-control-panel -f
 ```
 
 The service starts even when the message bus is down. The dashboard then tells

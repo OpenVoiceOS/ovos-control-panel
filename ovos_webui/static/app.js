@@ -1,4 +1,4 @@
-/* ovos-webui — plain browser JavaScript. No build step, no CDN. */
+/* ovos-control-panel — plain browser JavaScript. No build step, no CDN. */
 (function () {
   "use strict";
 

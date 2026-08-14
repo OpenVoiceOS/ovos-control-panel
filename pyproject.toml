@@ -3,14 +3,14 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ovos-webui"
+name = "ovos-control-panel"
 dynamic = ["version"]
-description = "Unified local web UI for OpenVoiceOS devices — health, configuration, skill settings and backups"
+description = "Control panel for OpenVoiceOS devices — settings, plugins, skills, transformers, intents, media, network, sensors and more, in your browser"
 readme = "README.md"
 license = "Apache-2.0"
 authors = [{ name = "JarbasAi", email = "jarbasai@mailfence.com" }]
 requires-python = ">=3.10"
-keywords = ["ovos", "openvoiceos", "webui", "configuration", "dashboard"]
+keywords = ["ovos", "openvoiceos", "control-panel", "configuration", "dashboard"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Home Automation",
@@ -43,11 +43,13 @@ dev = [
 ]
 
 [project.scripts]
+ovos-control-panel = "ovos_webui.service:main"
+# kept so an existing `ovos-webui` command still works after the rename
 ovos-webui = "ovos_webui.service:main"
 
 [project.urls]
-Homepage = "https://github.com/OpenVoiceOS/ovos-webui"
-"Bug Tracker" = "https://github.com/OpenVoiceOS/ovos-webui/issues"
+Homepage = "https://github.com/OpenVoiceOS/ovos-control-panel"
+"Bug Tracker" = "https://github.com/OpenVoiceOS/ovos-control-panel/issues"
 
 [tool.setuptools.dynamic]
 version = { attr = "ovos_webui.version.__version__" }

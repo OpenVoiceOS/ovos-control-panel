@@ -374,7 +374,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
 
     # The interactive documentation and the schema are turned off: they told a
     # stranger the whole shape of the service before any sign in.
-    app = FastAPI(title="OpenVoiceOS Web UI", version=__version__, lifespan=lifespan,
+    app = FastAPI(title="OpenVoiceOS Control Panel", version=__version__, lifespan=lifespan,
                   docs_url=None, redoc_url=None, openapi_url=None)
     app.state.policy = policy
 

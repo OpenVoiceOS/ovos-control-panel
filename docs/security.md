@@ -33,7 +33,7 @@ In `mycroft.conf`:
 Or on the command line:
 
 ```bash
-ovos-webui --token "a long random string"
+ovos-control-panel --token "a long random string"
 ```
 
 Make the token long and random:
@@ -99,7 +99,7 @@ because that is how you reach the device yourself. Any other name is refused
 unless you list it, which you do for a reverse proxy or an mDNS name such as
 `ovos.local`:
 
-    ovos-webui --hostname ovos.local
+    ovos-control-panel --hostname ovos.local
 
 or in `mycroft.conf`::
 

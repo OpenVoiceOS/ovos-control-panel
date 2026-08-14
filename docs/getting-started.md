@@ -10,7 +10,7 @@ there.
 
 ## 1. Open the web page
 
-ovos-webui runs on the device itself. On the same network, open a browser and
+ovos-control-panel runs on the device itself. On the same network, open a browser and
 go to:
 
 ```

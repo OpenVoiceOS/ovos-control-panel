@@ -28,7 +28,7 @@ It holds nothing else. It holds no audio, no model and no log.
 ## Make a backup
 
 Open the Backup page and press **Download a backup**. The file name holds the
-date and time, for example `ovos-webui-backup-20260810T175403Z.tar.gz`.
+date and time, for example `ovos-control-panel-backup-20260810T175403Z.tar.gz`.
 
 Keep the file somewhere else than the device. A backup on a broken SD card is
 not a backup.
