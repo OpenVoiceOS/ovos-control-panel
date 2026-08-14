@@ -71,7 +71,12 @@
     <p class="hint" id="tts_module-empty" hidden data-i18n="voice.tts.empty">No text-to-speech plugins are installed.
       Install one on the Plugins page.</p>
     <label><span data-i18n="voice.tts.fallback">Fallback (optional)</span><span id="tts_fallback-select"></span></label>
-    <div class="row"><button data-save="tts_module" data-i18n="config.save">Save</button></div>
+    <div class="row">
+      <button data-save="tts_module" data-i18n="config.save">Save</button>
+      <button class="secondary" id="tts-preview" data-i18n="voice.tts.preview">Hear the current voice</button>
+    </div>
+    <p class="hint" data-i18n="voice.tts.previewNote">This plays a sample on the device using the voice that is
+      in use now. To hear a new choice, save it first, then press it again.</p>
     <div class="msg" id="msg-tts_module" role="status" aria-live="polite" hidden></div>
   </div>
 
@@ -338,6 +343,20 @@ OvosWebUI.ready(function () {
         saveField("secondary_langs", secondary);
       }
     });
+  });
+
+  // Hear the current voice: speak a short sample on the device, reusing the
+  // Try-it speak route. It uses the voice in use now, so a new pick is heard
+  // only after it is saved.
+  el("tts-preview").addEventListener("click", function () {
+    say("msg-tts_module", t("voice.tts.previewSending", "Speaking a sample on the device…"));
+    api("/api/tryit/speak", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({text: t("voice.tts.sample", "Hello, this is how I sound.")})
+    }).then(function () {
+      say("msg-tts_module", t("voice.tts.previewDone",
+        "Sent. If you heard nothing, no voice is installed yet, or save your choice and try again."));
+    }).catch(function (e) { say("msg-tts_module", e.message, true); });
   });
 
   el("voice-body").hidden = true;

@@ -951,5 +951,10 @@
  "voice.lang.bidiTail": "في صفحة المحوّلات.",
  "transformers.bidi.voiceLead": "هذه نفس اللغات الإضافية في صفحة",
  "transformers.bidi.voiceLink": "إعدادات الصوت",
- "transformers.bidi.voiceTail": "."
+ "transformers.bidi.voiceTail": ".",
+ "voice.tts.preview": "استمع إلى الصوت الحالي",
+ "voice.tts.previewNote": "يشغّل هذا عيّنة على الجهاز بالصوت المستخدَم الآن. لسماع اختيار جديد، احفظه أولاً ثم اضغط مجدداً.",
+ "voice.tts.previewSending": "يُنطق مثال على الجهاز…",
+ "voice.tts.previewDone": "أُرسل. إن لم تسمع شيئاً، فلا صوت مثبَّت بعد، أو احفظ اختيارك وحاول مجدداً.",
+ "voice.tts.sample": "مرحباً، هكذا يبدو صوتي."
 }
