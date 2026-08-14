@@ -23,13 +23,19 @@ class SensorLog:
     def __init__(self):
         self._lock = threading.Lock()
         self._sensors: dict[str, dict[str, Any]] = {}
-        self._attached = False
+        self._bus = None
 
     def attach(self, bus) -> None:
-        """Subscribe to the two sensor broadcasts once."""
-        if self._attached or bus is None:
+        """Subscribe to the two sensor broadcasts.
+
+        Guards on the bus object, not a flag: a second call with the same bus
+        does nothing (so no topic ever gets two handlers, which would double the
+        readings), but a new bus after a reconnect is subscribed to, so the feed
+        does not silently go stale.
+        """
+        if bus is None or bus is self._bus:
             return
-        self._attached = True
+        self._bus = bus
         bus.on("ovos.phal.sensor", self._handler("sensor"))
         bus.on("ovos.phal.binary_sensor", self._handler("binary"))
 

@@ -35,13 +35,18 @@ class EventLog:
         self._lock = threading.Lock()
         self._events: list[dict[str, Any]] = []
         self._counter = itertools.count(1)
-        self._attached = False
+        self._bus = None
 
     def attach(self, bus) -> None:
-        """Subscribe to the watched message types once."""
-        if self._attached or bus is None:
+        """Subscribe to the watched message types.
+
+        Guards on the bus object, not a flag: a repeat call with the same bus
+        does nothing, so no topic gets two handlers, but a new bus after a
+        reconnect is subscribed to so the feed does not go stale.
+        """
+        if bus is None or bus is self._bus:
             return
-        self._attached = True
+        self._bus = bus
         for msg_type, name in WATCHED.items():
             bus.on(msg_type, self._handler(name))
 
