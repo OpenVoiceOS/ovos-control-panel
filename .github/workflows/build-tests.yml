@@ -11,4 +11,6 @@ jobs:
     with:
       python_versions: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
       install_extras: 'dev'
+      # ggwave (a test dependency) pulls in PyAudio, which needs portaudio to build.
+      apt_packages: 'portaudio19-dev'
       test_path: 'tests'

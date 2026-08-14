@@ -13,4 +13,6 @@ jobs:
       coverage_source: 'ovos_webui'
       test_path: 'tests/'
       install_extras: '.[dev]'
+      # ggwave (a test dependency) pulls in PyAudio, which needs portaudio to build.
+      system_deps: 'portaudio19-dev'
       min_coverage: 0
