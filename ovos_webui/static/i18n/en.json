@@ -474,8 +474,8 @@
  "token.checking": "Checking…",
  "token.current": "Current token",
  "token.new": "New token",
- "token.hint": "A good token is long and random. It is stored in your configuration and needed to sign in. This session stays signed in after you change it.",
- "token.how": "How to make a strong one",
+ "token.hint": "A good token is long and random. Press the button to have a strong one made for you, write it down, then save. It is stored in your configuration and needed to sign in. This session stays signed in after you change it.",
+ "token.how": "Make one yourself instead",
  "token.save": "Save token",
  "token.set": "This device has a token. Enter the current one to change it.",
  "token.none": "This device has no token yet. Setting one locks it down.",
@@ -918,5 +918,7 @@
  "sensors.updated": "Updates on their own as the device reports.",
  "voice.advanced": "Advanced — pipeline order and transformers",
  "voice.advancedHint": "Most people never need to change these. They decide how the device works out what you mean.",
- "mark1.eyes.volume": "Volume meter (0–11)"
+ "mark1.eyes.volume": "Volume meter (0–11)",
+ "token.generate": "Generate one for me",
+ "token.generated": "A strong token is filled in below. Write it down, then press Save token."
 }
