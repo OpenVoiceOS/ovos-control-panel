@@ -7,13 +7,11 @@
 - the login throttle counter was process-global, so one source's failures paid
   down the delay another (the real owner) incurs on their own first mistake.
 """
-import time
 
 import pytest
 
 
 def test_health_counts_audio_as_essential(monkeypatch):
-    from ovos_bus_client.message import Message
     from ovos_utils.fakebus import FakeBus
     from ovos_webui import health
 

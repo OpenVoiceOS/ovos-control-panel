@@ -60,7 +60,8 @@ def test_attach_captures_both_kinds(bus):
 
 def test_attach_is_idempotent(bus):
     log = sensors.SensorLog()
-    log.attach(bus); log.attach(bus)
+    log.attach(bus)
+    log.attach(bus)
     _emit(bus, "ovos.phal.sensor", {"state": 1, "sensor_id": "x"})
     # Only one handler, so exactly one record, not two.
     assert len(log.snapshot()["sensors"]) == 1
@@ -99,7 +100,8 @@ def test_attach_resubscribes_on_a_new_bus_but_not_the_same_one():
     from ovos_utils.fakebus import FakeBus, Message
     log = sensors.SensorLog()
     bus1 = FakeBus()
-    log.attach(bus1); log.attach(bus1)  # same bus twice: one handler only
+    log.attach(bus1)
+    log.attach(bus1)  # same bus twice: one handler only
     bus1.emit(Message("ovos.phal.sensor", {"state": 1, "sensor_id": "x"}))
     assert len(log.snapshot()["sensors"]) == 1  # not doubled
     # a reconnect gives a new bus object; the feed must not go stale

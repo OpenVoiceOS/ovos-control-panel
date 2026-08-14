@@ -240,8 +240,6 @@ def _stale_or_empty(data: dict[str, Any] | None, error: str) -> dict[str, Any]:
 #: handlers call ``installed_versions()`` more than once per request. Cache it
 #: briefly — the installed set only changes on an install, which prompts a
 #: service restart anyway.
-import threading as _threading
-
 _INSTALLED_CACHE: dict[str, Any] = {"ts": 0.0, "val": None}
 _INSTALLED_TTL = 15.0
 
@@ -254,7 +252,7 @@ def invalidate_installed_cache() -> None:
     """
     _INSTALLED_CACHE["val"] = None
     _INSTALLED_CACHE["ts"] = 0.0
-_INSTALLED_LOCK = _threading.Lock()
+_INSTALLED_LOCK = threading.Lock()
 
 
 def installed_versions() -> dict[str, str]:

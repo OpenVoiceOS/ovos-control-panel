@@ -56,7 +56,7 @@ def test_set_volume_validates_range():
 
 
 def test_set_volume_emits_fraction():
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_utils.fakebus import FakeBus
     from ovos_webui import devicecontrol
 
     bus = FakeBus()
@@ -180,7 +180,7 @@ def _wait_job(job, timeout=5.0):
 
 
 def test_install_delegates_over_the_bus_when_connected(monkeypatch):
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_utils.fakebus import FakeBus
     from ovos_webui import installer, pypi, updates
 
     monkeypatch.setattr(pypi, "details", lambda name: {"name": name})
@@ -271,7 +271,7 @@ def test_routing_override_and_broadcast(monkeypatch):
 
 
 def test_install_without_a_device_is_refused():
-    from ovos_webui import installer, pypi
+    from ovos_webui import installer
     import pytest as _pytest
 
     # No bus at all => nothing to delegate to => clear error, never local pip.

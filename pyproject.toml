@@ -68,3 +68,8 @@ testpaths = ["tests"]
 [tool.coverage.run]
 source = ["ovos_webui"]
 omit = ["tests/*"]
+
+[tool.ruff.lint.per-file-ignores]
+# conftest sets the XDG environment before importing anything from OVOS, so its
+# own imports deliberately come after that setup and cannot move to the top.
+"tests/conftest.py" = ["E402"]

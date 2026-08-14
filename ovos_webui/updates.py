@@ -239,10 +239,10 @@ def _run_pip_check() -> dict[str, Any]:
         return {"ok": True, "conflicts": []}
     # pip prints conflicts on stdout; a broken environment (no pip at all)
     # complains on stderr instead. Report whichever it said.
-    lines = [l.strip() for l in (proc.stdout or "").splitlines() if l.strip()]
+    lines = [ln.strip() for ln in (proc.stdout or "").splitlines() if ln.strip()]
     if not lines:
-        lines = [l.strip() for l in (proc.stderr or "").splitlines() if l.strip()]
-    if any("No module named pip" in l for l in lines):
+        lines = [ln.strip() for ln in (proc.stderr or "").splitlines() if ln.strip()]
+    if any("No module named pip" in ln for ln in lines):
         return {"ok": False, "conflicts": [],
                 "error": "pip is not available in this environment, "
                          "so nothing could be checked"}

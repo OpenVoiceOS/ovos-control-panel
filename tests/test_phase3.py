@@ -5,7 +5,6 @@ The style follows the security review: every test either proves a feature
 works or proves an abuse of it is refused.
 """
 import json
-import threading
 import time
 from pathlib import Path
 
@@ -176,7 +175,8 @@ def test_channel_selects_the_upgrade_version(monkeypatch):
     installer.Installer().upgrade("ovos-tts-plugin-piper", bus=bus)
     import time as _t
     for _ in range(100):
-        if "pkgs" in seen: break
+        if "pkgs" in seen:
+            break
         _t.sleep(0.01)
     assert seen["pkgs"] == ["ovos-tts-plugin-piper==1.1.0a1"]
     updates.set_release_channel("stable")
@@ -337,7 +337,6 @@ def test_conflicts_are_cached(monkeypatch):
 
 
 def test_project_json_is_size_capped(monkeypatch):
-    import io
 
     class Huge:
         def __enter__(self): return self
@@ -358,7 +357,6 @@ def test_updates_lock_never_blocks_a_request(monkeypatch):
     # cache rather than parking on the lock (worker-pool exhaustion defence).
     updates._CHECK_LOCK.acquire()
     try:
-        called = {"n": 0}
         monkeypatch.setattr(updates, "latest_versions",
                             lambda name: (_ for _ in ()).throw(AssertionError("swept while locked")))
         # Should not raise and not sweep — it serves the cache.

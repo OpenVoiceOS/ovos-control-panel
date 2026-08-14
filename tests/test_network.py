@@ -1,7 +1,6 @@
 """Wi-Fi over the network-manager PHAL plugin: scan, status, connect (success
 and failure on two different reply topics), forget/disconnect, timeouts, and
 the privileged routes."""
-import pytest
 
 
 # ── a FakeBus that answers the network-manager topics ────────────────────────
