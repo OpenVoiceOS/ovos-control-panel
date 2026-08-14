@@ -937,5 +937,10 @@
  "config.undo.confirm": "Undo your last change and go back to the previous settings?",
  "config.undo.doing": "Restoring…",
  "config.undo.done": "Restored the previous settings.",
- "config.undo.none": "There is no earlier version to go back to yet."
+ "config.undo.none": "There is no earlier version to go back to yet.",
+ "dash.mysetup.title": "Your setup",
+ "dash.mysetup.wake": "Wake word",
+ "dash.mysetup.stt": "Speech to text",
+ "dash.mysetup.tts": "Voice",
+ "dash.mysetup.lang": "Language"
 }

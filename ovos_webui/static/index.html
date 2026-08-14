@@ -39,6 +39,11 @@
   <div class="row"><button id="refresh" data-i18n="dash.recheck">Check again</button></div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
 
+  <section id="setup-section" hidden>
+    <h2 data-i18n="dash.mysetup.title">Your setup</h2>
+    <div class="card"><dl class="kv" id="setup-summary"></dl></div>
+  </section>
+
   <h2 data-i18n="dash.down.title">If something is down</h2>
   <div class="card">
     <p><strong data-i18n="dash.down.ask">If you are not sure what to do, ask whoever set up your device.</strong></p>
@@ -150,6 +155,25 @@ OvosWebUI.ready(function () {
   el("busmon").href = "http://" + window.location.hostname + ":8000/";
   el("refresh").addEventListener("click", load);
   load();
+
+  // A quick "your setup" summary, so the Dashboard answers "is my device set up
+  // the way I think" as well as "is it running". Needs a token; if there is
+  // none, the call is refused and the section simply stays hidden.
+  api("/api/voice").then(function (v) {
+    var f = (v && v.fields) || {};
+    function eff(k) { var x = f[k]; return x ? (x.effective || x.value) : null; }
+    var rows = [
+      [t("dash.mysetup.wake", "Wake word"), eff("wake_word")],
+      [t("dash.mysetup.stt", "Speech to text"), eff("stt_module")],
+      [t("dash.mysetup.tts", "Voice"), eff("tts_module")],
+      [t("dash.mysetup.lang", "Language"), eff("lang")]
+    ];
+    var html = "";
+    rows.forEach(function (r) {
+      if (r[1]) { html += "<dt>" + esc(r[0]) + "</dt><dd><bdi>" + esc(r[1]) + "</bdi></dd>"; }
+    });
+    if (html) { el("setup-summary").innerHTML = html; el("setup-section").hidden = false; }
+  }).catch(function () { /* no token or no bus: leave it hidden */ });
 
   // A device with no access token yet is reachable but not locked down —
   // point at the setup wizard's token step rather than staying silent.
