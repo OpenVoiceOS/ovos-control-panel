@@ -933,5 +933,9 @@
  "setup.wake.button": "Listen for my wake word",
  "setup.wake.listening": "Listening… say your wake word now.",
  "setup.wake.heard": "Heard it. Your wake word is working.",
- "setup.wake.notHeard": "Did not hear it. Check that a wake-word plugin is installed and the microphone works."
+ "setup.wake.notHeard": "Did not hear it. Check that a wake-word plugin is installed and the microphone works.",
+ "config.undo.confirm": "Undo your last change and go back to the previous settings?",
+ "config.undo.doing": "Restoring…",
+ "config.undo.done": "Restored the previous settings.",
+ "config.undo.none": "There is no earlier version to go back to yet."
 }

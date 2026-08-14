@@ -97,6 +97,16 @@ def make_backup(path: Path) -> Path | None:
     return dest
 
 
+def latest_backup(path: Path) -> Path | None:
+    """Return the most recent backup of ``path``, or ``None`` if there is none.
+
+    This is the copy taken just before the last write, so restoring it undoes
+    that write.
+    """
+    backups = _sorted_backups(backup_dir_for(path), Path(path).name)
+    return backups[-1] if backups else None
+
+
 def _sorted_backups(bdir: Path, name: str) -> list[Path]:
     """Return backups oldest first.
 

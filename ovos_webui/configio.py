@@ -110,6 +110,28 @@ def write_user_config(data: dict[str, Any], bus=None) -> dict[str, Any]:
             "applied": applied}
 
 
+def undo_last(bus=None) -> dict[str, Any]:
+    """Restore the configuration to the copy kept before the last change.
+
+    Every write to the user configuration first backs up the old file, so this
+    reads the most recent backup and writes it back. Writing it also backs up
+    the current file, so an undo can itself be undone. Returns ``{"undone":
+    False}`` when there is no backup to restore.
+    """
+    from ovos_webui import fsutils
+
+    path = user_config_path()
+    backup = fsutils.latest_backup(path)
+    if backup is None:
+        return {"undone": False}
+    try:
+        data = parse_text(backup.read_text(encoding="utf-8"), "json")
+    except (OSError, ConfigError) as err:
+        raise ConfigError(f"could not read the backup: {err}") from err
+    result = write_user_config(data, bus=bus)
+    return {"undone": True, "restored_from": backup.name, **result}
+
+
 def mutate(change, bus=None) -> dict[str, Any]:
     """Read-modify-write the user layer atomically.
 
