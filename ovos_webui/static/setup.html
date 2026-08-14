@@ -74,6 +74,14 @@
       <a href="/tryit" data-i18n="nav.tryit">Try it</a>
       <span data-i18n="setup.step4.tail">page — you see which skill answers and what it says.</span></p>
   </div>
+
+  <h2><span data-i18n="setup.wake.title">6. Say your wake word</span></h2>
+  <div class="card">
+    <p class="hint" data-i18n="setup.wake.hint">The typed test above skips the microphone and the wake word.
+      This checks they really work: press the button, then say your wake word out loud to the device.</p>
+    <div class="row"><button id="wake-test" data-i18n="setup.wake.button">Listen for my wake word</button></div>
+    <div class="msg" id="msg-wake" role="status" aria-live="polite" hidden></div>
+  </div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
   <p class="hint foot"><a data-i18n="foot.manual"
     href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
@@ -258,6 +266,33 @@ OvosWebUI.ready(function () {
         + '<a href="/plugins">' + esc(t("tryit.speak.sent.link", "Plugins page")) + "</a>"
         + esc(t("tryit.speak.sent.tail", ".")));
     }).catch(function (e) { sayError("msg-speak", e); });
+  });
+
+  // Test the wake word for real: listen to the device's own activity feed for a
+  // wake-word event, which only fires when the microphone and the wake-word
+  // plugin actually heard it — unlike the typed test above.
+  var wakeTimer = null;
+  el("wake-test").addEventListener("click", function () {
+    if (wakeTimer) { clearInterval(wakeTimer); wakeTimer = null; }
+    OvosWebUI.say("msg-wake", t("setup.wake.listening", "Listening… say your wake word now."));
+    api("/api/events").then(function (r) {
+      var cursor = r.next || 0, tries = 0;
+      wakeTimer = setInterval(function () {
+        tries += 1;
+        api("/api/events?since=" + cursor).then(function (r2) {
+          cursor = r2.next || cursor;
+          var heard = (r2.events || []).some(function (e) { return e.event === "wakeword"; });
+          if (heard) {
+            clearInterval(wakeTimer); wakeTimer = null;
+            OvosWebUI.say("msg-wake", t("setup.wake.heard", "Heard it. Your wake word is working."));
+          } else if (tries > 14) {
+            clearInterval(wakeTimer); wakeTimer = null;
+            OvosWebUI.say("msg-wake", t("setup.wake.notHeard",
+              "Did not hear it. Check that a wake-word plugin is installed and the microphone works."), true);
+          }
+        }).catch(function (e) { clearInterval(wakeTimer); wakeTimer = null; sayError("msg-wake", e); });
+      }, 1500);
+    }).catch(function (e) { sayError("msg-wake", e); });
   });
 });
 </script>

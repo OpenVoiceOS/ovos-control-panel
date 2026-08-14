@@ -927,5 +927,11 @@
  "mark1.presets.import": "Import",
  "mark1.presets.none": "No saved drawings yet.",
  "mark1.presets.load": "Load",
- "mark1.presets.delete": "Delete"
+ "mark1.presets.delete": "Delete",
+ "setup.wake.title": "6. Say your wake word",
+ "setup.wake.hint": "The typed test above skips the microphone and the wake word. This checks they really work: press the button, then say your wake word out loud to the device.",
+ "setup.wake.button": "Listen for my wake word",
+ "setup.wake.listening": "Listening… say your wake word now.",
+ "setup.wake.heard": "Heard it. Your wake word is working.",
+ "setup.wake.notHeard": "Did not hear it. Check that a wake-word plugin is installed and the microphone works."
 }
