@@ -917,5 +917,6 @@
  "sensors.off": "off",
  "sensors.updated": "Updates on their own as the device reports.",
  "voice.advanced": "Advanced — pipeline order and transformers",
- "voice.advancedHint": "Most people never need to change these. They decide how the device works out what you mean."
+ "voice.advancedHint": "Most people never need to change these. They decide how the device works out what you mean.",
+ "mark1.eyes.volume": "Volume meter (0–11)"
 }

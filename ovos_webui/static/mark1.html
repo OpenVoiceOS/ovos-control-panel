@@ -101,6 +101,8 @@
     <input type="range" id="eyes-brightness" min="1" max="30" value="30">
     <label for="eyes-fill" data-i18n="mark1.eyes.fill">Fill</label>
     <input type="range" id="eyes-fill" min="0" max="100" value="100">
+    <label for="eyes-volume" data-i18n="mark1.eyes.volume">Volume meter (0–11)</label>
+    <input type="range" id="eyes-volume" min="0" max="11" value="0">
   </div>
   <div class="msg" id="msg-eyes" role="status" aria-live="polite" hidden></div>
 
@@ -343,6 +345,9 @@ OvosWebUI.ready(function () {
   });
   el("eyes-brightness").addEventListener("change", function () {
     eyesAction("/api/mark1/eyes/brightness", {level: parseInt(el("eyes-brightness").value, 10)});
+  });
+  el("eyes-volume").addEventListener("change", function () {
+    eyesAction("/api/mark1/eyes/volume", {volume: parseInt(el("eyes-volume").value, 10)});
   });
   el("eyes-fill").addEventListener("change", function () {
     eyesAction("/api/mark1/eyes/fill", {percentage: parseInt(el("eyes-fill").value, 10)});
