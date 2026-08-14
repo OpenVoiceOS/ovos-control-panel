@@ -730,3 +730,15 @@ label.check input[type="checkbox"] { width: auto; margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before { animation: none !important; transition: none !important; }
 }
+
+/* The advanced disclosure on the Voice page: a plain, clearly-clickable heading
+   that keeps the rarely-needed pipeline and transformer controls out of the way
+   until asked for. */
+details.advanced { margin: 1.5rem 0; }
+details.advanced > summary {
+  cursor: pointer;
+  font-size: 1.15rem;
+  font-weight: 600;
+  padding: 0.5rem 0;
+}
+details.advanced[open] > summary { margin-bottom: 0.5rem; }

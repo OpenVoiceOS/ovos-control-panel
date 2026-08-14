@@ -75,6 +75,10 @@
     <div class="msg" id="msg-tts_module" role="status" aria-live="polite" hidden></div>
   </div>
 
+  <details class="advanced">
+  <summary data-i18n="voice.advanced">Advanced — pipeline order and transformers</summary>
+  <p class="hint" data-i18n="voice.advancedHint">Most people never need to change these. They decide how the
+    device works out what you mean.</p>
   <h2 data-i18n="voice.pipeline.title">Pipeline order</h2>
   <p class="hint" data-i18n="voice.pipeline.hint">When you speak, the device tries each of these in order and stops
     at the first one that understands you. Move an entry up to have it tried sooner.</p>
@@ -107,6 +111,7 @@
     <div class="row"><button data-save="metadata_transformers" data-i18n="config.save">Save</button></div>
     <div class="msg" id="msg-metadata_transformers" role="status" aria-live="polite" hidden></div>
   </div>
+  </details>
 
   <h2 data-i18n="voice.lang.title">Language</h2>
   <p class="hint" data-i18n="voice.lang.hint">The language the device speaks and listens in, for example
