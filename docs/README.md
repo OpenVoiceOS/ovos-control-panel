@@ -1,8 +1,8 @@
-# ovos-webui documentation
+# ovos-control-panel documentation
 
 ## What is this?
 
-ovos-webui is a web page that runs on your OpenVoiceOS device. You open it in
+ovos-control-panel is a web page that runs on your OpenVoiceOS device. You open it in
 a browser on your phone or computer, on your own network. It shows you
 whether the device works, lets you change its settings, and installs the
 plugins that give it a voice. There is no cloud, no account and no internet

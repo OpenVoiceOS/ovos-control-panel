@@ -15,7 +15,7 @@ The About page shows what is installed on this device and where to get help.
 
 ## What it shows
 
-- The version of ovos-webui, and the versions of the main OVOS packages it
+- The version of ovos-control-panel, and the versions of the main OVOS packages it
   found.
 - The address the page is served on.
 - Links to the OpenVoiceOS documentation, the chat, and the source code.

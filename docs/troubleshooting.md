@@ -75,7 +75,7 @@ started. If you forgot it, set a new one from a shell on the device:
 {"webui": {"access_token": "a new long random string"}}
 ```
 
-Then restart `ovos-webui`.
+Then restart `ovos-control-panel`.
 
 ## Installing does nothing / says no device
 
