@@ -920,5 +920,12 @@
  "voice.advancedHint": "Most people never need to change these. They decide how the device works out what you mean.",
  "mark1.eyes.volume": "Volume meter (0–11)",
  "token.generate": "Generate one for me",
- "token.generated": "A strong token is filled in below. Write it down, then press Save token."
+ "token.generated": "A strong token is filled in below. Write it down, then press Save token.",
+ "mark1.presets.namePlaceholder": "name this drawing",
+ "mark1.presets.save": "Save this drawing",
+ "mark1.presets.export": "Export all",
+ "mark1.presets.import": "Import",
+ "mark1.presets.none": "No saved drawings yet.",
+ "mark1.presets.load": "Load",
+ "mark1.presets.delete": "Delete"
 }

@@ -48,6 +48,17 @@
     <button class="secondary" id="preset-smile" data-i18n="mark1.mouth.presetSmile">Smile</button>
     <button id="mouth-send" data-i18n="mark1.mouth.send">Send drawing to device</button>
   </div>
+  <div class="mark1-controls" role="group" aria-label="Saved drawings">
+    <input type="text" id="mk1-preset-name" maxlength="40"
+      data-i18n-attr="placeholder:mark1.presets.namePlaceholder" placeholder="name this drawing">
+    <button class="secondary" id="mk1-preset-save" data-i18n="mark1.presets.save">Save this drawing</button>
+    <button class="secondary" id="mk1-preset-export" data-i18n="mark1.presets.export">Export all</button>
+    <label class="secondary mk1-import" style="cursor:pointer">
+      <span data-i18n="mark1.presets.import">Import</span>
+      <input type="file" id="mk1-preset-import" accept="application/json" hidden>
+    </label>
+  </div>
+  <ul class="plain rowlist" id="mk1-preset-list"></ul>
   <div class="mark1-controls">
     <label for="mouth-text-input" data-i18n="mark1.mouth.textLabel">Scrolling text</label>
     <input type="text" id="mouth-text-input" maxlength="500">
@@ -235,6 +246,69 @@ OvosWebUI.ready(function () {
   el("preset-heart").addEventListener("click", function () { loadPreset("heart"); });
   el("preset-note").addEventListener("click", function () { loadPreset("note"); });
   el("preset-smile").addEventListener("click", function () { loadPreset("smile"); });
+
+  // Save your own mouth drawings (and the eye colour) in this browser, name
+  // them, load them back, and export them as a file to share with other owners.
+  var MK1_KEY = "ovos-mk1-presets";
+  function readPresets() {
+    try { return JSON.parse(window.localStorage.getItem(MK1_KEY) || "{}") || {}; } catch (e) { return {}; }
+  }
+  function writePresets(p) {
+    try { window.localStorage.setItem(MK1_KEY, JSON.stringify(p)); } catch (e) { /* ignore */ }
+  }
+  function applyStoredPreset(preset) {
+    if (!preset || !Array.isArray(preset.grid) || preset.grid.length !== ROWS) { return; }
+    grid = preset.grid.map(function (r) { return r.slice(0, COLS); });
+    if (typeof preset.color === "string") { el("eyes-color").value = preset.color; }
+    draw();
+  }
+  function renderPresets() {
+    var ul = el("mk1-preset-list"); ul.innerHTML = "";
+    var p = readPresets(), names = Object.keys(p).sort();
+    if (!names.length) {
+      var empty = document.createElement("li"); empty.className = "hint";
+      empty.textContent = t("mark1.presets.none", "No saved drawings yet.");
+      ul.appendChild(empty); return;
+    }
+    names.forEach(function (name) {
+      var li = document.createElement("li");
+      li.innerHTML = '<span class="name">' + esc(name) + "</span> "
+        + '<button class="secondary" data-load="1">' + esc(t("mark1.presets.load", "Load")) + "</button> "
+        + '<button class="danger" data-del="1">' + esc(t("mark1.presets.delete", "Delete")) + "</button>";
+      li.querySelector("[data-load]").addEventListener("click", function () { applyStoredPreset(p[name]); });
+      li.querySelector("[data-del]").addEventListener("click", function () {
+        var all = readPresets(); delete all[name]; writePresets(all); renderPresets();
+      });
+      ul.appendChild(li);
+    });
+  }
+  el("mk1-preset-save").addEventListener("click", function () {
+    var name = el("mk1-preset-name").value.trim();
+    if (!name) { return; }
+    var all = readPresets();
+    all[name] = {grid: grid.map(function (r) { return r.slice(); }), color: el("eyes-color").value};
+    writePresets(all); el("mk1-preset-name").value = ""; renderPresets();
+  });
+  el("mk1-preset-export").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(readPresets(), null, 1)], {type: "application/json"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "mark1-drawings.json"; a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  el("mk1-preset-import").addEventListener("change", function (e) {
+    var file = e.target.files[0];
+    if (!file) { return; }
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var imported = JSON.parse(reader.result), all = readPresets();
+        Object.keys(imported).forEach(function (k) { all[k] = imported[k]; });
+        writePresets(all); renderPresets();
+      } catch (err) { /* a bad file is ignored */ }
+    };
+    reader.readAsText(file); e.target.value = "";
+  });
+  renderPresets();
 
   function needDevice() {
     if (!canDevice) {

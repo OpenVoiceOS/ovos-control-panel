@@ -920,5 +920,12 @@
  "voice.advancedHint": "لا يحتاج معظم الناس إلى تغيير هذه. إنها تقرّر كيف يستنتج الجهاز مقصدك.",
  "mark1.eyes.volume": "مقياس الصوت (0–11)",
  "token.generate": "أنشئ واحداً من أجلي",
- "token.generated": "تم ملء رمز قوي في الأسفل. دوّنه، ثم اضغط حفظ الرمز."
+ "token.generated": "تم ملء رمز قوي في الأسفل. دوّنه، ثم اضغط حفظ الرمز.",
+ "mark1.presets.namePlaceholder": "سمِّ هذا الرسم",
+ "mark1.presets.save": "احفظ هذا الرسم",
+ "mark1.presets.export": "تصدير الكل",
+ "mark1.presets.import": "استيراد",
+ "mark1.presets.none": "لا رسوم محفوظة بعد.",
+ "mark1.presets.load": "تحميل",
+ "mark1.presets.delete": "حذف"
 }
