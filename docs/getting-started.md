@@ -21,6 +21,16 @@ If you do not know the address, it is often the device's hostname, for
 example `http://ovos.local:8500/`, or its numeric IP address. On the device
 itself, `http://127.0.0.1:8500/` always works.
 
+If the device is not on your Wi-Fi yet, join it from the [Network](network.md)
+page once you can reach the device. A device with no screen or keyboard can be
+told the Wi-Fi another way: play the credentials to it as a sound from the
+[Send over sound](send-over-sound.md) page.
+
+If the page will not load from your phone but works on the device itself, the
+device is only accepting connections from itself, which is the safe default.
+See [Security](security.md) under "Let yourself in from your phone" to open it
+up, and set a token first.
+
 **Done looks like:** the Dashboard loads, with a card for the message bus and
 one for each service.
 
@@ -33,12 +43,11 @@ token. A token is a password for this page: without one, anyone on your
 network could change your device's settings. With one set, the page asks you
 to sign in once and remembers you.
 
-Go to **Setup** (or **Settings → Access token**) and set a long token. A
-random string works well:
-
-```bash
-python3 -c "import secrets; print(secrets.token_urlsafe(32))"
-```
+Go to **Setup** (or **Settings → Access token**) and press **Generate one for
+me**. This makes a strong token right in the browser, so you do not need a
+terminal. Write it down, then save. (If you would rather make your own, any
+long random string works, for example the output of
+`python3 -c "import secrets; print(secrets.token_urlsafe(32))"`.)
 
 This matters for the next steps too: installing plugins, hearing the device
 speak, and using the device controls all **need** a token. Skip this step and
