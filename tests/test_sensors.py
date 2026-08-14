@@ -11,7 +11,7 @@ _AUTH = {"Authorization": "Bearer s3cret-token"}
 @pytest.fixture(autouse=True)
 def _reset_singleton():
     sensors.LOG_SINGLETON._sensors = {}
-    sensors.LOG_SINGLETON._attached = False
+    sensors.LOG_SINGLETON._bus = None
     yield
 
 
@@ -93,3 +93,18 @@ def test_api_sensors_returns_collected_readings(token_client, bus):
     got = token_client.get("/api/sensors", headers=_AUTH).json()
     ids = [s["sensor_id"] for s in got["sensors"]]
     assert "pi_cpu" in ids
+
+
+def test_attach_resubscribes_on_a_new_bus_but_not_the_same_one():
+    from ovos_utils.fakebus import FakeBus, Message
+    log = sensors.SensorLog()
+    bus1 = FakeBus()
+    log.attach(bus1); log.attach(bus1)  # same bus twice: one handler only
+    bus1.emit(Message("ovos.phal.sensor", {"state": 1, "sensor_id": "x"}))
+    assert len(log.snapshot()["sensors"]) == 1  # not doubled
+    # a reconnect gives a new bus object; the feed must not go stale
+    bus2 = FakeBus()
+    log.attach(bus2)
+    bus2.emit(Message("ovos.phal.sensor", {"state": 2, "sensor_id": "y"}))
+    ids = {s["sensor_id"] for s in log.snapshot()["sensors"]}
+    assert "y" in ids
