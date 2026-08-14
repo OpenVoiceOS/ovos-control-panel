@@ -80,10 +80,14 @@
     <label>
       <span data-i18n="token.new">New token</span>
       <input type="password" id="token-new" autocomplete="new-password"></label>
-    <p class="hint" data-i18n="token.hint">A good token is long and random. It is stored in your configuration and
-      needed to sign in. This session stays signed in after you change it.</p>
+    <div class="row">
+      <button class="secondary" id="token-generate" data-i18n="token.generate">Generate one for me</button>
+    </div>
+    <p class="hint" data-i18n="token.hint">A good token is long and random. Press the button to have a strong
+      one made for you, write it down, then save. It is stored in your configuration and needed to sign in.
+      This session stays signed in after you change it.</p>
     <details class="tech">
-      <summary data-i18n="token.how">How to make a strong one</summary>
+      <summary data-i18n="token.how">Make one yourself instead</summary>
       <p class="hint">For example, the output of
         <code>python3 -c "import secrets; print(secrets.token_urlsafe(32))"</code>.</p>
     </details>
@@ -216,6 +220,21 @@ OvosWebUI.ready(function () {
       ? OvosWebUI.t("token.set", "This device has a token. Enter the current one to change it.")
       : OvosWebUI.t("token.none", "This device has no token yet. Setting one locks it down.");
   }).catch(function () {});
+
+  // Make a strong token in the browser, so nobody has to open a terminal. Uses
+  // the browser's cryptographic random source, encoded url-safe like the Python
+  // example. It is shown, not hidden, so you can write it down before saving.
+  el("token-generate").addEventListener("click", function () {
+    var bytes = new Uint8Array(24);
+    (window.crypto || window.msCrypto).getRandomValues(bytes);
+    var token = btoa(String.fromCharCode.apply(null, bytes))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    var input = el("token-new");
+    input.type = "text";
+    input.value = token;
+    OvosWebUI.say("msg-token", OvosWebUI.t("token.generated",
+      "A strong token is filled in below. Write it down, then press Save token."));
+  });
 
   el("token-save").addEventListener("click", function () {
     var body = {new: el("token-new").value};
