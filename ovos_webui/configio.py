@@ -194,6 +194,17 @@ def _notify(data: dict[str, Any], bus) -> bool:
     return buswait.emit(bus, Message("configuration.patch", {"config": data}))
 
 
+def notify_config_changed(data: dict[str, Any], bus=None) -> bool:
+    """Tell the running services that the configuration on disk changed.
+
+    For callers that write the file themselves instead of going through
+    ``mutate``/``write_user_config``. Same contract as those: ``True`` when the
+    services were told or there is no bus to tell, ``False`` when a bus exists
+    but could not be reached.
+    """
+    return _notify(data, bus)
+
+
 def user_or_merged(path: list[str]) -> Any:
     """Return a key, preferring the user layer read fresh from disk.
 

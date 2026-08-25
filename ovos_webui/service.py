@@ -689,7 +689,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_servers_set(kind: str, body: ServersBody) -> dict[str, Any]:
         if kind not in servers.KINDS:
             raise HTTPException(404, f"unknown kind '{kind}'")
-        result = servers.set_servers(kind, body.urls)
+        result = servers.set_servers(kind, body.urls, bus=state["bus"])
         if "error" in result:
             raise HTTPException(400, result["error"])
         return result
@@ -886,7 +886,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             # restore_archive does synchronous, fsync-heavy file I/O under a
             # lock; run it off the event loop so a restore cannot stall every
             # other request (this is an async route).
-            return await run_in_threadpool(backupio.restore_archive, blob)
+            return await run_in_threadpool(backupio.restore_archive, blob, state["bus"])
         except (backupio.RestoreError, UnsafeIdentifier) as err:
             raise HTTPException(400, str(err)) from None
 
@@ -1029,7 +1029,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_backup_revert(body: BackupIdBody) -> dict[str, Any]:
         from ovos_webui import history
         try:
-            return history.revert(body.id)
+            return history.revert(body.id, bus=state["bus"])
         except UnsafeIdentifier as err:
             raise HTTPException(400, str(err))
         except LookupError as err:

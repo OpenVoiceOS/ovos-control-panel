@@ -21,7 +21,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from ovos_webui.fsutils import UnsafeIdentifier, atomic_write, is_within
+from ovos_webui.fsutils import _WRITE_LOCK, UnsafeIdentifier, atomic_write, is_within
 
 BACKUP_DIR_NAME = ".ovos-webui-backups"
 
@@ -134,8 +134,15 @@ def read_backup(backup_id: str) -> dict[str, Any]:
             "truncated": truncated}
 
 
-def revert(backup_id: str) -> dict[str, Any]:
-    """Put one backup back in place of its file."""
+def revert(backup_id: str, bus=None) -> dict[str, Any]:
+    """Put one backup back in place of its file.
+
+    Reverting the configuration is a configuration write like any other, so the
+    running services are told about it. Without that the old values go back on
+    disk while the device keeps running the ones just reverted.
+    """
+    from ovos_webui import configio
+
     backup, target = _resolve(backup_id)
     # Never write through a symlinked target: following it would copy an
     # outside file into a readable backup, and clobber the user's link.
@@ -145,7 +152,19 @@ def revert(backup_id: str) -> dict[str, Any]:
     for root in roots():
         if is_within(root, target.resolve()):
             content = backup.read_text(encoding="utf-8")
-            new_backup = atomic_write(target, content)
-            return {"reverted": str(target),
-                    "backup": str(new_backup) if new_backup else None}
+            # Hold the write lock across write, read-back and notify, the same
+            # as configio.mutate: a writer landing in between would win on disk
+            # and lose on the bus, leaving the device on a configuration the
+            # file does not contain until it restarts.
+            with _WRITE_LOCK:
+                new_backup = atomic_write(target, content)
+                result = {"reverted": str(target),
+                          "backup": str(new_backup) if new_backup else None}
+                # _resolve returns a resolved path, so resolve the other side
+                # too: a symlink anywhere in the config home would otherwise
+                # make these differ and skip the notify without saying so.
+                if target == configio.user_config_path().resolve():
+                    result["applied"] = configio.notify_config_changed(
+                        configio.read_user_config(), bus)
+            return result
     raise LookupError("that backup does not belong to a file here")

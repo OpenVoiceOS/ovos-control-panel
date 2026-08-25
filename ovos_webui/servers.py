@@ -115,7 +115,7 @@ def _stt_tts_get(kind: str) -> dict[str, Any]:
     return {"kind": kind, "module": module, "urls": [u for u in urls if isinstance(u, str)]}
 
 
-def _stt_tts_set(kind: str, urls: list[str]) -> dict[str, Any]:
+def _stt_tts_set(kind: str, urls: list[str], bus=None) -> dict[str, Any]:
     spec = _SIMPLE_ENGINES[kind]
     section = spec["section"]
     module = configio.user_or_merged([section, "module"]) or spec["default_module"]
@@ -128,7 +128,7 @@ def _stt_tts_set(kind: str, urls: list[str]) -> dict[str, Any]:
         else:
             configio.del_in(user, [section, module, spec["list_key"]])
 
-    result = configio.mutate(change)
+    result = configio.mutate(change, bus=bus)
     return {"module": module, "urls": urls, "write": result}
 
 
@@ -153,7 +153,7 @@ def _translate_get() -> dict[str, Any]:
             "urls": [u for u in urls if isinstance(u, str)]}
 
 
-def _translate_set(urls: list[str]) -> dict[str, Any]:
+def _translate_set(urls: list[str], bus=None) -> dict[str, Any]:
     detect_module = (configio.user_or_merged(["language", "detection_module"])
                       or _TRANSLATE["detection_module"])
     translate_module = (configio.user_or_merged(["language", "translation_module"])
@@ -170,7 +170,7 @@ def _translate_set(urls: list[str]) -> dict[str, Any]:
             else:
                 configio.del_in(user, ["language", module, _TRANSLATE["list_key"]])
 
-    result = configio.mutate(change)
+    result = configio.mutate(change, bus=bus)
     return {"detection_module": detect_module, "translation_module": translate_module,
             "urls": urls, "write": result}
 
@@ -191,7 +191,7 @@ def get_servers(kind: str) -> dict[str, Any]:
         return {"error": str(err)}
 
 
-def set_servers(kind: str, urls: Any) -> dict[str, Any]:
+def set_servers(kind: str, urls: Any, bus=None) -> dict[str, Any]:
     """Validate and write the server list for ``kind``. Never raises."""
     try:
         clean = _validate_urls(urls)
@@ -199,9 +199,9 @@ def set_servers(kind: str, urls: Any) -> dict[str, Any]:
         return {"error": str(err)}
     try:
         if kind in _SIMPLE_ENGINES:
-            return _stt_tts_set(kind, clean)
+            return _stt_tts_set(kind, clean, bus=bus)
         if kind == "translate":
-            return _translate_set(clean)
+            return _translate_set(clean, bus=bus)
         return {"error": f"unknown kind '{kind}'"}
     except Exception as err:  # noqa: BLE001 - a write must report, not crash
         return {"error": str(err)}

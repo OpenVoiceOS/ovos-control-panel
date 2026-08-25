@@ -119,7 +119,11 @@ OvosWebUI.ready(function () {
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({id: shownId})
     }).then(function (r) {
-      OvosWebUI.say("msg", t("backup.reverted", "Done. The earlier version is back in place."));
+      var msg = t("backup.reverted", "Done. The earlier version is back in place.");
+      if (r.applied === false) {
+        msg += " " + t("config.saved.notLive", "The running services could not be told, so this is not live yet; it takes effect when the device is next restarted.");
+      }
+      OvosWebUI.say("msg", msg, r.applied === false);
       el("preview-card").hidden = true;
       shownId = null;
       loadHistory();
@@ -147,7 +151,11 @@ OvosWebUI.ready(function () {
     var form = new FormData();
     form.append("file", file);
     api("/api/restore", {method: "POST", body: form}).then(function (r) {
-      OvosWebUI.say("msg", OvosWebUI.t("backup.restored_prefix", "Restored ") + r.restored.length + OvosWebUI.t("backup.restored_suffix", " file(s)."));
+      var msg = OvosWebUI.t("backup.restored_prefix", "Restored ") + r.restored.length + OvosWebUI.t("backup.restored_suffix", " file(s).");
+      if (r.applied === false) {
+        msg += " " + OvosWebUI.t("config.saved.notLive", "The running services could not be told, so this is not live yet; it takes effect when the device is next restarted.");
+      }
+      OvosWebUI.say("msg", msg, r.applied === false);
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   });
 });

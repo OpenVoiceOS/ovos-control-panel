@@ -168,7 +168,11 @@ OvosWebUI.ready(function () {
     }).then(function (d) {
       state[kind] = (d.urls || []).slice();
       render(kind);
-      OvosWebUI.say("msg-" + kind, t("servers.saved", "Saved."));
+      var msg = t("servers.saved", "Saved.");
+      if (d.write && d.write.applied === false) {
+        msg += " " + t("config.saved.notLive", "The running services could not be told, so this is not live yet; it takes effect when the device is next restarted.");
+      }
+      OvosWebUI.say("msg-" + kind, msg, d.write && d.write.applied === false);
     }).catch(function (e) { OvosWebUI.say("msg-" + kind, e.message, true); });
   }
 
