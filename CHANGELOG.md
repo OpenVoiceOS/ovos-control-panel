@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a27](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a27) (2026-08-25)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a26...0.0.1a27)
+
+**Merged pull requests:**
+
+- fix: tell the running services when the configuration changes behind their back [\#59](https://github.com/OpenVoiceOS/ovos-control-panel/pull/59) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a26](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a26) (2026-08-25)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a25...0.0.1a26)
