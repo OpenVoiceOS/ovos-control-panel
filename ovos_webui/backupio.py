@@ -143,10 +143,23 @@ def _validate_payload(name: str, raw: bytes) -> str:
     return text
 
 
-def restore_archive(blob: bytes) -> dict[str, Any]:
-    """Unpack ``blob`` over the live files, serialized so two restores never mix."""
+def restore_archive(blob: bytes, bus=None) -> dict[str, Any]:
+    """Unpack ``blob`` over the live files, serialized so two restores never mix.
+
+    A restore is the heaviest configuration write the panel offers, so the
+    running services are told about it like any other. Told after the lock is
+    released: the notify is a bounded bus call, and holding the restore lock
+    across it would block a second restore on the network rather than on disk.
+    """
     with _RESTORE_LOCK:
-        return _restore_archive(blob)
+        result = _restore_archive(blob)
+    # "restored" holds the paths written, not the member names.
+    if str(user_config_path()) in result.get("restored", ()):
+        from ovos_webui import configio
+
+        result["applied"] = configio.notify_config_changed(
+            configio.read_user_config(), bus)
+    return result
 
 
 def _restore_archive(blob: bytes) -> dict[str, Any]:

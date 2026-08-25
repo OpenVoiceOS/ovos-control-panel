@@ -6,8 +6,8 @@ dist/
 .pytest_cache/
 .coverage
 htmlcov/
-.venv/
-venv/
+.venv
+venv
 .idea/
 .vscode/
 .worktrees/
