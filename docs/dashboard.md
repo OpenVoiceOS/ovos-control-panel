@@ -84,7 +84,10 @@ systemctl --user restart ovos-skills
 
 To see the messages themselves, use
 [ovos-busmon](https://github.com/OpenVoiceOS/ovos-busmon). The dashboard links
-to it on port 8000 of the same device.
+to it on port 8005 of the same device, which is where ovos-busmon serves by
+default. It is a separate service: the link only works if it is installed and
+running, and by default it binds to loopback, so reaching it from another
+machine needs `BUSMON_HOST` set.
 
 ## What this page does not do
 
