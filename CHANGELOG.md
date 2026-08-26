@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a34](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a34) (2026-08-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a33...0.0.1a34)
+
+**Merged pull requests:**
+
+- fix: put Setup in the navigation [\#66](https://github.com/OpenVoiceOS/ovos-control-panel/pull/66) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a33](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a33) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a32...0.0.1a33)
