@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a31](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a31) (2026-08-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a30...0.0.1a31)
+
+**Merged pull requests:**
+
+- fix: say truthfully which settings need a restart [\#62](https://github.com/OpenVoiceOS/ovos-control-panel/pull/62) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a30](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a30) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a29...0.0.1a30)
