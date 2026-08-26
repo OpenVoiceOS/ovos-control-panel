@@ -64,7 +64,7 @@
           <code>ovos-gui</code> <span data-i18n="dash.down.tech.log.tail2">or</span> <code>ovos-phal</code>
           <span data-i18n="dash.down.tech.log.tail3">for the others.</span>)</li>
         <li><span data-i18n="dash.down.tech.restart">Start it again:</span> <code>systemctl --user restart ovos-skills</code></li>
-        <li data-i18n="dash.down.tech.norestart">This page does not restart services itself — it runs no shell commands, by design. See the security notes.</li>
+        <li data-i18n="dash.down.tech.norestart">This page does not restart services itself: the panel controls the device over the message bus, which cannot help while the bus is down. See the security notes.</li>
       </ul>
     </details>
   </div>
@@ -91,7 +91,7 @@ OvosWebUI.ready(function () {
         : "<strong>" + esc(t("dash.bus", "System connection:")) + "</strong> " + esc(t("dash.bus.down",
             "not running."));
       var caveats = {
-        voice: t("service.voice.caveat", "No answer here is normal if this device uses the simpler listener, which does not report its status."),
+        voice: t("service.voice.caveat", "No answer here is normal if this device uses ovos-simple-listener, which does not report status."),
         gui_service: t("service.gui_service.caveat", "No answer is normal if this device has no screen."),
         PHAL: t("service.PHAL.caveat", "No answer is normal if this device has no extra hardware plugins.")
       };
