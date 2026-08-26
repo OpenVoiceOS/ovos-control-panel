@@ -167,6 +167,7 @@
   // added here once rather than in every file.
   var NAV = [
     ["/", "nav.dashboard", "Dashboard"],
+    ["/setup", "nav.setup", "Setup"],
     ["/tryit", "nav.tryit", "Try it"],
     ["/controls", "nav.controls", "Device"],
     ["/media", "nav.media", "Media"],

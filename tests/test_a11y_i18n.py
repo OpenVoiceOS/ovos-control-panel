@@ -93,3 +93,26 @@ def test_every_i18n_key_used_on_a_page_exists_in_the_locales():
 
     missing = sorted(k for k in used if k not in en)
     assert not missing, f"i18n keys used on a page but missing from en.json: {missing}"
+
+
+def test_every_page_can_be_reached_from_the_navigation():
+    """A page nobody can navigate to is a page nobody finds.
+
+    `/setup` was served and documented for months while being absent from the
+    rail, reachable only from two links on the dashboard -- so the page written
+    for a first-time user was the one a first-time user could not find.
+    """
+    import re
+    from pathlib import Path
+
+    from ovos_webui.service import PAGES, STATIC_DIR
+
+    nav = set(re.findall(r'\["(/[a-z0-9-]*)",\s*"nav\.',
+                         (Path(STATIC_DIR) / "app.js").read_text(encoding="utf-8")))
+    served = {route for route, _template in
+              ((p[0], p[1]) if isinstance(p, (list, tuple)) else (p, None) for p in PAGES)}
+    # the sign-in page is deliberately outside the rail: you are not signed in
+    unreachable = sorted(served - nav - {"/login"})
+    assert not unreachable, (
+        f"these pages are served but not in the navigation: {unreachable}"
+    )
