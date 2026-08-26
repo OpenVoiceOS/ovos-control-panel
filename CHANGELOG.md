@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a32](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a32) (2026-08-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a31...0.0.1a32)
+
+**Merged pull requests:**
+
+- fix: point the bus monitor link at the port busmon actually serves on [\#63](https://github.com/OpenVoiceOS/ovos-control-panel/pull/63) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a31](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a31) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a30...0.0.1a31)
