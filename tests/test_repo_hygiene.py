@@ -71,3 +71,32 @@ def test_no_compiled_or_packaging_leftovers_are_committed(tracked):
         or ".egg-info/" in path
     )
     assert not strays, f"build leftovers are committed: {strays}"
+
+
+def test_the_constraints_file_covers_every_declared_dependency():
+    """`constraints.txt` must not go stale against `pyproject.toml`.
+
+    It records one resolution of the dependency tree at the newest versions the
+    floors allow. A direct dependency missing from it means the file was not
+    regenerated after `pyproject.toml` changed, and anyone installing with it
+    would silently get a different set from the one it claims to describe.
+    """
+    import re
+    from importlib.metadata import requires
+
+    # The installed distribution's metadata, rather than parsing pyproject:
+    # tomllib arrived in 3.11 and this package supports 3.10.
+    declared = requires("ovos-control-panel") or []
+
+    pinned = {
+        line.split("==")[0].strip().lower().replace("_", "-")
+        for line in (REPO / "constraints.txt").read_text(encoding="utf-8").splitlines()
+        if "==" in line and not line.startswith("#")
+    }
+    names = {re.split(r"[<>=!\[; ]", spec, 1)[0].strip().lower().replace("_", "-")
+             for spec in declared}
+    missing = sorted(n for n in names if n and n not in pinned)
+    assert not missing, (
+        f"constraints.txt does not pin {missing}; regenerate it with "
+        "`uv pip compile --prerelease=allow --extra dev pyproject.toml -o constraints.txt`"
+    )

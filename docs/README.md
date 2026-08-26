@@ -62,3 +62,4 @@ If something is not working, go straight to
 - **Make a backup before changing anything** → [Backup](backup-restore.md)
 - **Use the device in another language** → [Accessibility and languages](accessibility.md)
 - **Something behaves differently from the last stable release** → [Pre-release quirks](prerelease-quirks.md)
+- **Reproduce a dependency set exactly** → [Constraints](constraints.md)
