@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a33](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a33) (2026-08-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a32...0.0.1a33)
+
+**Merged pull requests:**
+
+- chore: record the alpha set the panel is built against [\#64](https://github.com/OpenVoiceOS/ovos-control-panel/pull/64) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a32](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a32) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a31...0.0.1a32)
