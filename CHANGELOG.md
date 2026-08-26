@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a30](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a30) (2026-08-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a29...0.0.1a30)
+
+**Merged pull requests:**
+
+- fix: stop reaching for names the libraries have deprecated [\#61](https://github.com/OpenVoiceOS/ovos-control-panel/pull/61) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a29](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a29) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a28...0.0.1a29)
