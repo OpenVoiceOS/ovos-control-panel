@@ -21,9 +21,7 @@
     order it tries to understand a command, and the language. Every change is written into your own layer of
     <code>mycroft.conf</code>, the same file the Settings page's Advanced tab edits — this page just gives each
     setting a plain picker.</p>
-  <p class="hint" data-i18n="voice.restart">A running service keeps its old value until it is told about the change,
-    or until the device restarts. Most services pick a new value up right away; a few need a restart. If something
-    does not take effect, restart the device.</p>
+  <p class="hint" data-i18n="voice.restart">The wake word, the speech-to-text engine and the silence detector apply as soon as you save. The order the device tries to understand a command needs a restart, and so does changing the voice. If something does not change, restart the OVOS services.</p>
   <p class="hint"><span data-i18n="config.simple.file">Your changes are stored in your own layer of this file:</span>
     <code id="path" dir="ltr"></code></p>
 
@@ -315,8 +313,7 @@ OvosWebUI.ready(function () {
   function savedMessage(r) {
     var base = t("config.saved", "Saved. Backup:") + " " + (r.backup || t("config.saved.noBackup", "none was needed."));
     if (r.applied === false) {
-      return base + " " + t("config.saved.notLive", "The running services could not be told, so this is not "
-        + "live yet; it takes effect when the device is next restarted.");
+      return base + " " + t("config.saved.notLive", "The running services could not be told over the bus. They read the file as well, so this usually still applies; if it does not, restart the OVOS services.");
     }
     return base;
   }

@@ -9,8 +9,8 @@ The Plugins page carries three related tools.
 ## Updates
 
 The service compares every installed `ovos-*` package with PyPI and lists the
-ones that are behind, with an Upgrade button each. Upgrades run through the
-same argument-vector-only pip runner as installs: one job at a time, output
+ones that are behind, with an Upgrade button each. Upgrades go over the bus to
+the device's installer service, the same as installs: one job at a time, output
 streamed to the page, token always required. Version answers are cached for
 six hours. An unreachable PyPI never blocks the page.
 

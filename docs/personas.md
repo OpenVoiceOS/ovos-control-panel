@@ -51,8 +51,18 @@ as it stands, so you can see who answers before you rely on it.
 "Use this persona" writes the persona's name into
 `intents.persona.default_persona` in your configuration layer. This is the key
 the persona service reads to decide who answers when you do not name a
-persona. The page shows which persona is answering now. The change takes
-effect when the OVOS services next restart.
+persona. The page shows which persona is answering now.
+
+If the device was already answering as a persona, switching to another one it
+has loaded takes effect straight away. The persona service holds the same
+configuration object the merge keeps rebuilding, so the value it reads follows
+the file.
+
+Two cases still need the OVOS services restarted. A persona you have just
+created here is unknown to the service, which reads the persona files once when
+it starts. And the first persona ever chosen on a device does not apply either:
+until `intents.persona` exists in the configuration, the service was handed an
+empty block that is not part of the merge, so later writes do not reach it.
 
 ## If it doesn't work
 

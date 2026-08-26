@@ -45,8 +45,7 @@
     <div class="card" id="enable-card" hidden>
       <span id="enable-state"></span>
       <div class="row"><button class="secondary" id="enable-toggle"></button></div>
-      <p class="hint" data-i18n="skills.enable.hint">A turned-off skill stays installed but does not load.
-        The change takes effect when the OVOS services next restart.</p>
+      <p class="hint" data-i18n="skills.enable.hint">A turned-off skill stays installed but does not load. Turning one on takes effect within a minute. Turning one off takes effect when the OVOS services restart.</p>
       <div class="msg" id="msg-enable" role="status" aria-live="polite" hidden></div>
     </div>
     <div class="card" id="form"></div>
@@ -197,9 +196,11 @@ OvosWebUI.ready(function () {
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({enabled: target})
     }).then(function () {
-      OvosWebUI.sayHtml("msg-enable", esc(OvosWebUI.t("skills.enable.saved.pre", "Saved. "))
-        + '<a href="/controls">' + esc(OvosWebUI.t("skills.enable.saved.link", "Restart the OVOS services")) + "</a>"
-        + esc(OvosWebUI.t("skills.enable.saved.post", " to apply it.")));
+      // Turning a skill on is picked up by the skills service on its own;
+      // turning one off only stops it loading next time, so it keeps answering.
+      OvosWebUI.say("msg-enable", target
+        ? OvosWebUI.t("skills.enabled.saved", "Saved. The device loads it within a minute.")
+        : OvosWebUI.t("skills.disabled.saved", "Saved. It keeps answering until the OVOS services restart."));
       showEnabled(current.skill_id);
     }).catch(function (e) { OvosWebUI.say("msg-enable", e.message, true); });
   });

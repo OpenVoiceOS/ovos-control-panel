@@ -44,9 +44,7 @@
     <p class="hint" data-i18n="config.simple.hint">Leave a box empty to use the standard value again. Every save keeps a backup, so you can go back.</p>
     <details class="tech">
       <summary data-i18n="config.simple.where">Where these settings live</summary>
-      <p class="hint" data-i18n="config.simple.applies">The device reads the file as soon as you save it, so you do not have to
-        restart it. A service that is already running keeps its old value only if
-        it does not listen for configuration changes.</p>
+      <p class="hint" data-i18n="config.simple.applies">The device picks most of these up as soon as you save. If something does not change, restart the OVOS services.</p>
       <p class="hint"><span data-i18n="config.simple.file">Your changes are stored in your own layer of this file:</span></p>
       <code id="path-simple" dir="ltr"></code>
     </details>
@@ -195,8 +193,7 @@ OvosWebUI.ready(function () {
   function savedMessage(r) {
     var base = OvosWebUI.t("config.saved", "Saved. Backup:") + " " + (r.backup || OvosWebUI.t("config.saved.noBackup", "none was needed."));
     if (r.applied === false) {
-      return base + " " + OvosWebUI.t("config.saved.notLive", "The running services could not be told, so this is not "
-        + "live yet; it takes effect when the device is next restarted.");
+      return base + " " + OvosWebUI.t("config.saved.notLive", "The running services could not be told over the bus. They read the file as well, so this usually still applies; if it does not, restart the OVOS services.");
     }
     return base;
   }

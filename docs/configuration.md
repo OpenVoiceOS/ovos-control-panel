@@ -58,9 +58,22 @@ is not a mapping at the top level, is refused and nothing is written.
 
 ## After a save
 
-You do not have to restart the device. `ovos-config` watches the file and reads
-it again when it changes. When the message bus is up, the page also sends the
-existing `configuration.patch` message, so the services see the change at once.
+Most settings apply as soon as you save. `ovos-config` watches the file and
+reads it again when it changes, which is what makes a change visible to a
+running service. When the message bus is up the page also sends the existing
+`configuration.patch` message; ovos-audio and the listener act on it, and the
+skills service does not bind it at all.
+
+Two kinds of setting need the OVOS services restarted. Units, time format and
+date format are read from the session, which is built once when the skills
+service starts. Changing the voice does not always take effect either, because
+ovos-audio decides whether to reload by hashing the selected plugin's own
+settings and not the plugin name, so a swap between two plugins that have no
+settings of their own looks like no change to it.
+
+If something does not change, restart the OVOS services. The Device page has a
+button for it, which works where `ovos-PHAL-plugin-system` is installed; without
+that plugin, restart them from a terminal.
 
 Every save first copies the old file into `.ovos-webui-backups` beside it.
 
