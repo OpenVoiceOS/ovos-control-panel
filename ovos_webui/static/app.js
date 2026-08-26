@@ -104,8 +104,9 @@
   // [data-i18n-attr] (e.g. "placeholder:key;title:key"). The English text
   // already in the page is the fallback, so nothing disappears when a locale
   // has no entry.
-  // Translating a label that wraps a control must not wipe the control:
-  // only the element's own text is replaced, child elements stay.
+  // Translating a label that wraps a control must not wipe the control, so
+  // there only the element's own first text run is replaced and the control
+  // stays. Everywhere else the element is one message and is replaced whole.
   function firstTextNode(node) {
     for (var i = 0; i < node.childNodes.length; i++) {
       var c = node.childNodes[i];
@@ -117,20 +118,19 @@
   function applyI18n(root) {
     (root || document).querySelectorAll("[data-i18n]").forEach(function (node) {
       var key = node.getAttribute("data-i18n");
-      if (node.children.length === 0) {
-        node.textContent = t(key, node.textContent);
+      // A control inside the element is part of the page, not part of the
+      // message: replace the element's own text and leave the control alone.
+      // Anything else -- plain text, or a sentence with <code>/<em> inside --
+      // is one message, so the whole of it is replaced. Replacing only the
+      // first text node there would leave the English after the child on the
+      // page, next to the translation of the same sentence.
+      if (node.querySelector("input,select,textarea,button")) {
+        var text = firstTextNode(node);
+        if (text) { text.nodeValue = t(key, text.nodeValue); }
         return;
       }
-      var text = firstTextNode(node);
-      if (text) {
-        text.nodeValue = t(key, text.nodeValue);
-      } else {
-        // Only formatting children (e.g. a lone <strong> wrapper): the whole
-        // node is the message, so replace it rather than prepend a duplicate.
-        // Never do this when a control is inside — it must not be destroyed.
-        if (!node.querySelector("input,select,textarea,button")) {
-          node.textContent = t(key, node.textContent);
-        }
+      if (key && Object.prototype.hasOwnProperty.call(STRINGS, key)) {
+        node.textContent = STRINGS[key];
       }
     });
     (root || document).querySelectorAll("[data-i18n-attr]").forEach(function (node) {
