@@ -152,7 +152,7 @@ OvosWebUI.ready(function () {
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   }
 
-  el("busmon").href = "http://" + window.location.hostname + ":8000/";
+  el("busmon").href = "http://" + window.location.hostname + ":8005/";
   el("refresh").addEventListener("click", load);
   load();
 
