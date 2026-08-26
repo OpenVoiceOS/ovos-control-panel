@@ -105,7 +105,8 @@ def test_resource_name_accepts_a_plain_name():
 
 # ── F4: tryit only harvests its own round trip ───────────────────────────────
 def test_tryit_ignores_another_requests_reply(monkeypatch):
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
     from ovos_webui import tryit
 
     monkeypatch.setattr(tryit, "SETTLE", 0.01)

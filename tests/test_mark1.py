@@ -19,7 +19,7 @@ def _grid(fill=0):
 
 # ── capability probe ─────────────────────────────────────────────────────────
 def test_available_true_when_the_plugin_answers(bus):
-    from ovos_utils.fakebus import Message
+    from ovos_bus_client.message import Message
     from ovos_webui import mark1
 
     bus.on("enclosure.eyes.rgb.get", lambda m: bus.emit(

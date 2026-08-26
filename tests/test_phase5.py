@@ -23,7 +23,8 @@ def _targeting_on(keys):
 
 # ── volume / mic over the bus ────────────────────────────────────────────────
 def _volume_bus(percent=0.4, muted=False):
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
 
     bus = FakeBus()
     bus.on("mycroft.volume.get", lambda m: bus.emit(Message(
@@ -67,7 +68,8 @@ def test_set_volume_emits_fraction():
 
 
 def test_mic_status_and_mute():
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
     from ovos_webui import devicecontrol
 
     bus = FakeBus()
@@ -316,7 +318,6 @@ def test_a_failed_emit_never_wedges_the_installer(monkeypatch):
 
     # the lock is released, so a fresh install on a healthy bus can run
     bus2 = FakeBus()
-    from ovos_utils.fakebus import Message  # noqa: F401
     bus2.on("ovos.pip.install.ovos_audio",
             lambda m: bus2.emit(m.reply("ovos.pip.install.complete")))
     job2 = _wait_job(inst.install("ovos-tts-plugin-piper", bus=bus2))
@@ -327,7 +328,8 @@ def test_a_reply_for_another_job_is_ignored(monkeypatch):
     # OCE-002: replies land on the shared base topic. A reply that does not carry
     # THIS job's nonce (e.g. a late answer to a previous job) must not complete
     # or fail the running job.
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
     from ovos_webui import installer, pypi
     import time
 

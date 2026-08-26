@@ -10,7 +10,8 @@ def _nm_bus(*, networks=None, connected_ssid=None, connect_ok=None,
 
     ``connect_ok`` None means "do not answer connect at all" (a timeout).
     """
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
 
     bus = FakeBus()
 
@@ -107,7 +108,8 @@ def test_connect_failure_topic_is_an_error_not_a_success():
 
 
 def test_connect_open_network_uses_the_open_path():
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
     from ovos_webui import network
 
     bus = FakeBus()
@@ -191,7 +193,7 @@ def test_network_routes_503_without_a_device():
 
 def test_network_status_route_reads_the_bus(bus):
     from fastapi.testclient import TestClient
-    from ovos_utils.fakebus import Message
+    from ovos_bus_client.message import Message
     from ovos_webui.service import create_app
 
     bus.on("ovos.phal.nm.get.connected", lambda m: bus.emit(Message(
@@ -214,7 +216,8 @@ def test_network_page_renders(client):
 def test_connect_ignores_a_success_reply_for_a_different_ssid():
     """A stray success reply naming a different connection must not resolve
     this call — it should time out instead of reporting a false ok=True."""
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
     from ovos_webui import network
 
     network.CONNECT_TIMEOUT = 0.3

@@ -13,7 +13,7 @@ _AUTH = {"Authorization": "Bearer s3cret-token"}
 
 def _reply(bus, req_topic, data):
     """Answer ``req_topic`` with ``req_topic``.response carrying ``data``."""
-    from ovos_utils.fakebus import Message
+    from ovos_bus_client.message import Message
     bus.on(req_topic, lambda m: bus.emit(Message(req_topic + ".response", data, m.context)))
 
 

@@ -30,10 +30,8 @@ DEFAULT_TIMEOUT = 1.0
 
 
 def _message_cls():
-    try:
-        from ovos_bus_client.message import Message
-    except ImportError:  # pragma: no cover - minimal installs
-        from ovos_utils.fakebus import Message
+    from ovos_bus_client.message import Message
+
     return Message
 
 

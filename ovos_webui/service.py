@@ -60,9 +60,11 @@ from ovos_webui.fsutils import (MAX_PAYLOAD_BYTES, MAX_UPLOAD_BYTES,
 from ovos_webui.limits import BodyLimitMiddleware
 from ovos_webui.version import __version__
 
-#: Starlette renamed this constant. Keep working with both names.
-TOO_LARGE = getattr(status, "HTTP_413_CONTENT_TOO_LARGE",
-                    getattr(status, "HTTP_413_REQUEST_ENTITY_TOO_LARGE", 413))
+#: Starlette renamed this constant in 1.0 and warns on the old name. A default
+#: argument is evaluated whether or not it is needed, so the two names have to
+#: be tried one at a time or the warning fires on every modern install.
+TOO_LARGE = getattr(status, "HTTP_413_CONTENT_TOO_LARGE", None) or getattr(
+    status, "HTTP_413_REQUEST_ENTITY_TOO_LARGE", 413)
 
 STATIC_DIR = Path(__file__).parent / "static"
 
