@@ -16,7 +16,7 @@ def _reset_singleton():
 
 
 def _emit(bus, topic, data):
-    from ovos_utils.fakebus import Message
+    from ovos_bus_client.message import Message
     bus.emit(Message(topic, data))
 
 
@@ -97,7 +97,8 @@ def test_api_sensors_returns_collected_readings(token_client, bus):
 
 
 def test_attach_resubscribes_on_a_new_bus_but_not_the_same_one():
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
     log = sensors.SensorLog()
     bus1 = FakeBus()
     log.attach(bus1)

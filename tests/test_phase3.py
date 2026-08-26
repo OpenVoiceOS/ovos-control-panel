@@ -27,7 +27,8 @@ def _targeting_on(keys):
 
 # ── try it ───────────────────────────────────────────────────────────────────
 def _answering_bus():
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
 
     bus = FakeBus()
 
@@ -50,7 +51,8 @@ def test_tryit_reports_the_answer_and_the_skill():
 
 
 def test_tryit_reports_no_match():
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
     from ovos_webui import tryit
 
     bus = FakeBus()
@@ -107,7 +109,8 @@ def test_tryit_route_answers_over_the_bus(token_client):
 
 # ── live events ──────────────────────────────────────────────────────────────
 def test_events_are_recorded_and_paged():
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
     from ovos_webui.events import EventLog
 
     bus = FakeBus()

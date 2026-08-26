@@ -6,7 +6,7 @@ import pytest
 
 def _reply(bus, req_topic, data):
     """Wire ``req_topic`` to answer with ``req_topic``.response carrying ``data``."""
-    from ovos_utils.fakebus import Message
+    from ovos_bus_client.message import Message
 
     bus.on(req_topic, lambda m: bus.emit(Message(
         req_topic + ".response", data, m.context)))
@@ -77,7 +77,7 @@ def test_status_with_no_responder_returns_empty_stopped_state():
 
 # ── capability probe ─────────────────────────────────────────────────────────
 def test_available_true_on_pong(bus):
-    from ovos_utils.fakebus import Message
+    from ovos_bus_client.message import Message
     from ovos_webui import media
 
     bus.on("ovos.common_play.ping",

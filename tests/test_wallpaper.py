@@ -14,7 +14,7 @@ _B = "ovos.wallpaper.manager"
 
 
 def _reply(bus, suffix, data):
-    from ovos_utils.fakebus import Message
+    from ovos_bus_client.message import Message
     topic = f"{_B}.{suffix}"
     bus.on(topic, lambda m: bus.emit(Message(topic + ".response", data, m.context)))
 

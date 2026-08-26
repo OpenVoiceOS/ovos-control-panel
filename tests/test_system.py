@@ -21,7 +21,8 @@ import pytest
 def _system_bus(*, ssh_enabled=None, ssh_answers=True, lang_ok=True):
     """``ssh_enabled=None`` means the status handler never answers (a timeout,
     the capability gate)."""
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
 
     bus = FakeBus()
 
@@ -46,7 +47,8 @@ def _system_bus(*, ssh_enabled=None, ssh_answers=True, lang_ok=True):
 
 
 def _connectivity_bus(*, internet="connected", network="connected", answer=True):
-    from ovos_utils.fakebus import FakeBus, Message
+    from ovos_bus_client.message import Message
+    from ovos_utils.fakebus import FakeBus
 
     bus = FakeBus()
     if answer:

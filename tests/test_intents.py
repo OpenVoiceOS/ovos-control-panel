@@ -15,7 +15,7 @@ _AUTH = {"Authorization": "Bearer s3cret-token"}
 
 
 def _reply(bus, req_topic, reply_topic, data):
-    from ovos_utils.fakebus import Message
+    from ovos_bus_client.message import Message
     bus.on(req_topic, lambda m: bus.emit(Message(reply_topic, data, m.context)))
 
 
@@ -39,7 +39,7 @@ def test_list_intents_unavailable_when_no_reply(bus):
 
 def test_list_intents_passes_skill_filter(bus):
     seen = {}
-    from ovos_utils.fakebus import Message
+    from ovos_bus_client.message import Message
 
     def handler(m):
         seen.update(m.data)

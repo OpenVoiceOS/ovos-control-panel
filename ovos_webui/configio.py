@@ -184,10 +184,8 @@ def _notify(data: dict[str, Any], bus) -> bool:
         return True  # no bus to tell; nothing was lost
     if not buswait.is_connected(bus):
         return False
-    try:
-        from ovos_bus_client.message import Message
-    except ImportError:  # pragma: no cover - fallback for minimal installs
-        from ovos_utils.fakebus import Message
+    from ovos_bus_client.message import Message
+
     if not buswait.emit(bus, Message("configuration.patch.clear", {})):
         LOG.warning("could not clear the volatile configuration patch")
         return False
