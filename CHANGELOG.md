@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a29](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a29) (2026-08-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a28...0.0.1a29)
+
+**Merged pull requests:**
+
+- fix: read the pipeline stages ovos-config ships instead of copying them [\#57](https://github.com/OpenVoiceOS/ovos-control-panel/pull/57) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a28](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a28) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a27...0.0.1a28)
