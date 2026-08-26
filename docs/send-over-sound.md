@@ -20,25 +20,23 @@ a small library that encodes short text as sound and decodes it back.
 
 ## Enable listening on the device
 
-The listener is off by default. Anything within earshot of the microphone
+The listener is off to begin with. Anything within earshot of the microphone
 could otherwise trigger the device, so it only listens when you turn it on.
-Turn it on before you play a sound, and it turns itself back off after a
-timeout, so you do not have to remember to turn it off.
+
+**It stays on until something turns it off.** There is no timer: the plugin
+sets a flag when it is enabled and clears it when it is disabled, and nothing
+else changes it. Turn it on to send something, then turn it off. Leaving it on
+leaves the device acting on any ggwave sound it can hear.
 
 You can turn it on in three ways:
 
 - **By voice.** Say "enable ggwave" to turn the listener on, or "disable
   ggwave" to turn it off. This needs the `ovos-skill-ggwave` skill.
-- **On this page, in the webui.** Use the "Device listening" section at the
-  top of the page. Pick how long the
-  device should listen — 1 minute, 5 minutes (the default), 15 minutes, or
-  "Until I stop it" — then press **Start listening**. Press **Stop
-  listening** to turn it off early.
+- **On this page.** Use the "Device listening" section at the top, then press
+  **Start listening**. Press **Stop listening** to turn it off.
 - **In the plugin configuration.** Set `start_enabled: true` under
-  `ovos-audio-transformer-plugin-ggwave` to have the listener on from boot,
-  with no timeout unless `listen_timeout` also sets one. `listen_timeout` is
-  the default auto-disable time in seconds; the plugin's own default is 300
-  (5 minutes), and 0 means never auto-disable.
+  `ovos-audio-transformer-plugin-ggwave` to have the listener on from boot.
+  That is the only setting the plugin reads for this.
 
 ## Common tasks
 

@@ -19,6 +19,10 @@ plugin:
 | Text-to-speech | `ovos-tts-plugin-server` |
 | Translation | `ovos-lang-detector-plugin-server` and `ovos-translate-plugin-server` |
 
+Those are plugin names, and only the first two are also package names. The two
+translation plugins both come from `ovos-translate-server-plugin`, so that is
+what to install.
+
 Set the plugin on the [Settings](configuration.md) page first. A URL list
 saved here does nothing if the device uses a different plugin for that
 engine.

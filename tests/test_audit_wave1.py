@@ -32,14 +32,12 @@ def test_devicecontrol_get_volume_handles_an_already_scaled_percent():
     assert devicecontrol.get_volume(_volume_bus(True))["percent"] is None  # bool guarded
 
 
-def test_ggwave_listen_timeout_is_bounded():
+def test_ggwave_listen_takes_no_timeout():
+    """There is nothing to bound: the plugin has no auto-off to ask for, so the
+    body carries only the flag and an extra field is ignored rather than sent."""
     from ovos_webui.service import GgwaveListenBody
-    assert GgwaveListenBody(enabled=True, timeout=300).timeout == 300
-    assert GgwaveListenBody(enabled=True, timeout=0).timeout == 0  # "never"
-    with pytest.raises(ValidationError):
-        GgwaveListenBody(enabled=True, timeout=10 ** 20)  # unbounded
-    with pytest.raises(ValidationError):
-        GgwaveListenBody(enabled=True, timeout=True)  # bool
+    assert GgwaveListenBody(enabled=True).enabled is True
+    assert not hasattr(GgwaveListenBody(enabled=True), "timeout")
 
 
 def test_volume_bodies_reject_a_bool_percent():

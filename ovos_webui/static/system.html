@@ -171,8 +171,19 @@ OvosWebUI.ready(function () {
     api("/api/system/detect-location", {method: "POST"})
       .then(function (r) {
         if (r.ok) {
-          OvosWebUI.say("msg-connectivity", t("system.location.done",
-            "Location updated. See the Settings page to review it."));
+          // The plugin writes the web cache, which every later layer outranks.
+          // A location set by hand wins and can be cleared; a device told to
+          // ignore the web cache cannot be fixed from the Settings page, so
+          // the two cases say different things.
+          var msg;
+          if (r.reason === "ignored") {
+            msg = t("system.location.ignored", "Location found, but this device is configured to ignore the detected location. It will keep the location it already has.");
+          } else if (r.overridden) {
+            msg = t("system.location.overridden", "Location found, but your configuration sets a location of its own, which wins. Clear it on the Settings page to use the detected one.");
+          } else {
+            msg = t("system.location.done", "Location found and stored.");
+          }
+          OvosWebUI.say("msg-connectivity", msg, !!r.overridden);
         } else {
           OvosWebUI.say("msg-connectivity", r.error || t("system.actionFailed", "That did not work."), true);
         }

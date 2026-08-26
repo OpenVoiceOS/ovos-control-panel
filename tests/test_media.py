@@ -162,14 +162,22 @@ def test_get_volume_without_a_responder_returns_unknowns():
     assert media.get_volume(FakeBus()) == {"percent": None, "muted": None}
 
 
-def test_set_volume_emits_the_gui_variant_with_int_percent(bus):
+def test_set_volume_emits_the_message_the_stack_listens_on(bus):
+    """Volume belongs to the PHAL plugins, and both read a fraction.
+
+    The alsa plugin binds only `mycroft.volume.set`; pulseaudio binds that and
+    `mycroft.volume.set.gui`. Both multiply what they are given by 100, so the
+    0-100 integer this used to send read as 7300 on a pulseaudio device and
+    clamped to full volume, and did nothing at all on an alsa one. ovos-audio
+    and ovos-media only ever emit this message; they do not listen for it.
+    """
     from ovos_webui import media
 
     seen = []
-    bus.on("mycroft.volume.set.gui", lambda m: seen.append(m.data))
+    bus.on("mycroft.volume.set", lambda m: seen.append(m.data))
     r = media.set_volume(bus, 73)
     assert r["percent"] == 73
-    assert seen == [{"percent": 73}]
+    assert seen == [{"percent": 0.73}]
 
 
 def test_set_volume_rejects_out_of_range_and_bool():

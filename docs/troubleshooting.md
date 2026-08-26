@@ -107,7 +107,7 @@ installed, the page has nothing to talk to.
 
 **Fix:** The Device controls page tells you which plugin is missing and
 offers to install it. Press install, then restart the relevant service. Some
-controls also need the admin service (`ovos-PHAL-admin`). The page labels
+controls also need the admin service (the `ovos_PHAL_admin` process from the `ovos-PHAL` package). The page labels
 those.
 
 ---

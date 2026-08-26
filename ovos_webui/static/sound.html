@@ -48,27 +48,13 @@
   <h2 data-i18n="sound.listen.title">Device listening</h2>
   <div class="card" id="ggwave-card">
     <p class="hint" id="ggwave-need" hidden></p>
-    <p class="hint" data-i18n="sound.listen.intro">The receiving device only acts on a sound if its ggwave
-      listener is turned on. The listener is off by default: anything within earshot could otherwise
-      trigger the device. Turn it on only while you send something.</p>
-    <label for="ggwave-timeout" data-i18n="sound.listen.durationLabel">Stop listening after
-      <select id="ggwave-timeout">
-        <option value="60" data-i18n="sound.listen.d1">1 minute</option>
-        <option value="300" selected data-i18n="sound.listen.d5">5 minutes (default)</option>
-        <option value="900" data-i18n="sound.listen.d15">15 minutes</option>
-        <option value="0" data-i18n="sound.listen.dNever">Until I stop it</option>
-      </select>
-    </label>
-    <p class="hint" data-i18n="sound.listen.safety">For safety the device stops listening on its own after
-      the time you pick.</p>
+    <p class="hint" data-i18n="sound.listen.intro">The receiving device only acts on a sound if its ggwave listener is turned on, and it stays on until you turn it off. It is off to begin with, because anything within earshot could otherwise trigger the device. Turn it on while you send something, then turn it off.</p>
     <div class="row">
       <button id="ggwave-start" data-i18n="sound.listen.start">Start listening</button>
       <button class="secondary" id="ggwave-stop" data-i18n="sound.listen.stop">Stop listening</button>
     </div>
     <p class="hint" id="ggwave-state" role="status" aria-live="polite"></p>
-    <p class="hint" data-i18n="sound.listen.alt">You can also turn the listener on or off by voice — say
-      "enable ggwave" or "disable ggwave". The always-on and default-timeout behavior live in the
-      ovos-audio-transformer-plugin-ggwave configuration, as start_enabled and listen_timeout.</p>
+    <p class="hint" data-i18n="sound.listen.alt">You can also turn the listener on or off by voice — say “enable ggwave” or “disable ggwave”. Whether it starts on with the device is set in the ovos-audio-transformer-plugin-ggwave configuration, as start_enabled.</p>
   </div>
 
   <h2 data-i18n="sound.action.title">What to send</h2>
@@ -145,19 +131,13 @@ OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
 
   // ── device listening toggle ──────────────────────────────────────────────
-  function listeningOnMessage(timeoutSeconds) {
-    if (timeoutSeconds === 0) { return t("sound.listen.onUntilStopped", "Listening — until you stop it."); }
-    var minutes = Math.round(timeoutSeconds / 60);
-    return t("sound.listen.onTimed", "Listening — stops on its own after {minutes} min.").replace("{minutes}", minutes);
-  }
+  // The plugin has no auto-off: it listens until something turns it off.
   function setListening(enabled) {
-    var body = {enabled: enabled};
-    if (enabled) { body.timeout = parseInt(el("ggwave-timeout").value, 10); }
     api("/api/ggwave/listen", {method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(body)})
+      body: JSON.stringify({enabled: enabled})})
       .then(function () {
         OvosWebUI.say("ggwave-state", enabled
-          ? listeningOnMessage(body.timeout)
+          ? t("sound.listen.onUntilStopped", "Listening — until you stop it.")
           : t("sound.listen.off", "Listening disabled."));
       })
       .catch(function (e) { OvosWebUI.say("ggwave-state", e.message, true); });

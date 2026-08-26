@@ -20,9 +20,12 @@ ones are introduced:
   71-84), which replies with ``message.reply("ovos.common_play.pong")``.
 * ``mycroft.volume.get`` -> ``mycroft.volume.get.response`` (``percent`` is a
   0.0-1.0 fraction, ``muted`` a bool).
-* ``mycroft.volume.set.gui`` (``percent`` 0-100 int) — the GUI-slider volume
-  set, which does not trigger a spoken confirmation the way
-  ``mycroft.volume.set`` does.
+* ``mycroft.volume.set`` (``percent`` a 0.0-1.0 fraction) — the same message
+  the Device page uses. Volume is owned by the PHAL plugins: alsa binds
+  ``mycroft.volume.set``, pulseaudio binds that *and*
+  ``mycroft.volume.set.gui``. Both multiply what they are given by 100, so both
+  want a fraction. This page used to send ``.gui`` with a 0-100 int, which alsa
+  ignored and pulseaudio turned into 7300 for 73%, clamped to full volume.
 * ``mycroft.volume.mute`` / ``mycroft.volume.unmute`` — fire-and-forget.
 
 When nothing answers (no media service running, or an old OCP plugin that
@@ -165,16 +168,20 @@ def get_volume(bus) -> dict[str, Any]:
 
 
 def set_volume(bus, percent: int) -> dict[str, Any]:
-    """Set the volume to a whole percentage 0..100 through the GUI-slider
-    message, which — unlike ``mycroft.volume.set`` — does not speak a
-    confirmation."""
+    """Set the volume to a whole percentage 0..100.
+
+    Sent as a fraction, which is what both PHAL volume plugins expect. The
+    device plays its volume-change sound either way -- the ``.gui`` variant
+    suppresses only the re-report of the new level, not the sound -- so nothing
+    is lost by using the message alsa also listens on.
+    """
     from ovos_webui import buswait
 
     # bool is a subclass of int, so guard it out explicitly: True would sail
     # through the range check and set the volume to 1%.
     if isinstance(percent, bool) or not isinstance(percent, int) or not 0 <= percent <= 100:
         raise ValueError("the volume must be a whole number from 0 to 100")
-    ok = buswait.emit(bus, _msg("mycroft.volume.set.gui", {"percent": percent}))
+    ok = buswait.emit(bus, _msg("mycroft.volume.set", {"percent": percent / 100.0}))
     return {"percent": percent, "ok": ok}
 
 

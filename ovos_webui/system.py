@@ -28,10 +28,12 @@ introduced:
   listened for and their states merged into one result.
 
 * ``ovos.ipgeo.update`` drives ``ovos-PHAL-plugin-ipgeo`` to geolocate the
-  device by its public IP and write the result into ``location`` in the user
-  config (``update_mycroft_config``). The plugin answers with
-  ``message.response(...)`` — ``ovos.ipgeo.update.response`` — carrying
-  either ``{"location": {...}}`` or ``{"error": true}``.
+  device by its public IP. It writes the result into the *web cache*
+  (``LocalConf(get_webcache_location())``), not the user config. That layer
+  sits below the XDG configs in the merge, so a ``location`` set by hand in
+  ``mycroft.conf`` keeps winning and the detected one has no effect. The plugin
+  answers with ``message.response(...)`` — ``ovos.ipgeo.update.response`` —
+  carrying either ``{"location": {...}}`` or ``{"error": true}``.
 
 Every helper here goes through ``buswait`` (never raises on a bus problem —
 timeouts and a down bus come back as an error dict, exactly like ``network.py``).
@@ -43,6 +45,14 @@ from typing import Any
 
 #: How long a status/config round trip may take.
 DEFAULT_TIMEOUT = 5.0
+
+#: Geolocation is not a local round trip. The plugin fetches the public IP --
+#: through a ``requests.get`` with no timeout of its own -- then queries a
+#: geolocation API with a 5s timeout, then writes the web cache behind the
+#: cross-process config lock. A window the size of an ordinary query reports a
+#: missing plugin on any device whose network is merely slow, while the write
+#: goes ahead behind the reader's back.
+GEOLOCATE_TIMEOUT = 30.0
 
 #: Wiping and unregistering things device-side can take a moment longer than
 #: an ordinary query, but this is still fire-and-forget: no reply is awaited.
@@ -190,20 +200,113 @@ def connectivity(bus) -> dict[str, Any]:
 def detect_location(bus) -> dict[str, Any]:
     """Ask ``ovos-PHAL-plugin-ipgeo`` to geolocate the device by its public IP.
 
-    On success the plugin has already written the result into ``location`` in
-    the user config — see the [Settings](configuration.md)/config editor to
-    review it. Returns ``{"ok": True, "location": {...}}`` or
-    ``{"ok": False, "error": ...}``.
+    The plugin writes what it finds into the web cache, which sits *below* the
+    user configuration in the merge. So a ``location`` set by hand in
+    ``mycroft.conf`` keeps winning, and the detected one changes nothing --
+    reporting a plain success there would be a lie of the same kind this page
+    exists to avoid. That case comes back as ``overridden``, with a ``reason``
+    saying which of the two ways it will not take effect -- see
+    ``_detected_location_fate``.
+
+    Returns ``{"ok": True, "location": {...}}``, with ``overridden: True`` and
+    a ``reason`` when the detected location will not be the one the device
+    uses, or ``{"ok": False, "error": ...}``.
     """
     from ovos_webui import buswait
 
-    reply = buswait.wait_for_response(bus, _msg("ovos.ipgeo.update"),
-                                      timeout=DEFAULT_TIMEOUT)
+    # Ask for the location to be replaced. Without this the plugin returns
+    # early on any device that already has one -- and returns *before* it
+    # replies, so the silence would be reported here as the plugin missing.
+    # Pressing "Detect my location" is the request to overwrite.
+    reply = buswait.wait_for_response(bus,
+                                      _msg("ovos.ipgeo.update", {"overwrite": True}),
+                                      timeout=GEOLOCATE_TIMEOUT)
     if reply is None:
         return {"ok": False,
-                "error": "the ip-geolocation plugin did not answer — is it "
-                         "installed and running?"}
+                "error": "no answer from the ip-geolocation plugin — it may "
+                         "not be installed, or the lookup may still be "
+                         "running. Check the location on the Settings page "
+                         "before trying again."}
     data = reply.data or {}
     if data.get("error"):
         return {"ok": False, "error": "could not geolocate this device by its IP"}
-    return {"ok": True, "location": data.get("location")}
+
+    result = {"ok": True, "location": data.get("location")}
+    fate = _detected_location_fate()
+    if fate:
+        result["overridden"] = True
+        result["reason"] = fate
+    return result
+
+
+def _detected_location_fate() -> str | None:
+    """Whether the location the plugin just wrote will actually take effect.
+
+    The plugin writes the web cache, which ovos-config merges second from the
+    bottom: ``[default, remote, distribution, system, *xdg_configs, patch]``.
+    Two different things can stop it mattering, and they need different advice.
+
+    A ``location`` in a layer above it wins, and the remedy is to clear that
+    layer -- ``"overridden"``. But a system administrator can also constrain
+    the merge, and then nothing is overriding anything: the detected location
+    simply never arrives, pointing the reader at the Settings page would send
+    them to fix a layer that is not the problem, and the answer is
+    ``"ignored"``. Three constraints do that. ``disable_remote_config`` drops
+    the web cache outright. ``protected_keys.remote`` strips named keys out of
+    it. And so does ``disable_user_config``, which is the one that reads
+    backwards: ``filter_and_merge`` classifies every config that is not the
+    default or the system one as a *user* config, and the web cache is one of
+    them -- it is dropped by that test before the remote branch is ever
+    reached.
+
+    The same classification decides which layers can override. The
+    distribution config and the runtime patch layer are user configs too, so
+    ``protected_keys.user`` strips a ``location`` out of them just as it does
+    from the XDG files, leaving the system config as the only layer that can
+    outrank the web cache.
+
+    Returns ``None`` when the detected location is the one the device will use.
+    """
+    try:
+        from ovos_config.config import Configuration
+        from ovos_config.models import LocalConf
+
+        constraints = Configuration.get_system_constraints() or {}
+        protected = constraints.get("protected_keys") or {}
+        if (constraints.get("disable_remote_config")
+                or constraints.get("disable_user_config")
+                or _protects_location(protected.get("remote"))):
+            return "ignored"
+
+        # Read the files rather than the layer objects. `LocalConf.load_local`
+        # merges the file in and never clears, so a `location` the reader has
+        # just deleted -- following the very advice the "overridden" message
+        # gives -- would keep answering until the process restarts, and the
+        # message would repeat forever. Building fresh objects also keeps this
+        # out of ovos-config's process-global layers, which the panel serves
+        # from a thread pool.
+        higher = [Configuration.system]
+        if not _protects_location(protected.get("user")):
+            higher.append(Configuration.distribution)
+            higher += list(Configuration.xdg_configs)
+            higher.append(Configuration._Configuration__patch)
+        higher = [LocalConf(layer.path) if getattr(layer, "path", None) else layer
+                  for layer in higher]
+    except Exception:  # noqa: BLE001 - a bad config must not fail the lookup
+        return None
+
+    return "overridden" if any(l.get("location") for l in higher) else None
+
+
+def _protects_location(protected_keys) -> bool:
+    """Whether a ``protected_keys`` list covers ``location``.
+
+    ovos-config deletes each entry with ``flattened_delete``, which splits
+    nested keys on ``:`` -- ``"listener:channels"`` in the shipped config, not
+    ``listener.channels``. A bare ``location`` takes the whole key out of the
+    layer; ``location:city`` takes a leaf out of it. Either way the location
+    the device ends up with is not the one that was just detected, which is
+    what the page has to say.
+    """
+    return any(key == "location" or key.startswith("location:")
+               for key in (protected_keys or []))

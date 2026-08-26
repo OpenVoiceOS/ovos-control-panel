@@ -37,8 +37,9 @@ and asks you to confirm first.
 
 The panel lists each capability and whether its plugin is installed. For a
 capability without a dedicated control, like Wi-Fi setup, it shows an install
-button instead. Some plugins need the **admin service** (`ovos-PHAL-admin`) to
-run with the right permissions. Those are labelled, because installing the
+button instead. Some plugins need the **admin service** to run with the right
+permissions. That is the `ovos_PHAL_admin` process inside the `ovos-PHAL`
+package, not a package of its own. Those are labelled, because installing the
 package is not enough on its own for an admin plugin.
 
 ## If it doesn't work

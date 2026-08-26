@@ -54,8 +54,9 @@ def test_display_emits_mouth_display_with_the_canonical_encoding(bus):
     assert result["ok"] is True
     assert result["img_code"] == expected_code
     assert len(seen) == 1
+    # the plugin lower-cases clearPrev before comparing it, so it is a string
     assert seen[0] == {"img_code": expected_code, "xOffset": 1, "yOffset": 2,
-                       "clearPrev": False}
+                       "clearPrev": "false"}
 
 
 def test_display_rejects_wrong_shape(bus):
@@ -110,9 +111,14 @@ def test_mouth_viseme_wraps_into_a_viseme_list_and_activates_events(bus):
     bus.on("enclosure.mouth.events.activate", lambda m: order.append("activate"))
     bus.on("enclosure.mouth.viseme_list", lambda m: (order.append("viseme"),
                                                       seen.append(m.data)))
+    import time
+
     assert mark1.mouth_viseme(bus, 3)["ok"] is True
     assert order == ["activate", "viseme"]
-    assert seen[0]["visemes"] == [[3, 0.2]]
+    # the code is concatenated onto "mouth.viseme=" by the plugin, and start is
+    # a timestamp it compares against now, not an offset
+    assert seen[0]["visemes"] == [["3", mark1.VISEME_SECONDS]]
+    assert seen[0]["start"] > time.time() - 60
 
 
 def test_mouth_viseme_rejects_out_of_range_code(bus):

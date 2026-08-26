@@ -32,6 +32,15 @@ The page has four parts, in this order:
    an approximate location from the device's public IP address and saves it
    as the device location. Review it afterwards on the
    [Settings](configuration.md) page.
+
+   The lookup goes out to the internet, so give it a few seconds. It writes
+   the location into the lowest configuration layer the device reads, which
+   means a location you have set yourself keeps winning; when that happens the
+   page says so and points you at the Settings page to clear it. On a device
+   whose administrator has switched off the remote configuration layer, or
+   protected the location key, the detected location cannot be stored at all
+   and the page says that instead — there is nothing to clear, and the device
+   keeps the location it has.
 4. **Factory reset**: erases all settings, skills, and personal data, and
    returns the device to its factory defaults.
 

@@ -52,11 +52,13 @@ def test_admin_phal_package_set_is_the_live_plugin():
     assert not any("wifi-setup" in p for p in pkgs)
 
 
-def test_pipeline_plugin_routes_to_core(monkeypatch):
+def test_pipeline_plugin_broadcasts_because_core_has_no_installer(monkeypatch):
+    """ovos-core binds only the plain `ovos.pip.install` and builds no
+    ServiceInstaller, so there is no `ovos.pip.install.ovos_core` to target."""
     from ovos_webui import configio, installer
 
     # opt in to service targeting (a present webui.install_services block);
     # otherwise the install broadcasts and there is no per-family routing to assert.
     monkeypatch.setattr(configio, "user_or_merged",
                         lambda keys: {} if list(keys) == ["webui", "install_services"] else None)
-    assert installer._install_service_for("ovos-adapt-pipeline-plugin") == "ovos_core"
+    assert installer._install_service_for("ovos-adapt-pipeline-plugin") is None
