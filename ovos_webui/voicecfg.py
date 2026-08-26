@@ -25,10 +25,12 @@ from ovos_utils.log import LOG
 
 from ovos_webui import configio, pypi
 
-#: The pipeline stages OVOS ships out of the box, in their default order. A
-#: user's list is not limited to these — a plugin not on this list is still
-#: kept and shown — but this seeds the picker with the names most devices use.
-DEFAULT_PIPELINE = [
+#: The pipeline stages to fall back on when the installed ovos-config cannot be
+#: read. ovos-config is a hard dependency, so `default_pipeline` reads the list
+#: it actually ships and this copy is only a floor for a broken install. A
+#: user's list is not limited to these — a plugin not on this list is still kept
+#: and shown — but they seed the picker with the names most devices use.
+_FALLBACK_PIPELINE = [
     "ovos-stop-pipeline-plugin-high",
     "ovos-converse-pipeline-plugin",
     "ovos-ocp-pipeline-plugin-high",
@@ -38,10 +40,36 @@ DEFAULT_PIPELINE = [
     "ovos-ocp-pipeline-plugin-medium",
     "ovos-fallback-pipeline-plugin-high",
     "ovos-stop-pipeline-plugin-medium",
+    "ovos-padatious-pipeline-plugin-medium",
     "ovos-adapt-pipeline-plugin-medium",
     "ovos-fallback-pipeline-plugin-medium",
     "ovos-fallback-pipeline-plugin-low",
 ]
+
+
+def default_pipeline() -> list[str]:
+    """The pipeline stages the installed ovos-config ships, in its own order.
+
+    Read rather than copied: a copy goes stale every time ovos-config adds or
+    drops a stage, and it describes whichever version the copy was taken from
+    rather than the one on this device. Devices do not all run the same
+    ovos-config, so reading is also the only way the picker can offer what the
+    device will actually accept.
+    """
+    try:
+        from ovos_config.models import MycroftDefaultConfig
+
+        stages = MycroftDefaultConfig().get("intents", {}).get("pipeline")
+    except Exception as err:  # noqa: BLE001 - a broken ovos-config must not blank the page
+        LOG.warning(f"could not read the pipeline ovos-config ships, "
+                    f"falling back to a copy: {err}")
+        return list(_FALLBACK_PIPELINE)
+    if not isinstance(stages, list) or not all(isinstance(s, str) for s in stages):
+        LOG.warning(f"ovos-config's default pipeline is not a list of names, "
+                    f"falling back to a copy: {stages!r}")
+        return list(_FALLBACK_PIPELINE)
+    return list(stages) or list(_FALLBACK_PIPELINE)
+
 
 _LANG_RE = re.compile(r"^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})?$")
 
@@ -133,7 +161,7 @@ def get_settings() -> dict[str, Any]:
     _pipe = fields["pipeline"]["effective"]
     _utt = fields["utterance_transformers"]["effective"]
     fields["pipeline"]["options"] = sorted(
-        set(DEFAULT_PIPELINE) | set(by_family.get("pipeline", []))
+        set(default_pipeline()) | set(by_family.get("pipeline", []))
         | set(_pipe if isinstance(_pipe, list) else []))
     fields["utterance_transformers"]["options"] = sorted(
         set(by_family.get("utterance_transformer", []))
@@ -176,9 +204,6 @@ def _check_lang(field: str, value: Any) -> str:
     if not isinstance(value, str) or not _LANG_RE.match(value.strip()):
         raise VoiceConfigError(f"'{field}' must be a language code, for example pt-pt")
     return value.strip()
-
-
-_KNOWN_STAGES = set(DEFAULT_PIPELINE)
 
 
 def _check_pipeline(value: Any) -> list[str]:
