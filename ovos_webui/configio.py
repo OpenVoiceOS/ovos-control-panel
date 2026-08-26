@@ -171,9 +171,11 @@ def _notify(data: dict[str, Any], bus) -> bool:
     layer. Sending the clear first and the new configuration second makes a
     deletion take effect at once.
 
-    Both messages already exist in ovos-config: ``Configuration.register_bus``
-    binds ``configuration.patch`` and ``configuration.patch.clear``. Nothing
-    new is added to the bus here.
+    Both messages already exist in ovos-config, bound by
+    ``Configuration.set_config_update_handlers``. Nothing new is added to the
+    bus here. Only ovos-audio and the listener call that, so these messages
+    reach those two; every other service sees the change through ovos-config's
+    file watcher instead, which is why writing the file is what matters most.
 
     Every send goes through the bounded wrapper, because an emit on a bus that
     dropped waits with no limit and would hang the request.

@@ -23,6 +23,16 @@ language the skill does not ship, or improve one it does. Your set is stored in
 the device's own data directory and is read before the skill's own files, so it
 wins without touching the installed skill.
 
+Restart the OVOS services after saving. A skill reads its words when it loads
+and keeps them, so nothing changes until it loads again.
+
+One limitation to know about, for now. The phrases a skill listens for (`.voc`,
+`.intent`) are read from your set. The words it says out loud come from its
+`.dialog` files, and those are not read from your set yet — see
+[ovos-workshop#556](https://github.com/OpenVoiceOS/ovos-workshop/issues/556) for
+where that stands. Your words are saved either way and start working once it is
+fixed.
+
 ## Steps
 
 1. **Skill**: choose the skill to translate. If the list is empty, no skill is

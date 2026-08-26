@@ -101,9 +101,10 @@ go back to step 4.
 
 ![Device controls](images/controls-wide.png)
 
-Plugins only take effect after the OVOS services restart. Go to **Device
-controls** and restart the voice services (or reboot the device if you
-changed the wake word or language).
+A newly installed plugin is only picked up when the service that uses it
+loads it, so restart the voice services from the **Device** page. Settings you
+changed along the way do not need this: the wake word, the speech-to-text
+engine and the silence detector apply as soon as they are saved.
 
 **Done looks like:** the Dashboard shows every card as ready again after a
 short wait.

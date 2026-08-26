@@ -31,6 +31,8 @@
     Your words are saved beside the skill, not inside it, so a skill update
     cannot lose them.</p>
 
+  <p class="hint" role="note" data-i18n="translate.spoken_note">What a skill listens for takes effect. What it says out loud comes from its .dialog files, which OVOS does not read from here yet, so those lines are saved but not used until that is fixed.</p>
+
   <div class="card" id="pickercard">
     <label><span data-i18n="translate.skill">Skill</span><select id="skill"></select></label>
     <label><span data-i18n="translate.from">Translate from</span><select id="from"></select></label>
@@ -207,7 +209,7 @@ OvosWebUI.ready(function () {
       body: JSON.stringify({lines: rows.map(function (r) { return r.accepted ? r.text : r.source; })})
     }).then(function (r) {
       OvosWebUI.say("msg", OvosWebUI.t("translate.saved_prefix", "Saved to ") + r.path
-        + OvosWebUI.t("translate.saved_suffix", ". Restart the skills service to use it."));
+        + OvosWebUI.t("translate.saved_suffix", ". Restart the OVOS services to use it."));
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   });
 

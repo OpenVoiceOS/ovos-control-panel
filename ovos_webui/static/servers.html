@@ -170,7 +170,7 @@ OvosWebUI.ready(function () {
       render(kind);
       var msg = t("servers.saved", "Saved.");
       if (d.write && d.write.applied === false) {
-        msg += " " + t("config.saved.notLive", "The running services could not be told, so this is not live yet; it takes effect when the device is next restarted.");
+        msg += " " + t("config.saved.notLive", "The running services could not be told over the bus. They read the file as well, so this usually still applies; if it does not, restart the OVOS services.");
       }
       OvosWebUI.say("msg-" + kind, msg, d.write && d.write.applied === false);
     }).catch(function (e) { OvosWebUI.say("msg-" + kind, e.message, true); });

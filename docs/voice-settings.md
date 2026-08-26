@@ -70,11 +70,19 @@ understand those, alongside the main one.
 
 ## After a save
 
-You do not have to restart the device for most of these. `ovos-config`
-watches the file and reads it again when it changes, and when the message
-bus is up the page also sends the existing `configuration.patch` message.
-A few plugins only pick up a new value on their own restart. If a change
-does not seem to take effect, restart the device.
+The wake word, the speech-to-text engine and the silence detector apply as
+soon as you save: the listener watches for configuration changes and rebuilds
+whichever part changed.
+
+Two do not. The pipeline order is read into the session when the skills service
+starts and is not re-read afterwards. Changing the voice is unreliable, because
+ovos-audio decides whether to reload by hashing the selected plugin's own
+settings and not the plugin name, so a swap between two plugins that have no
+settings of their own looks like no change to it.
+
+If a change does not seem to take effect, restart the OVOS services. The Device
+page has a button for it, which works where `ovos-PHAL-plugin-system` is
+installed; without that plugin, restart them from a terminal.
 
 Every save first copies the old file into `.ovos-webui-backups` beside it,
 the same backup the Settings page makes.

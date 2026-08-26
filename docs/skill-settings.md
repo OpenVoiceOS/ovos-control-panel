@@ -56,8 +56,13 @@ directory beside it. The last 20 copies are kept.
 The editor shows whether the chosen skill is on, with one button to turn it
 off or back on. Off means the skill id is added to
 `skills.blacklisted_skills` in your configuration layer: the skill stays
-installed and keeps its settings, it just does not load after the OVOS
-services next restart. Turning it on removes the entry again.
+installed and keeps its settings, it just does not load.
+
+Turning a skill on takes effect on its own: the skills service re-reads the
+list about every thirty seconds and loads anything no longer blocked. Turning
+one off only stops it loading next time, because nothing unloads a skill that
+is already running, so it keeps answering until the OVOS services restart. The
+page says which of the two happened.
 
 ## If it doesn't work
 

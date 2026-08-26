@@ -27,11 +27,12 @@ a maintainer asks for, and it saves you looking each package up by hand.
 
 ## Device power
 
-The About page can send the standard system messages over the bus:
-`system.mycroft.service.restart` and `system.reboot`. `ovos-PHAL-plugin-system`
-acts on them where it is installed. On a device without it, the message is
-ignored and nothing happens. Both need the access token and a confirmation.
-The page never runs a shell command itself.
+Restarting and rebooting live on the [Device page](controls.md), not here. It
+sends the standard system messages over the bus, `system.mycroft.service.restart`
+and `system.reboot`, which `ovos-PHAL-plugin-system` acts on where it is
+installed. Without that plugin the buttons are disabled and the page offers to
+install it. Both need the access token and a confirmation, and neither runs a
+shell command.
 
 ![The device power section](images/about-power.png)
 

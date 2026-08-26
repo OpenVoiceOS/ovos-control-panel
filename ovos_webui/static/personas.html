@@ -277,7 +277,7 @@ OvosWebUI.ready(function () {
     if (!pid) { OvosWebUI.say("msg-activate", OvosWebUI.t("personas.chooseFirst", "Choose a persona first."), true); return; }
     if (!OvosWebUI.confirmed(OvosWebUI.t("personas.confirm.activate", "Make this the persona that answers your questions?"))) { return; }
     api("/api/personas/" + encodeURIComponent(pid) + "/activate", {method: "POST"}).then(function (r) {
-      OvosWebUI.say("msg-activate", OvosWebUI.t("personas.activated", "Saved. It answers after the OVOS services next restart."));
+      OvosWebUI.say("msg-activate", OvosWebUI.t("personas.activated", "Saved. If the device was already answering as a persona, this one takes over right away. The first time you choose one, and for a persona you have just created, it answers after the OVOS services restart."));
       refresh(pid);
     }).catch(function (e) { OvosWebUI.say("msg-activate", e.message, true); });
   });

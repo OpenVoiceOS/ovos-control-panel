@@ -46,13 +46,10 @@ runs at a time.
 
 Installing changes the software on the device, so it **always needs a token**,
 even on `127.0.0.1` where the rest of the page is open. Set one first — see
-[security.md](security.md). After an install or a remove, restart the affected
-OVOS service for the change to take effect.
-
-> Behind the scenes the install runs `pip` directly, never through a shell,
-> with the plugin name as a single checked argument. A name with a version
-> pin, an extra, an index URL, a path, or a shell character is refused before
-> `pip` is reached.
+[security.md](security.md). After installing or removing a plugin, restart the
+service that uses it — the **Device** page restarts the voice services together.
+A skill is the exception: the skills service rescans about every thirty seconds
+and picks a newly installed one up on its own.
 
 ## Where installs actually run
 

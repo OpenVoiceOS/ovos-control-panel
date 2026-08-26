@@ -44,11 +44,14 @@ before.
 
 **Cause:** A new plugin only loads when the service that uses it restarts.
 
-**Fix:** Go to **Device controls** and restart the affected service (or
-reboot the device). On a device where services are split across containers,
-the plugin is installed into the container that owns that service, not into
-the web-ui's own environment — restarting that specific service is what
-picks it up.
+**Fix:** Go to the **Device** page and restart the voice services, or reboot.
+The page restarts them together — it has no per-service button — so on a device
+where services are split across containers, restart the container that owns the
+service yourself. The plugin is installed into that container, not into the
+panel's own environment.
+
+A skill plugin is the exception: the skills service rescans about every thirty
+seconds and loads a newly installed skill on its own.
 
 ## "Sent. Listen to the device" but I hear nothing
 
@@ -57,8 +60,8 @@ out of the device.
 
 **Cause:** No text-to-speech plugin (a voice) is installed yet.
 
-**Fix:** Go to **Plugins**, install a voice for your language, then restart
-the audio service on **Device controls**. See
+**Fix:** Go to **Plugins**, install a voice for your language, then restart the
+voice services from the **Device** page. See
 [Getting started](getting-started.md) step 4.
 
 ## I can't sign in

@@ -80,10 +80,13 @@ one on the [Settings](configuration.md) page first.
 
 ## After a save
 
-You do not have to restart the device for most changes. `ovos-config` watches
-the file and reads it again when it changes. Some plugins only load a new
-setting when their service restarts. If a change does not seem to take effect,
-restart the device.
+Most changes apply as soon as you save. `ovos-config` watches the file and
+reads it again when it changes, and the audio and listener services act on the
+`configuration.patch` message the page sends. Whether a given plugin picks a new
+setting up without being restarted is up to that plugin. If a change does not
+seem to take effect, restart the OVOS services. The Device page has a button
+for it, which works where `ovos-PHAL-plugin-system` is installed; without that
+plugin, restart them from a terminal.
 
 ---
 [← Plugins](plugins.md) · [Home](README.md) · [Personas →](personas.md)
