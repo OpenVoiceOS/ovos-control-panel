@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a35](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a35) (2026-09-01)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a34...0.0.1a35)
+
+**Merged pull requests:**
+
+- fix: send messages the receiving plugins can actually act on [\#65](https://github.com/OpenVoiceOS/ovos-control-panel/pull/65) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a34](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a34) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a33...0.0.1a34)
