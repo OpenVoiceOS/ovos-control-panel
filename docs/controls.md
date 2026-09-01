@@ -4,9 +4,9 @@ Loudness, the microphone, and power: the things you reach for on a real
 device. Some of these are carried by companion **PHAL plugins**. The page
 tells you when one is missing and offers to install it.
 
-![The Device controls page](images/controls-wide.png)
+![The Device controls page](img/controls-wide.png)
 
-![The same page on a phone](images/controls-mobile.png)
+![The same page on a phone](img/controls-mobile.png)
 
 ## Common tasks
 

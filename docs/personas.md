@@ -3,9 +3,9 @@
 A persona decides who answers your questions. It tries a list of answer
 sources, in order, until one of them can answer. The Personas page makes and edits them.
 
-![The Personas page](images/personas-wide.png)
+![The Personas page](img/personas-wide.png)
 
-![The same page on a phone](images/personas-mobile.png)
+![The same page on a phone](img/personas-mobile.png)
 
 ## Common tasks
 

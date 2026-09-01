@@ -2,9 +2,9 @@
 
 The About page shows what is installed on this device and where to get help.
 
-![The About page](images/about-wide.png)
+![The About page](img/about-wide.png)
 
-![The same page on a phone](images/about-mobile.png)
+![The same page on a phone](img/about-mobile.png)
 
 ## Common tasks
 
@@ -34,7 +34,7 @@ installed. Without that plugin the buttons are disabled and the page offers to
 install it. Both need the access token and a confirmation, and neither runs a
 shell command.
 
-![The device power section](images/about-power.png)
+![The device power section](img/about-power.png)
 
 ## If it doesn't work
 

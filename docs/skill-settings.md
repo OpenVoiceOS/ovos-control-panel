@@ -4,9 +4,9 @@ This page changes what an individual skill is configured to do — for example
 an API key it needs, or a city it should use by default. It lists the skills
 that have settings on this device.
 
-![The Skill settings page](images/skills-wide.png)
+![The Skill settings page](img/skills-wide.png)
 
-![The same page on a phone](images/skills-mobile.png)
+![The same page on a phone](img/skills-mobile.png)
 
 ## Common tasks
 

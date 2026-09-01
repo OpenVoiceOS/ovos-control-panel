@@ -5,9 +5,9 @@ hearing and voice plugins for that language, a sound check, then a first
 question. Everything it touches can be changed later on the Settings and
 Plugins pages, so you cannot get it wrong.
 
-![The setup wizard](images/setup-wide.png)
+![The setup wizard](img/setup-wide.png)
 
-![The same page on a phone](images/setup-mobile.png)
+![The same page on a phone](img/setup-mobile.png)
 
 ## How to get through it
 

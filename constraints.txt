@@ -18,10 +18,15 @@ certifi==2026.7.22
     #   httpcore
     #   httpx
     #   requests
+cffi==2.1.1
+    # via timezonefinder
 charset-normalizer==3.5.1
     # via requests
+chronologia==0.27.1a1
+    # via ovos-date-parser
 click==8.4.2
     # via
+    #   geocoder
     #   rich-click
     #   uvicorn
 combo-lock==0.3.1
@@ -32,12 +37,22 @@ combo-lock==0.3.1
     #   ovos-utils
 coverage==7.15.4
     # via pytest-cov
+dateparser==1.4.2
+    # via ovos-date-parser
+decorator==5.3.1
+    # via ratelim
 fastapi==0.141.1
     # via ovos-control-panel (pyproject.toml)
 filelock==3.32.4
     # via combo-lock
+flatbuffers==25.12.19
+    # via timezonefinder
 ftfy==6.3.1
     # via ovos-utterance-normalizer
+future==1.0.0
+    # via geocoder
+geocoder==1.38.1
+    # via ovos-skill-date-time
 ggwave==0.4.3
     # via ovos-audio-transformer-plugin-ggwave
 greenlet==3.5.5
@@ -46,6 +61,8 @@ h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
+h3==4.5.0
+    # via timezonefinder
 httpcore==1.0.9
     # via httpx
 httptools==0.8.0
@@ -78,7 +95,9 @@ mdurl==0.1.2
 memory-tempfile==2.2.3
     # via combo-lock
 numpy==2.5.2
-    # via ovos-audio-transformer-plugin-ggwave
+    # via
+    #   ovos-audio-transformer-plugin-ggwave
+    #   timezonefinder
 ovos-audio-transformer-plugin-ggwave==1.0.0a1
     # via ovos-control-panel (pyproject.toml)
 ovos-bus-client==2.8.4a2
@@ -86,21 +105,30 @@ ovos-bus-client==2.8.4a2
     #   ovos-control-panel (pyproject.toml)
     #   ovos-gui-api-client
     #   ovos-mark1-utils
+    #   ovos-messagebus
     #   ovos-plugin-manager
     #   ovos-workshop
 ovos-config==2.3.10a2
     # via
     #   ovos-control-panel (pyproject.toml)
     #   ovos-bus-client
+    #   ovos-date-parser
     #   ovos-gui-api-client
+    #   ovos-messagebus
     #   ovos-plugin-manager
     #   ovos-workshop
+ovos-date-parser==0.30.1a1
+    # via ovos-skill-date-time
 ovos-gui-api-client==0.1.0
     # via ovos-workshop
 ovos-mark1-utils==0.0.1
     # via ovos-control-panel (pyproject.toml)
+ovos-messagebus==0.2.1a3
+    # via ovos-control-panel (pyproject.toml)
 ovos-number-parser==0.19.13
     # via
+    #   chronologia
+    #   ovos-date-parser
     #   ovos-option-matcher-fuzzy-plugin
     #   ovos-workshop
 ovos-option-matcher-fuzzy-plugin==0.0.2a1
@@ -110,12 +138,21 @@ ovos-plugin-manager==2.11.1a3
     #   ovos-control-panel (pyproject.toml)
     #   ovos-audio-transformer-plugin-ggwave
     #   ovos-option-matcher-fuzzy-plugin
+    #   ovos-skill-hello-world
     #   ovos-utterance-normalizer
     #   ovos-workshop
     #   ovos-yes-no-plugin
+ovos-skill-date-time==1.2.1a1
+    # via ovos-control-panel (pyproject.toml)
+ovos-skill-hello-world==0.2.8a1
+    # via ovos-control-panel (pyproject.toml)
+ovos-skill-personal==1.0.0a1
+    # via ovos-control-panel (pyproject.toml)
 ovos-spec-tools==1.8.0a1
     # via
+    #   chronologia
     #   ovos-bus-client
+    #   ovos-date-parser
     #   ovos-plugin-manager
     #   ovos-utils
     #   ovos-workshop
@@ -126,16 +163,26 @@ ovos-utils==0.13.13a1
     #   ovos-bus-client
     #   ovos-config
     #   ovos-gui-api-client
+    #   ovos-messagebus
     #   ovos-option-matcher-fuzzy-plugin
     #   ovos-plugin-manager
+    #   ovos-skill-date-time
+    #   ovos-skill-hello-world
+    #   ovos-skill-personal
     #   ovos-utterance-normalizer
     #   ovos-workshop
     #   ovos-yes-no-plugin
     #   padacioso
 ovos-utterance-normalizer==0.2.5a2
-    # via ovos-control-panel (pyproject.toml)
+    # via
+    #   ovos-control-panel (pyproject.toml)
+    #   ovos-skill-date-time
 ovos-workshop==9.5.2a1
-    # via ovos-control-panel (pyproject.toml)
+    # via
+    #   ovos-control-panel (pyproject.toml)
+    #   ovos-skill-date-time
+    #   ovos-skill-hello-world
+    #   ovos-skill-personal
 ovos-yes-no-plugin==0.3.1a2
     # via ovos-workshop
 packaging==26.3
@@ -152,6 +199,8 @@ pluggy==1.6.0
     #   pytest-cov
 ptyprocess==0.7.0
     # via pexpect
+pycparser==3.0
+    # via cffi
 pydantic==2.14.0b1
     # via
     #   fastapi
@@ -178,12 +227,18 @@ pytest-cov==7.1.0
     # via ovos-control-panel (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
+    #   dateparser
     #   ovos-config
+    #   ovos-date-parser
     #   ovos-utils
 python-dotenv==1.2.3
     # via uvicorn
 python-multipart==0.0.32
     # via ovos-control-panel (pyproject.toml)
+pytz==2026.3.post1
+    # via
+    #   dateparser
+    #   ovos-skill-date-time
 pyyaml==6.0.3
     # via
     #   ovos-control-panel (pyproject.toml)
@@ -191,6 +246,7 @@ pyyaml==6.0.3
     #   uvicorn
 quebra-frases==0.3.8a1
     # via
+    #   ovos-date-parser
     #   ovos-number-parser
     #   ovos-plugin-manager
     #   ovos-utterance-normalizer
@@ -199,10 +255,15 @@ rapidfuzz==3.14.5
     # via
     #   ovos-option-matcher-fuzzy-plugin
     #   ovos-workshop
+ratelim==0.1.6
+    # via geocoder
 regex==2026.7.19
-    # via quebra-frases
+    # via
+    #   dateparser
+    #   quebra-frases
 requests==2.34.2
     # via
+    #   geocoder
     #   ovos-plugin-manager
     #   ovos-utils
 rich==13.9.4
@@ -218,7 +279,9 @@ setuptools==84.0.0
 simplematch==1.4
     # via padacioso
 six==1.17.0
-    # via python-dateutil
+    # via
+    #   geocoder
+    #   python-dateutil
 standard-aifc==3.13.0
     # via ovos-plugin-manager
 standard-chunk==3.13.0
@@ -227,6 +290,12 @@ starlette==1.6.0
     # via
     #   ovos-control-panel (pyproject.toml)
     #   fastapi
+timezonefinder==8.3.0
+    # via ovos-skill-date-time
+timezonefinder-data==1.2026.3
+    # via timezonefinder
+tornado==6.5.8
+    # via ovos-messagebus
 typing-extensions==4.16.0
     # via
     #   fastapi
@@ -238,6 +307,10 @@ typing-inspection==0.4.4
     # via
     #   fastapi
     #   pydantic
+tzlocal==5.4.4
+    # via
+    #   dateparser
+    #   ovos-skill-date-time
 unicode-rbnf==2.4.0
     # via ovos-number-parser
 urllib3==2.7.0

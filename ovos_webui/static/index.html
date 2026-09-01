@@ -116,7 +116,9 @@ OvosWebUI.ready(function () {
           summary.innerHTML = "<strong>" + esc(t("dash.sum.ok", "Everything looks healthy.")) + "</strong>";
         } else {
           summary.className = "summary bad";
-          var badSub = t("dash.sum.bad.sub", "{n} service(s) did not answer.").replace("{n}", badCount);
+          var badSub = badCount === 1
+            ? t("dash.sum.bad.sub.one", "One service did not answer.")
+            : t("dash.sum.bad.sub", "{n} services did not answer.").replace("{n}", badCount);
           summary.innerHTML = "<strong>" + esc(t("dash.sum.bad", "Some parts need attention.")) + "</strong>"
             + '<div class="sub">' + esc(badSub) + "</div>";
         }

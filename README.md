@@ -6,7 +6,7 @@ if the device works, it lets you change the settings, and it makes backups.
 There is no cloud account and no internet connection. Every file the page needs
 is in the package.
 
-![The dashboard, showing every service ready](docs/images/dashboard-wide.png)
+![The dashboard, showing every service ready](docs/img/dashboard-wide.png)
 
 **[Read the full guide — start here](docs/README.md)**
 

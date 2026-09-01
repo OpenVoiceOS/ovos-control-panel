@@ -3,9 +3,9 @@
 This page saves your device's configuration and skill settings to a file, and
 puts them back if something goes wrong.
 
-![The Backup and restore page](images/backup-wide.png)
+![The Backup and restore page](img/backup-wide.png)
 
-![The same page on a phone](images/backup-mobile.png)
+![The same page on a phone](img/backup-mobile.png)
 
 ## Common tasks
 
@@ -63,7 +63,7 @@ Every save this app makes first copies the old file into a
 `.ovos-webui-backups` directory next to it. The "Go back to an earlier save"
 list shows those copies, newest first, lets you read one, and puts it back.
 
-![The backup history list](images/backup-history.png)
+![The backup history list](img/backup-history.png)
 
 A revert goes through the same atomic write as every other save, so the file
 being replaced is itself backed up first — a revert can always be reverted.

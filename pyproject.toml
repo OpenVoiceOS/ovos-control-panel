@@ -50,6 +50,16 @@ dev = [
     # load: the markup is still there, the strings are still there, the routes
     # still answer, and the page does nothing. See tests/test_pages_run.py.
     "playwright>=1.44",
+    # A bus for scripts/screenshots.py to stand a device up on. Shooting the
+    # panel with nothing behind it photographs a device that is not answering,
+    # under captions that say every service is ready.
+    "ovos-messagebus>=0.2.1a3",
+    # A handful of real skills, so the pages that list what a device can do are
+    # photographed listing something. A shoot against an empty environment
+    # produces "no skills are installed" under a caption promising a list.
+    "ovos-skill-hello-world>=0.0.1",
+    "ovos-skill-date-time>=0.0.1",
+    "ovos-skill-personal>=0.0.1",
 ]
 
 [project.scripts]

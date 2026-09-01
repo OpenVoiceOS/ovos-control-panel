@@ -4,9 +4,9 @@ This page changes what a skill says and hears, into your language. Use it
 when a skill does not speak your language yet, or gets it wrong. Your words
 are saved beside the skill, not inside it, so a skill update cannot lose them.
 
-![The Translate page](images/translate-wide.png)
+![The Translate page](img/translate-wide.png)
 
-![The same page on a phone](images/translate-mobile.png)
+![The same page on a phone](img/translate-mobile.png)
 
 ## Common tasks
 

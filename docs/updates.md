@@ -2,9 +2,9 @@
 
 The Plugins page carries three related tools.
 
-![The Plugins page, which carries the updates section below](images/plugins-wide.png)
+![The Plugins page, which carries the updates section below](img/plugins-wide.png)
 
-![The updates section of the Plugins page](images/plugins-updates.png)
+![The updates section of the Plugins page](img/plugins-updates.png)
 
 ## Updates
 

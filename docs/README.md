@@ -8,7 +8,7 @@ whether the device works, lets you change its settings, and installs the
 plugins that give it a voice. There is no cloud, no account and no internet
 connection — every file the page needs is already on the device.
 
-![The dashboard, showing every service ready](images/dashboard-wide.png)
+![The dashboard, showing every service ready](img/dashboard-wide.png)
 
 ## Start here
 
