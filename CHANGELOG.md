@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a36](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a36) (2026-09-01)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a35...0.0.1a36)
+
+**Merged pull requests:**
+
+- feat: draw the Mark-1 face as the hardware is laid out [\#67](https://github.com/OpenVoiceOS/ovos-control-panel/pull/67) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a35](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a35) (2026-09-01)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a34...0.0.1a35)
