@@ -113,3 +113,50 @@ def make_skill():
 @pytest.fixture
 def sandbox_root() -> Path:
     return Path(_SANDBOX)
+
+
+@pytest.fixture(scope="session")
+def live_panel():
+    """A real panel process on a free port, with a token, torn down after.
+
+    A fresh instance rather than whatever is listening: demo servers left over
+    from an earlier session serve stale static files, so a browser test could
+    otherwise pass against code that is not the code under test.
+    """
+    import contextlib
+    import secrets
+    import socket
+    import subprocess
+    import sys
+    import time
+    import urllib.error
+    import urllib.request
+
+    with contextlib.closing(socket.socket()) as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = int(sock.getsockname()[1])
+    token = secrets.token_urlsafe(16)
+    env = dict(os.environ, OVOS_WEBUI_TOKEN=token, OVOS_WEBUI_PORT=str(port),
+               OVOS_WEBUI_HOST="127.0.0.1")
+    proc = subprocess.Popen(
+        [sys.executable, "-c", "from ovos_webui.service import main; main()"],
+        env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    url = f"http://127.0.0.1:{port}"
+    deadline = time.time() + 30
+    while time.time() < deadline:
+        try:
+            urllib.request.urlopen(url + "/login", timeout=2)
+            break
+        except urllib.error.HTTPError:
+            break
+        except Exception:  # noqa: BLE001 - not up yet
+            time.sleep(0.3)
+    else:
+        proc.terminate()
+        raise RuntimeError("the panel never came up")
+    try:
+        yield url, token
+    finally:
+        proc.terminate()
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            proc.wait(timeout=10)

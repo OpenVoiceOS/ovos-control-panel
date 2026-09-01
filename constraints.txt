@@ -9,6 +9,10 @@ anyio==4.14.2
     #   httpx
     #   starlette
     #   watchfiles
+audioop-lts==0.2.2
+    # via
+    #   ovos-plugin-manager
+    #   standard-aifc
 certifi==2026.7.22
     # via
     #   httpcore
@@ -36,6 +40,8 @@ ftfy==6.3.1
     # via ovos-utterance-normalizer
 ggwave==0.4.3
     # via ovos-audio-transformer-plugin-ggwave
+greenlet==3.5.5
+    # via playwright
 h11==0.16.0
     # via
     #   httpcore
@@ -138,6 +144,8 @@ padacioso==2.2.6a1
     # via ovos-workshop
 pexpect==4.9.0
     # via ovos-utils
+playwright==1.51.0
+    # via ovos-control-panel (pyproject.toml)
 pluggy==1.6.0
     # via
     #   pytest
@@ -154,6 +162,7 @@ pyee==12.1.1
     # via
     #   ovos-bus-client
     #   ovos-utils
+    #   playwright
 pygments==2.21.0
     # via
     #   pytest
@@ -210,19 +219,20 @@ simplematch==1.4
     # via padacioso
 six==1.17.0
     # via python-dateutil
+standard-aifc==3.13.0
+    # via ovos-plugin-manager
+standard-chunk==3.13.0
+    # via standard-aifc
 starlette==1.6.0
     # via
     #   ovos-control-panel (pyproject.toml)
     #   fastapi
 typing-extensions==4.16.0
     # via
-    #   anyio
     #   fastapi
     #   pydantic
     #   pydantic-core
     #   pyee
-    #   pytest-asyncio
-    #   starlette
     #   typing-inspection
 typing-inspection==0.4.4
     # via

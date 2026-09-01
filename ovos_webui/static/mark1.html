@@ -9,8 +9,15 @@
 <link rel="manifest" href="/static/manifest.webmanifest">
 <script src="/static/app.js"></script>
 <style>
-  #mark1-canvas { display: block; margin: 0.75rem 0; background: #000; border-radius: 6px;
-    cursor: pointer; touch-action: none; max-width: 100%; height: auto; }
+  #mark1-canvas { display: block; margin: 0.75rem 0; background: #0b0b0d; border-radius: 10px;
+    cursor: crosshair; touch-action: none; max-width: 100%; height: auto; }
+  .mark1-live { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0.35rem 0; }
+  .mark1-frames { list-style: none; padding: 0; margin: 0.5rem 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .mark1-frames li { display: flex; align-items: center; gap: 0.35rem; border: 1px solid var(--line, #ccc);
+    border-radius: 6px; padding: 0.3rem 0.5rem; }
+  .mark1-frames canvas { display: block; background: #0b0b0d; border-radius: 3px; }
+  .mark1-live .dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: #888; flex: none; }
+  .mark1-live.is-live .dot { background: #39c46a; }
   .mark1-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0.5rem 0; }
   .mark1-controls label { display: flex; align-items: center; gap: 0.35rem; }
   .mark1-controls input[type="range"] { width: 10rem; }
@@ -35,7 +42,14 @@
   <h2 data-i18n="mark1.simulator.title">Simulator</h2>
   <p class="hint" data-i18n="mark1.simulator.hint">This preview runs entirely in your browser. It works even
     without a Mark-1 connected — use it to design before you send anything to the device.</p>
-  <canvas id="mark1-canvas" width="480" height="200" role="img" aria-label="Mark-1 faceplate preview"></canvas>
+  <canvas id="mark1-canvas" width="640" height="128"
+    aria-label="Mark-1 faceplate: left eye ring, mouth matrix, right eye ring"
+    data-i18n-attr="aria-label:mark1.canvas.aria"></canvas>
+  <div class="mark1-live" id="live-row" hidden>
+    <span class="dot" aria-hidden="true"></span>
+    <span id="live-note" data-i18n="mark1.live.off">Showing your design. The device is not being read.</span>
+    <button class="secondary" id="live-toggle" data-i18n="mark1.live.follow">Follow the device</button>
+  </div>
 
   <h2 data-i18n="mark1.mouth.title">Mouth</h2>
   <p class="hint" data-i18n="mark1.mouth.hint">Click or drag on the grid above to draw. Each square is one pixel
@@ -127,6 +141,42 @@
   <div class="msg" id="msg-system" role="status" aria-live="polite" hidden></div>
 
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <h2 data-i18n="mark1.anim.title">Animation</h2>
+  <p class="hint" data-i18n="mark1.anim.hint">Capture the face as a frame, build up a sequence, and play it back
+    here or on the device. Frames hold the mouth drawing and every eye LED.</p>
+  <div class="mark1-controls" role="group" aria-label="Animation" data-i18n-attr="aria-label:mark1.anim.aria">
+    <button class="secondary" id="anim-capture" data-i18n="mark1.anim.capture">Add this face as a frame</button>
+    <button class="secondary" id="anim-play" data-i18n="mark1.anim.play">Play here</button>
+    <button id="anim-send" data-i18n="mark1.anim.send">Play on the device</button>
+    <button class="secondary" id="anim-clear" data-i18n="mark1.anim.clear">Clear</button>
+  </div>
+  <div class="mark1-controls">
+    <label for="anim-hold" data-i18n="mark1.anim.hold">Hold each frame (seconds)</label>
+    <input type="number" id="anim-hold" min="0.4" max="10" step="0.1" value="0.5">
+  </div>
+  <ol id="anim-frames" class="mark1-frames"></ol>
+  <div class="mark1-controls">
+    <button class="secondary" id="anim-export" data-i18n="mark1.anim.export">Export animation</button>
+    <button class="secondary" id="anim-export-py" data-i18n="mark1.anim.exportPy">Export as Python</button>
+    <label class="secondary mk1-import" style="cursor:pointer">
+      <span data-i18n="mark1.anim.import">Import animation</span>
+      <input type="file" id="anim-import" accept="application/json" hidden>
+    </label>
+  </div>
+  <div class="msg" id="msg-anim" role="status" aria-live="polite" hidden></div>
+
+  <h2 data-i18n="mark1.fw.title">Faceplate firmware</h2>
+  <p class="hint" data-i18n="mark1.fw.hint">The eyes and the mouth are driven by a small board with its own
+    firmware, separate from the OVOS software. It rarely needs changing.</p>
+  <div class="card" id="fw-card" hidden>
+    <p id="fw-state" role="status" aria-live="polite"></p>
+    <div class="mark1-controls">
+      <button class="secondary" id="fw-update" data-i18n="mark1.fw.update" hidden>Update the firmware</button>
+    </div>
+    <pre id="fw-log" hidden></pre>
+  </div>
+  <div class="msg" id="msg-fw" role="status" aria-live="polite" hidden></div>
+
   <p class="hint foot"><a data-i18n="foot.manual"
     href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
 </main>
@@ -176,51 +226,177 @@ OvosWebUI.ready(function () {
   };
 
   var eyesOn = true, eyesColor = {r: 0, g: 200, b: 255};
-  var canDevice = false;
+  // The panel cannot prove a Mark 1 is absent. The only readback the faceplate
+  // offers is the eye colour, and a plugin too old to answer it looks exactly
+  // like no hardware at all, so a silent probe must not disable the controls.
+  // Sending is always allowed; the server reports what the device did with it.
+  // This flag only decides whether to mirror the live face and offer firmware.
+  var deviceConfirmed = false;
 
-  // ── simulator canvas ────────────────────────────────────────────────────
+  // ── the face ────────────────────────────────────────────────────────────
+  // A Mark 1 is a row, not a stack: left eye, mouth, right eye, side by side
+  // behind one smoked panel. The eyes are two rings of twelve addressable
+  // LEDs and the mouth is a 32x8 matrix of white ones, so that is what this
+  // draws -- individual LEDs, not two coloured blocks.
+  //
+  // The plugin addresses all twenty-four eye LEDs as one flat range: 0-11 is
+  // the left eye and 12-23 the right. Ring position within an eye is drawn
+  // clockwise from the top; the serial protocol fixes the numbering but not
+  // where pixel 0 physically sits, so treat the rotation as a convention of
+  // this drawing rather than a claim about the hardware.
   var canvas = el("mark1-canvas"), ctx = canvas.getContext("2d");
-  var EYE_H = 60, MOUTH_TOP = 70, CELL = Math.floor(canvas.width / COLS);
+  var EYE_LEDS = 12, EYE_PIXELS = EYE_LEDS * 2;
+  var CELL = 12, GAP = 20, LED_R = 5.5, RING_R = 38;
+  var MOUTH_W = COLS * CELL, MOUTH_H = ROWS * CELL;
+  var EYE_BOX = RING_R * 2 + LED_R * 2;
+  var FACE_H = Math.max(MOUTH_H, EYE_BOX);
+  var PAD_X = Math.round((canvas.width - (EYE_BOX * 2 + GAP * 2 + MOUTH_W)) / 2);
+  var PAD_Y = Math.round((canvas.height - FACE_H) / 2);
+  var MOUTH_X = PAD_X + EYE_BOX + GAP;
+  var MOUTH_Y = PAD_Y + Math.round((FACE_H - MOUTH_H) / 2);
+  var EYE_CY = PAD_Y + FACE_H / 2;
+  var LEFT_CX = PAD_X + EYE_BOX / 2;
+  var RIGHT_CX = MOUTH_X + MOUTH_W + GAP + EYE_BOX / 2;
+
+  // What each eye LED is showing. Mirrors the device when following it, and
+  // is what the colour/on/off controls paint locally otherwise.
+  var eyePixels = [];
+  for (var ep = 0; ep < EYE_PIXELS; ep++) { eyePixels.push({r: 0, g: 200, b: 255}); }
+
+  function ledCentre(idx) {
+    var side = idx < EYE_LEDS ? 0 : 1;
+    var within = idx % EYE_LEDS;
+    var angle = (within / EYE_LEDS) * Math.PI * 2 - Math.PI / 2;
+    var cx = side === 0 ? LEFT_CX : RIGHT_CX;
+    return {x: cx + Math.cos(angle) * RING_R, y: EYE_CY + Math.sin(angle) * RING_R};
+  }
+
+  function litStyle(px) {
+    return "rgb(" + px.r + "," + px.g + "," + px.b + ")";
+  }
+
+  function isDark(px) { return px.r + px.g + px.b < 12; }
+
+  function drawEye(side) {
+    for (var i = 0; i < EYE_LEDS; i++) {
+      var idx = side * EYE_LEDS + i;
+      var px = eyePixels[idx];
+      var at = ledCentre(idx);
+      var dark = !eyesOn || isDark(px);
+      if (!dark) {
+        // a lit LED spills a little light onto the panel around it
+        var glow = ctx.createRadialGradient(at.x, at.y, 0, at.x, at.y, LED_R * 2.6);
+        glow.addColorStop(0, "rgba(" + px.r + "," + px.g + "," + px.b + ",0.5)");
+        glow.addColorStop(1, "rgba(" + px.r + "," + px.g + "," + px.b + ",0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(at.x, at.y, LED_R * 2.6, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.beginPath(); ctx.arc(at.x, at.y, LED_R, 0, Math.PI * 2);
+      ctx.fillStyle = dark ? "#17171b" : litStyle(px);
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(255,255,255,0.10)";
+      ctx.stroke();
+    }
+  }
 
   function draw() {
-    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // eyes: two blocks near the top
-    var col = eyesOn ? ("rgb(" + eyesColor.r + "," + eyesColor.g + "," + eyesColor.b + ")") : "#111";
-    ctx.fillStyle = col;
-    ctx.fillRect(canvas.width * 0.18, 8, 60, EYE_H);
-    ctx.fillRect(canvas.width * 0.82 - 60, 8, 60, EYE_H);
-    // mouth: the pixel grid
+    ctx.fillStyle = "#0b0b0d";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drawEye(0);
     for (var y = 0; y < ROWS; y++) {
       for (var x = 0; x < COLS; x++) {
-        ctx.fillStyle = grid[y][x] ? "#39ff88" : "#0a0a0a";
-        ctx.fillRect(x * CELL, MOUTH_TOP + y * CELL, CELL - 1, CELL - 1);
+        var lit = grid[y][x];
+        var px = MOUTH_X + x * CELL, py = MOUTH_Y + y * CELL;
+        ctx.fillStyle = lit ? "#eaf6ff" : "#141419";
+        ctx.fillRect(px, py, CELL - 2, CELL - 2);
+        if (lit) {
+          ctx.fillStyle = "rgba(190,225,255,0.22)";
+          ctx.fillRect(px - 1, py - 1, CELL, CELL);
+        }
       }
     }
+    drawEye(1);
   }
   draw();
 
-  function toggleAt(clientX, clientY, val) {
-    var rect = canvas.getBoundingClientRect();
-    var scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
-    var px = (clientX - rect.left) * scaleX, py = (clientY - rect.top) * scaleY;
-    if (py < MOUTH_TOP) { return; }
-    var gx = Math.floor(px / CELL), gy = Math.floor((py - MOUTH_TOP) / CELL);
-    if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) { return; }
-    grid[gy][gx] = val === undefined ? (grid[gy][gx] ? 0 : 1) : val;
+  // Painting the whole ring is what the colour picker and on/off do; the
+  // per-pixel control is a click on a single LED.
+  function paintAllEyes(rgb) {
+    for (var i = 0; i < EYE_PIXELS; i++) {
+      eyePixels[i] = {r: rgb.r, g: rgb.g, b: rgb.b};
+    }
     draw();
   }
+
+  function canvasPoint(clientX, clientY) {
+    var rect = canvas.getBoundingClientRect();
+    return {x: (clientX - rect.left) * (canvas.width / rect.width),
+            y: (clientY - rect.top) * (canvas.height / rect.height)};
+  }
+
+  function mouthCellAt(at) {
+    var gx = Math.floor((at.x - MOUTH_X) / CELL);
+    var gy = Math.floor((at.y - MOUTH_Y) / CELL);
+    if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) { return null; }
+    return {x: gx, y: gy};
+  }
+
+  function eyeLedAt(at) {
+    // Generous hit target: the drawn LED is small, and on a touch screen the
+    // gap between two ring positions is smaller than a fingertip.
+    var best = null, bestDist = LED_R * 2.2;
+    for (var i = 0; i < EYE_PIXELS; i++) {
+      var c = ledCentre(i);
+      var d = Math.sqrt((c.x - at.x) * (c.x - at.x) + (c.y - at.y) * (c.y - at.y));
+      if (d < bestDist) { bestDist = d; best = i; }
+    }
+    return best;
+  }
+
+  function toggleAt(clientX, clientY, val) {
+    var cell = mouthCellAt(canvasPoint(clientX, clientY));
+    if (!cell) { return; }
+    grid[cell.y][cell.x] = val === undefined ? (grid[cell.y][cell.x] ? 0 : 1) : val;
+    draw();
+  }
+
+  function pickEyeColor() {
+    var hex = el("eyes-color").value || "#00c8ff";
+    return {r: parseInt(hex.slice(1, 3), 16), g: parseInt(hex.slice(3, 5), 16),
+            b: parseInt(hex.slice(5, 7), 16)};
+  }
+
+  function paintOneLed(idx) {
+    var chosen = pickEyeColor();
+    var lit = !isDark(eyePixels[idx]);
+    // Clicking a lit LED that already holds the chosen colour turns it off,
+    // so one control both paints and erases.
+    var same = lit && eyePixels[idx].r === chosen.r && eyePixels[idx].g === chosen.g
+      && eyePixels[idx].b === chosen.b;
+    eyePixels[idx] = same ? {r: 0, g: 0, b: 0} : chosen;
+    draw();
+    var px = eyePixels[idx];
+    api("/api/mark1/eyes/pixel", {method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({idx: idx, r: px.r, g: px.g, b: px.b})})
+      .then(function (r) {
+        if (r && r.ok === false) { OvosWebUI.say("msg-eyes", r.error || t("mark1.pixel.failed", "That LED did not take."), true); }
+      })
+      .catch(function () {
+        OvosWebUI.say("msg-eyes", t("mark1.pixel.failed", "That LED did not take."), true);
+      });
+  }
+
   var painting = false, paintValue = 1;
   canvas.addEventListener("pointerdown", function (e) {
+    var at = canvasPoint(e.clientX, e.clientY);
+    var led = eyeLedAt(at);
+    if (led !== null) { paintOneLed(led); return; }
+    var cell = mouthCellAt(at);
+    if (!cell) { return; }
     painting = true;
-    var rect = canvas.getBoundingClientRect();
-    var scaleY = canvas.height / rect.height;
-    var py = (e.clientY - rect.top) * scaleY;
-    if (py >= MOUTH_TOP) {
-      var gy = Math.floor((py - MOUTH_TOP) / CELL);
-      var scaleX = canvas.width / rect.width;
-      var gx = Math.floor((e.clientX - rect.left) * scaleX / CELL);
-      if (gy >= 0 && gy < ROWS && gx >= 0 && gx < COLS) { paintValue = grid[gy][gx] ? 0 : 1; }
-    }
+    paintValue = grid[cell.y][cell.x] ? 0 : 1;
     toggleAt(e.clientX, e.clientY, paintValue);
   });
   canvas.addEventListener("pointermove", function (e) {
@@ -310,17 +486,7 @@ OvosWebUI.ready(function () {
   });
   renderPresets();
 
-  function needDevice() {
-    if (!canDevice) {
-      OvosWebUI.say("msg-mouth", t("mark1.needsDevice",
-        "No Mark-1 is connected — this only works with real hardware."), true);
-      return true;
-    }
-    return false;
-  }
-
   el("mouth-send").addEventListener("click", function () {
-    if (needDevice()) { return; }
     api("/api/mark1/display", {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({grid: grid, x: 0, y: 0, clear: true})})
       .then(function (r) {
@@ -330,7 +496,6 @@ OvosWebUI.ready(function () {
       .catch(function (e) { OvosWebUI.say("msg-mouth", e.message, true); });
   });
   el("mouth-text-send").addEventListener("click", function () {
-    if (needDevice()) { return; }
     api("/api/mark1/mouth/text", {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({text: el("mouth-text-input").value || ""})})
       .then(function (r) {
@@ -340,14 +505,12 @@ OvosWebUI.ready(function () {
       .catch(function (e) { OvosWebUI.say("msg-mouth", e.message, true); });
   });
   el("mouth-reset").addEventListener("click", function () {
-    if (needDevice()) { return; }
     api("/api/mark1/mouth/reset", {method: "POST"})
       .then(function () { OvosWebUI.say("msg-mouth", t("mark1.sent", "Sent.")); })
       .catch(function (e) { OvosWebUI.say("msg-mouth", e.message, true); });
   });
   document.querySelectorAll("[data-viseme]").forEach(function (b) {
     b.addEventListener("click", function () {
-      if (needDevice()) { return; }
       api("/api/mark1/mouth/viseme", {method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({code: parseInt(b.getAttribute("data-viseme"), 10)})})
         .then(function (r) {
@@ -359,7 +522,6 @@ OvosWebUI.ready(function () {
   });
   document.querySelectorAll("[data-anim]").forEach(function (b) {
     b.addEventListener("click", function () {
-      if (needDevice()) { return; }
       api("/api/mark1/mouth/anim", {method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({kind: b.getAttribute("data-anim")})})
         .then(function (r) {
@@ -371,6 +533,80 @@ OvosWebUI.ready(function () {
   });
 
   // ── eyes ─────────────────────────────────────────────────────────────────
+  // ── following the device ────────────────────────────────────────────────
+  // The plugin keeps the colour of every eye LED as it handles each message,
+  // whoever sent it, so polling its readback shows the face as a skill or the
+  // volume knob is driving it -- not only what this page last sent.
+  var LIVE_MS = 1500;
+  var following = false, liveTimer = null, polling = false;
+
+  function readEyes() {
+    return api("/api/mark1/eyes")
+      .then(function (r) {
+        if (!following) { return; }
+        if (r && r.ok && r.pixels && r.pixels.length) {
+          for (var i = 0; i < eyePixels.length && i < r.pixels.length; i++) {
+            var px = r.pixels[i];
+            eyePixels[i] = {r: px[0], g: px[1], b: px[2]};
+          }
+          eyesOn = true;
+          draw();
+        } else if (r && r.ok === false) {
+          stopFollowing(r.error);
+        }
+      })
+      .catch(function (e) { stopFollowing(e.message); });
+  }
+
+  function startFollowing() {
+    following = true;
+    el("live-row").classList.add("is-live");
+    el("live-note").textContent = t("mark1.live.on",
+      "Following the device. The eyes show what the Mark-1 is showing.");
+    el("live-toggle").textContent = t("mark1.live.stop", "Stop following");
+    readAgain();
+  }
+
+  // Chained rather than run on an interval: the read blocks for as long as the
+  // probe timeout on a device that does not answer, and an interval would stack
+  // a queue of privileged requests behind the first one.
+  function readAgain() {
+    // `polling` rather than the timer handle: the handle is null for the whole
+    // in-flight read, which on a device that does not answer is seconds wide,
+    // and anything checking it in that window starts a second chain.
+    if (!following || document.hidden || polling) { return; }
+    polling = true;
+    // The flag is cleared whatever the read did. Leaving it set on a rejection
+    // would end the chain silently, on a page still claiming to follow.
+    readEyes().catch(function () {}).then(function () {
+      polling = false;
+      if (following && !document.hidden) {
+        liveTimer = window.setTimeout(readAgain, LIVE_MS);
+      }
+    });
+  }
+
+  function stopFollowing(why) {
+    following = false;
+    if (liveTimer) { window.clearTimeout(liveTimer); liveTimer = null; }
+    el("live-row").classList.remove("is-live");
+    el("live-note").textContent = why || t("mark1.live.off",
+      "Showing your design. The device is not being read.");
+    el("live-toggle").textContent = t("mark1.live.follow", "Follow the device");
+  }
+
+  el("live-toggle").addEventListener("click", function () {
+    if (following) { stopFollowing(); } else { startFollowing(); }
+  });
+  // Polling a device nobody is looking at is just traffic.
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && following) {
+      if (liveTimer) { window.clearTimeout(liveTimer); liveTimer = null; }
+    } else if (!document.hidden && following && !liveTimer) {
+      readAgain();
+    }
+  });
+
   function hexToRgb(hex) {
     var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
     if (!m) { return {r: 0, g: 0, b: 0}; }
@@ -378,10 +614,10 @@ OvosWebUI.ready(function () {
   }
   el("eyes-color").addEventListener("input", function () {
     eyesColor = hexToRgb(el("eyes-color").value);
-    draw();
+    // The colour control drives the whole ring; a single LED is a click on it.
+    paintAllEyes(eyesColor);
   });
   el("eyes-color").addEventListener("change", function () {
-    if (needsDeviceEyes()) { return; }
     api("/api/mark1/eyes/color", {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify(eyesColor)})
       .then(function (r) {
@@ -389,16 +625,7 @@ OvosWebUI.ready(function () {
       })
       .catch(function (e) { OvosWebUI.say("msg-eyes", e.message, true); });
   });
-  function needsDeviceEyes() {
-    if (!canDevice) {
-      OvosWebUI.say("msg-eyes", t("mark1.needsDevice",
-        "No Mark-1 is connected — this only works with real hardware."), true);
-      return true;
-    }
-    return false;
-  }
   function eyesAction(path, body) {
-    if (needsDeviceEyes()) { return; }
     api(path, {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify(body || {})})
       .then(function (r) {
@@ -429,11 +656,6 @@ OvosWebUI.ready(function () {
 
   // ── system ───────────────────────────────────────────────────────────────
   function systemAction(path, body) {
-    if (!canDevice) {
-      OvosWebUI.say("msg-system", t("mark1.needsDevice",
-        "No Mark-1 is connected — this only works with real hardware."), true);
-      return;
-    }
     api(path, {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify(body || {})})
       .then(function (r) {
@@ -446,17 +668,452 @@ OvosWebUI.ready(function () {
   el("system-unmute").addEventListener("click", function () { systemAction("/api/mark1/system/unmute"); });
   el("system-blink").addEventListener("click", function () { systemAction("/api/mark1/system/blink", {times: 3}); });
 
+  // ── animation ───────────────────────────────────────────────────────────
+  // A frame is the whole face: the mouth grid and all twenty-four eye LEDs.
+  // 0.4s is what ovos-mark1-utils clamps an animation to, because the
+  // faceplate misbehaves when written faster; the board takes its commands
+  // over a 9600-baud serial link behind a sixteen-slot queue, so a frame that
+  // rewrites every LED needs more than the floor to get there at all. The
+  // hold grows with the number of writes a frame actually makes.
+  var MIN_HOLD = 0.4, MAX_HOLD = 10;
+  var frames = [];
+
+  function snapshot() {
+    return {
+      grid: grid.map(function (row) { return row.slice(); }),
+      eyes: eyePixels.map(function (px) { return [px.r, px.g, px.b]; })
+    };
+  }
+
+  function applyFrame(frame) {
+    if (!frame || !Array.isArray(frame.grid)) { return; }
+    grid = frame.grid.map(function (row) { return row.slice(0, COLS); });
+    if (Array.isArray(frame.eyes)) {
+      for (var i = 0; i < eyePixels.length && i < frame.eyes.length; i++) {
+        var px = frame.eyes[i];
+        eyePixels[i] = {r: px[0], g: px[1], b: px[2]};
+      }
+    }
+    draw();
+  }
+
+  function holdSeconds() {
+    var raw = parseFloat(el("anim-hold").value);
+    if (!isFinite(raw) || raw < MIN_HOLD) { return MIN_HOLD; }
+    return Math.min(raw, MAX_HOLD);
+  }
+
+  function thumbnail(frame) {
+    var c = document.createElement("canvas");
+    c.width = COLS; c.height = ROWS + 2;
+    var g = c.getContext("2d");
+    g.fillStyle = "#0b0b0d"; g.fillRect(0, 0, c.width, c.height);
+    for (var y = 0; y < ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        if (frame.grid[y] && frame.grid[y][x]) {
+          g.fillStyle = "#eaf6ff"; g.fillRect(x, y + 1, 1, 1);
+        }
+      }
+    }
+    // one pixel of each eye's colour, so a frame that differs only in the
+    // eyes is still distinguishable in the strip
+    if (frame.eyes && frame.eyes.length) {
+      var l = frame.eyes[0], r = frame.eyes[EYE_LEDS] || l;
+      g.fillStyle = "rgb(" + l[0] + "," + l[1] + "," + l[2] + ")";
+      g.fillRect(0, 0, 2, 1);
+      g.fillStyle = "rgb(" + r[0] + "," + r[1] + "," + r[2] + ")";
+      g.fillRect(COLS - 2, 0, 2, 1);
+    }
+    c.style.width = (COLS * 3) + "px";
+    c.style.height = ((ROWS + 2) * 3) + "px";
+    c.style.imageRendering = "pixelated";
+    return c;
+  }
+
+  function renderFrames() {
+    var list = el("anim-frames");
+    list.innerHTML = "";
+    frames.forEach(function (frame, index) {
+      var li = document.createElement("li");
+      li.appendChild(thumbnail(frame));
+      var load = document.createElement("button");
+      load.className = "secondary";
+      load.textContent = String(index + 1);
+      load.setAttribute("aria-label",
+        t("mark1.anim.loadFrame", "Load frame {n}").replace("{n}", index + 1));
+      load.addEventListener("click", function () { applyFrame(frame); });
+      li.appendChild(load);
+      var del = document.createElement("button");
+      del.className = "secondary";
+      del.textContent = "\u00d7";
+      del.setAttribute("aria-label",
+        t("mark1.anim.dropFrame", "Remove frame {n}").replace("{n}", index + 1));
+      del.addEventListener("click", function () {
+        frames.splice(index, 1); renderFrames();
+      });
+      li.appendChild(del);
+      list.appendChild(li);
+    });
+  }
+
+  el("anim-capture").addEventListener("click", function () {
+    frames.push(snapshot());
+    renderFrames();
+  });
+  el("anim-clear").addEventListener("click", function () {
+    frames = []; renderFrames();
+  });
+
+  var playing = null;
+  el("anim-play").addEventListener("click", function () {
+    if (playing) { window.clearInterval(playing); playing = null;
+      el("anim-play").textContent = t("mark1.anim.play", "Play here"); return; }
+    if (!frames.length) {
+      OvosWebUI.say("msg-anim", t("mark1.anim.empty", "There are no frames yet."), true);
+      return;
+    }
+    var at = 0;
+    el("anim-play").textContent = t("mark1.anim.stop", "Stop");
+    playing = window.setInterval(function () {
+      applyFrame(frames[at % frames.length]); at += 1;
+    }, holdSeconds() * 1000);
+  });
+
+  // A frame is a mouth and twenty-four eye LEDs, so playing one has to send
+  // both. Uniform eyes go as a single fill; otherwise only the LEDs that
+  // changed since the last frame are written, because twenty-four per-pixel
+  // writes every 0.4s is sixty requests a second for an animation that mostly
+  // holds its colours still.
+  function eyeSends(frame, previous) {
+    var eyes = frame.eyes;
+    if (!Array.isArray(eyes) || eyes.length !== EYE_PIXELS) { return []; }
+    var same = eyes.every(function (px) {
+      return px[0] === eyes[0][0] && px[1] === eyes[0][1] && px[2] === eyes[0][2];
+    });
+    var post = function (path, body) {
+      return api(path, {method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body)});
+    };
+    if (same) {
+      var uniform = previous && Array.isArray(previous.eyes)
+        && previous.eyes.every(function (px) {
+          return px[0] === eyes[0][0] && px[1] === eyes[0][1] && px[2] === eyes[0][2];
+        });
+      if (uniform) { return []; }
+      return [post("/api/mark1/eyes/color",
+                   {r: eyes[0][0], g: eyes[0][1], b: eyes[0][2]})];
+    }
+    var out = [];
+    for (var i = 0; i < eyes.length; i++) {
+      var was = previous && Array.isArray(previous.eyes) ? previous.eyes[i] : null;
+      if (was && was[0] === eyes[i][0] && was[1] === eyes[i][1]
+          && was[2] === eyes[i][2]) { continue; }
+      out.push(post("/api/mark1/eyes/pixel",
+                    {idx: i, r: eyes[i][0], g: eyes[i][1], b: eyes[i][2]}));
+    }
+    return out;
+  }
+
+  el("anim-send").addEventListener("click", function () {
+    if (!frames.length) {
+      OvosWebUI.say("msg-anim", t("mark1.anim.empty", "There are no frames yet."), true);
+      return;
+    }
+    // Sent one frame at a time from here rather than handed to the device as
+    // a sequence: nothing in the mk1 plugin takes an animation, and inventing
+    // a message the plugin does not answer would be a control that reports
+    // success and does nothing.
+    var at = 0;
+    OvosWebUI.say("msg-anim",
+      t("mark1.anim.sending", "Playing the animation on the device."), false);
+    var send = function () {
+      if (at >= frames.length) {
+        OvosWebUI.say("msg-anim", t("mark1.anim.sent", "The animation finished."), false);
+        return;
+      }
+      var frame = frames[at];
+      var previous = at ? frames[at - 1] : null;
+      at += 1;
+      applyFrame(frame);
+      var eyes = eyeSends(frame, previous);
+      var sends = [
+        api("/api/mark1/display", {method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({grid: frame.grid, x: 0, y: 0, clear: true})})
+      ].concat(eyes);
+      // A frame costs the board real time on a 9600-baud line. The mouth is
+      // always about 0.36s of it: the encoded grid is the same size whatever
+      // it draws, so the command is always 90 bytes, over the 60 the plugin
+      // splits at, and the split carries a hard 0.25s sleep between the
+      // halves. Each eye write is another ~0.022s.
+      // Sending the next frame before that has drained grows the sixteen-slot
+      // queue behind the serial port for the length of the animation.
+      var needs = Math.max(holdSeconds(), 0.36 + eyes.length * 0.022);
+      Promise.all(sends)
+        .then(function (results) {
+          var bad = results.filter(function (r) { return r && r.ok === false; })[0];
+          if (bad) {
+            OvosWebUI.say("msg-anim", bad.error
+              || t("mark1.anim.frameFailed", "The device refused a frame, so the animation stopped."), true);
+            return;
+          }
+          window.setTimeout(send, needs * 1000);
+        })
+        .catch(function (e) { OvosWebUI.say("msg-anim", e.message, true); });
+    };
+    send();
+  });
+
+  function downloadBlob(text, name, type) {
+    var blob = new Blob([text], {type: type});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    window.setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
+
+  el("anim-export").addEventListener("click", function () {
+    if (!frames.length) {
+      OvosWebUI.say("msg-anim", t("mark1.anim.empty", "There are no frames yet."), true);
+      return;
+    }
+    downloadBlob(JSON.stringify({version: 1, hold: holdSeconds(), frames: frames}, null, 2),
+      "mark1-animation.json", "application/json");
+  });
+
+  el("anim-export-py").addEventListener("click", function () {
+    if (!frames.length) {
+      OvosWebUI.say("msg-anim", t("mark1.anim.empty", "There are no frames yet."), true);
+      return;
+    }
+    // A runnable FacePlateAnimation subclass, the shape ovos-mark1-utils
+    // already uses, so an exported animation can go straight into a skill.
+    var lines = [
+      '"""Generated by the OVOS control panel."""',
+      "from ovos_bus_client.message import Message",
+      "from ovos_mark1.faceplate import FacePlateAnimation",
+      "",
+      "",
+      "FRAMES = ["
+    ];
+    var eyeFrames = frames.map(function (frame) {
+      return (frame.eyes || []).map(function (px) {
+        return "(" + px[0] + ", " + px[1] + ", " + px[2] + ")";
+      });
+    });
+    frames.forEach(function (frame) {
+      var rows = frame.grid.map(function (row) {
+        return '        "' + row.map(function (c) { return c ? "X" : " "; }).join("") + '",';
+      });
+      lines.push("    [");
+      lines = lines.concat(rows);
+      lines.push("    ],");
+    });
+    lines.push("]");
+    lines.push("");
+    lines.push("# One (r, g, b) per eye pixel, flat: 0-11 is the left eye, 12-23 the right.");
+    lines.push("EYES = [");
+    eyeFrames.forEach(function (eyes) {
+      lines.push("    [" + eyes.join(", ") + "],");
+    });
+    lines = lines.concat([
+      "]",
+      "",
+      "",
+      "class PanelAnimation(FacePlateAnimation):",
+      "    \"\"\"Plays the frames in order, then starts again.\"\"\"",
+      "",
+      "    def __init__(self, bus=None):",
+      "        super().__init__(bus=bus)",
+      "        self.index = 0",
+      "",
+      "    def animate(self):",
+      "        rows = FRAMES[self.index % len(FRAMES)]",
+      "        for y, row in enumerate(rows):",
+      "            for x, cell in enumerate(row):",
+      "                self.grid[y][x] = 1 if cell != \" \" else 0",
+      "        for idx, (r, g, b) in enumerate(EYES[self.index % len(EYES)]):",
+      "            self.bus.emit(Message(\"enclosure.eyes.setpixel\",",
+      "                                  {\"idx\": idx, \"r\": r, \"g\": g, \"b\": b}))",
+      "        self.index += 1",
+      "",
+      "",
+      "if __name__ == \"__main__\":",
+      "    from ovos_bus_client.util import get_mycroft_bus",
+      "",
+      "    animation = PanelAnimation(bus=get_mycroft_bus())",
+      "",
+      "    # run() calls animate() and the callback; it never draws by itself,",
+      "    # so without this the animation loops in memory and the faceplate",
+      "    # never changes.",
+      "    def show(frame):",
+      "        frame.display(invert=True)",
+      "",
+      "    # ovos-mark1-utils clamps a faster delay to this: the faceplate",
+      "    # misbehaves when it is written to more quickly than this.",
+      "    animation.run(delay=" + holdSeconds().toFixed(2) + ", callback=show)",
+      ""
+    ]);
+    downloadBlob(lines.join("\n"), "mark1_animation.py", "text/x-python");
+  });
+
+  el("anim-import").addEventListener("click", function (e) { e.target.value = ""; });
+  el("anim-import").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) { return; }
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var data = JSON.parse(String(reader.result));
+        var loaded = Array.isArray(data) ? data : data.frames;
+        if (!Array.isArray(loaded) || !loaded.length) { throw new Error("no frames"); }
+        frames = loaded.filter(function (f) {
+          if (!f || !Array.isArray(f.grid) || f.grid.length !== ROWS) { return false; }
+          var gridOk = f.grid.every(function (row) {
+            return Array.isArray(row) && row.length === COLS
+              && row.every(function (c) { return c === 0 || c === 1; });
+          });
+          if (!gridOk) { return false; }
+          if (f.eyes === undefined) { return true; }
+          return Array.isArray(f.eyes) && f.eyes.length === EYE_PIXELS
+            && f.eyes.every(function (px) {
+              return Array.isArray(px) && px.length === 3
+                && px.every(function (v) {
+                  return typeof v === "number" && v >= 0 && v <= 255;
+                });
+            });
+        });
+        if (!frames.length) { throw new Error("no usable frames"); }
+        if (data.hold) { el("anim-hold").value = Math.max(MIN_HOLD, data.hold); }
+        renderFrames();
+        var dropped = loaded.length - frames.length;
+        OvosWebUI.say("msg-anim", dropped
+          ? t("mark1.anim.importedSome", "Loaded {n} frames and skipped {bad} the face cannot show.")
+              .replace("{n}", frames.length).replace("{bad}", dropped)
+          : t("mark1.anim.imported", "Loaded {n} frames.").replace("{n}", frames.length), false);
+      } catch (err) {
+        OvosWebUI.say("msg-anim",
+          t("mark1.anim.badFile", "That file is not a Mark-1 animation."), true);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  // ── faceplate firmware ──────────────────────────────────────────────────
+  // The update is built on the device before it is flashed, so it takes
+  // minutes and the request returns as soon as it is accepted. Progress
+  // arrives as its own messages, which the page polls the version for; the
+  // log below fills in as the device reports steps.
+  function showFirmware() {
+    api("/api/mark1/firmware").then(function (r) {
+      var card = el("fw-card"), state = el("fw-state"), btn = el("fw-update");
+      card.hidden = false;
+      if (!r || r.ok === false) {
+        state.textContent = (r && r.error) || t("mark1.fw.unknown",
+          "The firmware version could not be read.");
+        btn.hidden = true;
+        return;
+      }
+      if (!r.version) {
+        // Not the same thing as an old version, and not worth guessing about.
+        state.textContent = t("mark1.fw.notReported",
+          "The board has not reported its firmware version yet.");
+        btn.hidden = true;
+        return;
+      }
+      if (r.outdated) {
+        state.textContent = t("mark1.fw.outdated", "Running version {running}. Version {latest} is available.")
+          .replace("{running}", r.version).replace("{latest}", r.supported);
+        btn.hidden = false;
+      } else {
+        state.textContent = t("mark1.fw.current", "Running version {running}. This is the current firmware.")
+          .replace("{running}", r.version);
+        btn.hidden = true;
+      }
+    }).catch(function () {
+      el("fw-card").hidden = true;
+    });
+  }
+
+  el("fw-update").addEventListener("click", function () {
+    // Flashing holds the board in reset and rewrites it. Interrupting that
+    // leaves a faceplate that does nothing, so this asks the way the factory
+    // reset does rather than with a one-click confirm.
+    var typed = window.prompt(t("mark1.fw.typePrompt",
+      "Updating the firmware rewrites the faceplate board. If it is interrupted the eyes and mouth stop "
+      + "working until it is run again. Do not power the device off while it runs. Type UPDATE to continue:"));
+    if (typed !== "UPDATE") {
+      OvosWebUI.say("msg-fw", t("mark1.fw.cancelled", "Nothing was changed."), false);
+      return;
+    }
+    var log = el("fw-log");
+    log.hidden = false;
+    log.textContent = t("mark1.fw.started",
+      "Building the firmware on the device, then flashing it. This takes a few minutes.");
+    el("fw-update").disabled = true;
+    api("/api/mark1/firmware/update", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: "{}"})
+      .then(function (r) {
+        if (!r || r.ok === false) {
+          el("fw-update").disabled = false;
+          OvosWebUI.say("msg-fw", (r && r.error) || t("mark1.failed", "That did not work."), true);
+          return;
+        }
+        // Poll the version rather than claim success: the board reporting a
+        // new version is the only evidence the flash actually took.
+        var tries = 0;
+        var poll = window.setInterval(function () {
+          tries += 1;
+          if (tries > 60) {
+            // Five minutes of silence is not success. Saying nothing would
+            // leave "building the firmware" on screen for ever.
+            window.clearInterval(poll);
+            el("fw-update").disabled = false;
+            log.textContent = t("mark1.fw.noAnswer",
+              "The device stopped reporting. Check the service logs, and check the "
+              + "firmware version below before running this again.");
+            showFirmware();
+            return;
+          }
+          api("/api/mark1/firmware").then(function (f) {
+            if (f && f.ok && f.version && !f.outdated) {
+              window.clearInterval(poll);
+              el("fw-update").disabled = false;
+              log.textContent = t("mark1.fw.done", "The faceplate is running version {running}.")
+                .replace("{running}", f.version);
+              showFirmware();
+            }
+          }).catch(function () {});
+        }, 5000);
+      })
+      .catch(function (e) {
+        el("fw-update").disabled = false;
+        OvosWebUI.say("msg-fw", e.message, true);
+      });
+  });
+
   // ── capability gate ──────────────────────────────────────────────────────
   api("/api/mark1/available").then(function (r) {
-    canDevice = !!(r && r.available);
-    if (!canDevice) {
-      var gate = el("gate"), note = el("gate-note");
-      gate.hidden = false;
-      note.textContent = t("mark1.needsPlugin",
-        "No Mark-1 was found. Install ovos-PHAL-plugin-mk1 on the device to send drawings and controls to "
-        + "real hardware. The simulator and editor below still work without it.");
+    deviceConfirmed = !!(r && r.available);
+    if (deviceConfirmed) {
+      // A device is there, so offer to mirror it and start out doing so:
+      // opening this page to a face that is not the device's own face is the
+      // sort of small lie this panel exists to stop telling.
+      el("live-row").hidden = false;
+      startFollowing();
+      showFirmware();
+    } else {
+      sayUnconfirmed();
     }
-  }).catch(function () { canDevice = false; });
+  }).catch(function () { deviceConfirmed = false; sayUnconfirmed(); });
+
+  function sayUnconfirmed() {
+    var gate = el("gate"), note = el("gate-note");
+    gate.hidden = false;
+    note.textContent = t("mark1.unconfirmed",
+      "The panel could not confirm a Mark-1. It asks the faceplate what colour the eyes are showing and "
+      + "what firmware it runs, and only ovos-PHAL-plugin-mk1 new enough to answer one of those will "
+      + "reply, so a working device can stay silent here. The controls below still send, but nothing on "
+      + "the bus reports back whether the faceplate acted on them.");
+  }
 });
 </script>
 </body>

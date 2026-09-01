@@ -46,6 +46,10 @@ dev = [
     # them those tests fail in a clean environment.
     "ovos-audio-transformer-plugin-ggwave>=0.0.5",
     "ovos-utterance-normalizer>=0.2.3",
+    # A real browser, because nothing else notices a page whose script dies on
+    # load: the markup is still there, the strings are still there, the routes
+    # still answer, and the page does nothing. See tests/test_pages_run.py.
+    "playwright>=1.44",
 ]
 
 [project.scripts]

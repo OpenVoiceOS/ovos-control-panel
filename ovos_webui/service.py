@@ -295,6 +295,16 @@ class Mark1ColorBody(BaseModel):
     b: int = Field(ge=0, le=255)
 
 
+class Mark1PixelBody(BaseModel):
+    # 24 eye pixels, twelve per ring. Pinned to mark1.EYE_PIXEL_COUNT by a
+    # test rather than read from it: mark1 is imported lazily by the routes
+    # that use it, and a module-level import here would pull it in on start.
+    idx: int = Field(ge=0, le=23)
+    r: int = Field(ge=0, le=255)
+    g: int = Field(ge=0, le=255)
+    b: int = Field(ge=0, le=255)
+
+
 class Mark1SideBody(BaseModel):
     side: str = Field(..., max_length=8)
 
@@ -1292,6 +1302,26 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_mark1_available() -> dict[str, Any]:
         from ovos_webui import mark1
         return mark1.available(_need_bus())
+
+    @privileged.get("/mark1/eyes")
+    def api_mark1_eyes_state() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.eyes_state(_need_bus())
+
+    @privileged.post("/mark1/eyes/pixel")
+    def api_mark1_eyes_pixel(body: Mark1PixelBody) -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.set_pixel(_need_bus(), body.idx, body.r, body.g, body.b)
+
+    @privileged.get("/mark1/firmware")
+    def api_mark1_firmware() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.firmware(_need_bus())
+
+    @privileged.post("/mark1/firmware/update")
+    def api_mark1_firmware_update() -> dict[str, Any]:
+        from ovos_webui import mark1
+        return mark1.firmware_update(_need_bus())
 
     @privileged.post("/mark1/display")
     def api_mark1_display(body: Mark1DisplayBody) -> dict[str, Any]:
