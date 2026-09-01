@@ -2,8 +2,9 @@
 
 The Intents page looks inside what the device understands. Try a sentence to
 see which intent it would match, see which skills are active for a follow-up,
-and browse every registered intent. Nothing on this page speaks to you or runs
-a skill. It only inspects, so it is safe to explore.
+and browse every registered intent. The dry run only inspects: it reports which
+skill would answer without running it. Activating and deactivating a skill,
+further down the page, does change what the device does.
 
 ![The Intents page](img/intents-wide.png)
 

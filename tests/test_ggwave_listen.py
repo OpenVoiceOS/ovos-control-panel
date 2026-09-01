@@ -31,28 +31,30 @@ def test_ggwave_listen_disable_emits_the_disable_message(token_client, bus):
     assert seen == ["ovos.ggwave.disable"]
 
 
-def test_ggwave_listen_enable_carries_an_explicit_timeout(token_client, bus):
+def test_ggwave_listen_promises_no_auto_off_it_cannot_deliver(token_client, bus):
+    """The plugin has no timer and never reads the message data.
+
+    `handle_enable` in ovos-audio-transformer-plugin-ggwave sets a flag and
+    replies; there is no `listen_timeout`, no timer, and no path that turns the
+    listener off again. Sending a timeout would offer a safety net that does not
+    exist, on the one page where being wrong means a microphone stays open.
+    """
+    seen = []
+    bus.on("ovos.ggwave.enable", lambda m: seen.append(m.data))
+    r = token_client.post("/api/ggwave/listen", json={"enabled": True}, headers=AUTH)
+    assert r.status_code == 200
+    assert seen == [{}], "the panel is sending a timeout the plugin discards"
+    assert "timeout" not in r.json()
+
+
+def test_ggwave_listen_ignores_a_timeout_it_cannot_honour(token_client, bus):
+    """An old client may still send one; it must not be forwarded."""
     seen = []
     bus.on("ovos.ggwave.enable", lambda m: seen.append(m.data))
     r = token_client.post("/api/ggwave/listen", json={"enabled": True, "timeout": 60},
                           headers=AUTH)
     assert r.status_code == 200
-    assert seen == [{"timeout": 60}]
-
-
-def test_ggwave_listen_enable_timeout_zero_means_never_auto_disable(token_client, bus):
-    seen = []
-    bus.on("ovos.ggwave.enable", lambda m: seen.append(m.data))
-    r = token_client.post("/api/ggwave/listen", json={"enabled": True, "timeout": 0},
-                          headers=AUTH)
-    assert r.status_code == 200
-    assert seen == [{"timeout": 0}]
-
-
-def test_ggwave_listen_rejects_a_negative_timeout(token_client):
-    r = token_client.post("/api/ggwave/listen", json={"enabled": True, "timeout": -1},
-                          headers=AUTH)
-    assert r.status_code == 422
+    assert seen == [{}]
 
 
 def test_ggwave_listen_needs_a_token(token_client):

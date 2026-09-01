@@ -195,8 +195,12 @@ def test_detect_location_emits_ipgeo_update_and_parses_location():
     seen = []
     bus.on("ovos.ipgeo.update", lambda m: seen.append(m.msg_type))
     r = system.detect_location(bus)
-    assert r == {"ok": True, "location": {"city": "Lisbon"}}
+    assert r["ok"] is True
+    assert r["location"] == {"city": "Lisbon"}
     assert seen == ["ovos.ipgeo.update"]
+    # Nothing above the web cache sets a location here, so the detected one
+    # stands and the caller is not warned about an override that is not there.
+    assert "overridden" not in r
 
 
 def test_detect_location_reports_plugin_error():
@@ -205,14 +209,13 @@ def test_detect_location_reports_plugin_error():
     assert r["ok"] is False and r["error"]
 
 
-def test_detect_location_timeout_is_an_error_dict():
+def test_detect_location_timeout_is_an_error_dict(monkeypatch):
     from ovos_utils.fakebus import FakeBus
     from ovos_webui import system
 
-    system.DEFAULT_TIMEOUT = 0.3
+    monkeypatch.setattr(system, "GEOLOCATE_TIMEOUT", 0.3)
     r = system.detect_location(FakeBus())
     assert r["ok"] is False and r["error"]
-    system.DEFAULT_TIMEOUT = 5.0
 
 
 # ── routes ────────────────────────────────────────────────────────────────────

@@ -19,10 +19,10 @@ place.
 A plain sensor shows its value and its unit, like `42 °C` or `63 %`. An on/off
 sensor, such as whether the device is charging, shows on or off.
 
-## This page needs a token
+## Signing in
 
-The page reads from the running device, so it needs an access token, the same as
-the other device pages. Set one on the [Settings](configuration.md) page first.
+Being signed in is enough. Unlike installing or speaking, this page does not
+need an access token, so it works on a device that has never been given one.
 
 ---
 [← System](system.md) · [Home](README.md) · [Backup →](backup-restore.md)

@@ -31,6 +31,19 @@ from ovos_webui.service import create_app
 def clean_sandbox():
     """Start every test with an empty user config and no skill settings."""
     conf = configio.user_config_path()
+    # ovos_config resolves this path once, when it is first imported. Anything
+    # that imports it before this file runs -- a pytest plugin autoloaded from
+    # the environment, say -- pins the real path, and every test below would
+    # then rewrite the configuration of the machine running them. Refuse
+    # instead: a suite that cannot isolate itself must stop, not trample.
+    if not conf.is_relative_to(_SANDBOX):
+        raise RuntimeError(
+            f"the tests resolved the user config to {conf}, outside the "
+            f"sandbox at {_SANDBOX}. Something imported ovos_config before "
+            "the test environment was set up -- most likely a pytest plugin "
+            "autoloaded from the venv. Re-run with "
+            "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1, or in a venv built from this "
+            "repo alone.")
     conf.parent.mkdir(parents=True, exist_ok=True)
     conf.write_text("{}", encoding="utf-8")
     root = skillsio.skills_root()

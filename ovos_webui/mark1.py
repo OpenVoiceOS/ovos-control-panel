@@ -127,7 +127,10 @@ def display_grid(bus, grid: Any, x: int = 0, y: int = 0,
     img_code = FaceplateGrid(grid=grid, bus=bus).encode(invert=True)
     result = _emit(bus, "enclosure.mouth.display",
                    {"img_code": img_code, "xOffset": int(x), "yOffset": int(y),
-                    "clearPrev": bool(clear)})
+                    # The plugin lower-cases this before comparing it to
+                    # "true", so it has to be a string: a bool raises there and
+                    # nothing is drawn, for either value of the checkbox.
+                    "clearPrev": "true" if clear else "false"})
     result["img_code"] = img_code
     return result
 
@@ -158,14 +161,25 @@ def mouth_anim(bus, kind: str) -> dict[str, Any]:
     return _emit(bus, f"enclosure.mouth.{kind}")
 
 
+#: How long a single viseme stays on the faceplate, in seconds.
+VISEME_SECONDS = 0.4
+
+
 def mouth_viseme(bus, code: int) -> dict[str, Any]:
     """Show a single viseme, wrapped as a one-entry ``viseme_list``."""
+    import time
+
     code = _int(code)
     if code is None or not 0 <= code <= 6:
         return {"ok": False, "error": "code must be a whole number from 0 to 6"}
     _activate_mouth_events(bus)
+    # ``start`` is a timestamp, not an offset: the plugin skips any pair whose
+    # ``start + end`` has already passed, so a start of 0 means every viseme is
+    # in the distant past and nothing is ever written. The code goes over as a
+    # string because the plugin concatenates it onto "mouth.viseme=".
     return _emit(bus, "enclosure.mouth.viseme_list",
-                {"start": 0.0, "visemes": [[code, 0.2]]})
+                {"start": time.time(),
+                 "visemes": [[str(code), VISEME_SECONDS]]})
 
 
 # ── eyes ──────────────────────────────────────────────────────────────────────

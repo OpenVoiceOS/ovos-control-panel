@@ -53,12 +53,18 @@ and picks a newly installed one up on its own.
 
 ## Where installs actually run
 
-The web-ui never runs pip itself. It asks the device's installer service over
-the message bus (`ovos.pip.install` / `ovos.pip.uninstall`, handled by
-`ovos-core`'s skill installer and gated by its `allow_pip` config).
+The web-ui never runs pip itself. It asks the device's installer services over
+the message bus (`ovos.pip.install` / `ovos.pip.uninstall`). Several services
+can answer: ovos-core, the audio service, the listener, the GUI service and
+PHAL each run one. Every one of them is gated by the same `skills.installer`
+config, so `allow_pip` has to be on for any install to happen at all. A refusal
+that names a disabled pip is taken as the answer for the whole device. On a
+device whose services share one configuration that is exactly right; where each
+container carries its own, it can report a failure that only one service meant,
+which is the price of not waiting out the full timeout on the common case.
 
-That service runs pip in the process that owns the environment. This is what
-makes an install land in the right place in a split or containerised
+An installer service runs pip in the process that owns the environment. This is
+what makes an install land in the right place in a split or containerised
 deployment. Pip in the web-ui process would put the package where nothing can
 import it.
 
@@ -67,13 +73,45 @@ with a clear message (HTTP 503) rather than touching the web-ui's own
 environment. Only the package name, validated the same way as before, travels
 in the bus message.
 
-Each install is **routed to the service whose environment loads that kind of
-plugin**: a voice to the audio service, a listener plugin to the listener, a
-skill to ovos-core, a PHAL plugin to PHAL. It uses the targeted
-`ovos.pip.install.<service>` topic of `ovos_utils.skill_installer.ServiceInstaller`,
-so it lands in the right container in a split deployment. A kind with no known
-home uses the broadcast topic. Override the routing per family with the config
-`webui.install_services` (a family set to `broadcast` uses the broadcast topic).
+By default an install is **broadcast**: every service that has an installer
+hears it, and each one installs the package into its own environment. That is
+more work than a single install, and it is why the panel can offer to address
+one service instead. That is the right default
+because a service only answers a request addressed to it if it is new enough
+to listen for one, and a request nothing answers waits out the job timeout
+before reporting that nobody replied.
+
+On a split deployment, where each service has its own environment and a plugin
+has to land in a particular one, the install can be **addressed to a single
+service** instead — the targeted `ovos.pip.install.<service>` topic of
+`ovos_utils.skill_installer.ServiceInstaller`. Turn that on by adding a
+`webui.install_services` block to the config, which says the services are new
+enough to answer:
+
+```json
+{"webui": {"install_services": {"tts": "ovos_audio", "media": "broadcast"}}}
+```
+
+Every plugin family has a key. `tts`, `stt`, `wake_word`, `vad`,
+`audio_transformer`, `dialog_transformer`, `gui`, `phal` and `phal_admin` are
+addressed to a service by default. `media`, and everything the skills service
+owns — `skill`, `solver`, `persona`, `pipeline`, `utterance_transformer`,
+`lang_detect` and `translate` — are broadcast by default, because no service
+answers a request addressed to them. Naming one of those in the block targets
+it anyway, which is the escape hatch for a device whose layout differs.
+
+`phal_admin` is the one key that does not match what the Plugins page shows. A
+PHAL plugin that needs root — wifi setup, anything touching system services —
+runs in a separate root process, so it is addressed by `phal_admin` even though
+the page lists it as a PHAL plugin. Setting `phal` for one of those changes
+nothing. Where an install of one goes unanswered, the message the panel shows
+names the key to set.
+
+Adding the block turns targeting on for **every** family, not only the ones
+named in it: anything unnamed is addressed using the built-in routing (voices
+to the audio service, listener plugins to the listener, PHAL plugins to PHAL,
+and everything the skills service owns by broadcast). To keep a family on the
+broadcast topic, set it to `broadcast` explicitly.
 
 ## If it doesn't work
 

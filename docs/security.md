@@ -61,6 +61,8 @@ anything:
 - `POST /api/login` and `POST /api/logout`
 - `GET /login`: the sign in page
 - `GET /healthz`: the word `ok`, for a service monitor
+- `GET /static/manifest.webmanifest` and the two app icons: what a browser asks
+  for before anyone signs in.
 - `GET /static/app.css`: the stylesheet the sign-in page needs. It ships in
   the package, so anyone can already read it on PyPI.
 
@@ -121,12 +123,13 @@ cannot try many tokens quickly. A single mistyped token barely notices.
 
 If sign-in is refused, check you copied the whole token, and that any reverse
 proxy or hostname you use is listed under `webui.hostnames` (see "DNS
-rebinding" below). For anything else, see
+rebinding" above). For anything else, see
 [troubleshooting.md](troubleshooting.md).
 
 ## What the service does not do
 
-- It never runs a shell command. No handler starts a process.
+- No handler runs a shell. One starts a process: `/api/updates/conflicts` runs
+  `pip check` with a constant argument vector, never through a shell.
 - It never writes outside your configuration file and the skill settings
   directory.
 - The page's own assets are all in the package. Nothing loads from a CDN.
@@ -166,7 +169,7 @@ rebinding" below). For anything else, see
   archive is where it should be and that it parses, but it cannot tell whether
   the contents are sensible.
 
-## Phase 3 additions
+## Sending an utterance, and speaking
 
 - `POST /api/tryit/ask` and `/api/tryit/speak` send `recognizer_loop:utterance`
   and `speak` over the bus. Sending an utterance is running a command on the
@@ -186,7 +189,7 @@ rebinding" below). For anything else, see
 - The web-app manifest and its two icons are served without a sign in. They
   ship in the package, and a browser fetches a manifest without cookies.
 
-## Phase 3 hardening round
+## Diagnostics that do real work
 
 - The read-only diagnostics on the signed-in router that do real work,
   `/api/updates` (PyPI sweep), `/api/updates/conflicts` (`pip check`), and the
@@ -203,7 +206,7 @@ rebinding" below). For anything else, see
 - `esc()` escapes single quotes as well, so single-quoted attributes built from
   data are safe.
 
-## Phase 5 additions
+## Installs, device controls and the event feed
 
 - **Installs are bus-only.** The service that owns the environment handles
   `ovos.pip.install` / `.uninstall`. The web-ui never runs pip in its own

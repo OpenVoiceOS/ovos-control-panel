@@ -225,10 +225,6 @@ class EnabledBody(BaseModel):
 
 class GgwaveListenBody(BaseModel):
     enabled: bool
-    # 0 is a real, meaningful value here ("never auto-disable"), so the floor
-    # is 0, not 1 — only a negative timeout is rejected. Cap at 24h so an
-    # unbounded value cannot ride onto the bus.
-    timeout: int | None = Field(None, ge=0, le=86400, strict=True)
 
 
 class VolumeBody(BaseModel):
@@ -1404,11 +1400,13 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_ggwave_listen(body: GgwaveListenBody) -> dict[str, Any]:
         from ovos_bus_client.message import Message
         if body.enabled:
-            # timeout is optional: leave it out and the plugin falls back to
-            # its own configured "listen_timeout"; 0 means never auto-disable.
-            data = {"timeout": body.timeout} if body.timeout is not None else {}
-            _need_bus().emit(Message("ovos.ggwave.enable", data, {"source": "ovos-webui"}))
-            return {"ok": True, "sent": "ovos.ggwave.enable", "timeout": body.timeout}
+            # The plugin's handle_enable never reads message.data and it runs no
+            # timer, so there is no auto-off to ask for: it listens until
+            # something disables it. Sending a timeout would promise a safety
+            # net that does not exist. Reported as
+            # OpenVoiceOS/ovos-audio-transformer-plugin-ggwave#46.
+            _need_bus().emit(Message("ovos.ggwave.enable", {}, {"source": "ovos-webui"}))
+            return {"ok": True, "sent": "ovos.ggwave.enable"}
         _need_bus().emit(Message("ovos.ggwave.disable", {}, {"source": "ovos-webui"}))
         return {"ok": True, "sent": "ovos.ggwave.disable"}
 

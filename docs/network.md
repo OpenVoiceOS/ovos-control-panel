@@ -22,8 +22,9 @@ The page has two parts, in this order:
    **Disconnect** and **Forget this network** buttons.
 2. **Available networks** — every network the device can reach, found by
    the last scan. Press **Scan** to look again. Each network shows its name
-   and its security type, such as `wpa-psk` for a password-protected
-   network or `open` for one with no password.
+   and its security type exactly as `nmcli` reports it, such as `WPA2` or
+   `WPA2 WPA3`. An open network reports nothing at all, and the page shows it
+   as needing no password.
 
 Press a network in the list to join it. If it needs a password, the page
 asks for one before it connects.

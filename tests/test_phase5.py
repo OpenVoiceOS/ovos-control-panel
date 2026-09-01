@@ -231,22 +231,23 @@ def test_bus_install_reports_the_service_failure(monkeypatch):
     monkeypatch.setattr(configio, "user_or_merged", _targeting_on)  # opt in to routing
     bus = FakeBus()
     bus.on("ovos.pip.install.ovos_audio", lambda m: bus.emit(m.reply(
-        "ovos.pip.install.failed", {"error": "pip is disabled"})))
+        "ovos.pip.install.failed", {"error": "pip disabled in mycroft.conf"})))
     job = installer.Installer().install("ovos-tts-plugin-mimic3", bus=bus)
     _wait_job(job)
     assert job.state == "error"
-    assert any("pip is disabled" in line for line in job.lines)
+    assert any("pip disabled in mycroft.conf" in line for line in job.lines)
 
 
 def test_routing_maps_kind_to_service(monkeypatch):
     from ovos_webui import installer
     monkeypatch.setattr(configio, "user_or_merged", _targeting_on)  # opt in to routing
-    # voice -> audio, listener plugins -> listener, skill -> core, phal -> PHAL
+    # voice -> audio, listener plugins -> listener, phal -> PHAL
     assert installer._install_service_for("ovos-tts-plugin-piper") == "ovos_audio"
     assert installer._install_service_for("ovos-stt-plugin-vosk") == "ovos_dinkum_listener"
     assert installer._install_service_for("ovos-vad-plugin-silero") == "ovos_dinkum_listener"
-    assert installer._install_service_for("ovos-skill-news") == "ovos_core"
     assert installer._install_service_for("ovos-PHAL-plugin-alsa") == "ovos_PHAL"
+    # ovos-core has no targeted installer to send to, so a skill broadcasts
+    assert installer._install_service_for("ovos-skill-news") is None
 
 
 def test_admin_phal_plugin_routes_to_the_admin_process(monkeypatch):
