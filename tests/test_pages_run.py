@@ -109,12 +109,16 @@ def test_the_mark1_face_actually_draws(signed_in_page):
       if (!c) { return -1; }
       const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
       let n = 0;
+      // Counted bright, not merely non-black: the unlit lamps are drawn dark
+      // grey and there are 256 of them, so anything counting "not the
+      // background" is cleared many times over by a face where nothing lights
+      // and nothing works.
       for (let i = 0; i < d.length; i += 4) {
-        if (d[i] > 20 || d[i + 1] > 20 || d[i + 2] > 20) { n++; }
+        if (Math.max(d[i], d[i + 1], d[i + 2]) > 140) { n++; }
       }
       return n;
     })()""")
-    assert lit > 500, f"the faceplate drew nothing ({lit} lit pixels)"
+    assert lit > 500, f"the faceplate drew nothing lit ({lit} bright pixels)"
 
 
 def _canvas_signature(page):
@@ -963,3 +967,89 @@ def test_the_file_list_shows_the_merge_order(signed_in_page):
     assert items, "listed no configuration files"
     assert "packaged defaults" in items[0], items[0]
     assert "runtime change" in items[-1], items[-1]
+
+
+def test_clicking_between_two_lamps_still_draws_that_pixel(signed_in_page):
+    """The lamps are drawn smaller than their cells, so there is a gap
+    between them on screen. Hit-testing is by cell, not by lamp: a person
+    aiming at the corner of a pixel gets that pixel, not nothing.
+    """
+    page, url = signed_in_page
+    page.goto(f"{url}/mark1")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(400)
+
+    page.click("#mouth-clear")
+    page.wait_for_timeout(150)
+    before = _canvas_signature(page)
+
+    box = page.locator("#mark1-canvas").bounding_box()
+    spot = page.evaluate("""(() => {
+      const c = document.getElementById("mark1-canvas");
+      const RING_R = 38, LED_R = 5.5, GAP = 20, CELL = 12;
+      const EYE_BOX = RING_R * 2 + LED_R * 2, MOUTH_W = 32 * CELL;
+      const FACE_H = Math.max(8 * CELL, EYE_BOX);
+      const PAD_X = Math.round((c.width - (EYE_BOX * 2 + GAP * 2 + MOUTH_W)) / 2);
+      const PAD_Y = Math.round((c.height - FACE_H) / 2);
+      const MOUTH_X = PAD_X + EYE_BOX + GAP;
+      const MOUTH_Y = PAD_Y + Math.round((FACE_H - 8 * CELL) / 2);
+      // The very corner of the first cell: as far from that lamp's centre as
+      // a click can land while still being inside the pixel.
+      return {x: MOUTH_X + 1, y: MOUTH_Y + 1, w: c.width, h: c.height};
+    })()""")
+    page.mouse.click(box["x"] + spot["x"] * box["width"] / spot["w"],
+                     box["y"] + spot["y"] * box["height"] / spot["h"])
+    page.wait_for_timeout(200)
+
+    assert _canvas_signature(page) != before, (
+        "a click inside a pixel but between the lamps drew nothing"
+    )
+
+
+def test_the_mouth_is_round_lamps_that_stay_visible_unlit(signed_in_page):
+    """On the device every lamp in the grid is there in the plastic whether
+    it is lit or not, and the lamps are round.
+
+    Both halves matter and neither is visible to a test that only counts
+    pixels: square cells that fill their cell, or unlit lamps painted the
+    colour of the background, each make the display read as something other
+    than the one on the desk.
+    """
+    page, url = signed_in_page
+    page.goto(f"{url}/mark1")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(400)
+    page.click("#mouth-clear")
+    page.wait_for_timeout(200)
+
+    sampled = page.evaluate("""(() => {
+      const c = document.getElementById("mark1-canvas");
+      const g = c.getContext("2d");
+      const RING_R = 38, LED_R = 5.5, GAP = 20, CELL = 12;
+      const EYE_BOX = RING_R * 2 + LED_R * 2, MOUTH_W = 32 * CELL;
+      const FACE_H = Math.max(8 * CELL, EYE_BOX);
+      const PAD_X = Math.round((c.width - (EYE_BOX * 2 + GAP * 2 + MOUTH_W)) / 2);
+      const PAD_Y = Math.round((c.height - FACE_H) / 2);
+      const MOUTH_X = PAD_X + EYE_BOX + GAP;
+      const MOUTH_Y = PAD_Y + Math.round((FACE_H - 8 * CELL) / 2);
+      const at = (x, y) => {
+        const d = g.getImageData(Math.round(x), Math.round(y), 1, 1).data;
+        return Math.max(d[0], d[1], d[2]);
+      };
+      // The middle of a lamp, and the corner of the same cell.
+      const cell = (col, rowIndex) => ({
+        centre: at(MOUTH_X + col * CELL + CELL / 2, MOUTH_Y + rowIndex * CELL + CELL / 2),
+        corner: at(MOUTH_X + col * CELL + 1, MOUTH_Y + rowIndex * CELL + 1)
+      });
+      return {first: cell(0, 0), middle: cell(15, 4), last: cell(31, 7)};
+    })()""")
+
+    for where, sample in sampled.items():
+        assert sample["centre"] > 24, (
+            f"the unlit lamp at {where} is invisible against the faceplate "
+            f"({sample['centre']})"
+        )
+        assert sample["corner"] < sample["centre"] - 8, (
+            f"the lamp at {where} fills its cell corner to centre "
+            f"({sample['corner']} vs {sample['centre']}), so it is not round"
+        )

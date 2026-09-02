@@ -646,7 +646,7 @@
  "mark1.simulator.title": "Simulator",
  "mark1.simulator.hint": "This preview runs entirely in your browser. It works even without a Mark-1 connected — use it to design before you send anything to the device.",
  "mark1.mouth.title": "Mouth",
- "mark1.mouth.hint": "Click or drag on the grid above to draw. Each square is one pixel of the mouth display (8 rows by 32 columns).",
+ "mark1.mouth.hint": "Click or drag on the grid above to draw. Each lamp is one pixel of the mouth display (8 rows by 32 columns).",
  "mark1.mouth.clear": "Clear",
  "mark1.mouth.invert": "Invert",
  "mark1.mouth.presetHeart": "Heart",

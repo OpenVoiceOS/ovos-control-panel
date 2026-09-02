@@ -52,7 +52,7 @@
   </div>
 
   <h2 data-i18n="mark1.mouth.title">Mouth</h2>
-  <p class="hint" data-i18n="mark1.mouth.hint">Click or drag on the grid above to draw. Each square is one pixel
+  <p class="hint" data-i18n="mark1.mouth.hint">Click or drag on the grid above to draw. Each lamp is one pixel
     of the mouth display (8 rows by 32 columns).</p>
   <div class="mark1-controls">
     <button class="secondary" id="mouth-clear" data-i18n="mark1.mouth.clear">Clear</button>
@@ -246,6 +246,9 @@ OvosWebUI.ready(function () {
   // this drawing rather than a claim about the hardware.
   var canvas = el("mark1-canvas"), ctx = canvas.getContext("2d");
   var EYE_LEDS = 12, EYE_PIXELS = EYE_LEDS * 2;
+  // The mouth is a grid of round lamps whose unlit ones stay faintly visible
+  // against the black faceplate. The eye LEDs sit on a circle: twelve of them,
+  // evenly spaced, the way they are on the board.
   var CELL = 12, GAP = 20, LED_R = 5.5, RING_R = 38;
   var MOUTH_W = COLS * CELL, MOUTH_H = ROWS * CELL;
   var EYE_BOX = RING_R * 2 + LED_R * 2;
@@ -303,17 +306,32 @@ OvosWebUI.ready(function () {
   function draw() {
     ctx.fillStyle = "#0b0b0d";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // The faceplate is a black rectangle: a round eye, the mouth matrix, a
+    // round eye.
+    var inset = 4;
+    ctx.fillStyle = "#000";
+    ctx.fillRect(inset, inset, canvas.width - inset * 2, canvas.height - inset * 2);
+
     drawEye(0);
+    var dot = CELL * 0.34;
     for (var y = 0; y < ROWS; y++) {
       for (var x = 0; x < COLS; x++) {
         var lit = grid[y][x];
-        var px = MOUTH_X + x * CELL, py = MOUTH_Y + y * CELL;
-        ctx.fillStyle = lit ? "#eaf6ff" : "#141419";
-        ctx.fillRect(px, py, CELL - 2, CELL - 2);
+        var cx = MOUTH_X + x * CELL + CELL / 2;
+        var cy = MOUTH_Y + y * CELL + CELL / 2;
         if (lit) {
-          ctx.fillStyle = "rgba(190,225,255,0.22)";
-          ctx.fillRect(px - 1, py - 1, CELL, CELL);
+          ctx.fillStyle = "rgba(215,238,255,0.18)";
+          ctx.beginPath();
+          ctx.arc(cx, cy, dot * 2, 0, Math.PI * 2);
+          ctx.fill();
         }
+        // Unlit lamps stay visible: on the device the whole grid is there in
+        // the plastic whether it is lit or not, and a mouth drawn only where
+        // it is lit reads as a smaller display than the one you own.
+        ctx.fillStyle = lit ? "#fff" : "#2a2a30";
+        ctx.beginPath();
+        ctx.arc(cx, cy, dot, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
     drawEye(1);

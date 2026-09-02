@@ -646,7 +646,7 @@
  "mark1.simulator.title": "Simulador",
  "mark1.simulator.hint": "Esta pré-visualização funciona inteiramente no seu navegador. Funciona mesmo sem um Mark-1 ligado — use-a para desenhar antes de enviar algo para o dispositivo.",
  "mark1.mouth.title": "Boca",
- "mark1.mouth.hint": "Clique ou arraste na grelha acima para desenhar. Cada quadrado é um pixel do visor da boca (8 linhas por 32 colunas).",
+ "mark1.mouth.hint": "Clique ou arraste na grelha acima para desenhar. Cada lâmpada é um pixel do ecrã da boca (8 linhas por 32 colunas).",
  "mark1.mouth.clear": "Limpar",
  "mark1.mouth.invert": "Inverter",
  "mark1.mouth.presetHeart": "Coração",
