@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a37](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a37) (2026-09-02)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a36...0.0.1a37)
+
+**Merged pull requests:**
+
+- fix: give every page in the nav an icon of its own [\#68](https://github.com/OpenVoiceOS/ovos-control-panel/pull/68) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a36](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a36) (2026-09-01)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a35...0.0.1a36)
