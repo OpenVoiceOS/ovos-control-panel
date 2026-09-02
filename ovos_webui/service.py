@@ -666,6 +666,21 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_config_merged() -> dict[str, Any]:
         return {"config": configio.read_merged_config()}
 
+    @api.get("/config/layers")
+    def api_config_layers() -> dict[str, Any]:
+        from ovos_webui import layers
+        # Without the values: this says which files exist, in what order they
+        # merge, and which of them this device's policy ignores.
+        return {"layers": [{k: v for k, v in layer.items() if k != "data"}
+                           for layer in layers.stack()]}
+
+    @api.get("/config/resolve")
+    def api_config_resolve(key: str) -> dict[str, Any]:
+        from ovos_webui import layers
+        if not key or len(key) > 200:
+            raise HTTPException(400, "key must be a dotted configuration key")
+        return layers.resolve(key)
+
     @api.get("/config/quick")
     def api_quick_get() -> dict[str, Any]:
         return {"fields": configio.quick_form(),
