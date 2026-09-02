@@ -3,9 +3,9 @@
 The Plugins page finds OVOS plugins, the voices, listeners and other add-ons
 a device needs, and installs or removes them.
 
-![The Plugins page](images/plugins-wide.png)
+![The Plugins page](img/plugins-wide.png)
 
-![The same page on a phone](images/plugins-mobile.png)
+![The same page on a phone](img/plugins-mobile.png)
 
 ## Common tasks
 

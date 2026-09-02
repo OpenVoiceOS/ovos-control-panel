@@ -659,3 +659,102 @@ def test_following_can_be_restarted_after_it_is_stopped(signed_in_page):
     page.click("#live-toggle")
 
     assert reads, "following never read the device again after a stop"
+
+
+def test_every_page_in_the_nav_has_its_own_icon(signed_in_page):
+    """A page added without an icon rule is a solid block in the rail.
+
+    The icons are CSS masks over a box filled with the text colour, so an
+    unmasked box is not "no icon" -- it is a filled square where the icon
+    should be, on every page of the panel. The nav carries no id, and an
+    empty selector passes any per-element check, so the count is asserted
+    first.
+    """
+    from ovos_webui.service import PAGES
+
+    page, url = signed_in_page
+    page.goto(f"{url}/")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(400)
+
+    found = page.evaluate("""() => {
+      const out = [];
+      for (const a of document.querySelectorAll("nav a[href]")) {
+        const cs = getComputedStyle(a, "::before");
+        const mask = cs.maskImage || cs.webkitMaskImage || "none";
+        // The blank fallback is the only 1x1 viewBox; matching the bare
+        // digits would also hit arc flags in ordinary path data.
+        const blank = mask.includes("viewBox='0 0 1 1'")
+          || mask.includes("viewBox=%270 0 1 1%27");
+        out.push([a.getAttribute("href"), mask === "none" || blank, mask]);
+      }
+      return out;
+    }""")
+
+    assert len(found) == len(PAGES), (
+        f"read {len(found)} nav entries, expected {len(PAGES)}"
+    )
+    bare = [href for href, missing, _ in found if missing]
+    assert bare == [], f"nav entries with no icon of their own: {bare}"
+
+    # "Its own" is the point: two entries wearing the same icon is a worse
+    # rail than none, because the reader trusts it to tell them apart.
+    seen: dict[str, str] = {}
+    shared = []
+    for href, _, mask in found:
+        if mask in seen:
+            shared.append((seen[mask], href))
+        seen[mask] = href
+    assert shared == [], f"nav entries sharing one icon: {shared}"
+
+
+def test_one_service_down_is_not_reported_as_one_services(signed_in_page):
+    """"1 service(s)" is the shape of a string nobody read back.
+
+    The panel writes for a person reading it, and a count of one is the case
+    that shows whether anyone did.
+    """
+    page, url = signed_in_page
+    page.route("**/api/health", lambda route: route.fulfill(
+        status=200, content_type="application/json",
+        body=json.dumps({
+            "bus": {"reachable": True},
+            "healthy": False,
+            "services": [
+                {"name": "skills", "label": "Skills", "hint": "",
+                 "alive": None, "ready": None, "state": "no answer"},
+                {"name": "audio", "label": "Audio", "hint": "",
+                 "alive": True, "ready": True, "state": "ready"},
+            ]})))
+    page.goto(f"{url}/")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(600)
+
+    said = page.locator(".summary").inner_text()
+    assert "(s)" not in said, f"left the plural for the reader to sort out: {said!r}"
+    assert "One service" in said or "1 service " in said, said
+
+
+def test_the_setup_page_counts_its_own_steps(signed_in_page):
+    """"Five short steps" above six of them is the panel miscounting itself.
+
+    The steps are numbered in their own headings, so the intro and the page
+    can drift apart silently as steps are added.
+    """
+    page, url = signed_in_page
+    page.goto(f"{url}/setup")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(300)
+
+    numbered = page.evaluate("""() => [...document.querySelectorAll("h2")]
+        .map(h => h.textContent.trim())
+        .filter(t => /^\\d+\\./.test(t)).length""")
+    intro = page.locator("[data-i18n='setup.intro']").inner_text()
+    words = {"One": 1, "Two": 2, "Three": 3, "Four": 4, "Five": 5, "Six": 6,
+             "Seven": 7, "Eight": 8}
+    said = next((n for word, n in words.items() if intro.startswith(word)), None)
+
+    assert numbered, "no numbered steps on the setup page"
+    assert said == numbered, (
+        f"the intro says {said} steps and the page has {numbered}: {intro!r}"
+    )

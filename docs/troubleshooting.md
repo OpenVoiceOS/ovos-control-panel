@@ -9,7 +9,7 @@ that is done in order.
 
 **Symptom:** The Dashboard shows a red or grey card, or says "no answer."
 
-![The dashboard with a service down](images/dashboard-mobile.png)
+![The dashboard with a service down](img/dashboard-degraded.png)
 
 **Cause:** That service is not running, or the message bus itself is down. If
 the bus card itself shows "no answer," nothing else can be checked either —
@@ -99,7 +99,7 @@ Then try the install again.
 **Symptom:** On **Device controls**, the volume slider or another control is
 disabled.
 
-![Device controls](images/controls-wide.png)
+![Device controls](img/controls-wide.png)
 
 **Cause:** That control is carried by a companion PHAL plugin — for example,
 volume needs an audio plugin such as `ovos-PHAL-plugin-alsa`. If it is not

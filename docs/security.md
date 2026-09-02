@@ -4,9 +4,9 @@ This page explains how sign-in works, and how to protect a device that other
 people on your network could reach. Anyone who can open the web-ui can change
 how the device listens and what it says, so treat the address like a key.
 
-![The sign in page](images/login-wide.png)
+![The sign in page](img/login-wide.png)
 
-![The same page on a phone](images/login-mobile.png)
+![The same page on a phone](img/login-mobile.png)
 
 ## Common tasks
 

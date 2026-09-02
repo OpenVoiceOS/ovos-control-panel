@@ -4,9 +4,9 @@ The Settings page changes your own layer of `mycroft.conf`, the file that
 controls how the device behaves. Use it to change language, voice, or wake
 word without touching a file by hand.
 
-![The Settings page](images/config-wide.png)
+![The Settings page](img/config-wide.png)
 
-![The same page on a phone](images/config-mobile.png)
+![The same page on a phone](img/config-mobile.png)
 
 ## Common tasks
 
@@ -79,9 +79,8 @@ Every save first copies the old file into `.ovos-webui-backups` beside it.
 
 ## On a wide screen
 
-On a computer the fields lay out in two columns and the tabs move to a left rail.
-
-![Settings on a desktop](images/settings-desktop.png)
+On a computer the fields lay out in two columns, and the nav becomes a rail
+down the left instead of a row of pills across the top.
 
 ## Changing the access token
 

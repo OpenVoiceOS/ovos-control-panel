@@ -3,9 +3,9 @@
 The dashboard answers one question: does this device work? Open it first when
 you are not sure something is running.
 
-![The dashboard, every service ready](images/dashboard-wide.png)
+![The dashboard, every service ready](img/dashboard-wide.png)
 
-![The same page on a phone](images/dashboard-mobile.png)
+![The same page on a phone](img/dashboard-mobile.png)
 
 ## Common tasks
 

@@ -4,9 +4,9 @@ The dashboard answers "is each part running?". This page answers "does it
 actually work?": type a sentence and it takes the exact path a spoken one
 would.
 
-![The Try it page after asking a question](images/tryit-wide.png)
+![The Try it page](img/tryit-wide.png)
 
-![The same page on a phone](images/tryit-mobile.png)
+![The same page on a phone](img/tryit-mobile.png)
 
 ## Common tasks
 

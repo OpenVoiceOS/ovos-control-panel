@@ -4,9 +4,9 @@ This page answers "what can I ask this device?" It lists every skill
 installed on the device, with the one-line description from each skill's own
 package, and a filter to find one.
 
-![The Abilities page](images/abilities-wide.png)
+![The Abilities page](img/abilities-wide.png)
 
-![The same page on a phone](images/abilities-mobile.png)
+![The same page on a phone](img/abilities-mobile.png)
 
 ## Common tasks
 

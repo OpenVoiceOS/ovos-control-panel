@@ -36,7 +36,7 @@ one for each service.
 
 ## 2. Set an access token
 
-![The Setup page](images/setup-wide.png)
+![The Setup page](img/setup-wide.png)
 
 Before you install anything or send the device a command, set an access
 token. A token is a password for this page: without one, anyone on your
@@ -67,7 +67,7 @@ plugins list changes to plugins for that language.
 
 ## 4. Install ears and a voice
 
-![The Plugins page](images/plugins-wide.png)
+![The Plugins page](img/plugins-wide.png)
 
 A device needs two plugins to hold a conversation:
 
@@ -82,7 +82,7 @@ nothing or nothing seems to happen, check that you set a token in step 2.
 
 ## 5. Test it
 
-![The Try it page](images/tryit-wide.png)
+![The Try it page](img/tryit-wide.png)
 
 Go to **Try it**. Type a simple question, for example "what time is it," and
 send it. This takes the exact path a spoken question would take.
@@ -99,7 +99,7 @@ go back to step 4.
 
 ## 6. Restart the services
 
-![Device controls](images/controls-wide.png)
+![Device controls](img/controls-wide.png)
 
 A newly installed plugin is only picked up when the service that uses it
 loads it, so restart the voice services from the **Device** page. Settings you
