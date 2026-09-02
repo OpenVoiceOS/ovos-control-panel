@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a38](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a38) (2026-09-02)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a37...0.0.1a38)
+
+**Merged pull requests:**
+
+- feat: scrub, shuffle, repeat, and say when a device cannot play at all [\#69](https://github.com/OpenVoiceOS/ovos-control-panel/pull/69) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a37](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a37) (2026-09-02)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a36...0.0.1a37)
