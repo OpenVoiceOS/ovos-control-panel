@@ -762,7 +762,7 @@ def test_the_setup_page_counts_its_own_steps(signed_in_page):
     assert said == numbered, (
         f"the intro says {said} steps and the page has {numbered}: {intro!r}"
     )
-def _media_page(page, url, *, backends, status=None, progress=None):
+def _media_page(page, url, *, backends, status=None, progress=None, likes=None):
     """The media page against a device that answers what we say it answers."""
     import json as _json
 
@@ -779,6 +779,8 @@ def _media_page(page, url, *, backends, status=None, progress=None):
         page.unroute(pattern)
 
     page.route("**/api/media/available", answer({"available": True}))
+    page.route("**/api/media/likes",
+               answer(likes if likes is not None else {"ok": True, "entries": []}))
     page.route("**/api/media/backends", answer(backends))
     page.route("**/api/media/status", answer(status or {
         "state": "playing", "title": "A song", "artist": "Someone",
@@ -1053,3 +1055,143 @@ def test_the_mouth_is_round_lamps_that_stay_visible_unlit(signed_in_page):
             f"the lamp at {where} fills its cell corner to centre "
             f"({sample['corner']} vs {sample['centre']}), so it is not round"
         )
+
+
+def test_the_candidate_list_offers_the_other_matches(signed_in_page):
+    """"It played the wrong thing" should be one click, not a rephrase."""
+    import json as _json
+
+    page, url = signed_in_page
+    entries = [
+        {"title": "The right one", "artist": "A", "uri": "file:///a.mp3",
+         "match_confidence": 90},
+        {"title": "The wrong one", "artist": "B", "uri": "file:///b.mp3",
+         "match_confidence": 60},
+    ]
+    page.route("**/api/media/candidates", lambda route: route.fulfill(
+        status=200, content_type="application/json",
+        body=_json.dumps({"ok": True, "entries": entries})))
+    _media_page(page, url, backends={"ok": True, "can_play": True,
+                                     "backends": [{"name": "mpv",
+                                                   "remote": False,
+                                                   "uris": ["file"]}]})
+
+    assert not page.locator("#candidates-card").is_hidden()
+    titles = page.locator("#candidates li button").all_inner_texts()
+    assert "The right one" in titles[0], titles
+
+    sent = []
+    page.route("**/api/media/play_entry", lambda route: (
+        sent.append(route.request.post_data_json),
+        route.fulfill(status=200, content_type="application/json",
+                      body='{"ok": true}')))
+    page.locator("#candidates li button").nth(1).click()
+    page.wait_for_timeout(400)
+    assert sent and sent[0]["entry"]["uri"] == "file:///b.mp3", sent
+
+
+def test_one_candidate_is_not_a_choice(signed_in_page):
+    """A single candidate is what is already playing."""
+    import json as _json
+
+    page, url = signed_in_page
+    page.route("**/api/media/candidates", lambda route: route.fulfill(
+        status=200, content_type="application/json",
+        body=_json.dumps({"ok": True, "entries": [
+            {"title": "Only", "uri": "file:///a.mp3"}]})))
+    _media_page(page, url, backends={"ok": True, "can_play": True,
+                                     "backends": [{"name": "mpv",
+                                                   "remote": False,
+                                                   "uris": ["file"]}]})
+    assert page.locator("#candidates-card").is_hidden()
+
+
+def test_a_player_too_old_to_be_asked_shows_no_candidate_card(signed_in_page):
+    """The queries arrived in ovos-media 2.2.0a1; before that, silence."""
+    import json as _json
+
+    page, url = signed_in_page
+    page.route("**/api/media/candidates", lambda route: route.fulfill(
+        status=200, content_type="application/json",
+        body=_json.dumps({"ok": False, "entries": []})))
+    _media_page(page, url, backends={"ok": True, "can_play": True,
+                                     "backends": [{"name": "mpv",
+                                                   "remote": False,
+                                                   "uris": ["file"]}]})
+    assert page.locator("#candidates-card").is_hidden()
+
+
+def test_a_title_from_a_catalogue_is_never_markup(signed_in_page):
+    """Titles and artists come from the internet by way of a media
+    provider, so they reach the page as text or not at all."""
+    import json as _json
+
+    page, url = signed_in_page
+    page.route("**/api/media/candidates", lambda route: route.fulfill(
+        status=200, content_type="application/json",
+        body=_json.dumps({"ok": True, "entries": [
+            {"title": "<img src=x onerror='window.__x=1'>", "uri": "file:///a.mp3"},
+            {"title": "Second", "artist": "<b>bold</b>", "uri": "file:///b.mp3"}]})))
+    _media_page(page, url, backends={"ok": True, "can_play": True,
+                                     "backends": [{"name": "mpv",
+                                                   "remote": False,
+                                                   "uris": ["file"]}]})
+
+    assert page.evaluate("() => window.__x") is None, "a title ran as script"
+    assert page.locator("#candidates li button img").count() == 0
+    assert page.locator("#candidates li button b").count() == 0
+    assert "<b>bold</b>" in page.locator("#candidates li button").nth(1).inner_text()
+
+
+def test_the_liked_songs_are_listed_and_playable(signed_in_page):
+    import json as _json
+
+    page, url = signed_in_page
+    # A search is showing at the same time: playing a liked song must not
+    # drag those matches along with it.
+    page.route("**/api/media/candidates", lambda route: route.fulfill(
+        status=200, content_type="application/json",
+        body=_json.dumps({"ok": True, "entries": [
+            {"title": "From a search", "uri": "file:///s1.mp3"},
+            {"title": "Also from it", "uri": "file:///s2.mp3"}]})))
+    _media_page(page, url,
+                backends={"ok": True, "can_play": True,
+                          "backends": [{"name": "mpv", "remote": False,
+                                        "uris": ["file"]}]},
+                likes={"ok": True, "entries": [
+                    {"title": "A liked song", "artist": "Someone",
+                     "uri": "file:///liked.mp3"}]})
+
+    page.click("#likes-wrap summary")
+    page.wait_for_timeout(200)
+    assert page.locator("#likes li button").count() == 1
+    assert page.locator("#likes-empty").is_hidden(), (
+        "said nothing is liked while listing something"
+    )
+
+    sent = []
+    page.route("**/api/media/play_entry", lambda route: (
+        sent.append(route.request.post_data_json),
+        route.fulfill(status=200, content_type="application/json",
+                      body='{"ok": true}')))
+    page.locator("#likes li button").first.click()
+    page.wait_for_timeout(400)
+    assert sent and sent[0]["entry"]["uri"] == "file:///liked.mp3", sent
+    # A liked song is a new request, not a pick among the last search's
+    # matches. Carrying that set along would leave "what else this matched"
+    # showing results for something nobody asked about.
+    assert not sent[0]["among"], sent[0]["among"]
+
+
+def test_a_player_that_cannot_be_asked_about_likes_hides_the_list(signed_in_page):
+    """Nothing liked and cannot be asked are different, and the page shows
+    the difference rather than an empty list in both cases."""
+    import json as _json
+
+    page, url = signed_in_page
+    _media_page(page, url,
+                backends={"ok": True, "can_play": True,
+                          "backends": [{"name": "mpv", "remote": False,
+                                        "uris": ["file"]}]},
+                likes={"ok": False, "entries": []})
+    assert page.locator("#likes-wrap").is_hidden()

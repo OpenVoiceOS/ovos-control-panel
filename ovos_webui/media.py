@@ -244,6 +244,87 @@ def backends(bus) -> dict[str, Any]:
     return {"ok": True, "backends": found, "can_play": bool(found)}
 
 
+def _playable(entry: Any) -> bool:
+    """Whether the player would accept this entry as something to play.
+
+    Mirrors `_is_valid_media` in `ovos_media.bus.schemas`, precedence and
+    all: a playlist wins, then an extractor with a stream, then a non-empty
+    uri. An entry the player would drop is a row that cannot do anything, so
+    the page does not offer it.
+    """
+    if not isinstance(entry, dict):
+        return False
+    if entry.get("playlist"):
+        return isinstance(entry["playlist"], (list, tuple)) and bool(entry["playlist"])
+    if entry.get("extractor_id"):
+        return isinstance(entry["extractor_id"], str) and bool(entry.get("stream"))
+    uri = entry.get("uri")
+    return isinstance(uri, str) and uri != ""
+
+
+def _entries(bus, msg_type: str) -> dict[str, Any]:
+    """Ask for a list of media entries, and say plainly when nobody answers.
+
+    An empty list means the device has nothing to offer. No reply usually
+    means the player is older than the query -- both arrived in ovos-media
+    2.2.0a1 -- though a player that simply did not answer in time looks the
+    same from here, and over a request-and-reply query the two cannot be told
+    apart. Either way it is not the same as having nothing to offer, and the
+    page does not show it as such.
+    """
+    from ovos_webui import buswait
+
+    reply = buswait.wait_for_response(bus, _msg(msg_type), timeout=QUERY_TIMEOUT)
+    if reply is None:
+        return {"ok": False, "entries": []}
+    found = (reply.data or {}).get("entries") or []
+    return {"ok": True, "entries": [e for e in found if _playable(e)]}
+
+
+def candidates(bus) -> dict[str, Any]:
+    """What else the device considered for the request it is playing.
+
+    The commonest complaint about voice media is that it played the wrong
+    thing and there is no way to correct it except rephrasing. The player
+    keeps the candidate set the queue was chosen from, in descending match
+    order; this is a read of it.
+    """
+    return _entries(bus, "ovos.common_play.disambiguation")
+
+
+def likes(bus) -> dict[str, Any]:
+    """The liked-songs store, which the heart button writes to."""
+    return _entries(bus, "ovos.common_play.likes")
+
+
+def play_entry(bus, entry: Any,
+               among: list[Any] | None = None) -> dict[str, Any]:
+    """Play one of those entries, keeping the others on offer.
+
+    An ordinary play request carrying the chosen entry, not a "switch to
+    candidate" verb: the player already knows how to play an entry, and a new
+    message for it would be a second way to say the same thing.
+
+    The candidate set travels with it. A play request's ``disambiguation`` is
+    the complete candidate set for that request, and the player replaces what
+    it holds with it -- so sending only the picked entry would leave the
+    device believing that one entry was all it ever found, and the next pick
+    would have nothing to choose from.
+    """
+    if not _playable(entry):
+        # Keyed, not prose: the page turns this into the reader's language.
+        return {"ok": False, "error": "media.notPlayable"}
+    from ovos_webui import buswait
+
+    data: dict[str, Any] = {"media": entry}
+    candidates = [e for e in (among or []) if _playable(e)]
+    if entry not in candidates:
+        candidates = [entry] + candidates
+    if len(candidates) > 1:
+        data["disambiguation"] = candidates
+    return {"ok": buswait.emit(bus, _msg("ovos.common_play.play", data))}
+
+
 def get_volume(bus) -> dict[str, Any]:
     """Return the current volume (0..100) and mute flag, or unknowns."""
     from ovos_webui import buswait
