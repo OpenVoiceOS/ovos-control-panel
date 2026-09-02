@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a39](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a39) (2026-09-02)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a38...0.0.1a39)
+
+**Merged pull requests:**
+
+- feat: show which configuration file a setting actually comes from [\#70](https://github.com/OpenVoiceOS/ovos-control-panel/pull/70) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a38](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a38) (2026-09-02)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a37...0.0.1a38)
