@@ -19,13 +19,13 @@ def test_status_maps_player_state_and_returns_metadata(bus):
     _reply(bus, "ovos.common_play.status", {
         "player_state": 1, "media_type": "music", "title": "Song",
         "artist": "Artist", "image": "http://x/img.png", "shuffle": True,
-        "playlist_position": 2, "playlist_size": 5,
+        "loop_state": 1, "playlist_position": 2, "playlist_size": 5,
     })
     s = media.status(bus)
     assert s == {
         "state": "playing", "media_type": "music", "title": "Song",
         "artist": "Artist", "image": "http://x/img.png", "shuffle": True,
-        "playlist_position": 2, "playlist_size": 5,
+        "repeat": "all", "playlist_position": 2, "playlist_size": 5,
     }
 
 
