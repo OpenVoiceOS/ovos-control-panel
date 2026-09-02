@@ -355,6 +355,12 @@ h2::before {
 p.hint { color: var(--muted); margin: 0.2rem 0 1rem; }
 
 /* ── cards ────────────────────────────────────────────────────────────────── */
+/* The `hidden` attribute means hidden, whatever else an element's class says.
+ * Its default is `display: none` from the browser's own sheet, which any rule
+ * setting `display` outranks -- so a flex row marked hidden stayed on screen,
+ * and the page looked like it was offering a control it was not. */
+[hidden] { display: none !important; }
+
 .card {
   background: var(--card);
   border: 1px solid var(--line);
@@ -597,7 +603,6 @@ ul.rowlist li .when { color: var(--muted); font-size: 0.85rem; }
   font-weight: 600;
 }
 .banner::before { content: "⚠  " / ""; }
-.banner[hidden] { display: none; }
 
 /* ── inline messages ──────────────────────────────────────────────────────── */
 .msg {
@@ -609,7 +614,6 @@ ul.rowlist li .when { color: var(--muted); font-size: 0.85rem; }
 }
 .msg.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, var(--line)); }
 .msg.err { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); }
-.msg[hidden] { display: none; }
 
 /* ── lists and code ───────────────────────────────────────────────────────── */
 ul.plain { list-style: none; padding: 0; margin: 0; }

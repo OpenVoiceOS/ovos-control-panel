@@ -23,7 +23,14 @@
   <p class="hint" role="note" data-i18n="media.liveNote">The track position does not update on its own. Use Refresh to
     see the latest now-playing information.</p>
 
-  <!-- Shown instead of the controls when no media service answers. -->
+  <!-- Shown when a media service answers and has nothing to play through. -->
+  <div class="card" id="no-backends" hidden>
+    <p class="hint" id="no-backends-note" data-i18n="media.noBackends">This device has no way to play audio:
+      the media service is running, but no playback backend is loaded. Requests to play something are accepted
+      and nothing comes out. Install a media plugin from the Plugins page.</p>
+  </div>
+
+  <!-- Shown instead of the controls when no media service answers at all. -->
   <div class="card" id="gate" hidden>
     <p class="hint" id="gate-note" data-i18n="media.unavailable">No media service is running. Install and start
       ovos-media (or the OCP audio plugin) to use this page.</p>
@@ -40,8 +47,20 @@
           <span class="badge" id="np-state"></span>
         </div>
       </div>
+      <div class="row" id="seek-row" hidden>
+        <span id="seek-position">0:00</span>
+        <input type="range" id="seek" min="0" max="1000" step="1" value="0"
+          aria-label="Position in the track"
+          data-i18n-attr="aria-label:media.seek.aria">
+        <span id="seek-length">0:00</span>
+      </div>
       <div class="row">
         <button class="secondary" id="refresh" data-i18n="media.refresh">Refresh</button>
+        <label class="inline" for="shuffle"><input type="checkbox" id="shuffle">
+          <span data-i18n="media.shuffle">Shuffle</span></label>
+        <label class="inline" for="repeat"><input type="checkbox" id="repeat">
+          <span data-i18n="media.repeat">Repeat the queue</span></label>
+        <span class="badge" id="np-repeat" hidden></span>
       </div>
       <div class="msg" id="msg-np" role="status" aria-live="polite" hidden></div>
     </div>
@@ -100,11 +119,96 @@ OvosWebUI.ready(function () {
     var badge = el("np-state");
     badge.textContent = label;
     badge.className = "badge " + (s.state === "playing" ? "ready" : (s.state === "paused" ? "na" : ""));
+
+    var shuffle = el("shuffle");
+    shuffle.indeterminate = s.shuffle === null || s.shuffle === undefined;
+    shuffle.checked = !!s.shuffle;
+    var toggle = el("repeat");
+    // The player has one message for repeating the queue and none for
+    // repeating a single track, so the box offers the state it can set and
+    // the badge reports whichever state the device is in.
+    toggle.indeterminate = s.repeat === null || s.repeat === undefined;
+    toggle.checked = s.repeat === "all";
+    var repeat = el("np-repeat");
+    if (s.repeat && s.repeat !== "off") {
+      repeat.hidden = false;
+      repeat.textContent = s.repeat === "one"
+        ? t("media.repeat.one", "Repeating this track")
+        : t("media.repeat.all", "Repeating the queue");
+    } else { repeat.hidden = true; }
+  }
+
+  // ── where we are in the track ────────────────────────────────────────────
+  function clock(ms) {
+    var total = Math.max(0, Math.round(ms / 1000));
+    var minutes = Math.floor(total / 60);
+    return minutes + ":" + String(total % 60).padStart(2, "0");
+  }
+  var seeking = false, length = null;
+  var seek = el("seek");
+  function showProgress(p) {
+    // No length means nothing to scrub along -- a live stream has no end --
+    // so the bar is hidden rather than drawn against a made-up total.
+    if (!p.ok || !p.length) { el("seek-row").hidden = true; length = null; return; }
+    length = p.length;
+    el("seek-row").hidden = false;
+    el("seek-length").textContent = clock(p.length);
+    if (seeking) { return; }
+    el("seek-position").textContent = clock(p.position || 0);
+    seek.value = Math.round(((p.position || 0) / p.length) * 1000);
+  }
+  function loadProgress() {
+    api("/api/media/progress").then(showProgress).catch(function () {
+      el("seek-row").hidden = true;
+    });
+  }
+  seek.addEventListener("input", function () {
+    seeking = true;
+    if (length) { el("seek-position").textContent = clock(length * (seek.value / 1000)); }
+  });
+  seek.addEventListener("change", function () {
+    seeking = false;
+    if (!length) { return; }
+    api("/api/media/seek", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({position: Math.round(length * (seek.value / 1000))})})
+      .then(function (r) {
+        if (!r.ok) { OvosWebUI.say("msg-np", r.error || t("media.actionFailed", "That did not work."), true); }
+        loadProgress();
+      })
+      .catch(function (e) { OvosWebUI.say("msg-np", e.message, true); });
+  });
+  el("repeat").addEventListener("change", function () {
+    api("/api/media/repeat", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({enabled: el("repeat").checked})})
+      .then(function (r) {
+        if (!r.ok) { OvosWebUI.say("msg-np", t("media.actionFailed", "That did not work."), true); }
+        loadStatus();
+      })
+      .catch(function (e) { OvosWebUI.say("msg-np", e.message, true); });
+  });
+  el("shuffle").addEventListener("change", function () {
+    api("/api/media/shuffle", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({enabled: el("shuffle").checked})})
+      .then(function (r) {
+        if (!r.ok) { OvosWebUI.say("msg-np", t("media.actionFailed", "That did not work."), true); }
+        loadStatus();
+      })
+      .catch(function (e) { OvosWebUI.say("msg-np", e.message, true); });
+  });
+
+  // ── can this device make a sound at all ──────────────────────────────────
+  function loadBackends() {
+    api("/api/media/backends").then(function (r) {
+      // Only when it answered and said none: an older service that cannot be
+      // asked has not told us the device is mute.
+      el("no-backends").hidden = !(r.ok && r.can_play === false);
+    }).catch(function () {});
   }
   function loadStatus() {
     api("/api/media/status").then(showStatus).catch(function (e) {
       OvosWebUI.say("msg-np", e.message, true);
     });
+    loadProgress();
   }
   el("refresh").addEventListener("click", loadStatus);
 
@@ -170,6 +274,7 @@ OvosWebUI.ready(function () {
     el("panel").hidden = false;
     loadStatus();
     loadVolume();
+    loadBackends();
   }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
 });
 </script>

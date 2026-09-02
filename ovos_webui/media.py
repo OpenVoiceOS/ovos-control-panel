@@ -46,6 +46,13 @@ PING_TIMEOUT = 3.0
 #: importing ovos-utils just for three ints — see ``ovos_utils/ocp.py``.
 _STATE_NAMES = {0: "stopped", 1: "playing", 2: "paused"}
 
+#: ``loop_state`` as the player reports it: ``ovos_utils.ocp.LoopState`` is
+#: ``NONE = 0``, ``REPEAT = 1``, ``REPEAT_TRACK = 2``, so 1 repeats the queue
+#: and 2 repeats the one track. Read from the enum rather than assumed: the
+#: two are easy to swap and the badge then tells the reader the opposite of
+#: what the device is doing.
+_REPEAT_NAMES = {0: "off", 1: "all", 2: "one"}
+
 
 def _msg(msg_type: str, data: dict[str, Any] | None = None):
     from ovos_bus_client.message import Message
@@ -65,7 +72,7 @@ def available(bus) -> bool:
 
 def _empty_status() -> dict[str, Any]:
     return {"state": "stopped", "media_type": None, "title": None,
-            "artist": None, "image": None, "shuffle": None,
+            "artist": None, "image": None, "shuffle": None, "repeat": None,
             "playlist_position": None, "playlist_size": None}
 
 
@@ -91,6 +98,7 @@ def status(bus) -> dict[str, Any]:
             "artist": data.get("artist") or None,
             "image": data.get("image") or None,
             "shuffle": bool(data.get("shuffle")) if "shuffle" in data else None,
+            "repeat": _REPEAT_NAMES.get(data.get("loop_state")),
             "playlist_position": data.get("playlist_position"),
             "playlist_size": data.get("playlist_size"),
         }
@@ -140,6 +148,100 @@ def next(bus) -> dict[str, Any]:  # noqa: A001 - matches the route name
 
 def previous(bus) -> dict[str, Any]:
     return _transport(bus, "ovos.common_play.previous")
+
+
+def track_progress(bus) -> dict[str, Any]:
+    """Where the track is and how long it runs, both in milliseconds.
+
+    Read live rather than from the status snapshot: the player asks its
+    backend for the position each time, and a snapshot taken a second ago
+    would draw the handle behind where the music actually is.
+
+    A length of zero means the player does not know one -- a live stream has
+    no end -- and is reported as no length rather than as a track of zero
+    seconds, so the page can offer a position without offering a scrub bar.
+    """
+    from ovos_webui import buswait
+
+    position = buswait.wait_for_response(
+        bus, _msg("ovos.common_play.get_track_position"), timeout=QUERY_TIMEOUT)
+    if position is None:
+        return {"ok": False, "position": None, "length": None}
+    length = buswait.wait_for_response(
+        bus, _msg("ovos.common_play.get_track_length"), timeout=QUERY_TIMEOUT)
+    reported = (length.data or {}).get("length") if length is not None else None
+    return {"ok": True,
+            "position": (position.data or {}).get("position"),
+            "length": reported or None}
+
+
+def seek_to(bus, position: Any) -> dict[str, Any]:
+    """Move to an absolute position, in milliseconds.
+
+    Checked here rather than left to the player: it drops a position that is
+    not a real number, and a dropped message is a control that reports
+    success and does nothing.
+    """
+    import math
+
+    if isinstance(position, bool) or not isinstance(position, (int, float)):
+        return {"ok": False, "error": "the position must be a number of "
+                                      "milliseconds"}
+    if math.isnan(position) or math.isinf(position) or position < 0:
+        return {"ok": False, "error": "the position must be a number of "
+                                      "milliseconds"}
+    from ovos_webui import buswait
+
+    return {"ok": buswait.emit(
+        bus, _msg("ovos.common_play.set_track_position",
+                  {"position": int(position)}))}
+
+
+def set_shuffle(bus, enabled: Any) -> dict[str, Any]:
+    """Turn shuffle on or off.
+
+    Two topics rather than one with a flag, because that is what the player
+    binds: ``shuffle.set`` and ``shuffle.unset``.
+    """
+    topic = ("ovos.common_play.shuffle.set" if enabled
+             else "ovos.common_play.shuffle.unset")
+    return _transport(bus, topic)
+
+
+def set_repeat(bus, enabled: Any) -> dict[str, Any]:
+    """Repeat the queue, or stop repeating it.
+
+    Two topics, as with shuffle. The player's ``repeat.set`` means repeat the
+    queue; it has no separate message for repeating one track, so the panel
+    offers the state it can actually set.
+    """
+    topic = ("ovos.common_play.repeat.set" if enabled
+             else "ovos.common_play.repeat.unset")
+    return _transport(bus, topic)
+
+
+def backends(bus) -> dict[str, Any]:
+    """What the device can actually play audio through.
+
+    A media service with no backend loaded accepts every play request and
+    makes no sound, which is the single hardest media failure to diagnose
+    from the outside: nothing errors, and the only evidence is a line in a
+    log. Nothing answering is reported separately from answering with none --
+    an older service that cannot be asked has not told us it is mute.
+    """
+    from ovos_webui import buswait
+
+    reply = buswait.wait_for_response(
+        bus, _msg("ovos.common_play.list_backends"), timeout=QUERY_TIMEOUT)
+    if reply is None:
+        return {"ok": False, "backends": [], "can_play": None}
+    data = reply.data or {}
+    found = [{"name": name,
+              "remote": bool((info or {}).get("remote")),
+              "uris": [u for u in ((info or {}).get("supported_uris") or [])
+                       if isinstance(u, str)]}
+             for name, info in sorted(data.items()) if isinstance(name, str)]
+    return {"ok": True, "backends": found, "can_play": bool(found)}
 
 
 def get_volume(bus) -> dict[str, Any]:

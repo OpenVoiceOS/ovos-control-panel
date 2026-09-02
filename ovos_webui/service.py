@@ -235,6 +235,19 @@ class MediaVolumeBody(BaseModel):
     percent: int = Field(ge=0, le=100, strict=True)
 
 
+class MediaSeekBody(BaseModel):
+    #: Milliseconds from the start of the track. A day is more than any
+    #: track, and the player refuses anything that is not a real number.
+    position: int = Field(ge=0, le=86_400_000, strict=True)
+
+
+class MediaToggleBody(BaseModel):
+    """Shuffle and repeat: both are on-or-off, and the name reaches the
+    generated API documentation, so it should not say shuffle on the repeat
+    route."""
+    enabled: bool
+
+
 class MuteBody(BaseModel):
     muted: bool
 
@@ -1236,6 +1249,31 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_media_status() -> dict[str, Any]:
         from ovos_webui import media
         return media.status(_need_bus())
+
+    @privileged.get("/media/progress")
+    def api_media_progress() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.track_progress(_need_bus())
+
+    @privileged.post("/media/seek")
+    def api_media_seek(body: MediaSeekBody) -> dict[str, Any]:
+        from ovos_webui import media
+        return media.seek_to(_need_bus(), body.position)
+
+    @privileged.post("/media/shuffle")
+    def api_media_shuffle(body: MediaToggleBody) -> dict[str, Any]:
+        from ovos_webui import media
+        return media.set_shuffle(_need_bus(), body.enabled)
+
+    @privileged.post("/media/repeat")
+    def api_media_repeat(body: MediaToggleBody) -> dict[str, Any]:
+        from ovos_webui import media
+        return media.set_repeat(_need_bus(), body.enabled)
+
+    @privileged.get("/media/backends")
+    def api_media_backends() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.backends(_need_bus())
 
     @privileged.get("/media/available")
     def api_media_available() -> dict[str, Any]:

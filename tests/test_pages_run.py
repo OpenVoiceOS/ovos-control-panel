@@ -758,3 +758,164 @@ def test_the_setup_page_counts_its_own_steps(signed_in_page):
     assert said == numbered, (
         f"the intro says {said} steps and the page has {numbered}: {intro!r}"
     )
+def _media_page(page, url, *, backends, status=None, progress=None):
+    """The media page against a device that answers what we say it answers."""
+    import json as _json
+
+    def answer(payload):
+        return lambda route: route.fulfill(
+            status=200, content_type="application/json",
+            body=_json.dumps(payload))
+
+    # Handlers accumulate, and a second call to this would otherwise be
+    # answered by the first call's stubs.
+    for pattern in ("**/api/media/available", "**/api/media/backends",
+                    "**/api/media/status", "**/api/media/progress",
+                    "**/api/media/volume", "**/api/media/seek"):
+        page.unroute(pattern)
+
+    page.route("**/api/media/available", answer({"available": True}))
+    page.route("**/api/media/backends", answer(backends))
+    page.route("**/api/media/status", answer(status or {
+        "state": "playing", "title": "A song", "artist": "Someone",
+        "image": None, "shuffle": False, "repeat": "off", "media_type": None,
+        "playlist_position": 0, "playlist_size": 1}))
+    page.route("**/api/media/progress", answer(progress or {
+        "ok": True, "position": 30000, "length": 240000}))
+    page.route("**/api/media/volume", answer({"percent": 50, "muted": False}))
+    page.goto(f"{url}/media")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(500)
+
+
+def test_a_device_with_no_playback_backend_says_so(signed_in_page):
+    """The hardest media failure to see from outside: every play request is
+    accepted and nothing comes out."""
+    page, url = signed_in_page
+    _media_page(page, url, backends={"ok": True, "backends": [],
+                                     "can_play": False})
+    assert not page.locator("#no-backends").is_hidden(), (
+        "a device that cannot play anything said nothing about it"
+    )
+
+
+def test_a_device_that_cannot_be_asked_is_not_accused_of_being_mute(
+        signed_in_page):
+    """An older media service that does not answer the question has not told
+    us the device has no backends."""
+    page, url = signed_in_page
+    _media_page(page, url, backends={"ok": False, "backends": [],
+                                     "can_play": None})
+    assert page.locator("#no-backends").is_hidden()
+
+
+def test_a_device_with_a_backend_says_nothing(signed_in_page):
+    page, url = signed_in_page
+    _media_page(page, url, backends={
+        "ok": True, "can_play": True,
+        "backends": [{"name": "mpv", "remote": False, "uris": ["file"]}]})
+    assert page.locator("#no-backends").is_hidden()
+
+
+def test_the_scrub_bar_only_appears_for_a_track_with_an_end(signed_in_page):
+    """A live stream has no length, so there is nowhere to drag to."""
+    page, url = signed_in_page
+    good = {"ok": True, "backends": [{"name": "mpv", "remote": False,
+                                      "uris": ["file"]}], "can_play": True}
+
+    _media_page(page, url, backends=good)
+    assert not page.locator("#seek-row").is_hidden(), "no scrub bar for a track"
+    assert page.locator("#seek-length").inner_text() == "4:00"
+    assert page.locator("#seek-position").inner_text() == "0:30"
+
+    _media_page(page, url, backends=good,
+                progress={"ok": True, "position": 9000, "length": None})
+    # Polled rather than read once: the row is hidden when the page's own
+    # progress request comes back, not when the page finishes loading.
+    page.wait_for_selector("#seek-row", state="hidden", timeout=5000)
+
+
+def test_dragging_the_scrub_bar_sends_an_absolute_position(signed_in_page):
+    page, url = signed_in_page
+    sent = []
+    _media_page(page, url, backends={"ok": True, "can_play": True,
+                                     "backends": [{"name": "mpv",
+                                                   "remote": False,
+                                                   "uris": ["file"]}]})
+    page.route("**/api/media/seek", lambda route: (
+        sent.append(route.request.post_data_json),
+        route.fulfill(status=200, content_type="application/json",
+                      body='{"ok": true}')))
+    page.eval_on_selector("#seek", "el => { el.value = 500; "
+                          "el.dispatchEvent(new Event('change', {bubbles: true})); }")
+    page.wait_for_timeout(400)
+
+    assert sent, "dragging the bar sent nothing"
+    # Half of a four minute track, in milliseconds.
+    assert sent[0]["position"] == 120000, sent[0]
+
+
+def test_hidden_means_hidden_whatever_the_element_is(signed_in_page):
+    """`hidden` is an attribute, not a class, and any rule that sets
+    `display` outranks the browser's default for it.
+
+    Two rows in this panel are flex containers marked hidden, and both were
+    on screen: the Mark-1 live row on a device with no Mark-1, and the media
+    scrub bar for a track with no length. A page that shows a control it
+    means to be offering later is a page lying about what it can do.
+    """
+    page, url = signed_in_page
+    page.goto(f"{url}/mark1")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(300)
+
+    showing = page.evaluate("""() => [...document.querySelectorAll("[hidden]")]
+        .filter(el => getComputedStyle(el).display !== "none")
+        .map(el => el.id || el.className)""")
+    assert showing == [], f"marked hidden and still on screen: {showing}"
+
+
+def test_the_repeat_box_reports_and_sets_the_state_the_device_is_in(signed_in_page):
+    """`REPEAT` is the queue and `REPEAT_TRACK` is the one track; naming them
+    the other way round makes the badge say the opposite of what is happening.
+    """
+    import json as _json
+
+    page, url = signed_in_page
+    good = {"ok": True, "can_play": True,
+            "backends": [{"name": "mpv", "remote": False, "uris": ["file"]}]}
+    _media_page(page, url, backends=good, status={
+        "state": "playing", "title": "A song", "artist": "Someone",
+        "image": None, "shuffle": False, "repeat": "all", "media_type": None,
+        "playlist_position": 0, "playlist_size": 3})
+
+    assert page.locator("#repeat").is_checked(), (
+        "the queue repeats and the box says it does not"
+    )
+    assert "queue" in page.locator("#np-repeat").inner_text().lower()
+
+    sent = []
+    page.route("**/api/media/repeat", lambda route: (
+        sent.append(route.request.post_data_json),
+        route.fulfill(status=200, content_type="application/json",
+                      body='{"ok": true}')))
+    page.uncheck("#repeat")
+    page.wait_for_timeout(400)
+    assert sent == [{"enabled": False}], sent
+
+
+def test_a_single_track_repeat_is_not_called_a_queue_repeat(signed_in_page):
+    page, url = signed_in_page
+    _media_page(page, url,
+                backends={"ok": True, "can_play": True,
+                          "backends": [{"name": "mpv", "remote": False,
+                                        "uris": ["file"]}]},
+                status={"state": "playing", "title": "A song", "artist": "S",
+                        "image": None, "shuffle": False, "repeat": "one",
+                        "media_type": None, "playlist_position": 0,
+                        "playlist_size": 3})
+    said = page.locator("#np-repeat").inner_text().lower()
+    assert "track" in said, said
+    assert not page.locator("#repeat").is_checked(), (
+        "repeating one track is not repeating the queue"
+    )
