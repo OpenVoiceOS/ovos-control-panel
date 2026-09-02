@@ -919,3 +919,47 @@ def test_a_single_track_repeat_is_not_called_a_queue_repeat(signed_in_page):
     assert not page.locator("#repeat").is_checked(), (
         "repeating one track is not repeating the queue"
     )
+def test_looking_up_a_setting_names_the_file_it_comes_from(signed_in_page):
+    """The answer to "I changed it and nothing happened" is a filename."""
+    page, url = signed_in_page
+    page.goto(f"{url}/config")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(400)
+
+    page.fill("#where-key", "lang")
+    page.click("#where-look")
+    page.wait_for_timeout(600)
+
+    assert not page.locator("#where-answer").is_hidden()
+    said = page.locator("#where-from").inner_text()
+    assert said, "did not say where the value came from"
+    assert "mycroft.conf" in said or "default" in said.lower(), said
+
+
+def test_a_setting_nobody_has_touched_says_so(signed_in_page):
+    page, url = signed_in_page
+    page.goto(f"{url}/config")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(400)
+
+    page.fill("#where-key", "nothing.sets.this")
+    page.click("#where-look")
+    page.wait_for_timeout(600)
+
+    assert "Nothing sets this" in page.locator("#where-value").inner_text()
+
+
+def test_the_file_list_shows_the_merge_order(signed_in_page):
+    """Order is the whole point: later files win."""
+    page, url = signed_in_page
+    page.goto(f"{url}/config")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(600)
+
+    # The list sits behind a disclosure, so open it the way a reader would.
+    page.click("#where-stack summary")
+    page.wait_for_timeout(200)
+    items = page.locator("#where-layers li").all_inner_texts()
+    assert items, "listed no configuration files"
+    assert "packaged defaults" in items[0], items[0]
+    assert "runtime change" in items[-1], items[-1]

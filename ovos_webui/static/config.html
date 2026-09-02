@@ -74,6 +74,28 @@
     <div class="msg" id="msg-raw" role="status" aria-live="polite" hidden></div>
   </section>
 
+  <h2 data-i18n="config.where.title">Where a setting comes from</h2>
+  <div class="card">
+    <p class="hint" data-i18n="config.where.hint">OVOS merges its configuration from several files. If you
+      changed something and nothing happened, the value is usually still there and a later file sets it too.
+      Type a setting to see which file it ends up coming from.</p>
+    <div class="row">
+      <input type="text" id="where-key" placeholder="lang" spellcheck="false"
+        aria-label="Setting to look up" data-i18n-attr="aria-label:config.where.aria;placeholder:config.where.placeholder">
+      <button id="where-look" data-i18n="config.where.look">Look it up</button>
+    </div>
+    <div id="where-answer" hidden>
+      <p id="where-value" class="strong"></p>
+      <p id="where-from" class="hint"></p>
+      <ul class="plain" id="where-overridden"></ul>
+    </div>
+    <details id="where-stack">
+      <summary data-i18n="config.where.stack">All the configuration files, in the order they are merged</summary>
+      <ul class="plain" id="where-layers"></ul>
+    </details>
+    <div class="msg" id="msg-where" role="status" aria-live="polite" hidden></div>
+  </div>
+
   <h2 data-i18n="token.title">Access token</h2>
   <div class="card">
     <p class="hint" id="token-state" data-i18n="token.checking">Checking…</p>
@@ -267,6 +289,71 @@ OvosWebUI.ready(function () {
       el("token-state").textContent = OvosWebUI.t("token.set", "This device has a token. Enter the current one to change it.");
     }).catch(function (e) { OvosWebUI.say("msg-token", e.message, true); });
   });
+
+  // ── where a setting comes from ───────────────────────────────────────────
+  var t = OvosWebUI.t;
+
+  function describe(name) {
+    return {
+      "default": t("config.layer.default", "the packaged defaults"),
+      "remote": t("config.layer.remote", "the remote configuration cache"),
+      "distribution": t("config.layer.distribution", "the distribution's file"),
+      "system": t("config.layer.system", "the system file"),
+      "xdg": t("config.layer.xdg", "a user file"),
+      "patch": t("config.layer.patch", "a runtime change from a skill or the bus")
+    }[name] || name;
+  }
+
+  function showWhere(r) {
+    var answer = el("where-answer");
+    answer.hidden = false;
+    if (!r.set) {
+      el("where-value").textContent = t("config.where.unset", "Nothing sets this.");
+      el("where-from").textContent = "";
+      el("where-overridden").innerHTML = "";
+      return;
+    }
+    el("where-value").textContent = JSON.stringify(r.value);
+    el("where-from").textContent = (r.merged_from && r.merged_from.length
+      ? t("config.where.mergedFrom", "Merged from {n} files, last written in {where}")
+          .replace("{n}", r.merged_from.length + 1).replace("{where}", describe(r.winner))
+      : t("config.where.from", "Comes from {where}").replace("{where}", describe(r.winner)))
+      + (r.winner_path ? " — " + r.winner_path : "");
+    var list = el("where-overridden");
+    list.innerHTML = "";
+    r.overridden.forEach(function (o) {
+      // These are the files someone may have edited expecting a change.
+      var li = document.createElement("li");
+      li.textContent = t("config.where.overridden", "Also set in {where}, and overridden")
+        .replace("{where}", o.path || describe(o.name)) + ": " + JSON.stringify(o.value);
+      list.appendChild(li);
+    });
+  }
+
+  function lookUp() {
+    var key = el("where-key").value.trim();
+    if (!key) { return; }
+    api("/api/config/resolve?key=" + encodeURIComponent(key))
+      .then(showWhere)
+      .catch(function (e) { OvosWebUI.say("msg-where", e.message, true); });
+  }
+  el("where-look").addEventListener("click", lookUp);
+  el("where-key").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); lookUp(); }
+  });
+
+  api("/api/config/layers").then(function (r) {
+    var list = el("where-layers");
+    list.innerHTML = "";
+    (r.layers || []).forEach(function (layer) {
+      var li = document.createElement("li");
+      li.textContent = describe(layer.name) + (layer.path ? " — " + layer.path : "")
+        + (layer.dropped
+            ? " " + t("config.layer.dropped", "(ignored: this device's policy disables it)")
+            : (layer.exists ? "" : " " + t("config.layer.missing", "(not on this device)")));
+      list.appendChild(li);
+    });
+  }).catch(function () {});
 });
 </script>
 </body>
