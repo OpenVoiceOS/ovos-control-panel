@@ -23,11 +23,40 @@ from ovos_webui import layers
 
 
 def test_the_stack_is_reported_in_the_order_it_merges():
-    """Later beats earlier, and a reader has to be able to see that."""
+    """Later beats earlier, and this page's whole claim is which one wins.
+
+    Read from `load_all_configs` rather than restated here: it builds
+    `[default, distribution, system]`, inserts the remote cache at index 1
+    when it is allowed, appends the XDG files, and appends the runtime patch
+    last. A list written out by hand can drift from that and take the page's
+    answer with it.
+    """
+    import inspect
+    import re
+
+    from ovos_config.config import Configuration
+
+    source = inspect.getsource(Configuration.load_all_configs)
+    expected = ["default", "distribution", "system"]
+    assert re.search(r"configs\s*=\s*\[Configuration\.default,\s*"
+                     r"Configuration\.distribution,\s*Configuration\.system\]",
+                     source), "ovos-config no longer starts from that stack"
+    inserted = re.search(r"configs\.insert\((\d+),\s*Configuration\.remote\)",
+                         source)
+    assert inserted, "the remote cache is no longer inserted"
+    expected.insert(int(inserted.group(1)), "remote")
+    assert source.index("xdg_configs") < source.index("__patch"), (
+        "the runtime patch is no longer appended after the user files"
+    )
+    expected += ["xdg", "patch"]
+
     names = [layer["name"] for layer in layers.stack()]
-    assert names == ["default", "remote", "distribution", "system",
-                     "xdg", "patch"] or names[0] == "default"
-    assert names[-1] == "patch", f"runtime patches must win last: {names}"
+    # One entry per XDG file, and there can be several.
+    seen = [name for i, name in enumerate(names)
+            if i == 0 or name != names[i - 1]]
+    assert seen == expected, (
+        f"the panel merges {seen}, ovos-config merges {expected}"
+    )
 
 
 def test_every_layer_says_where_it_lives_and_whether_it_exists():
