@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a40](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a40) (2026-09-03)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a39...0.0.1a40)
+
+**Merged pull requests:**
+
+- fix: draw the faceplate the shape the device actually is [\#72](https://github.com/OpenVoiceOS/ovos-control-panel/pull/72) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a39](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a39) (2026-09-02)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a38...0.0.1a39)
