@@ -646,7 +646,7 @@
  "mark1.simulator.title": "Simulador",
  "mark1.simulator.hint": "Esta vista previa se ejecuta enteramente en su navegador. Funciona incluso sin un Mark-1 conectado; úsela para diseñar antes de enviar nada al dispositivo.",
  "mark1.mouth.title": "Boca",
- "mark1.mouth.hint": "Haga clic o arrastre en la cuadrícula de arriba para dibujar. Cada casilla es un píxel de la pantalla de la boca (8 filas por 32 columnas).",
+ "mark1.mouth.hint": "Haz clic o arrastra en la cuadrícula de arriba para dibujar. Cada lámpara es un píxel de la pantalla de la boca (8 filas por 32 columnas).",
  "mark1.mouth.clear": "Borrar",
  "mark1.mouth.invert": "Invertir",
  "mark1.mouth.presetHeart": "Corazón",
