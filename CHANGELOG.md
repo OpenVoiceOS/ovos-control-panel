@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a41](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a41) (2026-09-03)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a40...0.0.1a41)
+
+**Merged pull requests:**
+
+- fix: give ovos-media its own health card instead of claiming ovos-audio's [\#74](https://github.com/OpenVoiceOS/ovos-control-panel/pull/74) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a40](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a40) (2026-09-03)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a39...0.0.1a40)
