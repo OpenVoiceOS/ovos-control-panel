@@ -11,13 +11,16 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 #: The services that answer status messages, and the name each one registers.
-#: ``skills`` and ``intents`` come from ovos-core, ``audio`` from ovos-audio or
-#: ovos-media, ``voice`` from the listener, ``gui_service`` from ovos-gui and
-#: ``PHAL`` from ovos-PHAL.
+#: ``skills`` and ``intents`` come from ovos-core, ``audio`` from ovos-audio,
+#: ``media`` from ovos-media, ``voice`` from the listener, ``gui_service``
+#: from ovos-gui and ``PHAL`` from ovos-PHAL.
 SERVICES: list[dict[str, str]] = [
     {"name": "skills", "label": "Skills", "hint": "Loads and runs your skills."},
     {"name": "intents", "label": "Intents", "hint": "Decides which skill answers you."},
-    {"name": "audio", "label": "Audio", "hint": "Plays speech and media."},
+    {"name": "audio", "label": "Audio", "hint": "Plays speech."},
+    # ovos-media is optional: a device may run only ovos-audio (speech, no
+    # music/video playback), so a device without it must not read unhealthy.
+    {"name": "media", "label": "Media", "hint": "Plays music and video."},
     # ovos-simple-listener does not register a ProcessStatus at all, so a
     # device that uses it instead of ovos-dinkum-listener shows "no answer"
     # here even while it is listening perfectly well.

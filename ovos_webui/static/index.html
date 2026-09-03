@@ -91,6 +91,7 @@ OvosWebUI.ready(function () {
         : "<strong>" + esc(t("dash.bus", "System connection:")) + "</strong> " + esc(t("dash.bus.down",
             "not running."));
       var caveats = {
+        media: t("service.media.caveat", "No answer is normal if this device has no ovos-media installed."),
         voice: t("service.voice.caveat", "No answer here is normal if this device uses ovos-simple-listener, which does not report status."),
         gui_service: t("service.gui_service.caveat", "No answer is normal if this device has no screen."),
         PHAL: t("service.PHAL.caveat", "No answer is normal if this device has no extra hardware plugins.")

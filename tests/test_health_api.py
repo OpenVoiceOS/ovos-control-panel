@@ -38,6 +38,46 @@ def test_snapshot_reads_process_status(answering_bus):
     assert by_name["PHAL"]["state"] == "no answer"
 
 
+def test_media_has_its_own_card(bus):
+    """ovos-media is a separate service from ovos-audio and probes its own
+    ``mycroft.media.is_ready``, not ``mycroft.audio.is_ready``."""
+    snap = health.snapshot(bus, timeout=0.1)
+    names = {s["name"] for s in snap["services"]}
+    assert "media" in names
+
+
+def test_media_probes_its_own_message_type(bus):
+    seen = []
+    original = bus.emit
+
+    def spy(message):
+        seen.append(message.msg_type)
+        return original(message)
+
+    bus.emit = spy
+    health.probe(bus, "media", timeout=0.05)
+    assert "mycroft.media.is_ready" in seen or "mycroft.media.is_alive" in seen
+    assert "mycroft.audio.is_ready" not in seen
+
+
+def test_a_device_without_ovos_media_still_reads_healthy(bus):
+    """ovos-media is optional: a device that only runs ovos-audio must not
+    show unhealthy just because nothing answers the media probes."""
+    from ovos_utils.process_utils import ProcessState, ProcessStatus
+
+    ready = ProcessStatus("skills", bus)
+    ready.state = ProcessState.READY
+    ready = ProcessStatus("intents", bus)
+    ready.state = ProcessState.READY
+    ready = ProcessStatus("audio", bus)
+    ready.state = ProcessState.READY
+
+    snap = health.snapshot(bus, timeout=0.5)
+    by_name = {s["name"]: s for s in snap["services"]}
+    assert by_name["media"]["state"] == "no answer"
+    assert snap["healthy"] is True
+
+
 def test_snapshot_without_a_bus():
     snap = health.snapshot(None, timeout=0.1)
     assert snap["bus"]["reachable"] is False
