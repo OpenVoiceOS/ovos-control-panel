@@ -37,7 +37,7 @@ DEFAULT_TIMEOUT = 3.0
 #:
 #: This has to be larger than the most calls the app makes at once, or a
 #: healthy call is refused for lack of a permit. The dashboard is the busiest
-#: caller: one page load probes six services at the same time
+#: caller: one page load probes seven services at the same time
 #: (``health.SERVICES``), so this leaves room for several page loads at once
 #: while still bounding a flood on a bus that has gone away.
 MAX_INFLIGHT = 24

@@ -28,7 +28,8 @@ Then there is one card for each service:
 | --- | --- | --- |
 | Skills | ovos-core skill manager | `mycroft.skills.is_ready` |
 | Understanding | ovos-core intent service | `mycroft.intents.is_ready` |
-| Audio | ovos-audio or ovos-media | `mycroft.audio.is_ready` |
+| Audio | ovos-audio | `mycroft.audio.is_ready` |
+| Media | ovos-media | `mycroft.media.is_ready` |
 | Listener | ovos-dinkum-listener | `mycroft.voice.is_ready` |
 | Screen | ovos-gui | `mycroft.gui_service.is_ready` |
 | Hardware controls (PHAL) | ovos-PHAL | `mycroft.PHAL.is_ready` |
@@ -56,7 +57,7 @@ page, not a fault on the device.
 
 When the bus itself is down, every service card shows a grey "waiting" chip
 and keeps its plain description: the red banner at the top already carries
-the one real alarm, and repeating it six times would only add noise.
+the one real alarm, and repeating it seven times would only add noise.
 
 ## How the check works
 
@@ -65,8 +66,8 @@ handlers, `mycroft.<name>.is_alive` and `mycroft.<name>.is_ready`. The dashboard
 sends those messages and waits one second for the answer. It adds no new
 message type to the bus.
 
-All six services are asked at the same time, so the whole check costs one
-second, not six.
+All seven services are asked at the same time, so the whole check costs one
+second, not seven.
 
 ## If something is down
 
@@ -101,7 +102,7 @@ service never runs a shell command from a web request, by design (see
 `journalctl` and `systemctl` commands to run over SSH instead.
 
 The summary banner at the top reflects only the core services — skills, intents
-and audio. The screen, the hardware layer (PHAL) and the listener can be
+and audio. Media, the screen, the hardware layer (PHAL) and the listener can be
 legitimately absent on a given device, so their being quiet never turns the
 banner to "needs attention"; their own cards still show and explain the state.
 
