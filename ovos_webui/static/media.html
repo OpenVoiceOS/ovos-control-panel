@@ -65,6 +65,14 @@
       <div class="msg" id="msg-np" role="status" aria-live="polite" hidden></div>
     </div>
 
+    <div id="candidates-card" class="card" hidden>
+      <h3 data-i18n="media.candidates.title">What else this matched</h3>
+      <p class="hint" data-i18n="media.candidates.hint">The device chose from these. Pick another to play it
+        instead — no need to ask again.</p>
+      <ul class="picklist" id="candidates"></ul>
+      <div class="msg" id="msg-candidates" role="status" aria-live="polite" hidden></div>
+    </div>
+
     <h2 data-i18n="media.transport.title">Transport</h2>
     <div class="card" id="transport-card">
       <div class="row">
@@ -75,6 +83,13 @@
       </div>
       <div class="msg" id="msg-transport" role="status" aria-live="polite" hidden></div>
     </div>
+
+    <details id="likes-wrap">
+      <summary data-i18n="media.likes.title">Songs you liked</summary>
+      <ul class="picklist" id="likes"></ul>
+      <p class="hint" id="likes-empty" hidden data-i18n="media.likes.none">Nothing liked yet. The heart on a
+        playing track adds it here.</p>
+    </details>
 
     <h2 data-i18n="media.volume.title">Volume</h2>
     <div class="card" id="volume-card">
@@ -196,6 +211,74 @@ OvosWebUI.ready(function () {
       .catch(function (e) { OvosWebUI.say("msg-np", e.message, true); });
   });
 
+  // ── what else the device considered, and what has been liked ────────────
+  function row(entry, onPick) {
+    var li = document.createElement("li");
+    var button = document.createElement("button");
+    button.className = "pick";
+    // textContent throughout: these strings come from a media catalogue.
+    button.textContent = entry.title || entry.uri || "";
+    if (entry.artist) {
+      var artist = document.createElement("span");
+      artist.className = "hint";
+      artist.textContent = " — " + entry.artist;
+      button.appendChild(artist);
+    }
+    button.addEventListener("click", function () { onPick(entry); });
+    li.appendChild(button);
+    return li;
+  }
+
+  var offered = [];
+  function play(entry, where, among) {
+    api("/api/media/play_entry", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({entry: entry, among: among || []})})
+      .then(function (r) {
+        if (!r.ok) {
+          // The bus layer answers with a key when the message never left, and
+          // with the device's own words when it did.
+          var why = r.error === "media.notPlayable"
+            ? t("media.notPlayable", "The player cannot play that one.")
+            : (r.error || t("media.actionFailed", "That did not work."));
+          OvosWebUI.say(where, why, true);
+          return;
+        }
+        window.setTimeout(function () { loadStatus(); loadCandidates(); }, 600);
+      })
+      .catch(function (e) { OvosWebUI.say(where, e.message, true); });
+  }
+
+  function loadCandidates() {
+    api("/api/media/candidates").then(function (r) {
+      var list = el("candidates");
+      list.innerHTML = "";
+      // Shown only when there is a choice to offer: a single candidate is
+      // what is already playing, and an empty list is not a card.
+      var entries = (r.ok && r.entries) || [];
+      offered = entries;
+      el("candidates-card").hidden = entries.length < 2;
+      entries.forEach(function (entry) {
+        // The whole set goes with the pick: a play request's candidate list
+        // is what the device keeps, so sending one entry would throw the
+        // rest away and leave nothing to pick from next time.
+        list.appendChild(row(entry, function (e) { play(e, "msg-candidates", offered); }));
+      });
+    }).catch(function () { el("candidates-card").hidden = true; });
+  }
+
+  function loadLikes() {
+    api("/api/media/likes").then(function (r) {
+      var list = el("likes");
+      list.innerHTML = "";
+      var entries = (r.ok && r.entries) || [];
+      el("likes-empty").hidden = entries.length > 0;
+      el("likes-wrap").hidden = !r.ok;
+      entries.forEach(function (entry) {
+        list.appendChild(row(entry, function (e) { play(e, "msg-np"); }));
+      });
+    }).catch(function () { el("likes-wrap").hidden = true; });
+  }
+
   // ── can this device make a sound at all ──────────────────────────────────
   function loadBackends() {
     api("/api/media/backends").then(function (r) {
@@ -210,7 +293,10 @@ OvosWebUI.ready(function () {
     });
     loadProgress();
   }
-  el("refresh").addEventListener("click", loadStatus);
+  el("refresh").addEventListener("click", function () {
+    loadStatus();
+    loadCandidates();
+  });
 
   // ── transport ────────────────────────────────────────────────────────────
   function act(path) {
@@ -275,6 +361,8 @@ OvosWebUI.ready(function () {
     loadStatus();
     loadVolume();
     loadBackends();
+    loadCandidates();
+    loadLikes();
   }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
 });
 </script>
