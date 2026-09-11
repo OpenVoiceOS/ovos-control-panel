@@ -7,7 +7,7 @@ there is, and the answer is almost never that the change was not saved. It is
 that a later layer sets the same key and wins.
 
 The order is ``ovos_config.config.Configuration.load_all_configs``: the
-packaged defaults, the remote cache, the distribution file, the system file,
+packaged defaults, the distribution file, the system file, the assistant file,
 then the XDG files, then runtime patches from skills and bus events. Each
 overrides the one before, so the last layer that mentions a key is the one a
 reader has to edit.
@@ -23,9 +23,9 @@ from typing import Any
 #: is held privately because nothing outside the library is meant to write it.
 _LAYERS: list[tuple[str, str]] = [
     ("default", "default"),
-    ("remote", "remote"),
     ("distribution", "distribution"),
     ("system", "system"),
+    ("assistant", "assistant"),
     ("xdg", "xdg_configs"),
     ("patch", "_Configuration__patch"),
 ]
@@ -85,19 +85,19 @@ def stack() -> list[dict[str, Any]]:
     The rules are ``Configuration.filter_and_merge``'s, applied to copies:
     ``disable_user_config`` drops every layer that is not the packaged
     defaults or the system file -- the distribution file and runtime patches
-    included -- and ``protected_keys`` removes named keys from the remote or
-    the user layers.
+    included -- and ``protected_keys`` removes named keys from the assistant
+    or the user layers.
     """
     from ovos_config.config import Configuration
 
     policy = _constraints()
     protected = policy.get("protected_keys") or {}
     skip_user = bool(policy.get("disable_user_config"))
-    skip_remote = bool(policy.get("disable_remote_config"))
 
     default_path = getattr(Configuration.default, "path", None)
     system_path = getattr(Configuration.system, "path", None)
-    remote_path = getattr(Configuration.remote, "path", None)
+    assistant_path = getattr(
+        getattr(Configuration, "assistant", None), "path", None)
 
     found: list[dict[str, Any]] = []
     for name, attribute in _LAYERS:
@@ -108,11 +108,13 @@ def stack() -> list[dict[str, Any]]:
         for part in parts:
             path = getattr(part, "path", None)
             data = _as_dict(part)
-            is_user = path is None or path not in (default_path, system_path)
-            is_remote = path is not None and path == remote_path
-            dropped = (is_remote and skip_remote) or (is_user and skip_user)
-            if not dropped and is_remote:
-                data = _without(data, protected.get("remote") or [])
+            is_assistant = path is not None and path == assistant_path
+            is_user = (not is_assistant
+                       and (path is None
+                            or path not in (default_path, system_path)))
+            dropped = is_user and skip_user
+            if is_assistant:
+                data = _without(data, protected.get("assistant") or [])
             elif not dropped and is_user:
                 data = _without(data, protected.get("user") or [])
             found.append({

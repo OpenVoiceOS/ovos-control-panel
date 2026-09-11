@@ -1081,31 +1081,21 @@ class TestDetectedLocationIsReportedHonestly:
         self._layers(monkeypatch, {}, xdg=[{}, {}], tmp_path=tmp_path)
         assert system._detected_location_fate() is None
 
-    def test_a_device_that_drops_the_web_cache_is_not_described_as_overridden(
+    def test_protecting_location_in_the_assistant_layer_is_the_same_answer(
             self, monkeypatch):
-        """`disable_remote_config` means the detected location never arrives.
+        """`protected_keys.assistant` strips named keys out of that layer.
 
-        Nothing is overriding it, so telling the reader to clear a location on
-        the Settings page sends them to fix a layer that is not the problem.
-        """
-        from ovos_webui import system
-
-        self._layers(monkeypatch, {"disable_remote_config": True})
-        assert system._detected_location_fate() == "ignored"
-
-    def test_protecting_location_in_the_remote_layer_is_the_same_answer(
-            self, monkeypatch):
-        """`protected_keys.remote` strips named keys out of the web cache.
-
-        Nested entries are split on `:`, the syntax the shipped `mycroft.conf`
-        documents and uses (`listener:channels`). Reading them as dotted paths
-        matches nothing any device actually contains, so the panel would report
-        a stored location that was thrown away on the way in.
+        ovos-config dropped remote configuration, so `disable_remote_config`
+        and `protected_keys.remote` name nothing and a guard reading them is
+        always false. Nested entries are split on `:`, the syntax the shipped
+        `mycroft.conf` documents and uses (`listener:channels`). Reading them
+        as dotted paths matches nothing any device contains, so the panel
+        would report a stored location that was thrown away on the way in.
         """
         from ovos_webui import system
 
         self._layers(monkeypatch,
-                     {"protected_keys": {"remote": ["location:city"]}})
+                     {"protected_keys": {"assistant": ["location:city"]}})
         assert system._detected_location_fate() == "ignored"
 
     def test_a_system_location_still_overrides_under_the_user_protections(

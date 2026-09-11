@@ -296,9 +296,9 @@ OvosWebUI.ready(function () {
   function describe(name) {
     return {
       "default": t("config.layer.default", "the packaged defaults"),
-      "remote": t("config.layer.remote", "the remote configuration cache"),
       "distribution": t("config.layer.distribution", "the distribution's file"),
       "system": t("config.layer.system", "the system file"),
+      "assistant": t("config.layer.assistant", "the assistant file"),
       "xdg": t("config.layer.xdg", "a user file"),
       "patch": t("config.layer.patch", "a runtime change from a skill or the bus")
     }[name] || name;

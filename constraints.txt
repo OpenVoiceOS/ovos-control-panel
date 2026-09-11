@@ -9,10 +9,6 @@ anyio==4.14.2
     #   httpx
     #   starlette
     #   watchfiles
-audioop-lts==0.2.2
-    # via
-    #   ovos-plugin-manager
-    #   standard-aifc
 certifi==2026.7.22
     # via
     #   httpcore
@@ -74,8 +70,6 @@ idna==3.19
     #   anyio
     #   httpx
     #   requests
-importlib-metadata==9.0.0
-    # via ovos-plugin-manager
 iniconfig==2.3.0
     # via pytest
 json-database==1.0.4a1
@@ -100,7 +94,7 @@ numpy==2.5.2
     #   timezonefinder
 ovos-audio-transformer-plugin-ggwave==1.0.0a1
     # via ovos-control-panel (pyproject.toml)
-ovos-bus-client==2.8.4a2
+ovos-bus-client==2.11.15a1
     # via
     #   ovos-control-panel (pyproject.toml)
     #   ovos-gui-api-client
@@ -108,7 +102,7 @@ ovos-bus-client==2.8.4a2
     #   ovos-messagebus
     #   ovos-plugin-manager
     #   ovos-workshop
-ovos-config==2.3.10a2
+ovos-config==3.5.0a1
     # via
     #   ovos-control-panel (pyproject.toml)
     #   ovos-bus-client
@@ -123,7 +117,7 @@ ovos-gui-api-client==0.1.0
     # via ovos-workshop
 ovos-mark1-utils==0.0.1
     # via ovos-control-panel (pyproject.toml)
-ovos-messagebus==0.2.1a3
+ovos-messagebus==0.2.1a4
     # via ovos-control-panel (pyproject.toml)
 ovos-number-parser==0.19.13
     # via
@@ -133,7 +127,7 @@ ovos-number-parser==0.19.13
     #   ovos-workshop
 ovos-option-matcher-fuzzy-plugin==0.0.2a1
     # via ovos-workshop
-ovos-plugin-manager==2.11.1a3
+ovos-plugin-manager==2.12.1a1
     # via
     #   ovos-control-panel (pyproject.toml)
     #   ovos-audio-transformer-plugin-ggwave
@@ -148,7 +142,7 @@ ovos-skill-hello-world==0.2.8a1
     # via ovos-control-panel (pyproject.toml)
 ovos-skill-personal==1.0.0a1
     # via ovos-control-panel (pyproject.toml)
-ovos-spec-tools==1.8.0a1
+ovos-spec-tools==1.12.0a1
     # via
     #   chronologia
     #   ovos-bus-client
@@ -177,7 +171,7 @@ ovos-utterance-normalizer==0.2.5a2
     # via
     #   ovos-control-panel (pyproject.toml)
     #   ovos-skill-date-time
-ovos-workshop==9.5.2a1
+ovos-workshop==9.8.1a1
     # via
     #   ovos-control-panel (pyproject.toml)
     #   ovos-skill-date-time
@@ -282,10 +276,6 @@ six==1.17.0
     # via
     #   geocoder
     #   python-dateutil
-standard-aifc==3.13.0
-    # via ovos-plugin-manager
-standard-chunk==3.13.0
-    # via standard-aifc
 starlette==1.6.0
     # via
     #   ovos-control-panel (pyproject.toml)
@@ -298,10 +288,13 @@ tornado==6.5.8
     # via ovos-messagebus
 typing-extensions==4.16.0
     # via
+    #   anyio
     #   fastapi
     #   pydantic
     #   pydantic-core
     #   pyee
+    #   pytest-asyncio
+    #   starlette
     #   typing-inspection
 typing-inspection==0.4.4
     # via
@@ -329,5 +322,3 @@ websocket-client==1.9.0
     # via ovos-bus-client
 websockets==17.0.1
     # via uvicorn
-zipp==4.1.0
-    # via importlib-metadata

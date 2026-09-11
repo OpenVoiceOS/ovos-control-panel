@@ -6,8 +6,8 @@ the stack overrides it. The panel can already show what a key resolves to; it
 could not show *which file that value came from*, which is the half that
 answers the question.
 
-The order is ovos-config's own: default, remote, distribution, system, then
-the XDG files, then runtime patches, each overriding the one before.
+The order is ovos-config's own: default, distribution, system, assistant,
+then the XDG files, then runtime patches, each overriding the one before.
 """
 import json
 from copy import deepcopy
@@ -25,9 +25,47 @@ from ovos_webui import layers
 def test_the_stack_is_reported_in_the_order_it_merges():
     """Later beats earlier, and a reader has to be able to see that."""
     names = [layer["name"] for layer in layers.stack()]
-    assert names == ["default", "remote", "distribution", "system",
-                     "xdg", "patch"] or names[0] == "default"
+    # `xdg` is a list of files, so it contributes one entry per file and the
+    # count varies by machine; the ORDER is the invariant, not the length
+    collapsed = [n for i, n in enumerate(names) if i == 0 or n != names[i - 1]]
+    assert collapsed == ["default", "distribution", "system", "assistant",
+                         "xdg", "patch"], names
     assert names[-1] == "patch", f"runtime patches must win last: {names}"
+    xdg_at = [i for i, n in enumerate(names) if n == "xdg"]
+    assert xdg_at == list(range(xdg_at[0], xdg_at[0] + len(xdg_at))), (
+        f"the xdg files must be contiguous in the stack: {names}")
+
+
+def test_every_named_layer_exists_on_the_library():
+    """The names are not a copy of ovos-config's list, they index into it.
+
+    A layer the library dropped or renamed leaves an attribute that is not
+    there, and the page built from it is empty or raises rather than saying
+    so. Reading the attribute here fails when the two drift.
+    """
+    from ovos_config.config import Configuration
+
+    for name, attribute in layers._LAYERS:
+        if attribute.startswith("_Configuration"):
+            continue  # private, and held under a mangled name
+        assert hasattr(Configuration, attribute), (
+            f"layer {name!r} reads Configuration.{attribute}, which is gone")
+
+
+def test_the_stack_does_not_raise_on_the_installed_ovos_config():
+    """`Configuration.remote` was read directly and is gone in 3.x.
+
+    getattr guarded the `.path` lookup and not the attribute itself, so the
+    page raised AttributeError for every user on a current ovos-config while
+    CI, pinned to an older one, stayed green.
+    """
+    assert layers.stack()
+
+
+def test_no_layer_is_named_remote():
+    """ovos-config states it 'no longer supports remote config'."""
+    names = [layer["name"] for layer in layers.stack()]
+    assert "remote" not in names, names
 
 
 def test_every_layer_says_where_it_lives_and_whether_it_exists():
@@ -201,21 +239,27 @@ class TestAgainstWhatTheMergeReallyDoes:
         finally:
             Configuration.reload()
 
-    def test_a_remote_cache_the_device_ignores_is_not_read(
-            self, monkeypatch):
+    def test_a_protected_assistant_key_is_not_shown(self, monkeypatch):
+        """`protected_keys.assistant` replaces the remote section.
+
+        ovos-config dropped remote configuration, and with it
+        `disable_remote_config` and `protected_keys.remote`. The section a
+        policy uses to hide keys from the assistant file is `assistant`, and
+        reading the old name protects nothing while still looking protective.
+        """
         from ovos_config.config import Configuration
 
-        monkeypatch.setattr(Configuration, "get_system_constraints",
-                            staticmethod(lambda *a, **k: {"disable_remote_config": True}))
+        monkeypatch.setattr(
+            Configuration, "get_system_constraints",
+            staticmethod(lambda *a, **k: {
+                "protected_keys": {"assistant": ["lang"]}}))
         Configuration.reload()
         try:
-            assert all(not layer["dropped"] or layer["name"] == "remote"
-                       for layer in layers.stack())
-            remote = [layer for layer in layers.stack()
-                      if layer["name"] == "remote"]
-            assert remote and remote[0]["dropped"], (
-                "the remote cache is skipped by policy and was not marked"
-            )
+            assistant = [layer for layer in layers.stack()
+                         if layer["name"] == "assistant"]
+            assert assistant, "the assistant layer is not reported at all"
+            assert "lang" not in assistant[0]["data"], (
+                "the policy names lang as protected and it is still shown")
         finally:
             Configuration.reload()
 

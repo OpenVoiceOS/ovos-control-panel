@@ -251,13 +251,12 @@ def _detected_location_fate() -> str | None:
     the merge, and then nothing is overriding anything: the detected location
     simply never arrives, pointing the reader at the Settings page would send
     them to fix a layer that is not the problem, and the answer is
-    ``"ignored"``. Three constraints do that. ``disable_remote_config`` drops
-    the web cache outright. ``protected_keys.remote`` strips named keys out of
-    it. And so does ``disable_user_config``, which is the one that reads
-    backwards: ``filter_and_merge`` classifies every config that is not the
-    default or the system one as a *user* config, and the web cache is one of
-    them -- it is dropped by that test before the remote branch is ever
-    reached.
+    ``"ignored"``. Two constraints do that. ``protected_keys.assistant``
+    strips named keys out of the assistant layer. And so does
+    ``disable_user_config``, which is the one that reads backwards:
+    ``filter_and_merge`` classifies every config that is not the default or
+    the system one as a *user* config, so it is dropped by that test before
+    any per-layer protection is reached.
 
     The same classification decides which layers can override. The
     distribution config and the runtime patch layer are user configs too, so
@@ -273,9 +272,8 @@ def _detected_location_fate() -> str | None:
 
         constraints = Configuration.get_system_constraints() or {}
         protected = constraints.get("protected_keys") or {}
-        if (constraints.get("disable_remote_config")
-                or constraints.get("disable_user_config")
-                or _protects_location(protected.get("remote"))):
+        if (constraints.get("disable_user_config")
+                or _protects_location(protected.get("assistant"))):
             return "ignored"
 
         # Read the files rather than the layer objects. `LocalConf.load_local`

@@ -489,7 +489,7 @@
  "config.where.overridden": "Também definido em {where}, e substituído",
  "config.where.stack": "Todos os ficheiros de configuração, pela ordem em que são juntos",
  "config.layer.default": "os valores por omissão do pacote",
- "config.layer.remote": "a cache de configuração remota",
+ "config.layer.assistant": "o ficheiro do assistente",
  "config.layer.distribution": "o ficheiro da distribuição",
  "config.layer.system": "o ficheiro do sistema",
  "config.layer.xdg": "um ficheiro do utilizador",
