@@ -198,7 +198,7 @@ def test_detect_location_emits_ipgeo_update_and_parses_location():
     assert r["ok"] is True
     assert r["location"] == {"city": "Lisbon"}
     assert seen == ["ovos.ipgeo.update"]
-    # Nothing above the web cache sets a location here, so the detected one
+    # Nothing above the assistant layer sets a location here, so the detected one
     # stands and the caller is not warned about an override that is not there.
     assert "overridden" not in r
 
