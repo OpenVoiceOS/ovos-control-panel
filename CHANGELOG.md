@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a42](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a42) (2026-09-14)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a41...0.0.1a42)
+
+**Merged pull requests:**
+
+- fix: name the layers ovos-config actually merges [\#75](https://github.com/OpenVoiceOS/ovos-control-panel/pull/75) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.0.1a41](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a41) (2026-09-03)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a40...0.0.1a41)
