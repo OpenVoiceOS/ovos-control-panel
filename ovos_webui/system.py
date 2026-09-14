@@ -28,12 +28,12 @@ introduced:
   listened for and their states merged into one result.
 
 * ``ovos.ipgeo.update`` drives ``ovos-PHAL-plugin-ipgeo`` to geolocate the
-  device by its public IP. It writes the result into the *web cache*
-  (``LocalConf(get_webcache_location())``), not the user config. That layer
-  sits below the XDG configs in the merge, so a ``location`` set by hand in
-  ``mycroft.conf`` keeps winning and the detected one has no effect. The plugin
-  answers with ``message.response(...)`` — ``ovos.ipgeo.update.response`` —
-  carrying either ``{"location": {...}}`` or ``{"error": true}``.
+  device by its public IP. It writes the result into the *assistant layer*
+  (``Configuration.assistant``, ``runtime.conf``), not the user config. That
+  layer sits below the XDG configs in the merge, so a ``location`` set by hand
+  in ``mycroft.conf`` keeps winning and the detected one has no effect. The
+  plugin answers with ``message.response(...)`` — ``ovos.ipgeo.update.response``
+  — carrying either ``{"location": {...}}`` or ``{"error": true}``.
 
 Every helper here goes through ``buswait`` (never raises on a bus problem —
 timeouts and a down bus come back as an error dict, exactly like ``network.py``).
@@ -200,13 +200,13 @@ def connectivity(bus) -> dict[str, Any]:
 def detect_location(bus) -> dict[str, Any]:
     """Ask ``ovos-PHAL-plugin-ipgeo`` to geolocate the device by its public IP.
 
-    The plugin writes what it finds into the web cache, which sits *below* the
-    user configuration in the merge. So a ``location`` set by hand in
-    ``mycroft.conf`` keeps winning, and the detected one changes nothing --
-    reporting a plain success there would be a lie of the same kind this page
-    exists to avoid. That case comes back as ``overridden``, with a ``reason``
-    saying which of the two ways it will not take effect -- see
-    ``_detected_location_fate``.
+    The plugin writes what it finds into the assistant layer, which sits above
+    the system and distribution configs and *below* the user configuration in
+    the merge. So a ``location`` set by hand in ``mycroft.conf`` keeps winning,
+    and the detected one changes nothing -- reporting a plain success there
+    would be a lie of the same kind this page exists to avoid. That case comes
+    back as ``overridden``, with a ``reason`` saying which of the two ways it
+    will not take effect -- see ``_detected_location_fate``.
 
     Returns ``{"ok": True, "location": {...}}``, with ``overridden: True`` and
     a ``reason`` when the detected location will not be the one the device
@@ -242,28 +242,27 @@ def detect_location(bus) -> dict[str, Any]:
 def _detected_location_fate() -> str | None:
     """Whether the location the plugin just wrote will actually take effect.
 
-    The plugin writes the web cache, which ovos-config merges second from the
-    bottom: ``[default, remote, distribution, system, *xdg_configs, patch]``.
-    Two different things can stop it mattering, and they need different advice.
+    The plugin writes the assistant layer (``Configuration.assistant``,
+    ``runtime.conf``). ovos-config 3.x merges
+    ``[default, distribution, system, assistant, *xdg_configs, patch]``, so the
+    assistant layer sits above the system and distribution configs and below
+    the XDG user files and the runtime patch layer. Two different things can
+    stop the detected location mattering, and they need different advice.
 
-    A ``location`` in a layer above it wins, and the remedy is to clear that
-    layer -- ``"overridden"``. But a system administrator can also constrain
-    the merge, and then nothing is overriding anything: the detected location
-    simply never arrives, pointing the reader at the Settings page would send
-    them to fix a layer that is not the problem, and the answer is
-    ``"ignored"``. Three constraints do that. ``disable_remote_config`` drops
-    the web cache outright. ``protected_keys.remote`` strips named keys out of
-    it. And so does ``disable_user_config``, which is the one that reads
-    backwards: ``filter_and_merge`` classifies every config that is not the
-    default or the system one as a *user* config, and the web cache is one of
-    them -- it is dropped by that test before the remote branch is ever
-    reached.
+    ``protected_keys.assistant`` covering ``location`` strips it out of the
+    assistant layer before the merge. Then nothing is overriding anything: the
+    detected location never arrives, pointing the reader at the Settings page
+    would send them to fix a layer that is not the problem, and the answer is
+    ``"ignored"``. ``disable_user_config`` does not do that:
+    ``filter_and_merge`` never drops the assistant layer, only user layers.
 
-    The same classification decides which layers can override. The
-    distribution config and the runtime patch layer are user configs too, so
-    ``protected_keys.user`` strips a ``location`` out of them just as it does
-    from the XDG files, leaving the system config as the only layer that can
-    outrank the web cache.
+    A ``location`` in a layer above the assistant layer wins, and the remedy is
+    to clear that layer -- ``"overridden"``. Only the XDG user files and the
+    runtime patch layer are above it, and ``filter_and_merge`` counts both as
+    user layers: ``disable_user_config`` drops them, and
+    ``protected_keys.user`` strips a ``location`` out of them. In either case
+    they cannot override. The system and distribution configs merge below the
+    assistant layer, so a ``location`` there never wins over the detected one.
 
     Returns ``None`` when the detected location is the one the device will use.
     """
@@ -273,10 +272,11 @@ def _detected_location_fate() -> str | None:
 
         constraints = Configuration.get_system_constraints() or {}
         protected = constraints.get("protected_keys") or {}
-        if (constraints.get("disable_remote_config")
-                or constraints.get("disable_user_config")
-                or _protects_location(protected.get("remote"))):
+        if _protects_location(protected.get("assistant")):
             return "ignored"
+        if (constraints.get("disable_user_config")
+                or _protects_location(protected.get("user"))):
+            return None
 
         # Read the files rather than the layer objects. `LocalConf.load_local`
         # merges the file in and never clears, so a `location` the reader has
@@ -285,11 +285,7 @@ def _detected_location_fate() -> str | None:
         # message would repeat forever. Building fresh objects also keeps this
         # out of ovos-config's process-global layers, which the panel serves
         # from a thread pool.
-        higher = [Configuration.system]
-        if not _protects_location(protected.get("user")):
-            higher.append(Configuration.distribution)
-            higher += list(Configuration.xdg_configs)
-            higher.append(Configuration._Configuration__patch)
+        higher = list(Configuration.xdg_configs) + [Configuration._Configuration__patch]
         higher = [LocalConf(layer.path) if getattr(layer, "path", None) else layer
                   for layer in higher]
     except Exception:  # noqa: BLE001 - a bad config must not fail the lookup

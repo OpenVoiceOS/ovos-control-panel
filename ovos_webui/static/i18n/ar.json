@@ -489,7 +489,7 @@
  "config.where.overridden": "محدد أيضًا في {where}، وتم تجاوزه",
  "config.where.stack": "كل ملفات الإعداد، بترتيب دمجها",
  "config.layer.default": "القيم الافتراضية للحزمة",
- "config.layer.remote": "ذاكرة الإعداد البعيد",
+ "config.layer.assistant": "ملف المساعد",
  "config.layer.distribution": "ملف التوزيعة",
  "config.layer.system": "ملف النظام",
  "config.layer.xdg": "ملف المستخدم",

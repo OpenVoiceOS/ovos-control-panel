@@ -955,11 +955,14 @@ class TestBroadcastInstallSemantics:
 class TestDetectedLocationIsReportedHonestly:
     """The detected location often does not win, and the page has to say so.
 
-    The plugin writes the web cache, which ovos-config merges second from the
-    bottom: the distribution config, `/etc/mycroft`, every XDG config and the
-    runtime patch layer all outrank it. Reporting a plain success when the
-    device will keep using a different location is the failure this page is
-    supposed to have stopped making.
+    The plugin writes the assistant layer (`runtime.conf`). ovos-config 3.x
+    merges `[default, distribution, system, assistant, *xdg_configs, patch]`,
+    so every XDG config and the runtime patch layer outrank it, and the
+    distribution config and `/etc/mycroft` do not. Reporting a plain success
+    when the device will keep using a different location is the failure this
+    page is supposed to have stopped making; warning about a layer that cannot
+    win sends the reader to fix the wrong thing. tests/test_location_fate.py
+    checks the same answers against a real merge.
     """
 
     @staticmethod
@@ -1051,28 +1054,30 @@ class TestDetectedLocationIsReportedHonestly:
         monkeypatch.setattr(Configuration, "_Configuration__patch",
                             _Layer(patch or {}), raising=False)
 
-    def test_a_system_wide_location_counts_not_just_the_user_file(self, monkeypatch):
-        """`/etc/mycroft` must not be the layer that is missed."""
+    def test_a_system_wide_location_does_not_outrank_the_assistant_layer(self, monkeypatch):
+        """`/etc/mycroft` merges below the assistant layer in ovos-config 3.x.
+
+        A `location` there is the one the detected location replaces, so
+        warning about it would send the reader to clear a layer that is not
+        winning.
+        """
         from ovos_webui import system
 
         self._layers(monkeypatch, {},
                      system_conf={"location": {"city": {"name": "SysWideCity"}}})
-        assert system._detected_location_fate() == "overridden"
+        assert system._detected_location_fate() is None
 
-    def test_a_distribution_image_location_counts_too(self, monkeypatch):
-        """The layer a distribution image actually uses, tested positively.
+    def test_a_distribution_image_location_does_not_outrank_it_either(self, monkeypatch):
+        """The distribution config merges first after the defaults.
 
-        The test above names this case in its docstring and then sets the
-        system layer, so dropping the distribution layer from the check left
-        the suite green. The only other test that populates it asserts the
-        result is `None`, which passes just as well when the layer is never
-        read at all.
+        A distribution image that ships a `location` is overridden by the
+        detected one, not the other way round.
         """
         from ovos_webui import system
 
         self._layers(monkeypatch, {},
                      distribution={"location": {"city": {"name": "DistroCity"}}})
-        assert system._detected_location_fate() == "overridden"
+        assert system._detected_location_fate() is None
 
     def test_no_location_anywhere_above_the_web_cache_is_not_overridden(
             self, monkeypatch, tmp_path):
@@ -1081,46 +1086,37 @@ class TestDetectedLocationIsReportedHonestly:
         self._layers(monkeypatch, {}, xdg=[{}, {}], tmp_path=tmp_path)
         assert system._detected_location_fate() is None
 
-    def test_a_device_that_drops_the_web_cache_is_not_described_as_overridden(
+    def test_protecting_location_in_the_assistant_layer_is_the_same_answer(
             self, monkeypatch):
-        """`disable_remote_config` means the detected location never arrives.
+        """`protected_keys.assistant` strips named keys out of that layer.
 
-        Nothing is overriding it, so telling the reader to clear a location on
-        the Settings page sends them to fix a layer that is not the problem.
-        """
-        from ovos_webui import system
-
-        self._layers(monkeypatch, {"disable_remote_config": True})
-        assert system._detected_location_fate() == "ignored"
-
-    def test_protecting_location_in_the_remote_layer_is_the_same_answer(
-            self, monkeypatch):
-        """`protected_keys.remote` strips named keys out of the web cache.
-
-        Nested entries are split on `:`, the syntax the shipped `mycroft.conf`
-        documents and uses (`listener:channels`). Reading them as dotted paths
-        matches nothing any device actually contains, so the panel would report
-        a stored location that was thrown away on the way in.
+        ovos-config dropped remote configuration, so `disable_remote_config`
+        and `protected_keys.remote` name nothing and a guard reading them is
+        always false. Nested entries are split on `:`, the syntax the shipped
+        `mycroft.conf` documents and uses (`listener:channels`). Reading them
+        as dotted paths matches nothing any device contains, so the panel
+        would report a stored location that was thrown away on the way in.
         """
         from ovos_webui import system
 
         self._layers(monkeypatch,
-                     {"protected_keys": {"remote": ["location:city"]}})
+                     {"protected_keys": {"assistant": ["location:city"]}})
         assert system._detected_location_fate() == "ignored"
 
-    def test_a_system_location_still_overrides_under_the_user_protections(
+    def test_a_system_location_stays_below_under_the_user_protections(
             self, monkeypatch):
-        """The system config is exempt from `protected_keys.user`.
+        """The system config is exempt from `protected_keys.user`, and still below.
 
-        It is one of the two layers `filter_and_merge` does not treat as a user
-        config, so a `location` there survives the strip and still wins.
+        `filter_and_merge` does not treat it as a user config, so a `location`
+        there survives the strip. It still merges before the assistant layer,
+        so the detected location wins over it.
         """
         from ovos_webui import system
 
         self._layers(monkeypatch,
                      {"protected_keys": {"user": ["location"]}},
                      system_conf={"location": {"city": {"name": "SysCity"}}})
-        assert system._detected_location_fate() == "overridden"
+        assert system._detected_location_fate() is None
 
     def test_a_location_protected_at_user_level_cannot_override_either(
             self, monkeypatch, tmp_path):
@@ -1189,23 +1185,22 @@ class TestDetectedLocationIsReportedHonestly:
             "the reader cleared the location and is still told it wins"
         )
 
-    def test_disabling_user_config_drops_the_web_cache_along_with_the_rest(
+    def test_disabling_user_config_keeps_the_assistant_layer_and_drops_the_user_file(
             self, monkeypatch, tmp_path):
-        """The constraint that reads backwards, and the one this got wrong.
+        """The constraint the 2.x version of this check got backwards.
 
-        `filter_and_merge` classifies every config that is not the default or
-        the system one as a *user* config, and `RemoteConf`'s path is the web
-        cache -- so `disable_user_config` drops the layer the plugin just
-        wrote, before the remote branch is ever reached. Answering "nothing
-        above is overriding it" is then the same lie as reporting a plain
-        success: the device will not use the detected location either way.
+        In ovos-config 3.x `filter_and_merge` marks the assistant layer by its
+        path and never counts it as a user config, so `disable_user_config`
+        keeps the layer the plugin just wrote. It drops the XDG user files, so
+        a `location` there cannot override: the detected location is the one
+        the device uses, and saying "ignored" would be the lie.
         """
         from ovos_webui import system
 
         self._layers(monkeypatch, {"disable_user_config": True},
-                     xdg=[{"location": {"city": {"name": "IgnoredCity"}}}],
+                     xdg=[{"location": {"city": {"name": "DroppedCity"}}}],
                      tmp_path=tmp_path)
-        assert system._detected_location_fate() == "ignored"
+        assert system._detected_location_fate() is None
 
     def test_the_runtime_patch_layer_outranks_the_web_cache_too(self, monkeypatch):
         """It is the last layer in the merge, so a `location` there wins."""

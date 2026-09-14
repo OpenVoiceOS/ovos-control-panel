@@ -489,7 +489,7 @@
  "config.where.overridden": "Also set in {where}, and overridden",
  "config.where.stack": "All the configuration files, in the order they are merged",
  "config.layer.default": "the packaged defaults",
- "config.layer.remote": "the remote configuration cache",
+ "config.layer.assistant": "the assistant file",
  "config.layer.distribution": "the distribution's file",
  "config.layer.system": "the system file",
  "config.layer.xdg": "a user file",
