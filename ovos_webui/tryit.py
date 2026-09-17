@@ -90,7 +90,7 @@ def ask(bus, utterance: str, lang: str) -> dict[str, Any]:
         bus.emit(Message("recognizer_loop:utterance",
                          {"utterances": [utterance], "lang": lang},
                          {"ident": ident, "source": "ovos-webui",
-                          "destination": ["skills"]}))
+                          "destination": "skills"}))
         first_answer.wait(ANSWER_TIMEOUT)
         if first_answer.is_set() and not failed.is_set():
             # Skills often answer in more than one sentence.

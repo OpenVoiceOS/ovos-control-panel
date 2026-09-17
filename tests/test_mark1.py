@@ -320,3 +320,10 @@ def test_display_body_rejects_oversized_grid():
         Mark1DisplayBody(grid=[[0] * 33] + [[0] * 32] * 7)  # a row too wide
     # a valid 8x32 grid is still accepted
     Mark1DisplayBody(grid=[[0] * 32] * 8)
+
+
+def test_mark1_message_destination_is_a_string():
+    # OVOS-MSG-1 §3.3: destination is a string, with no list form.
+    from ovos_webui import mark1
+
+    assert mark1._msg("enclosure.reset").context["destination"] == "enclosure"
