@@ -68,10 +68,10 @@ ANSWERS: dict[str, tuple[str, dict]] = {
         "ovos.intent.list.response",
         {"ok": True, "intents": [
             {"skill_id": "ovos-skill-date-time.openvoiceos",
-             "intent_name": "what.time.is.it", "lang": "en-US",
+             "intent_name": "what_time_is_it", "lang": "en-US",
              "method": "template", "enabled": True, "session_id": "default"},
             {"skill_id": "ovos-skill-date-time.openvoiceos",
-             "intent_name": "what.day.is.it", "lang": "en-US",
+             "intent_name": "what_day_is_it", "lang": "en-US",
              "method": "template", "enabled": True, "session_id": "default"},
             {"skill_id": "ovos-skill-hello-world.openvoiceos",
              "intent_name": "HelloWorldIntent", "lang": "en-US",
