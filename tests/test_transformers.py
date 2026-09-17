@@ -6,6 +6,7 @@ a section key is a plugin unless it is ``order``/``blacklisted_skills``;
 ``active`` defaults to true; ``order`` lists execution order.
 """
 import json
+from importlib.metadata import PackageNotFoundError, distribution
 
 import pytest
 
@@ -22,6 +23,21 @@ def _user():
     return configio.read_user_config()
 
 
+def _needs_distribution(name):
+    """Skip when the plugin is not installed, and name it in the reason.
+
+    The `[dev]` extra installs it. Where that extra cannot install (ggwave has
+    no wheel on some platforms), the test cannot hold, so it reads as a skip.
+    When the plugin is installed, the test asserts exactly what it did before.
+    """
+    try:
+        distribution(name)
+        missing = False
+    except PackageNotFoundError:
+        missing = True
+    return pytest.mark.skipif(missing, reason=f"{name} is not installed")
+
+
 # ---------------------------------------------------------------- get_chains
 
 def test_get_chains_lists_all_six_chains():
@@ -30,6 +46,7 @@ def test_get_chains_lists_all_six_chains():
     assert "path" in data
 
 
+@_needs_distribution("ovos-audio-transformer-plugin-ggwave")
 def test_installed_audio_plugins_include_a_really_installed_one():
     # ovos-audio-transformer-plugin-ggwave is a test dependency of this repo,
     # registered under opm.transformer.audio — so it must be offered.
@@ -37,6 +54,7 @@ def test_installed_audio_plugins_include_a_really_installed_one():
     assert "ovos-audio-transformer-plugin-ggwave" in audio["installed"]
 
 
+@_needs_distribution("ovos-utterance-normalizer")
 def test_utterance_installed_includes_a_neon_legacy_group_plugin():
     # ovos-utterance-normalizer registers under the deprecated ``neon.plugin.text``
     # group, which the plugin manager still loads. The page must offer it too,
