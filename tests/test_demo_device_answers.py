@@ -72,12 +72,20 @@ def test_each_intent_is_one_the_named_skill_really_registers(demo):
     avoid.
     """
     import importlib
+    import importlib.util
     import inspect
     import re
 
     _, payload = demo.ANSWERS["ovos.intent.list"]
     modules = {"ovos-skill-date-time.openvoiceos": "ovos_skill_date_time",
                "ovos-skill-hello-world.openvoiceos": "ovos_skill_hello_world"}
+
+    # The `[dev]` extra installs these skills. Where it cannot install, the
+    # check cannot run, so it reads as a skip that names the package. A skill
+    # that is installed but fails to import still fails below.
+    for skill_id in sorted({i["skill_id"] for i in payload["intents"]}):
+        if importlib.util.find_spec(modules[skill_id]) is None:
+            pytest.skip(f"{modules[skill_id]} is not installed")
 
     for intent in payload["intents"]:
         module = importlib.import_module(modules[intent["skill_id"]])
