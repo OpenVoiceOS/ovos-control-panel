@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a43](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a43) (2026-09-18)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a42...0.0.1a43)
+
+**Merged pull requests:**
+
+- fix: demo device lists the date-time intents under their current names [\#79](https://github.com/OpenVoiceOS/ovos-control-panel/pull/79) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.0.1a42](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a42) (2026-09-14)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a41...0.0.1a42)
