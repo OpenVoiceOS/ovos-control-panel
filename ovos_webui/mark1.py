@@ -81,7 +81,7 @@ def _msg(msg_type: str, data: dict[str, Any] | None = None):
     from ovos_bus_client.message import Message
 
     return Message(msg_type, data or {}, {"source": "ovos-webui",
-                                          "destination": ["enclosure"]})
+                                          "destination": "enclosure"})
 
 
 def _emit(bus, msg_type: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
