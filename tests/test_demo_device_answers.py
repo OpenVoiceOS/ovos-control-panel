@@ -108,8 +108,14 @@ def test_each_intent_is_one_the_named_skill_really_registers(demo):
         name = intent["intent_name"]
         if intent["method"] == "template":
             # A `.intent` file, named without the skill prefix or the suffix.
-            assert f'"{name}.intent"' in source, (
-                f"{name} is not a template intent of {intent['skill_id']}"
+            # The set of real names is read from the installed skill's own
+            # locale tree, not guessed at or hardcoded here: a skill renames
+            # its resource files (OVOS-INTENT-2 requires lowercase letters,
+            # digits and underscores) without this test going stale.
+            registered = {p.stem for p in locales.rglob("*.intent")}
+            assert name in registered, (
+                f"{name} is not a template intent of {intent['skill_id']}; "
+                f"it registers {sorted(registered)}"
             )
         else:
             assert re.search(rf'IntentBuilder\(\s*"{re.escape(name)}"', source), (

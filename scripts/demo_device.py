@@ -74,7 +74,7 @@ ANSWERS: dict[str, tuple[str, dict]] = {
              "intent_name": "what_day_is_it", "lang": "en-US",
              "method": "template", "enabled": True, "session_id": "default"},
             {"skill_id": "ovos-skill-hello-world.openvoiceos",
-             "intent_name": "HelloWorldIntent", "lang": "en-US",
+             "intent_name": "hello_world_intent", "lang": "en-US",
              "method": "template", "enabled": True, "session_id": "default"}]}),
     "intent.service.active_skills.get": (
         "intent.service.active_skills.reply",
