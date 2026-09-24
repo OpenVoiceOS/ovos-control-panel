@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a45](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a45) (2026-09-24)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a44...0.0.1a45)
+
+**Merged pull requests:**
+
+- fix: emit destination as a string \(OVOS-MSG-1 §3.3\) [\#78](https://github.com/OpenVoiceOS/ovos-control-panel/pull/78) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.0.1a44](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a44) (2026-09-24)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a43...0.0.1a44)
