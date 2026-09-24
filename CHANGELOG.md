@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a44](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a44) (2026-09-24)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a43...0.0.1a44)
+
+**Merged pull requests:**
+
+- fix\(test\): derive registered intent names from the installed skills instead of a hardcoded list [\#80](https://github.com/OpenVoiceOS/ovos-control-panel/pull/80) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.0.1a43](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a43) (2026-09-18)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a42...0.0.1a43)
