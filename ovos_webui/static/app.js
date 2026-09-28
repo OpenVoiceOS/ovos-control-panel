@@ -180,6 +180,7 @@
     ["/wallpaper", "nav.wallpaper", "Wallpaper"],
     ["/config", "nav.settings", "Settings"],
     ["/voice", "nav.voice", "Voice settings"],
+    ["/speakers", "nav.speakers", "Voice profiles"],
     ["/skills", "nav.skills", "Skills"],
     ["/abilities", "nav.abilities", "Abilities"],
     ["/intents", "nav.intents", "Intents"],
