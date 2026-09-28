@@ -79,7 +79,10 @@ where = ["."]
 include = ["ovos_webui*"]
 
 [tool.setuptools.package-data]
-ovos_webui = ["static/*"]
+# "static/*" is one level deep and misses static/i18n/*.json, so the wheel
+# shipped the pages and none of their translations. The pages carry data-i18n
+# attributes and fetch those files at runtime.
+ovos_webui = ["static/*", "static/**/*"]
 
 [tool.pytest.ini_options]
 
