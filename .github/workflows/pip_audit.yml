@@ -7,4 +7,4 @@ on:
 
 jobs:
   pip_audit:
-    uses: OpenVoiceOS/gh-automations/.github/workflows/pip-audit.yml@82252c363b239fe5c60dc0ae2a4e81721d4cabef
+    uses: OpenVoiceOS/gh-automations/.github/workflows/pip-audit.yml@dev
