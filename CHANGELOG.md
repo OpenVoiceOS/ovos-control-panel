@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a46](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a46) (2026-10-01)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a45...0.0.1a46)
+
+**Merged pull requests:**
+
+- ci: reference gh-automations shared workflows at @dev [\#83](https://github.com/OpenVoiceOS/ovos-control-panel/pull/83) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.0.1a45](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a45) (2026-09-24)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a44...0.0.1a45)
