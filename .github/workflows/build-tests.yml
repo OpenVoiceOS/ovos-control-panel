@@ -7,9 +7,11 @@ on:
 
 jobs:
   build:
-    uses: OpenVoiceOS/gh-automations/.github/workflows/build-tests.yml@82252c363b239fe5c60dc0ae2a4e81721d4cabef
+    uses: OpenVoiceOS/gh-automations/.github/workflows/build-tests.yml@dev
     with:
       python_versions: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
+      # OVOS dependencies ship as alphas; resolve them the way the alpha channel does.
+      uv_prerelease: 'allow'
       install_extras: 'dev'
       # ggwave (a test dependency) pulls in PyAudio, which needs portaudio to build.
       system_deps: 'portaudio19-dev'
