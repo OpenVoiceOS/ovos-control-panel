@@ -9,17 +9,14 @@ answers the question.
 The order is ovos-config's own: default, distribution, system, assistant,
 then the XDG files, then runtime patches, each overriding the one before.
 """
-import json
 from copy import deepcopy
 
-import pytest
+from ovos_webui import layers
 
 
 def _deep(layer) -> dict:
     """A snapshot that shares nothing with the layer it came from."""
     return deepcopy(dict(layer))
-
-from ovos_webui import layers
 
 
 def test_the_stack_is_reported_in_the_order_it_merges():
