@@ -9,27 +9,84 @@ answers the question.
 The order is ovos-config's own: default, distribution, system, assistant,
 then the XDG files, then runtime patches, each overriding the one before.
 """
-import json
 from copy import deepcopy
 
-import pytest
+from ovos_webui import layers
 
 
 def _deep(layer) -> dict:
     """A snapshot that shares nothing with the layer it came from."""
     return deepcopy(dict(layer))
 
-from ovos_webui import layers
+
+def _the_order_ovos_config_really_merges():
+    """The merge order, taken from the call ``load_all_configs`` makes.
+
+    Not from the text of its source. A regex over
+    ``inspect.getsource`` was tried first and it reads one comment line in
+    another repository as a change of merge order, which fails this suite
+    with a reason that is not true. ``load_all_configs`` hands
+    ``filter_and_merge`` the layer objects in the order it merges them, so
+    recording that one call *is* the order.
+
+    Returns the layer names the panel uses, consecutive duplicates kept, and
+    ``None`` for a layer ovos-config merges that the panel does not model.
+    """
+    from unittest import mock
+
+    from ovos_config.config import Configuration
+
+    recorded = []
+    real = Configuration.filter_and_merge
+
+    def record(configs):
+        # a copy: filter_and_merge replaces entries of this list in place
+        recorded.extend(configs)
+        return real(configs)
+
+    with mock.patch.object(Configuration, "filter_and_merge",
+                           staticmethod(record)):
+        # passing constraints explicitly bypasses the memo, so the call
+        # really happens even when something earlier warmed the cache
+        Configuration.load_all_configs(Configuration.get_system_constraints())
+
+    known = []
+    for name, attribute in layers._LAYERS:
+        layer = getattr(Configuration, attribute, None)
+        if layer is None:
+            continue
+        for part in (layer if name == "xdg" else [layer]):
+            known.append((name, part))
+
+    order = []
+    for merged in recorded:
+        order.append(next((name for name, part in known if part is merged),
+                          None))
+    return order
 
 
 def test_the_stack_is_reported_in_the_order_it_merges():
-    """Later beats earlier, and a reader has to be able to see that."""
+    """Later beats earlier, and this page's whole claim is which one wins.
+
+    The expected order is read from ovos-config, not restated here: a list
+    written out by hand drifts when the library changes its stack, and takes
+    the page's answer with it without failing.
+    """
+    expected = _the_order_ovos_config_really_merges()
+    assert None not in expected, (
+        "ovos-config merges a layer this page does not model: "
+        f"{expected}")
+
+    def collapse(names):
+        return [n for i, n in enumerate(names)
+                if i == 0 or n != names[i - 1]]
+
     names = [layer["name"] for layer in layers.stack()]
     # `xdg` is a list of files, so it contributes one entry per file and the
     # count varies by machine; the ORDER is the invariant, not the length
-    collapsed = [n for i, n in enumerate(names) if i == 0 or n != names[i - 1]]
-    assert collapsed == ["default", "distribution", "system", "assistant",
-                         "xdg", "patch"], names
+    assert collapse(names) == collapse(expected), (
+        f"the panel merges {collapse(names)}, "
+        f"ovos-config merges {collapse(expected)}")
     assert names[-1] == "patch", f"runtime patches must win last: {names}"
     xdg_at = [i for i, n in enumerate(names) if n == "xdg"]
     assert xdg_at == list(range(xdg_at[0], xdg_at[0] + len(xdg_at))), (
