@@ -42,6 +42,60 @@ def _pages():
     return sorted(PAGES)
 
 
+# The four reads the /plugins page starts on load that leave this machine or
+# shell out: `/api/plugins/search` fetches the PyPI index, `/api/updates`
+# asks PyPI for the latest of every installed OVOS package, `/api/updates/
+# conflicts` runs `pip check`, and `/api/plugins/recommended` reads the
+# installed set. On a cold cache they take 21 to 31 seconds together, against
+# the 30 second limit `wait_for_load_state("networkidle")` applies, so the
+# /plugins case of `test_the_page_script_runs` passed or failed on how busy
+# pypi.org was that minute (T-6597).
+#
+# Each is answered from here with the shape the real handler returns, measured
+# against a live panel rather than read off the source:
+#
+#   /api/plugins/search      keys=['cache_age','error','kinds','offline',
+#                                  'results','stale','total']
+#   /api/updates             keys=['channel','checked','offline','outdated',
+#                                  'packages']
+#   /api/updates/conflicts   keys=['conflicts','error','ok']
+#   /api/plugins/recommended keys=['lang','plugins','profiles']
+#
+# What this hides, said plainly: a handler that DROPS a key keeps this test
+# green while the real page breaks, because the browser never sees the real
+# reply. A handler that adds a key the page needs still reds here, which is
+# the direction that matters for a script-runs test. The real replies are
+# covered by the python route tests (tests/test_pypi_index.py,
+# tests/test_recommends.py), which call the handlers themselves.
+_STUBS = {
+    "**/api/plugins/search*": {"results": [], "total": 0, "kinds": ["stt", "tts"],
+                               "cache_age": 0, "stale": False, "offline": False,
+                               "error": None},
+    "**/api/updates": {"channel": "stable", "offline": False, "packages": [],
+                       "checked": 0, "outdated": 0},
+    "**/api/updates/conflicts": {"ok": True, "conflicts": [], "error": None},
+    "**/api/plugins/recommended*": {"lang": "en-us", "profiles": {}, "plugins": []},
+}
+
+
+def _answer(payload):
+    # A one-argument handler, not two: Playwright inspects the handler's own
+    # signature to decide whether to call it with just the route or with
+    # (route, request), and a second parameter -- even a defaulted one meant
+    # to close over ``payload`` -- is counted, so the request object silently
+    # overwrites ``payload`` instead of falling through to its default.
+    def handler(route):
+        route.fulfill(status=200, content_type="application/json",
+                      body=json.dumps(payload))
+    return handler
+
+
+def _stub_the_slow_reads(context):
+    """Answer the PyPI-backed reads in the browser, so no test waits on PyPI."""
+    for pattern, payload in _STUBS.items():
+        context.route(pattern, _answer(payload))
+
+
 @pytest.fixture(scope="module")
 def signed_in_page(live_panel):
     import os
@@ -74,6 +128,7 @@ def signed_in_page(live_panel):
             warnings.warn(message, stacklevel=1)
             pytest.skip(message)
         context = browser.new_context(viewport={"width": 1280, "height": 900})
+        _stub_the_slow_reads(context)
         page = context.new_page()
         page.goto(f"{url}/login")
         page.fill("input[type=password]", token)
