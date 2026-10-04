@@ -202,6 +202,7 @@
  "backup.confirm_restore_suffix": "؟ تُحفظ الملفات الحالية كنسخ احتياطية.",
  "backup.restored_prefix": "تمت استعادة ",
  "backup.restored_suffix": " ملف(ملفات).",
+ "backup.unchanged_suffix": " ملف (ملفات) كانت مطابقة للنسخة الاحتياطية وتُركت كما هي.",
  "about.loading": "جارٍ التحميل…",
  "about.links_heading": "روابط",
  "about.packages_heading": "الحزم المثبَّتة",

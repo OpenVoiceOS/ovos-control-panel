@@ -152,6 +152,9 @@ OvosWebUI.ready(function () {
     form.append("file", file);
     api("/api/restore", {method: "POST", body: form}).then(function (r) {
       var msg = OvosWebUI.t("backup.restored_prefix", "Restored ") + r.restored.length + OvosWebUI.t("backup.restored_suffix", " file(s).");
+      if (r.unchanged && r.unchanged.length) {
+        msg += " " + r.unchanged.length + OvosWebUI.t("backup.unchanged_suffix", " file(s) already matched the backup and were left as they were.");
+      }
       if (r.applied === false) {
         msg += " " + OvosWebUI.t("config.saved.notLive", "The running services could not be told over the bus. They read the file as well, so this usually still applies; if it does not, restart the OVOS services.");
       }

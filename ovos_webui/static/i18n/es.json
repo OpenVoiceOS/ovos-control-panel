@@ -202,6 +202,7 @@
  "backup.confirm_restore_suffix": "? Los archivos actuales se conservan como copia de seguridad.",
  "backup.restored_prefix": "Restaurado(s) ",
  "backup.restored_suffix": " archivo(s).",
+ "backup.unchanged_suffix": " archivo(s) ya coincidían con la copia y se dejaron como estaban.",
  "about.loading": "Cargando…",
  "about.links_heading": "Enlaces",
  "about.packages_heading": "Paquetes instalados",

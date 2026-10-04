@@ -57,6 +57,42 @@ def test_backup_restore_round_trip(client, make_skill):
     assert skillsio.read_settings("skill-a") == {"volume": 3}
 
 
+def test_restore_leaves_identical_files_alone(client, make_skill):
+    """Restoring what is already there writes nothing and makes no backups.
+
+    Every restore used to rewrite every file, so restoring a fresh download
+    pushed one real earlier save per file out of its backup directory.
+    """
+    from ovos_webui.fsutils import backup_dir_for
+    from ovos_webui.configio import user_config_path
+
+    client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    make_skill("skill-a", {"volume": 3})
+    blob = client.get("/api/backup").content
+    before = sorted(p.name for p in backup_dir_for(user_config_path()).glob("*"))
+
+    r = client.post("/api/restore", files={"file": ("b.tar.gz", blob, "application/gzip")})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["restored"] == [] and body["backups"] == []
+    assert len(body["unchanged"]) == 2
+    after = sorted(p.name for p in backup_dir_for(user_config_path()).glob("*"))
+    assert after == before
+
+
+def test_restore_writes_only_what_differs(client, make_skill):
+    client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
+    make_skill("skill-a", {"volume": 3})
+    blob = client.get("/api/backup").content
+    client.put("/api/skills/skill-a", json={"settings": {"volume": 99}})
+
+    body = client.post("/api/restore",
+                       files={"file": ("b.tar.gz", blob, "application/gzip")}).json()
+    assert len(body["restored"]) == 1 and body["restored"][0].endswith("settings.json")
+    assert len(body["unchanged"]) == 1
+    assert skillsio.read_settings("skill-a") == {"volume": 3}
+
+
 def test_restore_keeps_a_backup_of_what_it_replaced(client):
     client.put("/api/config", json={"text": '{"lang": "pt-pt"}', "format": "json"})
     blob = client.get("/api/backup").content
