@@ -31,9 +31,15 @@ The page works on a phone. It follows the light or dark setting of your device.
 
 ## Install
 
+The panel follows the OVOS **alpha** channel. It is built on the ovos-config 3.x
+configuration layers, which only alpha has for now. Install it on an alpha device:
+
 ```bash
-pip install ovos-control-panel
+pip install --pre ovos-control-panel
 ```
+
+On a stable or testing device, pip either picks an old pre-release or wants to
+upgrade core OVOS packages to alphas. Wait until alpha becomes testing.
 
 ## Run
 
