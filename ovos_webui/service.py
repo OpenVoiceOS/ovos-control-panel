@@ -1232,7 +1232,9 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     @privileged.get("/network/status")
     def api_network_status() -> dict[str, Any]:
         from ovos_webui import network
-        return network.connected(_need_bus())
+        status = network.connected(_need_bus())
+        status.update(network.local_links())
+        return status
 
     @privileged.post("/network/scan")
     def api_network_scan() -> dict[str, Any]:
