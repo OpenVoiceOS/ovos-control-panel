@@ -116,3 +116,19 @@ def test_every_page_can_be_reached_from_the_navigation():
     assert not unreachable, (
         f"these pages are served but not in the navigation: {unreachable}"
     )
+
+
+def test_app_js_knows_every_shipped_locale():
+    """app.js only fetches the languages it lists, so the list and the files
+    must agree: a new locale file that is missing from the list would never be
+    loaded, and a listed language with no file would 404 on every page."""
+    import re
+    from pathlib import Path
+
+    from ovos_webui.service import STATIC_DIR
+
+    js = (Path(STATIC_DIR) / "app.js").read_text(encoding="utf-8")
+    listed = set(re.findall(r"(\w+): 1", re.search(
+        r"var LOCALES = \{([^}]*)\}", js).group(1)))
+    shipped = {p.stem for p in (Path(STATIC_DIR) / "i18n").glob("*.json")} - {"en"}
+    assert listed == shipped
