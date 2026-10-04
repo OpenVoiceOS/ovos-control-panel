@@ -30,14 +30,14 @@ Screenshots and longer notes go in a comment below.
 | | |
 |---|---|
 | `ovos-control-panel` version | <!-- shown on the About page --> |
-| Installed with | <!-- e.g. `pip install ovos-control-panel`, `--pre`, from git --> |
-| OVOS channel / `ovos-core` version | |
+| Installed with | <!-- e.g. `pip install --pre ovos-control-panel`, from git --> |
+| OVOS channel / `ovos-core` version | <!-- the panel needs the alpha channel for now --> |
 | Device | <!-- e.g. Mark II, Raspberry Pi 4 + ReSpeaker, headless VM --> |
 | Browsers | <!-- e.g. Firefox on Android, Safari on iPhone, Chrome on desktop --> |
 
 ## Install and sign in
 
-- [ ] The README install command installs the **current** release. Note which version pip actually picked.
+- [ ] On an alpha device, the README install command installs the **current** release. Note which version pip actually picked.
 - [ ] Started as a service with `--host 0.0.0.0` and a token, the panel answers on `http://<device ip>:8500/`.
 - [ ] A wrong token gives a clear error, and you stay on the sign-in page.
 - [ ] The right token takes you to the dashboard.
