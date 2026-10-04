@@ -276,6 +276,19 @@
     renameMenu = nameHere;
   }
 
+  // The header's round buttons share one group, so they wrap together.
+  function headerTools() {
+    var header = document.querySelector("header");
+    if (!header) { return null; }
+    var tools = header.querySelector(".header-tools");
+    if (!tools) {
+      tools = document.createElement("span");
+      tools.className = "header-tools";
+      header.appendChild(tools);
+    }
+    return tools;
+  }
+
   // A theme control lives in every header without touching each page's markup.
   // It cycles system → dark → light, persists the choice, and names the
   // current state for a screen reader.
@@ -311,8 +324,8 @@
       labelThemeButton(button, theme);
       live.textContent = t("theme.label", "Theme:") + " " + themeName(theme);
     });
-    header.appendChild(button);
-    header.appendChild(live);
+    headerTools().appendChild(button);
+    headerTools().appendChild(live);
   }
 
   // A Simple-mode control lives in every header, next to the theme control. It
@@ -348,8 +361,8 @@
         ? t("simple.nowOn", "Showing only the everyday pages.")
         : t("simple.nowOff", "Showing all pages.");
     });
-    header.appendChild(button);
-    header.appendChild(live);
+    headerTools().appendChild(button);
+    headerTools().appendChild(live);
   }
 
   // A larger-text control in every header. Cycles normal → large → larger,
@@ -382,8 +395,8 @@
       labelTextButton(button, size);
       live.textContent = t("text.label", "Text size:") + " " + t("text." + size, TEXT_NAME[size]);
     });
-    header.appendChild(button);
-    header.appendChild(live);
+    headerTools().appendChild(button);
+    headerTools().appendChild(live);
   }
 
   function showBanner(status) {

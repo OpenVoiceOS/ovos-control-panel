@@ -155,6 +155,18 @@ button.theme-toggle {
   border-radius: var(--radius-sm);
 }
 button.theme-toggle:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-wash); }
+/* The header's round buttons travel as one group at the trailing edge. When
+ * the title and the group do not fit on one line (a 320px phone, or the
+ * largest text size) the whole group wraps to its own row instead of pushing
+ * the page sideways. */
+.header-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-inline-start: auto;
+}
+.header-tools button.theme-toggle { margin-inline-start: 0; }
+header { flex-wrap: wrap; row-gap: 0.5rem; }
 
 /* The signature: a red equalizer that reads as sound made visible. It is
  * decorative for a screen reader, and on the dashboard it goes flat and dim
@@ -772,7 +784,7 @@ details.tech[open] > summary { margin-bottom: 0.5rem; }
 [dir="rtl"] details.tech[open] > summary::before { transform: rotate(-90deg); }
 
 /* ── tabs (Simple / Advanced, JSON / YAML) ────────────────────────────────── */
-.tabs { display: flex; gap: 0.4rem; margin-bottom: 0.7rem; }
+.tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.7rem; }
 .tabs button { width: auto; flex: 0 0 auto; }
 .tabs button[aria-pressed="false"], .tabs button:not([aria-pressed]):not([aria-current="true"]) {
   background: transparent;
