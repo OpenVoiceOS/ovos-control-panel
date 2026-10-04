@@ -156,7 +156,7 @@
   // not exist answered 404 on every page load, a console error on a device in
   // any other language; English is the fallback either way. A test keeps this
   // list in step with the files.
-  var LOCALES = {ar: 1, es: 1, pt: 1};
+  var LOCALES = {ar: 1, da: 1, es: 1, pt: 1};
 
   // Load the locale file for a language, fall back to English, and apply it.
   function loadLocale(lang) {
