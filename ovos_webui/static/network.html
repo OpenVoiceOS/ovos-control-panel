@@ -106,7 +106,21 @@ OvosWebUI.ready(function () {
       el("current-state").textContent = t("network.on", "Connected to") + " " + status.ssid;
       d.hidden = false; f.hidden = false;
     } else {
-      el("current-state").textContent = t("network.off", "Not connected to any Wi-Fi network.");
+      // The plugin only speaks about Wi-Fi. Say how the device is online
+      // anyway, and do not claim "not connected" when nothing answered.
+      var lines = [];
+      if (status && status.answered === false) {
+        lines.push(t("network.noAnswer", "The network manager did not answer, so the Wi-Fi state is unknown."));
+      }
+      if (status && status.wired && status.wired.length) {
+        lines.push(t("network.wired", "Online by cable:") + " " + status.wired.join(", ") + ".");
+      }
+      if (status && status.wifi_adapter === false) {
+        lines.push(t("network.noAdapter", "This device has no Wi-Fi adapter."));
+      } else if (status && status.answered !== false) {
+        lines.push(t("network.off", "Not connected to any Wi-Fi network."));
+      }
+      el("current-state").textContent = lines.join(" ");
       d.hidden = true; f.hidden = true;
     }
   }

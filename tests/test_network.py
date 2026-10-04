@@ -77,21 +77,62 @@ def test_scan_without_a_responder_returns_empty_and_does_not_hang():
 def test_connected_reports_the_ssid():
     from ovos_webui import network
     assert network.connected(_nm_bus(connected_ssid="home")) == {
-        "connected": True, "ssid": "home"}
+        "connected": True, "ssid": "home", "answered": True}
 
 
 def test_not_connected():
     from ovos_webui import network
     assert network.connected(_nm_bus(connected_ssid=None)) == {
-        "connected": False, "ssid": None}
+        "connected": False, "ssid": None, "answered": True}
 
 
-def test_connected_timeout_is_reported_as_not_connected():
+def test_connected_timeout_is_reported_as_unanswered():
+    """No reply is not the same as "not connected": the page says unknown."""
     from ovos_utils.fakebus import FakeBus
     from ovos_webui import network
 
     network.QUERY_TIMEOUT = 0.3
-    assert network.connected(FakeBus()) == {"connected": False, "ssid": None}
+    assert network.connected(FakeBus()) == {
+        "connected": False, "ssid": None, "answered": False}
+
+
+def _fake_kernel(tmp_path, links, default):
+    """A /sys/class/net with ``links`` ({name: is_wifi}) and a route table
+    whose default routes go out through ``default``."""
+    net = tmp_path / "net"
+    for name, wifi in links.items():
+        (net / name).mkdir(parents=True)
+        if wifi:
+            (net / name / "wireless").mkdir()
+    route = tmp_path / "route"
+    lines = ["Iface\tDestination\tGateway"]
+    for name in default:
+        lines.append(f"{name}\t00000000\t0101A8C0")
+    lines.append("eth0\t0001A8C0\t00000000")  # a subnet route, not a default
+    route.write_text("\n".join(lines) + "\n")
+    return str(net), str(route)
+
+
+def test_local_links_sees_a_cable(tmp_path):
+    """A wired device (or a container) is online, just not over Wi-Fi."""
+    from ovos_webui import network
+    net, route = _fake_kernel(tmp_path, {"lo": False, "eth0": False}, ["eth0"])
+    assert network.local_links(net, route) == {
+        "wired": ["eth0"], "wifi_adapter": False}
+
+
+def test_local_links_does_not_call_wifi_wired(tmp_path):
+    from ovos_webui import network
+    net, route = _fake_kernel(tmp_path, {"eth0": False, "wlan0": True}, ["wlan0"])
+    assert network.local_links(net, route) == {
+        "wired": [], "wifi_adapter": True}
+
+
+def test_local_links_off_linux_is_unknown(tmp_path):
+    from ovos_webui import network
+    assert network.local_links(str(tmp_path / "missing"),
+                               str(tmp_path / "missing-route")) == {
+        "wired": [], "wifi_adapter": None}
 
 
 # ── connect: success and failure on two different reply topics ────────────────
@@ -205,7 +246,12 @@ def test_network_status_route_reads_the_bus(bus):
         r = c.get("/api/network/status",
                   headers={"Authorization": "Bearer s3cret-token"})
         assert r.status_code == 200
-        assert r.json() == {"connected": True, "ssid": "home"}
+        body = r.json()
+        assert {k: body[k] for k in ("connected", "ssid", "answered")} == {
+            "connected": True, "ssid": "home", "answered": True}
+        # the kernel's view rides along, whatever this machine has
+        assert isinstance(body["wired"], list)
+        assert body["wifi_adapter"] in (True, False, None)
 
 
 def test_network_page_renders(client):

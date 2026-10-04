@@ -25,6 +25,7 @@ route that reaches these functions sits on the privileged router.
 """
 from __future__ import annotations
 
+import os
 import threading
 from typing import Any
 
@@ -154,21 +155,61 @@ def scan(bus) -> list[dict[str, str]]:
 
 
 def connected(bus) -> dict[str, Any]:
-    """Report the currently-joined network as ``{connected, ssid}``.
+    """Report the currently-joined network as ``{connected, ssid, answered}``.
 
-    A device that is not on Wi-Fi (or that did not answer) reports
-    ``{"connected": False, "ssid": None}``.
+    ``answered`` is False when the network manager did not reply at all, so the
+    page can say the Wi-Fi state is unknown instead of claiming the device is
+    not connected.
     """
     reply = _request(bus, "ovos.phal.nm.get.connected", {},
                      ["ovos.phal.nm.is.connected",
                       "ovos.phal.nm.is.not.connected"], QUERY_TIMEOUT)
     if reply is None:
-        return {"connected": False, "ssid": None}
+        return {"connected": False, "ssid": None, "answered": False}
     topic, message = reply
     if topic == "ovos.phal.nm.is.connected":
         ssid = (message.data or {}).get("connection_name")
-        return {"connected": True, "ssid": ssid if isinstance(ssid, str) else None}
-    return {"connected": False, "ssid": None}
+        return {"connected": True, "ssid": ssid if isinstance(ssid, str) else None,
+                "answered": True}
+    return {"connected": False, "ssid": None, "answered": True}
+
+
+def local_links(net_root: str = "/sys/class/net",
+                route_file: str = "/proc/net/route") -> dict[str, Any]:
+    """How this device is online, read from the kernel, not from the bus.
+
+    The network-manager plugin only speaks about Wi-Fi, so a device on a cable
+    (or a container on a virtual link) was shown as "not connected" while the
+    page itself was being served over that link. This reads two things the
+    panel can see without running anything, since it runs on the device:
+
+    * ``wired``: the interfaces that carry a default route and are not Wi-Fi
+      adapters, i.e. what the device is online through besides Wi-Fi.
+    * ``wifi_adapter``: True if any interface is a Wi-Fi adapter, False if
+      none is, None when the kernel's view cannot be read (not Linux).
+    """
+    try:
+        names = os.listdir(net_root)
+    except OSError:
+        return {"wired": [], "wifi_adapter": None}
+
+    def is_wifi(name: str) -> bool:
+        base = os.path.join(net_root, name)
+        return (os.path.isdir(os.path.join(base, "wireless"))
+                or os.path.exists(os.path.join(base, "phy80211")))
+
+    default: set[str] = set()
+    try:
+        with open(route_file, encoding="ascii", errors="replace") as handle:
+            next(handle, None)  # the header line
+            for line in handle:
+                parts = line.split()
+                if len(parts) >= 2 and parts[1] == "00000000":
+                    default.add(parts[0])
+    except OSError:
+        pass
+    wired = sorted(n for n in default if n in names and not is_wifi(n))
+    return {"wired": wired, "wifi_adapter": any(is_wifi(n) for n in names)}
 
 
 def _act(bus, ssid: str, msg_type: str, data: dict[str, Any],
