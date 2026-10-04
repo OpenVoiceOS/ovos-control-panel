@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a51](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a51) (2026-10-04)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a50...0.0.1a51)
+
+**Merged pull requests:**
+
+- fix: pin the configuration merge order to the order that is real [\#73](https://github.com/OpenVoiceOS/ovos-control-panel/pull/73) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a50](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a50) (2026-10-04)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a49...0.0.1a50)
