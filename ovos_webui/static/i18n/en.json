@@ -202,6 +202,7 @@
  "backup.confirm_restore_suffix": "? The current files are kept as backups.",
  "backup.restored_prefix": "Restored ",
  "backup.restored_suffix": " file(s).",
+ "backup.unchanged_suffix": " file(s) already matched the backup and were left as they were.",
  "about.loading": "Loading…",
  "about.links_heading": "Links",
  "about.packages_heading": "Installed packages",

@@ -153,13 +153,25 @@ def restore_archive(blob: bytes, bus=None) -> dict[str, Any]:
     """
     with _RESTORE_LOCK:
         result = _restore_archive(blob)
-    # "restored" holds the paths written, not the member names.
-    if str(user_config_path()) in result.get("restored", ()):
+    # "restored" holds the paths written, not the member names. A config file
+    # that already matched was not rewritten, but the running services are
+    # still told: they may hold values the file no longer has, and the person
+    # restoring expects the device to follow the backup.
+    config = str(user_config_path())
+    if config in result.get("restored", ()) or config in result.get("unchanged", ()):
         from ovos_webui import configio
 
         result["applied"] = configio.notify_config_changed(
             configio.read_user_config(), bus)
     return result
+
+
+def _same_as_live(target: Path, text: str) -> bool:
+    """True when ``target`` already holds exactly ``text``."""
+    try:
+        return target.read_text(encoding="utf-8") == text
+    except (OSError, UnicodeDecodeError):
+        return False
 
 
 def _restore_archive(blob: bytes) -> dict[str, Any]:
@@ -185,6 +197,7 @@ def _restore_archive(blob: bytes) -> dict[str, Any]:
 
     # ── stage 1: read and check everything ───────────────────────────────────
     staged: list[tuple[Path, str, Path]] = []
+    unchanged: list[str] = []
     try:
         with tar:
             for member in _iter_members(tar):
@@ -218,12 +231,20 @@ def _restore_archive(blob: bytes) -> dict[str, Any]:
                         raise RestoreError(
                             f"{member.name} cannot be restored: {err}") from err
                     root = skills_root()
+                # A file that already holds exactly this text is left alone:
+                # rewriting it would only push a real earlier save out of its
+                # backup directory, for a change of nothing.
+                if _same_as_live(target, text):
+                    unchanged.append(str(target))
+                    continue
                 staged.append((target, text, root))
     except tarfile.TarError as err:
         raise RestoreError(f"the archive could not be read: {err}") from err
 
-    if not staged:
+    if not staged and not unchanged:
         raise RestoreError("the archive holds nothing to restore")
+    if not staged:
+        return {"restored": [], "backups": [], "unchanged": unchanged}
 
     # ── stage 2: write every new file beside its target ──────────────────────
     temporaries: list[tuple[Path, Path, Path]] = []
@@ -259,4 +280,4 @@ def _restore_archive(blob: bytes) -> dict[str, Any]:
             f"the restore stopped part way: {err}. "
             f"These files were replaced: {', '.join(written) or 'none'}. "
             f"The files they replaced are in the backup directories.") from err
-    return {"restored": written, "backups": backups}
+    return {"restored": written, "backups": backups, "unchanged": unchanged}
