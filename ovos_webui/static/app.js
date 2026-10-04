@@ -223,6 +223,59 @@
     });
   }
 
+  // On a phone the page list folds behind one button (#86). The CSS hides the
+  // list only once this has run (the js-menu class), so a page whose script
+  // fails still shows every link. The button carries the current page's name.
+  var renameMenu = function () {};
+  function mountMenuToggle() {
+    var nav = document.querySelector('nav[aria-label], nav#sitenav');
+    if (!nav || document.getElementById("menu-toggle")) { return; }
+    if (!nav.id) { nav.id = "sitenav"; }
+    var bar = document.createElement("div");
+    bar.className = "menubar";
+    var button = document.createElement("button");
+    button.id = "menu-toggle";
+    button.type = "button";
+    button.className = "menu-toggle";
+    button.setAttribute("aria-controls", nav.id);
+    button.setAttribute("aria-expanded", "false");
+    var label = document.createElement("span");
+    label.textContent = "\u2630 " + t("menu.button", "Menu");
+    var here = document.createElement("span");
+    here.className = "menu-here";
+    function nameHere() {
+      var current = nav.querySelector('a[aria-current="page"]');
+      here.textContent = current ? current.textContent : "";
+      label.textContent = "\u2630 " + t("menu.button", "Menu");
+    }
+    nameHere();
+    button.appendChild(label);
+    button.appendChild(here);
+    bar.appendChild(button);
+    nav.parentNode.insertBefore(bar, nav);
+    function setOpen(open) {
+      nav.classList.toggle("open", open);
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    button.addEventListener("click", function () {
+      var open = !nav.classList.contains("open");
+      setOpen(open);
+      if (open) {
+        var first = nav.querySelector('a[aria-current="page"]') || nav.querySelector("a");
+        if (first) { first.focus(); }
+      }
+    });
+    nav.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && nav.classList.contains("open")) {
+        setOpen(false);
+        button.focus();
+      }
+    });
+    document.documentElement.classList.add("js-menu");
+    // The page names are translated after the locale loads; follow them.
+    renameMenu = nameHere;
+  }
+
   // A theme control lives in every header without touching each page's markup.
   // It cycles system → dark → light, persists the choice, and names the
   // current state for a screen reader.
@@ -367,6 +420,7 @@
       document.addEventListener("DOMContentLoaded", function () {
         renderNav();
         markNav();
+        mountMenuToggle();
         mountThemeToggle();
         mountSimpleToggle();
         mountTextToggle();
@@ -376,6 +430,7 @@
           showBanner(s);
           return loadLocale(s && s.lang);
         }).catch(function () { /* offline or not signed in: stay in English */ })
+          .then(function () { renameMenu(); })
           .then(function () {
             try { fn(); } catch (e) { console.error(e); }
           });

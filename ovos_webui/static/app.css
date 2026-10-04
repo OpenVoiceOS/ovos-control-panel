@@ -271,6 +271,43 @@ nav a[href="/about"]   { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 
 main { padding: 1.1rem; max-width: 62rem; margin: 0 auto; }
 
+/* ── phone: the page list folds behind one Menu button (#86) ───────────────
+ * 24 wrapping pills filled 63% of a 375x812 screen and stayed there while the
+ * page scrolled. Below the desktop breakpoint the list is closed by default
+ * and only the slim bar that opens it stays pinned. The bar names the page
+ * you are on, so the closed menu still says where you are. Without app.js the
+ * class is never set and the full list shows, as before. */
+.menubar { display: none; }
+@media (max-width: 63.99rem) {
+  .menubar {
+    display: flex;
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 10;
+    padding: 0.45rem 0.8rem;
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+  }
+  button.menu-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 44px;
+    padding: 0.4rem 0.9rem;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    max-width: 100%;
+  }
+  button.menu-toggle:hover { border-color: var(--accent); background: var(--accent-wash); }
+  .menu-toggle .menu-here { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .js-menu nav { position: static; }
+  .js-menu nav:not(.open) { display: none; }
+}
+
 /* ── desktop: the pill row becomes a left rail, content uses the width ──────
  * Below 64rem the phone layout stands (header, wrapping pill nav, single
  * column). At and above it the page becomes a two-column app: a sticky rail
