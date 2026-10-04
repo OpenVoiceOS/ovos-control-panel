@@ -938,8 +938,6 @@ def test_the_repeat_box_reports_and_sets_the_state_the_device_is_in(signed_in_pa
     """`REPEAT` is the queue and `REPEAT_TRACK` is the one track; naming them
     the other way round makes the badge say the opposite of what is happening.
     """
-    import json as _json
-
     page, url = signed_in_page
     good = {"ok": True, "can_play": True,
             "backends": [{"name": "mpv", "remote": False, "uris": ["file"]}]}

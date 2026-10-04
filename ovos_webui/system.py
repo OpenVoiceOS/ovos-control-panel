@@ -291,7 +291,7 @@ def _detected_location_fate() -> str | None:
     except Exception:  # noqa: BLE001 - a bad config must not fail the lookup
         return None
 
-    return "overridden" if any(l.get("location") for l in higher) else None
+    return "overridden" if any(layer.get("location") for layer in higher) else None
 
 
 def _protects_location(protected_keys) -> bool:
