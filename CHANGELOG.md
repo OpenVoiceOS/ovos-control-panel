@@ -1,16 +1,5 @@
 # Changelog
 
-## [0.0.1a47](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a47) (2026-10-04)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a46...0.0.1a47)
-
-**Merged pull requests:**
-
-- docs: add a manual test run issue template [\#88](https://github.com/OpenVoiceOS/ovos-control-panel/pull/88) ([andlo](https://github.com/andlo))
-- fix: stub PyPI calls in the /plugins page browser test [\#84](https://github.com/OpenVoiceOS/ovos-control-panel/pull/84) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
-- fix\(packaging\): ship the i18n files in the wheel [\#82](https://github.com/OpenVoiceOS/ovos-control-panel/pull/82) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
-- test: skip the checks whose optional package is absent [\#77](https://github.com/OpenVoiceOS/ovos-control-panel/pull/77) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
-
 ## [0.0.1a46](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a46) (2026-10-01)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a45...0.0.1a46)
