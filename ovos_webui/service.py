@@ -241,6 +241,17 @@ class MediaSeekBody(BaseModel):
     position: int = Field(ge=0, le=86_400_000, strict=True)
 
 
+class MediaEntryBody(BaseModel):
+    """One media entry, as the player itself describes it, and optionally the
+    set it was picked from. Not validated field by field here:
+    `media.play_entry` refuses anything the player would refuse, using the
+    player's own rule, so the two cannot drift apart."""
+    entry: dict[str, Any]
+    #: Absent means "the caller does not know the set"; the service reads the
+    #: device's own. An empty list means "the set is empty" and reads nothing.
+    among: list[dict[str, Any]] | None = None
+
+
 class MediaToggleBody(BaseModel):
     """Shuffle and repeat: both are on-or-off, and the name reaches the
     generated API documentation, so it should not say shuffle on the repeat
@@ -1286,6 +1297,21 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_media_repeat(body: MediaToggleBody) -> dict[str, Any]:
         from ovos_webui import media
         return media.set_repeat(_need_bus(), body.enabled)
+
+    @privileged.get("/media/candidates")
+    def api_media_candidates() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.candidates(_need_bus())
+
+    @privileged.get("/media/likes")
+    def api_media_likes() -> dict[str, Any]:
+        from ovos_webui import media
+        return media.likes(_need_bus())
+
+    @privileged.post("/media/play_entry")
+    def api_media_play_entry(body: MediaEntryBody) -> dict[str, Any]:
+        from ovos_webui import media
+        return media.play_entry(_need_bus(), body.entry, body.among)
 
     @privileged.get("/media/backends")
     def api_media_backends() -> dict[str, Any]:
