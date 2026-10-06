@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.1a52](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a52) (2026-10-06)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a51...0.0.1a52)
+
+**Merged pull requests:**
+
+- fix: find recommends files by closest language tag [\#96](https://github.com/OpenVoiceOS/ovos-control-panel/pull/96) ([JarbasAl](https://github.com/JarbasAl))
+- feat: add a Danish translation [\#95](https://github.com/OpenVoiceOS/ovos-control-panel/pull/95) ([andlo](https://github.com/andlo))
+- fix: only fetch the locale files that ship [\#94](https://github.com/OpenVoiceOS/ovos-control-panel/pull/94) ([andlo](https://github.com/andlo))
+- fix: a restore leaves files that already match alone [\#93](https://github.com/OpenVoiceOS/ovos-control-panel/pull/93) ([andlo](https://github.com/andlo))
+- fix: say how the device is online when it is not on Wi-Fi [\#92](https://github.com/OpenVoiceOS/ovos-control-panel/pull/92) ([andlo](https://github.com/andlo))
+- fix: no page scrolls sideways on a narrow phone [\#91](https://github.com/OpenVoiceOS/ovos-control-panel/pull/91) ([andlo](https://github.com/andlo))
+- fix: fold the page menu behind one button on a phone \(\#86\) [\#90](https://github.com/OpenVoiceOS/ovos-control-panel/pull/90) ([andlo](https://github.com/andlo))
+- docs: say the panel needs the alpha channel [\#89](https://github.com/OpenVoiceOS/ovos-control-panel/pull/89) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a51](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a51) (2026-10-04)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a50...0.0.1a51)
