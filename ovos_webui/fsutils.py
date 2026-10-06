@@ -92,7 +92,9 @@ def make_backup(path: Path) -> Path | None:
     while dest.exists():
         n += 1
         dest = bdir / f"{path.name}.{timestamp()}.{n}.bak"
-    shutil.copy2(path, dest)
+    # ``copy``, not ``copy2``: the backup's mtime is when it was taken, not
+    # when the file it copies was last written.
+    shutil.copy(path, dest)
     _prune_backups(bdir, path.name)
     return dest
 
@@ -107,20 +109,35 @@ def latest_backup(path: Path) -> Path | None:
     return backups[-1] if backups else None
 
 
-def _sorted_backups(bdir: Path, name: str) -> list[Path]:
-    """Return backups oldest first.
+#: ``<file>.<stamp>.bak`` or, for a second backup in the same second,
+#: ``<file>.<stamp>.<n>.bak`` (see :func:`make_backup`).
+_ORDER_RE = re.compile(r"\.(?P<stamp>[0-9]{8}T[0-9]{6}Z)(?:\.(?P<n>[0-9]+))?\.bak$")
 
-    The names carry a timestamp with a resolution of one second, so several
-    backups can share a name prefix. Sorting by modification time, with the
-    name as the tie breaker, keeps the real order.
+
+def backup_order_key(name: str) -> tuple[str, int]:
+    """The order a backup was taken in, read from its file name.
+
+    The stamp has a one-second resolution, so a later backup in the same
+    second gets a counter: ``.bak``, ``.1.bak``, ``.2.bak`` … ``.10.bak``.
+    The counter is compared as a number, so ``.10`` comes after ``.9`` and a
+    bare ``.bak`` comes before ``.1``. Plain string order gets both wrong.
+
+    Modification time is not used: ``make_backup`` used to copy the source
+    file's mtime onto the backup, and on a file system with a coarse clock two
+    backups can share an mtime, which then fell back to string order and
+    listed the oldest backup as the newest. A name that does not match sorts
+    first.
     """
-    def key(path: Path):
-        try:
-            return (path.stat().st_mtime_ns, path.name)
-        except OSError:  # pragma: no cover - the file went away
-            return (0, path.name)
+    match = _ORDER_RE.search(name)
+    if not match:
+        return ("", -1)
+    return (match.group("stamp"), int(match.group("n") or 0))
 
-    return sorted(bdir.glob(f"{name}.*.bak"), key=key)
+
+def _sorted_backups(bdir: Path, name: str) -> list[Path]:
+    """Return backups oldest first, in the order they were taken."""
+    return sorted(bdir.glob(f"{name}.*.bak"),
+                  key=lambda path: (backup_order_key(path.name), path.name))
 
 
 def _restore_metadata(tmp: str, previous) -> None:
