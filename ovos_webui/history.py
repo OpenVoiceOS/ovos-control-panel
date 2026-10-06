@@ -21,7 +21,13 @@ import re
 from pathlib import Path
 from typing import Any
 
-from ovos_webui.fsutils import _WRITE_LOCK, UnsafeIdentifier, atomic_write, is_within
+from ovos_webui.fsutils import (
+    _WRITE_LOCK,
+    UnsafeIdentifier,
+    atomic_write,
+    backup_order_key,
+    is_within,
+)
 
 BACKUP_DIR_NAME = ".ovos-webui-backups"
 
@@ -77,9 +83,8 @@ def _describe(bak: Path, root: Path) -> dict[str, Any] | None:
         "target": str(target),
         "stamp": match.group("stamp"),
         "size": st.st_size,
-        #: Sort key. The stamp string has a one-second resolution and an
-        #: unpadded counter (".9" vs ".10"), so string order is wrong for
-        #: same-second backups; modification time is the real order.
+        #: When the backup was taken. Ordering uses the name instead
+        #: (fsutils.backup_order_key), which a coarse clock cannot tie.
         "mtime": st.st_mtime_ns,
     }
 
@@ -100,7 +105,11 @@ def list_backups() -> list[dict[str, Any]]:
                 entry = _describe(here / filename, root)
                 if entry:
                     found.append(entry)
-    found.sort(key=lambda e: (e["mtime"], e["id"]), reverse=True)
+    # Order by the stamp and counter in the name (see
+    # fsutils.backup_order_key); the backups of different files share one
+    # UTC clock, so this also orders them against each other.
+    found.sort(key=lambda e: (backup_order_key(Path(e["id"]).name), e["id"]),
+               reverse=True)
     return found
 
 

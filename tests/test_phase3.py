@@ -479,3 +479,76 @@ def test_updates_route_shape(client, monkeypatch):
     assert isinstance(body["packages"], list)
     for p in body["packages"]:
         assert set(p) == {"name", "installed", "latest", "outdated"}
+
+
+# ── backup order on a coarse clock (#97) ─────────────────────────────────────
+# Two backups in the same second share a stamp; the second gets ".1". On a
+# file system whose clock ticks coarser than the saves, they can also share an
+# mtime. Ordering used to fall back to the name as a string, where ".1.bak"
+# sorts before ".bak", so the oldest backup was listed as the newest and
+# "Undo my last change" restored the wrong version. These tests force the tie
+# instead of hoping for it.
+
+def _same_second_backups(path, count):
+    """Make ``count`` backups of ``path`` within one second, oldest first,
+    every one with the same mtime."""
+    import os
+    from unittest import mock
+
+    from ovos_webui import fsutils
+
+    made = []
+    with mock.patch.object(fsutils, "timestamp", return_value="20261006T064614Z"):
+        for i in range(count):
+            path.write_text(json.dumps({"version": i}))
+            made.append(fsutils.make_backup(path))
+    ns = made[0].stat().st_mtime_ns
+    for backup in made:
+        os.utime(backup, ns=(ns, ns))
+    return made
+
+
+def test_backup_order_key_reads_the_counter_as_a_number():
+    from ovos_webui.fsutils import backup_order_key
+
+    names = ["f.20261006T064614Z.10.bak", "f.20261006T064614Z.bak",
+             "f.20261006T064614Z.9.bak", "f.20261006T064615Z.bak",
+             "f.20261006T064614Z.1.bak"]
+    assert sorted(names, key=backup_order_key) == [
+        "f.20261006T064614Z.bak", "f.20261006T064614Z.1.bak",
+        "f.20261006T064614Z.9.bak", "f.20261006T064614Z.10.bak",
+        "f.20261006T064615Z.bak"]
+
+
+def test_latest_backup_is_the_newest_even_when_mtimes_tie(tmp_path):
+    from ovos_webui.fsutils import latest_backup, list_backups
+
+    target = tmp_path / "mycroft.conf"
+    made = _same_second_backups(target, 11)  # .bak, .1 … .10
+    assert list_backups(target) == made
+    assert latest_backup(target) == made[-1]
+    assert json.loads(latest_backup(target).read_text()) == {"version": 10}
+
+
+def test_history_lists_same_second_backups_newest_first():
+    from ovos_webui import history
+
+    made = _same_second_backups(configio.user_config_path(), 3)
+    listed = [b["id"].rsplit("/", 1)[-1] for b in history.list_backups()
+              if b["stamp"].startswith("20261006T064614Z")]
+    assert listed == [m.name for m in reversed(made)]
+
+
+def test_a_backup_is_stamped_when_it_is_taken(tmp_path):
+    """mtime means when the backup was made, not when the source was written."""
+    import os
+    import time
+
+    from ovos_webui.fsutils import make_backup
+
+    target = tmp_path / "mycroft.conf"
+    target.write_text("{}")
+    old = time.time_ns() - 3600 * 10**9
+    os.utime(target, ns=(old, old))
+    backup = make_backup(target)
+    assert backup.stat().st_mtime_ns > old + 1800 * 10**9
