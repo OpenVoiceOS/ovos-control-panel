@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.1a53](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a53) (2026-10-06)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a52...0.0.1a53)
+
+**Merged pull requests:**
+
+- fix: order backups by the stamp and counter in their name \(\#97\) [\#98](https://github.com/OpenVoiceOS/ovos-control-panel/pull/98) ([andlo](https://github.com/andlo))
+- feat: show what else the device matched, and what has been liked [\#71](https://github.com/OpenVoiceOS/ovos-control-panel/pull/71) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.1a52](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a52) (2026-10-06)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a51...0.0.1a52)
