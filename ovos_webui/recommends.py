@@ -15,12 +15,16 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ovos_spec_tools.language import closest_lang
 from ovos_utils.log import LOG
 
 #: A language code, e.g. ``pt`` or ``pt-pt``. Anything else is refused before
 #: it can be joined into a path: ``lang`` is used to build ``<lang>.conf``, so
 #: a value with a separator or ``..`` would otherwise walk out of the registry.
 LANG_RE = re.compile(r"^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})?$")
+
+MAX_LANG_DISTANCE = 5
+
 
 #: The profiles the registry ships, in the order ovos-config merges them.
 PROFILE_ORDER = ["base", "platform", "offline_stt", "online_stt",
@@ -75,8 +79,9 @@ def _read(path: Path) -> dict[str, Any]:
 def for_language(lang: str) -> dict[str, Any]:
     """Return every recommendation the registry holds for ``lang``.
 
-    ovos-config falls back from ``pt-pt`` to any file that starts with ``pt``,
-    so the same fallback is used here.
+    Files are named by language tag (``pt-PT.conf``, ``arg.conf``) or, in older
+    registries, in lower case (``pt-pt.conf``). The closest file wins, as in
+    ``ovos-config autoconfigure``.
     """
     root = registry_root()
     if root is None:
@@ -85,18 +90,16 @@ def for_language(lang: str) -> dict[str, Any]:
     if not LANG_RE.match(lang):
         # Not a language code. Refuse it rather than build a path from it.
         return {"available": True, "lang": lang, "profiles": {}}
-    short = lang.split("-")[0]
     out: dict[str, Any] = {}
     for profile in profiles():
         directory = root / profile
-        if not directory.is_dir():
+        if profile == "platform" or not directory.is_dir():
             continue
-        path = directory / f"{lang}.conf"
-        if not path.is_file():
-            matches = sorted(p for p in directory.glob(f"{short}*.conf"))
-            if not matches:
-                continue
-            path = matches[0]
+        stems = sorted(p.stem for p in directory.glob("*.conf"))
+        match = closest_lang(lang, stems, max_distance=MAX_LANG_DISTANCE)
+        if match is None:
+            continue
+        path = directory / f"{match}.conf"
         data = _read(path)
         if data:
             out[profile] = {"lang": path.stem, "config": data,
