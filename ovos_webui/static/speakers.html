@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="same-origin">
+<title>Voice profiles — OpenVoiceOS</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<script src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<div class="banner" id="banner" role="alert" hidden></div>
+<header><h1 data-i18n="hdr.speakers">Voice profiles</h1>
+  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
+<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
+  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
+</nav>
+<main id="main" tabindex="-1">
+  <p class="hint" data-i18n="speakers.intro">The device can check that a wake word came from a voice it
+    knows. Record a few clips of each person, give the profile a name, and the device keeps a voice
+    fingerprint. This needs ovos-ww-verifier-plugin-speaker on the device.</p>
+
+  <div class="card" role="note">
+    <strong data-i18n="speakers.privacy.title">What is stored</strong>
+    <ul class="plain">
+      <li data-i18n="speakers.privacy.local">The recordings leave this browser, go to the device, and are
+        deleted after the device reads them. Only a number fingerprint stays, and it stays on the device.</li>
+      <li data-i18n="speakers.privacy.consent">Record a person only with that person present and willing.</li>
+      <li data-i18n="speakers.privacy.gate">Enrolling and deleting are closed on the device by default. If
+        the device answers that enrollment is off, a person with access to the device turns it on in the
+        plugin configuration.</li>
+    </ul>
+  </div>
+
+  <h2 data-i18n="speakers.roster.title">Enrolled voices</h2>
+  <section class="card" id="section-roster">
+    <ul class="plain rowlist" id="speaker-list"></ul>
+    <div class="msg" id="msg-roster" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <h2 data-i18n="speakers.record.title">Record a new voice</h2>
+  <section class="card" id="section-enroll">
+    <label data-i18n="speakers.record.nameLabel">Name of this person
+      <input id="speaker-name" type="text" autocomplete="off" maxlength="64" placeholder="Alice">
+    </label>
+    <p class="hint" data-i18n="speakers.record.howto">Record three to five clips. Say a normal sentence
+      each time, about three seconds, in the room the device sits in.</p>
+
+    <div id="recorder" hidden>
+      <div class="row">
+        <button id="rec-start" data-i18n="speakers.record.start">Record a clip</button>
+        <button class="secondary" id="rec-stop" data-i18n="speakers.record.stop" hidden>Stop</button>
+      </div>
+      <p class="hint" id="rec-state" role="status" aria-live="polite"></p>
+    </div>
+
+    <p class="hint" id="rec-unavailable" hidden></p>
+
+    <label data-i18n="speakers.record.uploadLabel">Or add a WAV file
+      <input id="clip-file" type="file" accept="audio/wav,.wav" multiple>
+    </label>
+
+    <ul class="plain rowlist" id="clip-list"></ul>
+
+    <div class="row">
+      <button id="enroll-go" data-i18n="speakers.record.enroll">Save this voice</button>
+      <button class="secondary" id="clips-clear" data-i18n="speakers.record.clear">Discard the clips</button>
+    </div>
+    <div class="msg" id="msg-enroll" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <h2 data-i18n="speakers.test.title">Test a voice</h2>
+  <section class="card" id="section-test">
+    <p class="hint" data-i18n="speakers.test.intro">Record one fresh clip and ask the device whose voice it
+      is. Nothing is saved: this only reports what the device hears.</p>
+    <div id="test-recorder" hidden>
+      <div class="row">
+        <button id="test-start" data-i18n="speakers.test.start">Record and test</button>
+        <button class="secondary" id="test-stop" data-i18n="speakers.test.stop" hidden>Stop</button>
+      </div>
+    </div>
+    <label data-i18n="speakers.test.uploadLabel">Or test a WAV file
+      <input id="test-file" type="file" accept="audio/wav,.wav">
+    </label>
+    <div class="msg" id="msg-test" role="status" aria-live="polite" hidden></div>
+  </section>
+
+  <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+</main>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t,
+      say = OvosWebUI.say, confirmed = OvosWebUI.confirmed;
+
+  // The device's embedder reads 16 kHz mono. The browser records at whatever
+  // its hardware runs at, so every clip is resampled here rather than sent at
+  // the card's rate and resampled on a device with less to spare.
+  var TARGET_RATE = 16000;
+  var MAX_SECONDS = 15;
+  var clips = [];            // {name, b64, seconds}
+  var recording = null;      // the capture in flight
+  var enrolledClips = {};    // name -> clip count, for a profile enrolled here
+
+  // ── WAV encoding ─────────────────────────────────────────────────────────
+  // The device refuses anything that is not a readable WAV, so the browser
+  // builds one: 16-bit PCM, one channel, 16 kHz, with the 44-byte header.
+  function downsample(samples, fromRate) {
+    if (fromRate === TARGET_RATE) { return samples; }
+    var ratio = fromRate / TARGET_RATE;
+    var out = new Float32Array(Math.floor(samples.length / ratio));
+    for (var i = 0; i < out.length; i++) {
+      // Average the window rather than picking one sample: a plain pick
+      // aliases, and an aliased clip embeds to a different voice.
+      var start = Math.floor(i * ratio), end = Math.min(Math.floor((i + 1) * ratio), samples.length);
+      var sum = 0, n = 0;
+      for (var j = start; j < end; j++) { sum += samples[j]; n++; }
+      out[i] = n ? sum / n : 0;
+    }
+    return out;
+  }
+
+  function encodeWav(samples) {
+    var buffer = new ArrayBuffer(44 + samples.length * 2);
+    var view = new DataView(buffer);
+    function str(offset, text) {
+      for (var i = 0; i < text.length; i++) { view.setUint8(offset + i, text.charCodeAt(i)); }
+    }
+    str(0, "RIFF");
+    view.setUint32(4, 36 + samples.length * 2, true);
+    str(8, "WAVEfmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);            // PCM
+    view.setUint16(22, 1, true);            // mono
+    view.setUint32(24, TARGET_RATE, true);
+    view.setUint32(28, TARGET_RATE * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    str(36, "data");
+    view.setUint32(40, samples.length * 2, true);
+    for (var i = 0; i < samples.length; i++) {
+      var s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return buffer;
+  }
+
+  function toBase64(buffer) {
+    var bytes = new Uint8Array(buffer), binary = "";
+    for (var i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return window.btoa(binary);
+  }
+
+  // ── the roster ───────────────────────────────────────────────────────────
+  function renderRoster(names) {
+    var ul = el("speaker-list");
+    ul.innerHTML = "";
+    if (!names.length) {
+      var empty = document.createElement("li");
+      empty.className = "hint";
+      empty.textContent = t("speakers.roster.none",
+        "Nobody is enrolled yet. With an empty roster the device falls back to whatever its fail_open setting says.");
+      ul.appendChild(empty);
+      return;
+    }
+    names.forEach(function (name) {
+      var li = document.createElement("li");
+      var count = enrolledClips[name];
+      var clipText = count
+        ? " · " + count + " " + t("speakers.roster.clips", "clips")
+        : "";
+      li.innerHTML = '<span class="name">' + esc(name) + "</span>"
+        + '<span class="slug">' + esc(clipText) + "</span>";
+      var del = document.createElement("button");
+      del.className = "secondary";
+      del.textContent = t("speakers.roster.delete", "Delete");
+      del.addEventListener("click", function () { removeSpeaker(name); });
+      li.appendChild(del);
+      ul.appendChild(li);
+    });
+  }
+
+  function loadRoster() {
+    return api("/api/speakers").then(function (d) {
+      if (!d.available) {
+        say("msg-roster", t("speakers.roster.offline",
+          "The device did not answer. Check that ovos-ww-verifier-plugin-speaker is installed and the bus is up."), true);
+        renderRoster([]);
+        return;
+      }
+      if (d.error) { say("msg-roster", deviceError(d.error), true); } else { el("msg-roster").hidden = true; }
+      renderRoster(d.speakers || []);
+    }).catch(function (e) { say("msg-roster", e.message, true); });
+  }
+
+  // The device answers with the specification's own short strings. Each gets a
+  // sentence a reader can act on; an unknown one is shown as it arrived.
+  function deviceError(code) {
+    var known = {
+      "enrollment disabled": t("speakers.err.disabled",
+        "Enrollment is turned off on the device. Somebody with access to it turns on allow_bus_enrollment in the plugin configuration."),
+      "bad request": t("speakers.err.badRequest", "The device refused the request."),
+      "bad clip": t("speakers.err.badClip", "The device could not read a recording."),
+      "clip too large": t("speakers.err.tooLarge", "The recordings are larger than the device accepts."),
+      "no audio": t("speakers.err.noAudio", "No recording reached the device."),
+      "internal error": t("speakers.err.internal", "The device hit an error while it worked on this.")
+    };
+    return known[code] || String(code);
+  }
+
+  function removeSpeaker(name) {
+    if (!confirmed(t("speakers.roster.confirm", "Delete this voice profile?"))) { return; }
+    api("/api/speakers/" + encodeURIComponent(name), {method: "DELETE"}).then(function (d) {
+      if (!d.available) {
+        say("msg-roster", t("speakers.roster.offline",
+          "The device did not answer. Check that ovos-ww-verifier-plugin-speaker is installed and the bus is up."), true);
+        return;
+      }
+      if (d.error) { say("msg-roster", deviceError(d.error), true); return; }
+      delete enrolledClips[name];
+      say("msg-roster", d.removed
+        ? t("speakers.roster.deleted", "The profile is deleted.")
+        : t("speakers.roster.absent", "There was no profile with that name."));
+      loadRoster();
+    }).catch(function (e) { say("msg-roster", e.message, true); });
+  }
+
+  // ── recording ────────────────────────────────────────────────────────────
+  function canRecord() {
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+              && window.AudioContext !== undefined);
+  }
+
+  function startCapture(onClip, onError) {
+    navigator.mediaDevices.getUserMedia({audio: {channelCount: 1}}).then(function (stream) {
+      var ctx = new window.AudioContext();
+      var source = ctx.createMediaStreamSource(stream);
+      var node = ctx.createScriptProcessor(4096, 1, 1);
+      var chunks = [], frames = 0;
+      node.onaudioprocess = function (e) {
+        var input = e.inputBuffer.getChannelData(0);
+        chunks.push(new Float32Array(input));
+        frames += input.length;
+        if (frames / ctx.sampleRate >= MAX_SECONDS) { recording.stop(); }
+      };
+      source.connect(node);
+      node.connect(ctx.destination);
+      recording = {
+        stop: function () {
+          if (recording !== this && recording !== null && recording.done) { return; }
+          this.done = true;
+          node.disconnect();
+          source.disconnect();
+          stream.getTracks().forEach(function (tr) { tr.stop(); });
+          var merged = new Float32Array(frames), at = 0;
+          chunks.forEach(function (c) { merged.set(c, at); at += c.length; });
+          var rate = ctx.sampleRate;
+          ctx.close();
+          recording = null;
+          var samples = downsample(merged, rate);
+          onClip(toBase64(encodeWav(samples)), samples.length / TARGET_RATE);
+        },
+        done: false
+      };
+    }).catch(function (err) { onError(err); });
+  }
+
+  function renderClips() {
+    var ul = el("clip-list");
+    ul.innerHTML = "";
+    clips.forEach(function (clip, index) {
+      var li = document.createElement("li");
+      li.innerHTML = '<span class="name">' + esc(clip.name) + "</span>"
+        + '<span class="slug">' + esc(clip.seconds.toFixed(1) + " s") + "</span>";
+      var drop = document.createElement("button");
+      drop.className = "secondary";
+      drop.textContent = t("speakers.record.drop", "Remove");
+      drop.addEventListener("click", function () { clips.splice(index, 1); renderClips(); });
+      li.appendChild(drop);
+      ul.appendChild(li);
+    });
+    if (clips.length) {
+      var note = document.createElement("li");
+      note.className = "hint";
+      note.textContent = clips.length < 3
+        ? t("speakers.record.more", "Three clips or more make a profile the device can trust.")
+        : t("speakers.record.enough", "That is enough to save.");
+      ul.appendChild(note);
+    }
+  }
+
+  function addClip(b64, seconds) {
+    clips.push({name: t("speakers.record.clipName", "Clip") + " " + (clips.length + 1),
+                b64: b64, seconds: seconds});
+    renderClips();
+  }
+
+  function readWavFile(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var buffer = reader.result, head = new Uint8Array(buffer, 0, Math.min(12, buffer.byteLength));
+        var tag = String.fromCharCode.apply(null, head);
+        if (tag.slice(0, 4) !== "RIFF" || tag.slice(8, 12) !== "WAVE") {
+          reject(new Error(t("speakers.record.notWav", "That file is not a WAV recording.")));
+          return;
+        }
+        resolve(toBase64(buffer));
+      };
+      reader.onerror = function () { reject(new Error(t("speakers.record.unreadable", "That file could not be read."))); };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  // ── enrolling ────────────────────────────────────────────────────────────
+  function enroll() {
+    var name = el("speaker-name").value.trim();
+    if (!name) { say("msg-enroll", t("speakers.record.needName", "Give this person a name first."), true); return; }
+    if (!clips.length) { say("msg-enroll", t("speakers.record.needClips", "Record at least one clip first."), true); return; }
+    say("msg-enroll", t("speakers.record.working", "The device is listening to the clips. This takes a moment."));
+    api("/api/speakers/enroll", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({name: name, clips: clips.map(function (c) { return c.b64; })})
+    }).then(function (d) {
+      if (!d.available) {
+        say("msg-enroll", t("speakers.record.noAnswer",
+          "The device did not answer in time. The profile may or may not have been saved: check the list."), true);
+        loadRoster();
+        return;
+      }
+      if (d.error) { say("msg-enroll", deviceError(d.error), true); return; }
+      if (!d.enrolled) { say("msg-enroll", t("speakers.record.failed", "The device did not save the profile."), true); return; }
+      enrolledClips[d.name] = d.clips;
+      clips = [];
+      renderClips();
+      el("speaker-name").value = "";
+      say("msg-enroll", t("speakers.record.saved", "The voice is saved."));
+      loadRoster();
+    }).catch(function (e) { say("msg-enroll", e.message, true); });
+  }
+
+  // ── testing ──────────────────────────────────────────────────────────────
+  function testClip(b64) {
+    say("msg-test", t("speakers.test.working", "The device is listening to the clip."));
+    api("/api/speakers/verify", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({clip: b64})
+    }).then(function (d) {
+      if (!d.available) {
+        say("msg-test", t("speakers.test.noAnswer", "The device did not answer."), true);
+        return;
+      }
+      if (d.error) { say("msg-test", deviceError(d.error), true); return; }
+      if (d.roster_empty) {
+        say("msg-test", d.accepted
+          ? t("speakers.test.emptyOpen", "Nobody is enrolled, and this device accepts any voice.")
+          : t("speakers.test.emptyClosed", "Nobody is enrolled, and this device accepts no voice until somebody is."), !d.accepted);
+        return;
+      }
+      if (!d.speaker) {
+        say("msg-test", t("speakers.test.noMatch", "This voice matches nobody who is enrolled."), true);
+        return;
+      }
+      // A label and then the name, never a name inside a sentence: a
+      // translation puts the words in its own order, and a fragment glued
+      // around a name cannot follow it.
+      var score = (d.score === null || d.score === undefined) ? "" : " (" + d.score.toFixed(2) + ")";
+      var label = d.accepted
+        ? t("speakers.test.accepted", "The device accepts this voice as:")
+        : t("speakers.test.rejected", "The closest voice, which the device does not accept:");
+      say("msg-test", label + " " + d.speaker + score, !d.accepted);
+    }).catch(function (e) { say("msg-test", e.message, true); });
+  }
+
+  // ── wiring ───────────────────────────────────────────────────────────────
+  if (canRecord()) {
+    el("recorder").hidden = false;
+    el("test-recorder").hidden = false;
+  } else {
+    var why = el("rec-unavailable");
+    why.hidden = false;
+    why.textContent = window.isSecureContext === false
+      ? t("speakers.record.insecure",
+          "This browser only opens the microphone over HTTPS, or on the device itself. Add a WAV file instead, or open this panel on the device.")
+      : t("speakers.record.noMic", "This browser does not give the page a microphone. Add a WAV file instead.");
+  }
+
+  el("rec-start").addEventListener("click", function () {
+    el("rec-start").hidden = true;
+    el("rec-stop").hidden = false;
+    say("rec-state", t("speakers.record.recording", "Recording. Say a sentence, then stop."));
+    startCapture(function (b64, seconds) {
+      el("rec-start").hidden = false;
+      el("rec-stop").hidden = true;
+      el("rec-state").hidden = true;
+      addClip(b64, seconds);
+    }, function (err) {
+      el("rec-start").hidden = false;
+      el("rec-stop").hidden = true;
+      say("rec-state", t("speakers.record.micDenied", "The browser did not give this page the microphone.") + " " + err.name, true);
+    });
+  });
+
+  el("rec-stop").addEventListener("click", function () { if (recording) { recording.stop(); } });
+
+  el("test-start").addEventListener("click", function () {
+    el("test-start").hidden = true;
+    el("test-stop").hidden = false;
+    say("msg-test", t("speakers.test.recording", "Recording. Say a sentence, then stop."));
+    startCapture(function (b64) {
+      el("test-start").hidden = false;
+      el("test-stop").hidden = true;
+      testClip(b64);
+    }, function (err) {
+      el("test-start").hidden = false;
+      el("test-stop").hidden = true;
+      say("msg-test", t("speakers.record.micDenied", "The browser did not give this page the microphone.") + " " + err.name, true);
+    });
+  });
+
+  el("test-stop").addEventListener("click", function () { if (recording) { recording.stop(); } });
+
+  el("clip-file").addEventListener("change", function (e) {
+    var files = Array.prototype.slice.call(e.target.files || []);
+    files.reduce(function (chain, file) {
+      return chain.then(function () {
+        return readWavFile(file).then(function (b64) { addClip(b64, 0); });
+      });
+    }, Promise.resolve()).catch(function (err) { say("msg-enroll", err.message, true); });
+    e.target.value = "";
+  });
+
+  el("test-file").addEventListener("change", function (e) {
+    var file = (e.target.files || [])[0];
+    if (file) { readWavFile(file).then(testClip).catch(function (err) { say("msg-test", err.message, true); }); }
+    e.target.value = "";
+  });
+
+  el("enroll-go").addEventListener("click", enroll);
+  el("clips-clear").addEventListener("click", function () { clips = []; renderClips(); el("msg-enroll").hidden = true; });
+
+  loadRoster();
+});
+</script>
+</body>
+</html>
