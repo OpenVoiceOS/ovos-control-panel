@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.1a54](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a54) (2026-10-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a53...0.0.1a54)
+
+**Merged pull requests:**
+
+- fix: name greetings in the demo device's intent list [\#101](https://github.com/OpenVoiceOS/ovos-control-panel/pull/101) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+- fix: add the Danish strings for the media candidates card [\#99](https://github.com/OpenVoiceOS/ovos-control-panel/pull/99) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a53](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a53) (2026-10-06)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a52...0.0.1a53)
