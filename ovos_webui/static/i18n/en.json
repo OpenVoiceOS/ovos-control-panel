@@ -289,6 +289,7 @@
  "plugins.kind.solver": "Answers questions",
  "plugins.kind.ww": "Wake word",
  "plugins.kind.vad": "Voice activity",
+ "plugins.kind.media_provider": "Music and radio source",
  "plugins.profile.offline_stt": "works offline",
  "plugins.profile.online_stt": "needs the internet",
  "plugins.profile.offline_male": "works offline",

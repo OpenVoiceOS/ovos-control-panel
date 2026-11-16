@@ -289,6 +289,7 @@
  "plugins.kind.solver": "Responde preguntas",
  "plugins.kind.ww": "Palabra de activación",
  "plugins.kind.vad": "Actividad de voz",
+ "plugins.kind.media_provider": "Fuente de música y radio",
  "plugins.profile.offline_stt": "funciona sin conexión",
  "plugins.profile.online_stt": "necesita internet",
  "plugins.profile.offline_male": "funciona sin conexión",

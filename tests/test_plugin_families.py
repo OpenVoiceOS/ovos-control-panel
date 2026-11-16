@@ -28,6 +28,10 @@ from ovos_webui.pypi import classify
     ("ovos-tts-plugin-server", "tts"),
     ("ovos-stt-plugin-server", "stt"),
     ("ovos-translate-plugin-server", "translate"),
+    # OCP's MediaProviders, the replacement for the OCP search skills
+    ("ovos-media-provider-pyradios", "media_provider"),
+    ("ovos-media-provider-somafm", "media_provider"),
+    ("ovos-media-provider-youtube-music", "media_provider"),
 ])
 def test_family_is_classified(name, kind):
     assert classify(name) == kind

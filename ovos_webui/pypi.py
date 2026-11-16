@@ -98,6 +98,11 @@ FAMILIES: list[tuple[str, str]] = [
     (r"^ovos-lang-detector-[a-z0-9-]+-plugin$", "lang_detect"),
     (r"^ovos-persona-[a-z0-9-]+$", "persona"),
     (r"^ovos-media-plugin-[a-z0-9-]+$", "media"),
+    # OCP's MediaProviders (opm.media.provider): ovos-media-provider-pyradios,
+    # -somafm, -news, -youtube, ... They replace the OCP search skills and
+    # are loaded by ovos-ocp-pipeline-plugin, inside ovos-core, so like
+    # pipeline stages they are installed with the broadcast topic.
+    (r"^ovos-media-provider-[a-z0-9-]+$", "media_provider"),
     (r"^ovos-gui-plugin-[a-z0-9-]+$", "gui"),
     (r"^ovos-skill-[a-z0-9-]+$", "skill"),
 ]
