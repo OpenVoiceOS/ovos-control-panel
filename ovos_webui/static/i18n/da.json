@@ -288,6 +288,7 @@
  "plugins.kind.solver": "Svarer på spørgsmål",
  "plugins.kind.ww": "Wake word",
  "plugins.kind.vad": "Stemmeaktivitet",
+ "plugins.kind.media_provider": "Kilde til musik og radio",
  "plugins.profile.offline_stt": "virker offline",
  "plugins.profile.online_stt": "kræver internet",
  "plugins.profile.offline_male": "virker offline",
