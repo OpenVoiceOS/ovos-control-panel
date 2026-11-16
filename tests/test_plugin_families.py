@@ -34,8 +34,7 @@ from ovos_webui.pypi import classify
     ("ovos-media-provider-youtube-music", "media_provider"),
     # skills that are not named ovos-skill-*
     ("skill-homeassistant", "skill"),
-    ("neon-skill-alerts", "skill"),
-    ("neon-homeassistant-skill", "skill"),
+    ("skill-monster-scanner", "skill"),
 ])
 def test_family_is_classified(name, kind):
     assert classify(name) == kind
