@@ -105,6 +105,12 @@ FAMILIES: list[tuple[str, str]] = [
     (r"^ovos-media-provider-[a-z0-9-]+$", "media_provider"),
     (r"^ovos-gui-plugin-[a-z0-9-]+$", "gui"),
     (r"^ovos-skill-[a-z0-9-]+$", "skill"),
+    # skills published by others under their own conventions, which load in
+    # ovos-core like any other: skill-homeassistant (OscillateLabs), and the
+    # Neon skills, named neon-skill-* or neon-*-skill
+    (r"^skill-[a-z0-9-]+$", "skill"),
+    (r"^neon-skill-[a-z0-9-]+$", "skill"),
+    (r"^neon-[a-z0-9-]+-skill$", "skill"),
 ]
 
 _COMPILED = [(re.compile(pattern, re.IGNORECASE), kind) for pattern, kind in FAMILIES]

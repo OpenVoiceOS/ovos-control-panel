@@ -31,7 +31,12 @@ from ovos_utils.log import LOG
 
 #: A package name and nothing else. No version, no extras, no path, no URL.
 #: Anchored, so a trailing `; rm -rf /` cannot match.
-PACKAGE_RE = re.compile(r"^ovos-[a-z0-9]([a-z0-9-]{0,78}[a-z0-9])?$", re.IGNORECASE)
+#: A plain package name in PyPI's normalized form (PEP 503): letters, digits
+#: and hyphens, no version, extras, path or URL. It does not have to start
+#: with ``ovos-``: nothing in OVOS asks that of a skill or plugin
+#: (skill-homeassistant, the neon-skill-* skills). What may be installed is
+#: decided by ``pypi.classify``: only the OVOS plugin families.
+PACKAGE_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,98}[a-z0-9])?$", re.IGNORECASE)
 
 #: Give up on a pip run after this long.
 JOB_TIMEOUT = 900
@@ -203,7 +208,7 @@ def validate_package_name(name: str) -> str:
     # fullmatch correctly refuses it.
     if not PACKAGE_RE.fullmatch(name):
         raise UnsafePackageName(
-            "the package name must be a plain OVOS package name, "
+            "the package name must be a plain package name, "
             "with no version, extras, path or URL")
     if classify(name) is None:
         raise UnsafePackageName(
