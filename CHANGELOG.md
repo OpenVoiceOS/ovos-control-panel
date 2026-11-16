@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a55](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a55) (2026-11-16)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a54...0.0.1a55)
+
+**Merged pull requests:**
+
+- feat: find and install OCP's media providers [\#104](https://github.com/OpenVoiceOS/ovos-control-panel/pull/104) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a54](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a54) (2026-10-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a53...0.0.1a54)
