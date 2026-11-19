@@ -107,7 +107,7 @@ def test_every_page_can_be_reached_from_the_navigation():
 
     from ovos_webui.service import PAGES, STATIC_DIR
 
-    nav = set(re.findall(r'\["(/[a-z0-9-]*)",\s*"nav\.',
+    nav = set(re.findall(r'"path":\s*"(/[a-z0-9-]*)"',
                          (Path(STATIC_DIR) / "app.js").read_text(encoding="utf-8")))
     served = {route for route, _template in
               ((p[0], p[1]) if isinstance(p, (list, tuple)) else (p, None) for p in PAGES)}
