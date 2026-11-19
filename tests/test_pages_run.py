@@ -1266,3 +1266,61 @@ def test_a_player_that_cannot_be_asked_about_likes_hides_the_list(signed_in_page
                                         "uris": ["file"]}]},
                 likes={"ok": False, "entries": []})
     assert page.locator("#likes-wrap").is_hidden()
+
+
+def _visible_nav(page):
+    return page.evaluate("""() => [...document.querySelectorAll("nav a[href]")]
+      .filter(a => a.offsetParent !== null).map(a => a.getAttribute("href"))""")
+
+
+def test_the_menu_starts_folded_and_unfolds_in_place(signed_in_page):
+    """Everyday pages always show; the advanced groups fold behind "Show more"
+    inside the menu, and the choice is remembered."""
+    page, url = signed_in_page
+    page.goto(f"{url}/")
+    page.evaluate("() => { localStorage.removeItem('ovos-nav-more'); "
+                  "localStorage.removeItem('ovos-simple'); }")
+    page.reload()
+    page.wait_for_load_state("networkidle")
+
+    assert page.locator("#simple-toggle").count() == 0, "the header switch is gone"
+    more = page.locator("nav #nav-more")
+    assert more.get_attribute("aria-expanded") == "false"
+    folded = _visible_nav(page)
+    assert "/about" in folded and "/skills" in folded
+    assert "/intents" not in folded and "/plugins" not in folded
+
+    more.click()
+    assert more.get_attribute("aria-expanded") == "true"
+    assert "/intents" in _visible_nav(page)
+
+    page.reload()
+    page.wait_for_load_state("networkidle")
+    assert page.locator("nav #nav-more").get_attribute("aria-expanded") == "true"
+    assert "/plugins" in _visible_nav(page)
+    page.evaluate("() => localStorage.setItem('ovos-nav-more', '0')")
+
+
+def test_the_group_of_the_page_you_are_on_stays_open(signed_in_page):
+    page, url = signed_in_page
+    page.goto(f"{url}/")
+    page.evaluate("() => localStorage.setItem('ovos-nav-more', '0')")
+    page.goto(f"{url}/intents")
+    page.wait_for_load_state("networkidle")
+    shown = _visible_nav(page)
+    assert {"/intents", "/transformers", "/personas"} <= set(shown)
+    assert "/plugins" not in shown
+    assert page.locator('nav a[aria-current="page"]').get_attribute("href") == "/intents"
+
+
+def test_someone_who_had_every_page_on_keeps_them(signed_in_page):
+    """The old header switch stored ovos-simple=0 for "show all pages"."""
+    page, url = signed_in_page
+    page.goto(f"{url}/")
+    page.evaluate("() => { localStorage.removeItem('ovos-nav-more'); "
+                  "localStorage.setItem('ovos-simple', '0'); }")
+    page.reload()
+    page.wait_for_load_state("networkidle")
+    assert page.locator("nav #nav-more").get_attribute("aria-expanded") == "true"
+    page.evaluate("() => { localStorage.removeItem('ovos-simple'); "
+                  "localStorage.setItem('ovos-nav-more', '0'); }")

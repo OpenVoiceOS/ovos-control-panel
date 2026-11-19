@@ -972,10 +972,6 @@
  "voice.pipeline.removed": "{n} removida.",
  "wallpaper.setThis": "Definir papel de parede: {n}",
  "wallpaper.brokenThumb": "Não foi possível carregar o papel de parede: {n}",
- "simple.on": "Vista simples ligada — mostrar todas as páginas",
- "simple.off": "Mostrar apenas as páginas do dia a dia",
- "simple.nowOn": "A mostrar apenas as páginas do dia a dia.",
- "simple.nowOff": "A mostrar todas as páginas.",
  "menu.button": "Menu",
  "text.label": "Tamanho do texto:",
  "text.normal": "normal",
@@ -1029,5 +1025,12 @@
  "voice.tts.previewNote": "Isto reproduz uma amostra no dispositivo usando a voz que está em uso agora. Para ouvir uma nova escolha, guarde-a primeiro e depois prima novamente.",
  "voice.tts.previewSending": "A dizer uma amostra no dispositivo…",
  "voice.tts.previewDone": "Enviado. Se não ouviu nada, ainda não há nenhuma voz instalada, ou guarde a sua escolha e tente novamente.",
- "voice.tts.sample": "Olá, é assim que soo."
+ "voice.tts.sample": "Olá, é assim que soo.",
+ "nav.more": "Mostrar mais",
+ "nav.less": "Mostrar menos",
+ "nav.group.voice": "Voz, avançado",
+ "nav.group.understanding": "Compreensão",
+ "nav.group.device": "Dispositivo, avançado",
+ "nav.group.screen": "Ecrã",
+ "nav.group.maintenance": "Manutenção"
 }

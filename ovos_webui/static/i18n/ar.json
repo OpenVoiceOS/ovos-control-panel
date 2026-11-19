@@ -972,10 +972,6 @@
  "voice.pipeline.removed": "أُزيل {n}.",
  "wallpaper.setThis": "تعيين الخلفية: {n}",
  "wallpaper.brokenThumb": "تعذّر تحميل الخلفية: {n}",
- "simple.on": "العرض المبسّط مُفعّل — أظهر كل الصفحات",
- "simple.off": "أظهر الصفحات اليومية فقط",
- "simple.nowOn": "عرض الصفحات اليومية فقط.",
- "simple.nowOff": "عرض كل الصفحات.",
  "menu.button": "القائمة",
  "text.label": "حجم النص:",
  "text.normal": "عادي",
@@ -1029,5 +1025,12 @@
  "voice.tts.previewNote": "يشغّل هذا عيّنة على الجهاز بالصوت المستخدَم الآن. لسماع اختيار جديد، احفظه أولاً ثم اضغط مجدداً.",
  "voice.tts.previewSending": "يُنطق مثال على الجهاز…",
  "voice.tts.previewDone": "أُرسل. إن لم تسمع شيئاً، فلا صوت مثبَّت بعد، أو احفظ اختيارك وحاول مجدداً.",
- "voice.tts.sample": "مرحباً، هكذا يبدو صوتي."
+ "voice.tts.sample": "مرحباً، هكذا يبدو صوتي.",
+ "nav.more": "عرض المزيد",
+ "nav.less": "عرض أقل",
+ "nav.group.voice": "الصوت، متقدم",
+ "nav.group.understanding": "الفهم",
+ "nav.group.device": "الجهاز، متقدم",
+ "nav.group.screen": "الشاشة",
+ "nav.group.maintenance": "الصيانة"
 }

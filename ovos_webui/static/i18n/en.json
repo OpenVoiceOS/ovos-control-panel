@@ -972,10 +972,6 @@
  "voice.pipeline.removed": "Removed {n}.",
  "wallpaper.setThis": "Set wallpaper: {n}",
  "wallpaper.brokenThumb": "Could not load wallpaper: {n}",
- "simple.on": "Simple view on — show all pages",
- "simple.off": "Show only the everyday pages",
- "simple.nowOn": "Showing only the everyday pages.",
- "simple.nowOff": "Showing all pages.",
  "menu.button": "Menu",
  "text.label": "Text size:",
  "text.normal": "normal",
@@ -1029,5 +1025,12 @@
  "voice.tts.previewNote": "This plays a sample on the device using the voice that is in use now. To hear a new choice, save it first, then press it again.",
  "voice.tts.previewSending": "Speaking a sample on the device…",
  "voice.tts.previewDone": "Sent. If you heard nothing, no voice is installed yet, or save your choice and try again.",
- "voice.tts.sample": "Hello, this is how I sound."
+ "voice.tts.sample": "Hello, this is how I sound.",
+ "nav.more": "Show more",
+ "nav.less": "Show less",
+ "nav.group.voice": "Voice, advanced",
+ "nav.group.understanding": "Understanding",
+ "nav.group.device": "Device, advanced",
+ "nav.group.screen": "Screen",
+ "nav.group.maintenance": "Maintenance"
 }
