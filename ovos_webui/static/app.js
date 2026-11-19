@@ -171,31 +171,39 @@
   // The one place the site navigation is defined. Every page carries an empty
   // (or fallback) <nav aria-label="Site">; this fills it, so a new page is
   // added here once rather than in every file.
+  //
+  // Each page says where it belongs, so the menu can be built from this list:
+  //   group  the menu group: "everyday" (always shown), "voice", "understanding",
+  //          "device", "screen" or "maintenance" (shown under "Show more")
+  //   level  "everyday" or "advanced"; the simple view shows only "everyday"
+  //   needs  the capability the page depends on (a plugin or a screen), or null.
+  //          Pages whose need is not met can be left out of the menu.
+  // Kept JSON-shaped (quoted keys, no trailing comma) so the tests can read it.
   var NAV = [
-    ["/", "nav.dashboard", "Dashboard"],
-    ["/setup", "nav.setup", "Setup"],
-    ["/tryit", "nav.tryit", "Try it"],
-    ["/controls", "nav.controls", "Device"],
-    ["/media", "nav.media", "Media"],
-    ["/apps", "nav.apps", "Apps"],
-    ["/network", "nav.network", "Network"],
-    ["/servers", "nav.servers", "Servers"],
-    ["/system", "nav.system", "System"],
-    ["/sensors", "nav.sensors", "Sensors"],
-    ["/mark1", "nav.mark1", "Mark-1 faceplate"],
-    ["/wallpaper", "nav.wallpaper", "Wallpaper"],
-    ["/config", "nav.settings", "Settings"],
-    ["/voice", "nav.voice", "Voice settings"],
-    ["/skills", "nav.skills", "Skills"],
-    ["/abilities", "nav.abilities", "Abilities"],
-    ["/intents", "nav.intents", "Intents"],
-    ["/plugins", "nav.plugins", "Plugins"],
-    ["/transformers", "nav.transformers", "Transformers"],
-    ["/personas", "nav.personas", "Personas"],
-    ["/translate", "nav.translate", "Translate"],
-    ["/sound", "nav.sound", "Send over sound"],
-    ["/backup", "nav.backup", "Backup"],
-    ["/about", "nav.about", "About"]
+    {"path": "/", "key": "nav.dashboard", "label": "Dashboard", "group": "everyday", "level": "everyday", "needs": null},
+    {"path": "/setup", "key": "nav.setup", "label": "Setup", "group": "everyday", "level": "everyday", "needs": null},
+    {"path": "/tryit", "key": "nav.tryit", "label": "Try it", "group": "everyday", "level": "everyday", "needs": null},
+    {"path": "/controls", "key": "nav.controls", "label": "Device", "group": "everyday", "level": "everyday", "needs": null},
+    {"path": "/network", "key": "nav.network", "label": "Network", "group": "everyday", "level": "everyday", "needs": null},
+    {"path": "/voice", "key": "nav.voice", "label": "Voice settings", "group": "everyday", "level": "everyday", "needs": null},
+    {"path": "/skills", "key": "nav.skills", "label": "Skills", "group": "everyday", "level": "everyday", "needs": null},
+    {"path": "/abilities", "key": "nav.abilities", "label": "Abilities", "group": "everyday", "level": "everyday", "needs": null},
+    {"path": "/backup", "key": "nav.backup", "label": "Backup", "group": "everyday", "level": "everyday", "needs": null},
+    {"path": "/about", "key": "nav.about", "label": "About", "group": "everyday", "level": "everyday", "needs": null},
+    {"path": "/servers", "key": "nav.servers", "label": "Servers", "group": "voice", "level": "advanced", "needs": null},
+    {"path": "/translate", "key": "nav.translate", "label": "Translate", "group": "voice", "level": "advanced", "needs": null},
+    {"path": "/intents", "key": "nav.intents", "label": "Intents", "group": "understanding", "level": "advanced", "needs": null},
+    {"path": "/transformers", "key": "nav.transformers", "label": "Transformers", "group": "understanding", "level": "advanced", "needs": null},
+    {"path": "/personas", "key": "nav.personas", "label": "Personas", "group": "understanding", "level": "advanced", "needs": null},
+    {"path": "/system", "key": "nav.system", "label": "System", "group": "device", "level": "advanced", "needs": "system"},
+    {"path": "/sensors", "key": "nav.sensors", "label": "Sensors", "group": "device", "level": "advanced", "needs": "sensors"},
+    {"path": "/media", "key": "nav.media", "label": "Media", "group": "device", "level": "advanced", "needs": "media"},
+    {"path": "/apps", "key": "nav.apps", "label": "Apps", "group": "screen", "level": "advanced", "needs": "app-launcher"},
+    {"path": "/wallpaper", "key": "nav.wallpaper", "label": "Wallpaper", "group": "screen", "level": "advanced", "needs": "wallpaper"},
+    {"path": "/mark1", "key": "nav.mark1", "label": "Mark-1 faceplate", "group": "screen", "level": "advanced", "needs": "mark1"},
+    {"path": "/plugins", "key": "nav.plugins", "label": "Plugins", "group": "maintenance", "level": "advanced", "needs": null},
+    {"path": "/config", "key": "nav.settings", "label": "Settings", "group": "maintenance", "level": "advanced", "needs": null},
+    {"path": "/sound", "key": "nav.sound", "label": "Send over sound", "group": "maintenance", "level": "advanced", "needs": null}
   ];
   // Simple mode hides the advanced pages, leaving only what a non-technical
   // owner needs day to day. It is a per-browser choice, off by default, and it
@@ -203,8 +211,6 @@
   // directly. The page you are on is always kept in the nav so a link can never
   // strand you on a hidden page.
   var SIMPLE_KEY = "ovos-simple";
-  var SIMPLE_PATHS = {"/": 1, "/tryit": 1, "/controls": 1, "/voice": 1,
-                      "/config": 1, "/network": 1, "/backup": 1};
   function simpleMode() {
     try { return window.localStorage.getItem(SIMPLE_KEY) === "1"; } catch (e) { return false; }
   }
@@ -213,11 +219,11 @@
     if (!nav) { return; }
     var here = window.location.pathname.replace(/\/$/, "") || "/";
     var items = simpleMode()
-      ? NAV.filter(function (x) { return SIMPLE_PATHS[x[0]] || x[0] === here; })
+      ? NAV.filter(function (x) { return x.level === "everyday" || x.path === here; })
       : NAV;
     nav.innerHTML = items.map(function (item) {
-      return '<a href="' + item[0] + '" data-i18n="' + item[1] + '">'
-        + esc(t(item[1], item[2])) + "</a>";
+      return '<a href="' + item.path + '" data-i18n="' + item.key + '">'
+        + esc(t(item.key, item.label)) + "</a>";
     }).join("");
   }
 
