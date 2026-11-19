@@ -15,4 +15,9 @@ jobs:
       install_extras: 'dev'
       # ggwave (a test dependency) pulls in PyAudio, which needs portaudio to build.
       system_deps: 'portaudio19-dev'
+      # The page tests run every page in a real browser; it is a separate
+      # download from the playwright package. With the variable set, a missing
+      # browser fails the build instead of skipping the gate.
+      pre_test_command: 'python -m playwright install --with-deps chromium'
+      test_env: 'OVOS_WEBUI_REQUIRE_BROWSER=1'
       test_path: 'tests'

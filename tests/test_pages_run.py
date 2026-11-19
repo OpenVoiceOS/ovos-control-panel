@@ -9,22 +9,20 @@ This caught a `var canvas` declared below the geometry that used it -- `var`
 hoists the declaration but not the assignment, so the whole script died on
 load and the faceplate drew nothing at all, with 961 other tests green.
 
-Skipped when Playwright's browser is not present. Playwright itself is a dev
-dependency, but the browser binary is a separate ~115MB download that the
-shared build workflow has no hook to trigger -- it exposes `pre_install_pip`
-for packages and nothing that runs a command before the tests. So this gate
-runs for anyone working on the panel (`playwright install chromium`) and skips
-in CI.
+Skipped when Playwright's browser is not present, so anyone can run the suite
+without the ~115MB browser download. CI installs the browser
+(`pre_test_command` in build-tests.yml) and sets OVOS_WEBUI_REQUIRE_BROWSER=1,
+which turns that skip into a failure: in CI a missing browser means the gate
+did not run, and that must not read as a pass.
 
 That matters more here than the count suggests. Nearly everything the Mark-1
 page does -- the canvas geometry, the eye diff, the poll chain, the animation
-editor and its exports -- is asserted only in this file. CI proves the routes
-answer and the strings are there; it proves nothing about whether the face
-draws. Said plainly rather than left as a guard that looks like it protects the
-pipeline and does not; raised with the shared workflows so it can run
-everywhere.
+editor and its exports -- is asserted only in this file. The rest of the suite
+proves the routes answer and the strings are there; it proves nothing about
+whether the face draws.
 """
 import json
+import os
 import re
 import time
 import warnings
@@ -32,8 +30,24 @@ from pathlib import Path
 
 import pytest
 
-pytest.importorskip("playwright.sync_api",
-                    reason="playwright is not installed")
+
+def _browser_required() -> bool:
+    return os.environ.get("OVOS_WEBUI_REQUIRE_BROWSER", "") not in ("", "0")
+
+
+def _not_running(message: str):
+    """Skip locally, fail where the gate is required to run."""
+    if _browser_required():
+        pytest.fail(message, pytrace=False)
+    pytest.skip(message)
+
+
+try:
+    import playwright.sync_api  # noqa: F401
+except ImportError:  # pragma: no cover - depends on the environment
+    if _browser_required():
+        raise
+    pytest.skip("playwright is not installed", allow_module_level=True)
 
 
 def _pages():
@@ -126,7 +140,7 @@ def signed_in_page(live_panel):
                 "playwright upgrade too -- each version wants its own build)."
             )
             warnings.warn(message, stacklevel=1)
-            pytest.skip(message)
+            _not_running(message)
         context = browser.new_context(viewport={"width": 1280, "height": 900})
         _stub_the_slow_reads(context)
         page = context.new_page()
