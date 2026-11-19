@@ -972,10 +972,6 @@
  "voice.pipeline.removed": "{n} eliminado.",
  "wallpaper.setThis": "Establecer fondo de pantalla: {n}",
  "wallpaper.brokenThumb": "No se ha podido cargar el fondo de pantalla: {n}",
- "simple.on": "Vista sencilla activada; mostrar todas las páginas",
- "simple.off": "Mostrar solo las páginas del día a día",
- "simple.nowOn": "Mostrando solo las páginas del día a día.",
- "simple.nowOff": "Mostrando todas las páginas.",
  "menu.button": "Menú",
  "text.label": "Tamaño del texto:",
  "text.normal": "normal",
@@ -1029,5 +1025,12 @@
  "voice.tts.previewNote": "Esto reproduce una muestra en el dispositivo con la voz que está en uso ahora mismo. Para escuchar una elección nueva, guárdela primero y luego vuelva a pulsarlo.",
  "voice.tts.previewSending": "Diciendo una muestra en el dispositivo…",
  "voice.tts.previewDone": "Enviado. Si no ha oído nada, todavía no hay ninguna voz instalada, o guarde su elección y vuelva a intentarlo.",
- "voice.tts.sample": "Hola, así es como sueno."
+ "voice.tts.sample": "Hola, así es como sueno.",
+ "nav.more": "Mostrar más",
+ "nav.less": "Mostrar menos",
+ "nav.group.voice": "Voz, avanzado",
+ "nav.group.understanding": "Comprensión",
+ "nav.group.device": "Dispositivo, avanzado",
+ "nav.group.screen": "Pantalla",
+ "nav.group.maintenance": "Mantenimiento"
 }

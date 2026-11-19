@@ -968,10 +968,6 @@
  "voice.pipeline.removed": "Fjernede {n}.",
  "wallpaper.setThis": "Sæt baggrund: {n}",
  "wallpaper.brokenThumb": "Kunne ikke indlæse baggrund: {n}",
- "simple.on": "Enkel visning er slået til — vis alle sider",
- "simple.off": "Vis kun de daglige sider",
- "simple.nowOn": "Viser kun de daglige sider.",
- "simple.nowOff": "Viser alle sider.",
  "menu.button": "Menu",
  "text.label": "Tekststørrelse:",
  "text.normal": "normal",
@@ -1029,5 +1025,12 @@
  "network.noAnswer": "Netværksmanageren svarede ikke, så Wi-Fi-tilstanden er ukendt.",
  "network.wired": "Online via kabel:",
  "network.noAdapter": "Denne enhed har ingen Wi-Fi-adapter.",
- "backup.unchanged_suffix": " fil(er) var allerede magen til backuppen og blev ikke ændret."
+ "backup.unchanged_suffix": " fil(er) var allerede magen til backuppen og blev ikke ændret.",
+ "nav.more": "Vis mere",
+ "nav.less": "Vis mindre",
+ "nav.group.voice": "Stemme, avanceret",
+ "nav.group.understanding": "Forståelse",
+ "nav.group.device": "Enheden, avanceret",
+ "nav.group.screen": "Skærm",
+ "nav.group.maintenance": "Vedligehold"
 }

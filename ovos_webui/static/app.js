@@ -174,8 +174,8 @@
   //
   // Each page says where it belongs, so the menu can be built from this list:
   //   group  the menu group: "everyday" (always shown), "voice", "understanding",
-  //          "device", "screen" or "maintenance" (shown under "Show more")
-  //   level  "everyday" or "advanced"; the simple view shows only "everyday"
+  //          "device", "screen" or "maintenance" (folded under "Show more")
+  //   level  "everyday" or "advanced"
   //   needs  the capability the page depends on (a plugin or a screen), or null.
   //          Pages whose need is not met can be left out of the menu.
   // Kept JSON-shaped (quoted keys, no trailing comma) so the tests can read it.
@@ -205,26 +205,72 @@
     {"path": "/config", "key": "nav.settings", "label": "Settings", "group": "maintenance", "level": "advanced", "needs": null},
     {"path": "/sound", "key": "nav.sound", "label": "Send over sound", "group": "maintenance", "level": "advanced", "needs": null}
   ];
-  // Simple mode hides the advanced pages, leaving only what a non-technical
-  // owner needs day to day. It is a per-browser choice, off by default, and it
-  // only changes which nav links show — every page still works if reached
-  // directly. The page you are on is always kept in the nav so a link can never
-  // strand you on a hidden page.
-  var SIMPLE_KEY = "ovos-simple";
-  function simpleMode() {
-    try { return window.localStorage.getItem(SIMPLE_KEY) === "1"; } catch (e) { return false; }
+  // The menu shows the everyday pages always and folds the advanced groups
+  // behind "Show more", inside the menu itself. The choice is remembered per
+  // browser and starts folded. Every link is always in the DOM -- a folded
+  // group is only hidden -- and the group holding the page you are on stays
+  // open, so a link can never strand you on a page the menu does not show.
+  var GROUPS = [
+    ["voice", "nav.group.voice", "Voice, advanced"],
+    ["understanding", "nav.group.understanding", "Understanding"],
+    ["device", "nav.group.device", "Device, advanced"],
+    ["screen", "nav.group.screen", "Screen"],
+    ["maintenance", "nav.group.maintenance", "Maintenance"]
+  ];
+  var MORE_KEY = "ovos-nav-more";
+  // The header button this replaces stored "ovos-simple"; "0" meant someone
+  // had asked for every page, so they start unfolded.
+  var OLD_SIMPLE_KEY = "ovos-simple";
+  function showMore() {
+    try {
+      var v = window.localStorage.getItem(MORE_KEY);
+      if (v === null) { return window.localStorage.getItem(OLD_SIMPLE_KEY) === "0"; }
+      return v === "1";
+    } catch (e) { return false; }
+  }
+  function herePath() {
+    return window.location.pathname.replace(/\/$/, "") || "/";
+  }
+  function navLink(item) {
+    return '<a href="' + item.path + '" data-i18n="' + item.key + '">'
+      + esc(t(item.key, item.label)) + "</a>";
   }
   function renderNav() {
     var nav = document.querySelector('nav[aria-label], nav#sitenav');
     if (!nav) { return; }
-    var here = window.location.pathname.replace(/\/$/, "") || "/";
-    var items = simpleMode()
-      ? NAV.filter(function (x) { return x.level === "everyday" || x.path === here; })
-      : NAV;
-    nav.innerHTML = items.map(function (item) {
-      return '<a href="' + item.path + '" data-i18n="' + item.key + '">'
-        + esc(t(item.key, item.label)) + "</a>";
-    }).join("");
+    var html = '<div class="nav-group nav-everyday">'
+      + NAV.filter(function (x) { return x.group === "everyday"; }).map(navLink).join("")
+      + "</div>";
+    html += '<button type="button" class="nav-more" id="nav-more" aria-expanded="false"'
+      + ' aria-controls="nav-advanced"></button>';
+    html += '<div class="nav-advanced" id="nav-advanced">' + GROUPS.map(function (g) {
+      var items = NAV.filter(function (x) { return x.group === g[0]; });
+      if (!items.length) { return ""; }
+      return '<div class="nav-group" role="group" data-group="' + g[0] + '" aria-labelledby="navg-' + g[0] + '">'
+        + '<span class="nav-heading" id="navg-' + g[0] + '" data-i18n="' + g[1] + '">'
+        + esc(t(g[1], g[2])) + "</span>" + items.map(navLink).join("") + "</div>";
+    }).join("") + "</div>";
+    nav.innerHTML = html;
+    var button = nav.querySelector("#nav-more");
+    button.addEventListener("click", function () {
+      var next = !showMore();
+      try { window.localStorage.setItem(MORE_KEY, next ? "1" : "0"); } catch (e) { /* ignore */ }
+      foldNav(nav);
+    });
+    foldNav(nav);
+  }
+  function foldNav(nav) {
+    var open = showMore();
+    var here = herePath();
+    var current = NAV.filter(function (x) { return x.path === here; })[0];
+    nav.querySelectorAll(".nav-advanced .nav-group").forEach(function (g) {
+      g.hidden = !open && !(current && current.group === g.getAttribute("data-group"));
+    });
+    var button = nav.querySelector("#nav-more");
+    var key = open ? "nav.less" : "nav.more";
+    button.setAttribute("aria-expanded", open ? "true" : "false");
+    button.setAttribute("data-i18n", key);
+    button.textContent = t(key, open ? "Show less" : "Show more");
   }
 
   function markNav() {
@@ -340,43 +386,6 @@
     headerTools().appendChild(live);
   }
 
-  // A Simple-mode control lives in every header, next to the theme control. It
-  // shows or hides the advanced pages and re-draws the nav in place.
-  function labelSimpleButton(button) {
-    var on = simpleMode();
-    button.textContent = on ? "☰" : "⋯";
-    button.setAttribute("aria-pressed", on ? "true" : "false");
-    var label = on ? t("simple.on", "Simple view on — show all pages")
-      : t("simple.off", "Show only the everyday pages");
-    button.setAttribute("aria-label", label);
-    button.setAttribute("title", label);
-  }
-  function mountSimpleToggle() {
-    var header = document.querySelector("header");
-    if (!header || document.getElementById("simple-toggle")) { return; }
-    var button = document.createElement("button");
-    button.id = "simple-toggle";
-    button.type = "button";
-    button.className = "theme-toggle";
-    var live = document.createElement("span");
-    live.className = "visually-hidden";
-    live.setAttribute("aria-live", "polite");
-    labelSimpleButton(button);
-    button.addEventListener("click", function () {
-      var next = simpleMode() ? "0" : "1";
-      try { window.localStorage.setItem(SIMPLE_KEY, next); } catch (e) { /* ignore */ }
-      labelSimpleButton(button);
-      renderNav();
-      markNav();
-      applyI18n(document.querySelector('nav[aria-label], nav#sitenav'));
-      live.textContent = simpleMode()
-        ? t("simple.nowOn", "Showing only the everyday pages.")
-        : t("simple.nowOff", "Showing all pages.");
-    });
-    headerTools().appendChild(button);
-    headerTools().appendChild(live);
-  }
-
   // A larger-text control in every header. Cycles normal → large → larger,
   // persists the choice, and names the current size for a screen reader.
   var TEXT_NAME = {normal: "normal", large: "large", xlarge: "largest"};
@@ -447,7 +456,6 @@
         markNav();
         mountMenuToggle();
         mountThemeToggle();
-        mountSimpleToggle();
         mountTextToggle();
         // One status call drives both the language/direction and the banner,
         // then the page runs with translations already applied.
