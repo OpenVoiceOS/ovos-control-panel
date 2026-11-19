@@ -63,6 +63,9 @@ def test_validate_package_name_refuses(bad):
     "ovos-PHAL-plugin-alsa",
     "ovos-solver-wikipedia-plugin",
     "ovos-skill-news",
+    # not every OVOS skill is named ovos-*
+    "skill-homeassistant",
+    "skill-easter-eggs",
 ])
 def test_validate_package_name_accepts(good):
     assert installer.validate_package_name(good) == good
@@ -72,6 +75,16 @@ def test_a_valid_name_that_is_not_an_ovos_family_is_refused():
     # Matches the character pattern but is not a plugin family.
     with pytest.raises(installer.UnsafePackageName):
         installer.validate_package_name("ovos-core")
+
+
+@pytest.mark.parametrize("name", ["requests", "numpy", "skill", "skill-", "neon-utils",
+                                  # neon skills pin old ovos packages: not offered
+                                  "neon-skill-alerts", "neon-homeassistant-skill"])
+def test_a_plain_name_outside_the_families_is_refused(name):
+    # Without the ovos- prefix in the character pattern, the families are
+    # what keeps arbitrary PyPI packages out.
+    with pytest.raises(installer.UnsafePackageName):
+        installer.validate_package_name(name)
 
 
 @pytest.mark.parametrize("bad", INJECTION[:12])
