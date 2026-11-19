@@ -1207,6 +1207,12 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         from ovos_webui import phal
         return phal.capability_status()
 
+    @api.get("/nav/needs")
+    def api_nav_needs() -> dict[str, Any]:
+        """Which page needs are met, so the menu can leave out what cannot work."""
+        from ovos_webui import phal
+        return phal.page_needs()
+
     @api.get("/device/volume")
     def api_volume_get() -> dict[str, Any]:
         from ovos_webui import devicecontrol

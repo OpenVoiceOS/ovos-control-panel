@@ -259,6 +259,64 @@
     });
     foldNav(nav);
   }
+  // Pages whose need is not met (a plugin or a screen the device lacks) are
+  // left out of the menu, and a group left empty goes with them. The answer
+  // is kept for a few minutes per tab so the menu does not jump on every page.
+  // Until it is known, and when the panel runs apart from the assistant (its
+  // own packages then say nothing about the device's), every page shows.
+  var NEEDS_KEY = "ovos-nav-needs";
+  var NEEDS_TTL = 5 * 60 * 1000;
+  function cachedNeeds() {
+    try {
+      var c = JSON.parse(window.sessionStorage.getItem(NEEDS_KEY) || "null");
+      return c && Date.now() - c.at < NEEDS_TTL ? c.data : null;
+    } catch (e) { return null; }
+  }
+  function unmet(data, item) {
+    return !!(data && data.colocated && item.needs && data.needs
+      && data.needs[item.needs] && data.needs[item.needs].met === false);
+  }
+  function applyNeeds(data) {
+    var nav = document.querySelector('nav[aria-label], nav#sitenav');
+    if (!nav) { return; }
+    var here = herePath();
+    NAV.forEach(function (item) {
+      var a = nav.querySelector('a[href="' + item.path + '"]');
+      if (a) { a.hidden = unmet(data, item) && item.path !== here; }
+    });
+    nav.querySelectorAll(".nav-group").forEach(function (g) {
+      var links = g.querySelectorAll("a[href]");
+      var shown = Array.prototype.filter.call(links, function (a) { return !a.hidden; });
+      g.classList.toggle("nav-empty", links.length > 0 && shown.length === 0);
+    });
+    var current = NAV.filter(function (x) { return x.path === here; })[0];
+    var note = document.getElementById("needs-note");
+    if (current && unmet(data, current)) {
+      if (!note) {
+        var main = document.querySelector("main");
+        if (!main) { return; }
+        note = document.createElement("p");
+        note.id = "needs-note";
+        note.className = "msg needs-note";
+        note.setAttribute("role", "note");
+        main.insertBefore(note, main.firstChild);
+      }
+      var pkg = data.needs[current.needs].suggest;
+      var parts = t("nav.needs.missing", "This page needs {pkg}, which is not installed on this device.")
+        .split("{pkg}");
+      note.innerHTML = esc(parts[0]) + "<code>" + esc(pkg) + "</code>" + esc(parts.slice(1).join(""))
+        + ' <a href="/plugins">' + esc(t("nav.needs.install", "Install it on the Plugins page")) + "</a>.";
+    } else if (note) {
+      note.parentNode.removeChild(note);
+    }
+  }
+  function loadNeeds() {
+    applyNeeds(cachedNeeds());
+    return api("/api/nav/needs").then(function (data) {
+      try { window.sessionStorage.setItem(NEEDS_KEY, JSON.stringify({at: Date.now(), data: data})); } catch (e) { /* ignore */ }
+      applyNeeds(data);
+    }).catch(function () { /* not answered: keep every page */ });
+  }
   function foldNav(nav) {
     var open = showMore();
     var here = herePath();
@@ -463,7 +521,7 @@
           showBanner(s);
           return loadLocale(s && s.lang);
         }).catch(function () { /* offline or not signed in: stay in English */ })
-          .then(function () { renameMenu(); })
+          .then(function () { renameMenu(); loadNeeds(); })
           .then(function () {
             try { fn(); } catch (e) { console.error(e); }
           });

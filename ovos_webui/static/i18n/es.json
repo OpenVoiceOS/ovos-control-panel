@@ -1032,5 +1032,7 @@
  "nav.group.understanding": "Comprensión",
  "nav.group.device": "Dispositivo, avanzado",
  "nav.group.screen": "Pantalla",
- "nav.group.maintenance": "Mantenimiento"
+ "nav.group.maintenance": "Mantenimiento",
+ "nav.needs.missing": "Esta página necesita {pkg}, que no está instalado en este dispositivo.",
+ "nav.needs.install": "Instálelo en la página Plugins"
 }
