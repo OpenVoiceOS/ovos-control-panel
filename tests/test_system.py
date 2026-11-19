@@ -1,4 +1,4 @@
-"""System panel: SSH status/enable/disable, factory reset, device language,
+"""System panel: SSH status/enable/disable, factory reset,
 connectivity, IP-geolocation, and the privileged routes.
 
 Bus messages exercised here, verified against ovos-PHAL-plugin-system,
@@ -7,14 +7,11 @@ ovos-PHAL-plugin-connectivity-events and ovos-PHAL-plugin-ipgeo:
 * ``system.ssh.status`` -> ``system.ssh.status.response`` ({"enabled": bool})
 * ``system.ssh.enable`` / ``system.ssh.disable`` (fire-and-forget)
 * ``system.factory.reset`` (fire-and-forget, destructive)
-* ``system.configure.language`` ({"language_code": ...}) ->
-  ``system.configure.language.complete`` ({"lang": ...})
 * ``ovos.PHAL.internet_check`` -> ``mycroft.internet.state`` /
   ``mycroft.network.state`` (each {"state": "connected"|"disconnected"})
 * ``ovos.ipgeo.update`` -> ``ovos.ipgeo.update.response``
   ({"location": {...}} or {"error": True})
 """
-import pytest
 
 
 # ── a FakeBus that answers the system-plugin topics ─────────────────────────
@@ -126,48 +123,6 @@ def test_factory_reset_emits_the_reset_message():
     assert seen == ["system.factory.reset"]
 
 
-# ── device language ──────────────────────────────────────────────────────────
-def test_set_language_emits_the_configure_message_and_parses_the_completion():
-    from ovos_webui import system
-
-    bus = _system_bus()
-    seen = []
-    bus.on("system.configure.language", lambda m: seen.append(m.data))
-    r = system.set_language(bus, "pt-PT")
-    assert r == {"ok": True, "lang": "pt-pt"}
-    assert seen == [{"language_code": "pt-PT"}]
-
-
-@pytest.mark.parametrize("junk", ["", "  ", "not a lang code!", "1234",
-                                  "toolongxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-                                  None, 42, "en\n"])
-def test_set_language_rejects_junk(junk):
-    from ovos_webui import system
-
-    bus = _system_bus()
-    seen = []
-    bus.on("system.configure.language", lambda m: seen.append(m.data))
-    r = system.set_language(bus, junk)
-    assert r["ok"] is False
-    assert seen == []  # never touched the bus
-
-
-@pytest.mark.parametrize("lang", ["en", "en-US", "en_US", "pt-PT", "zh-Hans-CN", "yue"])
-def test_valid_lang_accepts_plausible_codes(lang):
-    from ovos_webui import system
-    assert system.valid_lang(lang) is True
-
-
-def test_set_language_timeout_is_an_error_dict():
-    from ovos_utils.fakebus import FakeBus
-    from ovos_webui import system
-
-    system.DEFAULT_TIMEOUT = 0.3
-    r = system.set_language(FakeBus(), "en-US")
-    assert r["ok"] is False and r["error"]
-    system.DEFAULT_TIMEOUT = 5.0
-
-
 # ── connectivity ──────────────────────────────────────────────────────────────
 def test_connectivity_parses_both_states():
     from ovos_webui import system
@@ -223,7 +178,6 @@ def test_system_routes_need_a_token(token_client):
     assert token_client.get("/api/system/ssh").status_code == 401
     assert token_client.post("/api/system/ssh", json={"enabled": True}).status_code == 401
     assert token_client.post("/api/system/factory-reset").status_code == 401
-    assert token_client.post("/api/system/language", json={"lang": "en-US"}).status_code == 401
     assert token_client.get("/api/system/connectivity").status_code == 401
     assert token_client.post("/api/system/detect-location").status_code == 401
 
@@ -240,7 +194,6 @@ def test_system_routes_503_without_a_device():
         assert c.get("/api/system/ssh", headers=auth).status_code == 503
         assert c.post("/api/system/ssh", json={"enabled": True}, headers=auth).status_code == 503
         assert c.post("/api/system/factory-reset", headers=auth).status_code == 503
-        assert c.post("/api/system/language", json={"lang": "en-US"}, headers=auth).status_code == 503
         assert c.get("/api/system/connectivity", headers=auth).status_code == 503
         assert c.post("/api/system/detect-location", headers=auth).status_code == 503
 
@@ -278,17 +231,10 @@ def test_ssh_set_route_enables_and_disables(bus):
         assert r.status_code == 200 and r.json()["sent"] is True
 
 
-def test_language_route_rejects_junk_with_400_or_error_payload(bus):
-    from fastapi.testclient import TestClient
-    from ovos_webui.service import create_app
-
-    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
-    with TestClient(app, base_url="http://127.0.0.1:8500",
-                    headers={"sec-fetch-site": "same-origin"}) as c:
-        r = c.post("/api/system/language", json={"lang": "not a lang!"},
-                   headers={"Authorization": "Bearer s3cret-token"})
-        assert r.status_code == 200
-        assert r.json()["ok"] is False
+def test_the_language_route_is_gone(client):
+    # the language is set on the Voice and language page, through the config
+    paths = {getattr(r, "path", "") for r in client.app.routes}
+    assert "/api/system/language" not in paths
 
 
 def test_system_page_renders(client):

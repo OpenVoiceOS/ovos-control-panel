@@ -1,8 +1,8 @@
-"""SSH, factory reset, device language, connectivity, and IP-geolocation over
+"""SSH, factory reset, connectivity, and IP-geolocation over
 the message bus.
 
-These use the message types ``ovos-PHAL-plugin-system`` (SSH, factory reset,
-language), ``ovos-PHAL-plugin-connectivity-events`` (connectivity), and
+These use the message types ``ovos-PHAL-plugin-system`` (SSH, factory reset),
+``ovos-PHAL-plugin-connectivity-events`` (connectivity), and
 ``ovos-PHAL-plugin-ipgeo`` (IP geolocation) already register — no new ones are
 introduced:
 
@@ -18,8 +18,6 @@ introduced:
   wipe (``handle_factory_reset_request``). There is no "done" reply to wait on
   — the wipe can outlive the request — so this is fire-and-forget like the
   existing reboot/shutdown actions on the controls page.
-* ``system.configure.language`` (``language_code``, e.g. ``en_US``) ->
-  ``system.configure.language.complete`` (``lang``) (``handle_configure_language_request``).
 
 * ``ovos.PHAL.internet_check`` drives ``ovos-PHAL-plugin-connectivity-events``
   to answer on ``mycroft.internet.state`` and ``mycroft.network.state``
@@ -40,7 +38,6 @@ timeouts and a down bus come back as an error dict, exactly like ``network.py``)
 """
 from __future__ import annotations
 
-import re
 from typing import Any
 
 #: How long a status/config round trip may take.
@@ -61,7 +58,6 @@ FACTORY_RESET_TIMEOUT = 5.0
 #: A loose BCP-47-ish check: 2-3 letter language, optional region/script,
 #: e.g. "en", "en-US", "en_US", "pt-PT", "zh-Hans-CN". Not a full BCP-47
 #: validator — just enough to keep obvious junk off the bus.
-_LANG_RE = re.compile(r"\A[a-zA-Z]{2,3}([_-][a-zA-Z0-9]{2,8}){0,2}\Z")
 
 
 def _msg(msg_type: str, data: dict[str, Any] | None = None):
@@ -117,32 +113,6 @@ def factory_reset(bus) -> dict[str, Any]:
     ok = buswait.emit(bus, _msg("system.factory.reset"),
                       timeout=FACTORY_RESET_TIMEOUT)
     return {"sent": ok}
-
-
-# ── device language ─────────────────────────────────────────────────────────
-def valid_lang(lang: Any) -> bool:
-    """A plausible BCP-47-ish language code, e.g. ``en-US`` or ``pt_PT``."""
-    return isinstance(lang, str) and bool(_LANG_RE.match(lang))
-
-
-def set_language(bus, lang: str) -> dict[str, Any]:
-    """Set the device language. Rejects anything that is not a plausible code.
-
-    Returns ``{"ok": True, "lang": ...}`` on the plugin's completion reply,
-    or ``{"ok": False, "error": ...}`` on a bad code or a bus timeout.
-    """
-    if not valid_lang(lang):
-        return {"ok": False, "error": "that does not look like a language code"}
-    from ovos_webui import buswait
-
-    reply = buswait.wait_for_response(
-        bus, _msg("system.configure.language", {"language_code": lang}),
-        timeout=DEFAULT_TIMEOUT, reply_type="system.configure.language.complete")
-    if reply is None:
-        return {"ok": False,
-                "error": "the system plugin did not answer — is it installed "
-                         "and running?"}
-    return {"ok": True, "lang": (reply.data or {}).get("lang")}
 
 
 # ── connectivity ─────────────────────────────────────────────────────────────

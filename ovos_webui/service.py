@@ -80,6 +80,7 @@ PAGES = {
     "/": "index.html",
     "/config": "config.html",
     "/voice": "voice.html",
+    "/voice-all": "voice.html",
     "/skills": "skills.html",
     "/backup": "backup.html",
     "/about": "about.html",
@@ -288,10 +289,6 @@ class WifiSsidBody(BaseModel):
 
 class SshBody(BaseModel):
     enabled: bool
-
-
-class LanguageBody(BaseModel):
-    lang: str = Field(..., max_length=32)
 
 
 class Mark1DisplayBody(BaseModel):
@@ -1182,11 +1179,6 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_factory_reset() -> dict[str, Any]:
         from ovos_webui import system
         return system.factory_reset(_need_bus())
-
-    @privileged.post("/system/language")
-    def api_set_language(body: LanguageBody) -> dict[str, Any]:
-        from ovos_webui import system
-        return system.set_language(_need_bus(), body.lang)
 
     @privileged.get("/system/connectivity")
     def api_connectivity() -> dict[str, Any]:

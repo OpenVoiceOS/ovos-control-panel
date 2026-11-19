@@ -1469,3 +1469,41 @@ def test_a_skill_with_settings_opens_its_settings_and_switch(signed_in_page, mak
     # listed once: the settings folder and the package are the same skill
     page.click("#back")
     assert page.locator("#skilllist button.pick", has_text="Hello World").count() == 1
+
+
+def test_voice_and_language_shows_the_everyday_settings(signed_in_page):
+    page, url = signed_in_page
+    page.goto(f"{url}/voice")
+    page.wait_for_load_state("networkidle")
+    assert page.locator("h1").inner_text() == "Voice and language"
+    page.wait_for_selector("#voice-body:not([hidden])")
+    assert page.locator("#wake_word-select").is_visible()
+    assert page.locator("#tts_module-select").is_visible()
+    assert page.locator("#lang-input").is_visible()
+    for n in page.locator(".voice-advanced").all():
+        assert n.is_hidden()
+    assert page.locator('#more-everyday a[href="/voice-all"]').is_visible()
+
+
+def test_all_voice_settings_shows_everything(signed_in_page):
+    page, url = signed_in_page
+    page.goto(f"{url}/voice-all")
+    page.wait_for_load_state("networkidle")
+    assert page.locator("h1").inner_text() == "All voice settings"
+    assert page.locator("#more-everyday").is_hidden()
+    assert page.locator("#intro-all").is_visible()
+    assert page.locator(".voice-advanced").count() == 2
+    for n in page.locator(".voice-advanced").all():
+        assert not n.evaluate("n => n.hidden")
+    assert page.locator('nav a[aria-current="page"]').get_attribute("href") == "/voice-all"
+
+
+def test_the_internet_status_moved_to_network(signed_in_page):
+    page, url = signed_in_page
+    page.goto(f"{url}/network")
+    page.wait_for_load_state("networkidle")
+    assert page.locator("#internet-card").is_visible()
+    page.goto(f"{url}/system")
+    page.wait_for_load_state("networkidle")
+    assert page.locator("#language").count() == 0
+    assert page.locator("#location-card").is_visible()
