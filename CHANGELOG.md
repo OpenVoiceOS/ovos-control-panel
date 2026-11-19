@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.1a57](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a57) (2026-11-19)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a56...0.0.1a57)
+
+**Merged pull requests:**
+
+- fix: clearer page texts, and links to the new technical manual [\#119](https://github.com/OpenVoiceOS/ovos-control-panel/pull/119) ([andlo](https://github.com/andlo))
+- refactor: give every page a group, a level and a requirement in NAV [\#118](https://github.com/OpenVoiceOS/ovos-control-panel/pull/118) ([andlo](https://github.com/andlo))
+- ci: run the browser page tests in CI [\#117](https://github.com/OpenVoiceOS/ovos-control-panel/pull/117) ([andlo](https://github.com/andlo))
+- fix: find and install packages that aren't named ovos-\* [\#103](https://github.com/OpenVoiceOS/ovos-control-panel/pull/103) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a56](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a56) (2026-11-19)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a55...0.0.1a56)
@@ -472,10 +483,6 @@
 ## [0.0.1a2](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a2) (2026-08-10)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/4fb8f8d9c6200eefbdf847c8a0700db26570600e...0.0.1a2)
-
-**Merged pull requests:**
-
-- feat: local web UI for OpenVoiceOS devices [\#1](https://github.com/OpenVoiceOS/ovos-control-panel/pull/1) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
