@@ -14,6 +14,7 @@ Playwright package:
 python -m playwright install chromium
 ```
 
-Without it those tests skip. The shared build workflow has no hook to run a
-command before the test step, so they currently skip in CI too — run them
-locally before touching anything that ships JavaScript.
+Without it those tests skip locally. CI installs the browser before the tests
+(`pre_test_command` in `.github/workflows/build-tests.yml`) and sets
+`OVOS_WEBUI_REQUIRE_BROWSER=1`, so there a missing browser fails the build
+instead of skipping. Set the same variable locally to make sure the gate ran.
