@@ -46,6 +46,7 @@ from ovos_webui import (backupio, configio, health, installer, meta, personas,
 from ovos_webui import applauncher
 from ovos_webui import intents
 from ovos_webui import sensors as sensorlog
+from ovos_webui import speakers
 from ovos_webui import wallpaper
 from ovos_webui.auth import (
     COOKIE_NAME,
@@ -96,6 +97,7 @@ PAGES = {
     "/apps": "apps.html",
     "/wallpaper": "wallpaper.html",
     "/sensors": "sensors.html",
+    "/speakers": "speakers.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -108,7 +110,8 @@ SYSTEM_ACTIONS = {
 }
 
 #: The endpoints that take an upload, and so have a larger body limit.
-UPLOAD_PATHS = frozenset({"/api/restore"})
+UPLOAD_PATHS = frozenset({"/api/restore", "/api/speakers/enroll",
+                          "/api/speakers/verify"})
 
 
 class ConfigBody(BaseModel):
@@ -201,6 +204,17 @@ class DryRunBody(BaseModel):
 
 class SkillActiveBody(BaseModel):
     active: bool
+
+
+class SpeakerEnrollBody(BaseModel):
+    name: str = Field(max_length=speakers.MAX_NAME)
+    #: base64 WAV recordings of the speaker, three to five of them
+    clips: list[str]
+
+
+class SpeakerVerifyBody(BaseModel):
+    #: one fresh base64 WAV recording to measure against the roster
+    clip: str
 class AppNameBody(BaseModel):
     name: str = Field(max_length=applauncher.MAX_NAME)
 class WallpaperUrlBody(BaseModel):
@@ -872,6 +886,36 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     @privileged.post("/wallpaper/rotation")
     def api_wallpaper_rotation(body: WallpaperRotationBody) -> dict[str, Any]:
         return wallpaper.set_auto_rotation(_need_bus(), body.enabled)
+
+    # ── voice profiles ────────────────────────────────────────────────
+    # The four OVOS-SPEAKER-1 topics of ovos-ww-verifier-plugin-speaker (see
+    # ovos_webui/speakers.py). Enrolling and deleting are closed on the device
+    # unless the deployment opens them; the reply says so and the page shows
+    # that answer rather than a bare failure.
+    @privileged.get("/speakers")
+    def api_speakers_list() -> dict[str, Any]:
+        return speakers.list_speakers(_need_bus())
+
+    @privileged.post("/speakers/enroll")
+    def api_speakers_enroll(body: SpeakerEnrollBody) -> dict[str, Any]:
+        try:
+            return speakers.enroll(_need_bus(), body.name, body.clips)
+        except speakers.SpeakerError as err:
+            raise HTTPException(400, str(err)) from None
+
+    @privileged.post("/speakers/verify")
+    def api_speakers_verify(body: SpeakerVerifyBody) -> dict[str, Any]:
+        try:
+            return speakers.verify(_need_bus(), body.clip)
+        except speakers.SpeakerError as err:
+            raise HTTPException(400, str(err)) from None
+
+    @privileged.delete("/speakers/{name}")
+    def api_speakers_delete(name: str) -> dict[str, Any]:
+        try:
+            return speakers.delete_speaker(_need_bus(), name)
+        except speakers.SpeakerError as err:
+            raise HTTPException(400, str(err)) from None
 
     # ── sensors ───────────────────────────────────────────────────────
     # ovos-PHAL-sensors only broadcasts readings, so the app listens and keeps
