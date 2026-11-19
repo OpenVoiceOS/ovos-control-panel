@@ -1032,5 +1032,7 @@
  "nav.group.understanding": "Forståelse",
  "nav.group.device": "Enheden, avanceret",
  "nav.group.screen": "Skærm",
- "nav.group.maintenance": "Vedligehold"
+ "nav.group.maintenance": "Vedligehold",
+ "nav.needs.missing": "Denne side kræver {pkg}, som ikke er installeret på enheden.",
+ "nav.needs.install": "Installér det på siden Plugins"
 }

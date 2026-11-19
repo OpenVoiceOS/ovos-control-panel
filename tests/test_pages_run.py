@@ -1324,3 +1324,56 @@ def test_someone_who_had_every_page_on_keeps_them(signed_in_page):
     assert page.locator("nav #nav-more").get_attribute("aria-expanded") == "true"
     page.evaluate("() => { localStorage.removeItem('ovos-simple'); "
                   "localStorage.setItem('ovos-nav-more', '0'); }")
+
+
+def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
+    """A need that is not met takes its page out of the menu (and an emptied
+    group with it); reaching the page anyway says what it needs."""
+    page, url = signed_in_page
+    needs = {"colocated": True, "needs": {
+        k: {"met": k in ("system", "media"), "suggest": "pkg-" + k}
+        for k in ("system", "sensors", "media", "app-launcher", "wallpaper", "mark1")}}
+
+    def answer(route):
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(needs))
+
+    page.route("**/api/nav/needs", answer)
+    try:
+        page.goto(f"{url}/")
+        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
+                      "localStorage.setItem('ovos-nav-more', '1'); }")
+        page.reload()
+        page.wait_for_function("() => document.querySelector('nav a[href=\"/wallpaper\"]').hidden")
+        shown = _visible_nav(page)
+        assert "/system" in shown and "/media" in shown
+        assert not {"/sensors", "/apps", "/wallpaper", "/mark1"} & set(shown)
+        assert not page.locator('nav .nav-group[data-group="screen"]').is_visible()
+
+        page.goto(f"{url}/wallpaper")
+        note = page.locator("#needs-note")
+        note.wait_for()
+        assert "pkg-wallpaper" in note.inner_text()
+        assert note.locator('a[href="/plugins"]').count() == 1
+        assert "/wallpaper" in _visible_nav(page), "the page you are on stays in the menu"
+    finally:
+        page.unroute("**/api/nav/needs")
+        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
+                      "localStorage.setItem('ovos-nav-more', '0'); }")
+
+
+def test_a_panel_apart_from_the_device_hides_no_page(signed_in_page):
+    page, url = signed_in_page
+    needs = {"colocated": False, "needs": {"wallpaper": {"met": False, "suggest": "x"}}}
+    page.route("**/api/nav/needs", lambda r: r.fulfill(
+        status=200, content_type="application/json", body=json.dumps(needs)))
+    try:
+        page.goto(f"{url}/")
+        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
+                      "localStorage.setItem('ovos-nav-more', '1'); }")
+        page.reload()
+        page.wait_for_load_state("networkidle")
+        assert "/wallpaper" in _visible_nav(page)
+    finally:
+        page.unroute("**/api/nav/needs")
+        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
+                      "localStorage.setItem('ovos-nav-more', '0'); }")

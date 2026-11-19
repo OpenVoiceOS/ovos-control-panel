@@ -243,7 +243,7 @@ nav a:hover { color: var(--ink); background: var(--accent-wash); }
  * their own, so the links stay items of the nav's own flex layout (wrapping
  * pills on a phone, a column on the desktop rail). A folded group is hidden. */
 nav .nav-group, nav .nav-advanced { display: contents; }
-nav .nav-group[hidden] { display: none; }
+nav .nav-group[hidden], nav .nav-group.nav-empty, nav a[hidden] { display: none; }
 nav .nav-heading {
   flex-basis: 100%;
   margin: 0.7rem 0 0.1rem;
