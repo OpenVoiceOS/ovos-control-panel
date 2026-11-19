@@ -1127,10 +1127,7 @@ OvosWebUI.ready(function () {
     var gate = el("gate"), note = el("gate-note");
     gate.hidden = false;
     note.textContent = t("mark1.unconfirmed",
-      "The panel could not confirm a Mark-1. It asks the faceplate what colour the eyes are showing and "
-      + "what firmware it runs, and only ovos-PHAL-plugin-mk1 new enough to answer one of those will "
-      + "reply, so a working device can stay silent here. The controls below still send, but nothing on "
-      + "the bus reports back whether the faceplate acted on them.");
+      "The panel could not confirm a Mark-1. It asks the faceplate for its eye colour and its firmware version, and only a recent ovos-PHAL-plugin-mk1 answers those, so a working Mark-1 can stay silent here. The controls below still send, but nothing reports back whether the faceplate acted on them.");
   }
 });
 </script>

@@ -76,9 +76,7 @@
 
   <h2 data-i18n="config.where.title">Where a setting comes from</h2>
   <div class="card">
-    <p class="hint" data-i18n="config.where.hint">OVOS merges its configuration from several files. If you
-      changed something and nothing happened, the value is usually still there and a later file sets it too.
-      Type a setting to see which file it ends up coming from.</p>
+    <p class="hint" data-i18n="config.where.hint">OVOS reads its configuration from several files, one after another, and a later file wins. If you changed something and nothing happened, a later file probably sets it too. Type a setting to see which file its value comes from.</p>
     <div class="row">
       <input type="text" id="where-key" placeholder="lang" spellcheck="false"
         aria-label="Setting to look up" data-i18n-attr="aria-label:config.where.aria;placeholder:config.where.placeholder">
