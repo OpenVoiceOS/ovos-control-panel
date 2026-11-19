@@ -187,7 +187,6 @@
     {"path": "/network", "key": "nav.network", "label": "Network", "group": "everyday", "level": "everyday", "needs": null},
     {"path": "/voice", "key": "nav.voice", "label": "Voice settings", "group": "everyday", "level": "everyday", "needs": null},
     {"path": "/skills", "key": "nav.skills", "label": "Skills", "group": "everyday", "level": "everyday", "needs": null},
-    {"path": "/abilities", "key": "nav.abilities", "label": "Abilities", "group": "everyday", "level": "everyday", "needs": null},
     {"path": "/backup", "key": "nav.backup", "label": "Backup", "group": "everyday", "level": "everyday", "needs": null},
     {"path": "/about", "key": "nav.about", "label": "About", "group": "everyday", "level": "everyday", "needs": null},
     {"path": "/servers", "key": "nav.servers", "label": "Servers", "group": "voice", "level": "advanced", "needs": null},
