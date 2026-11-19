@@ -23,6 +23,14 @@
   <p class="hint" role="note" data-i18n="network.warnNote">Changing the Wi-Fi network can drop this browser's own connection to the
     device if you are on the same Wi-Fi. If the page stops responding after a change, reconnect to the device's network.</p>
 
+  <h2 data-i18n="network.internet.title">Internet</h2>
+  <div class="card" id="internet-card">
+    <p id="internet-state" data-i18n="network.internet.checking">Checking…</p>
+    <div class="row">
+      <button class="secondary" id="internet-refresh" data-i18n="network.internet.refresh">Refresh</button>
+    </div>
+  </div>
+
   <!-- Shown instead of the controls when the plugin is not installed. -->
   <div class="card" id="gate" hidden>
     <p class="hint" id="gate-note"></p>
@@ -57,6 +65,23 @@
 OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
   var current = {connected: false, ssid: null};
+
+  // ── internet: works without the network-manager plugin ───────────────────
+  function stateLabel(state) {
+    if (state === "connected") { return t("network.internet.connected", "online"); }
+    if (state === "disconnected") { return t("network.internet.disconnected", "offline"); }
+    return t("network.internet.unknown", "unknown");
+  }
+  function loadInternet() {
+    el("internet-state").textContent = t("network.internet.checking", "Checking…");
+    api("/api/system/connectivity").then(function (r) {
+      el("internet-state").textContent =
+        t("network.internet.internet", "Internet:") + " " + stateLabel(r.internet) + " · "
+        + t("network.internet.network", "Network:") + " " + stateLabel(r.network);
+    }).catch(function (e) { el("internet-state").textContent = e.message; });
+  }
+  el("internet-refresh").addEventListener("click", loadInternet);
+  loadInternet();
 
   function prettyName(name) {
     return name.replace(/^ovos-(phal|PHAL)-plugin-/i, "").replace(/-/g, " ").trim()

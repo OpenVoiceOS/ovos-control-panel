@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="same-origin">
-<title>Voice settings — OpenVoiceOS</title>
+<title>Voice and language — OpenVoiceOS</title>
 <link rel="stylesheet" href="/static/app.css">
 <link rel="manifest" href="/static/manifest.webmanifest">
 <script src="/static/app.js"></script>
@@ -12,13 +12,19 @@
 <body>
 <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
 <div class="banner" id="banner" role="alert" hidden></div>
-<header><h1 data-i18n="voice.title">Voice settings</h1>
+<header><h1 id="voice-h1" data-i18n="voice.title">Voice and language</h1>
   <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
 <nav aria-label="Site" data-i18n-attr="aria-label:nav.aria"></nav>
 <main id="main" tabindex="-1">
-  <p class="hint" data-i18n="voice.intro">How the device listens and speaks: the wake word, how it tells speech
+  <p class="hint" id="intro-everyday" data-i18n="voice.intro">The wake word the device listens for, the voice it
+    speaks with, and its language. Changes are saved to your own layer of <code>mycroft.conf</code>, the same file you
+    can edit as text on the Settings page.</p>
+  <p class="hint" id="intro-all" hidden data-i18n="voice.intro.all">How the device listens and speaks: the wake word, how it tells speech
     from silence, the plugins that turn speech into text and text into speech, and the language. Changes are saved
     to your own layer of <code>mycroft.conf</code>, the same file you can edit as text on the Settings page.</p>
+  <p class="hint" id="more-everyday"><span data-i18n="voice.more.lead">Speech to text, how it tells speech from silence and the order it
+    tries to understand you are under</span>
+    <a href="/voice-all" data-i18n="voice.more.link">All voice settings</a>.</p>
   <p class="hint" data-i18n="voice.restart">The wake word, the speech-to-text engine and the silence detector apply as soon as you save. The order the device tries to understand a command needs a restart, and so does changing the voice. If something does not change, restart the OVOS services.</p>
   <p class="hint"><span data-i18n="config.simple.file">Your changes are stored in your own layer of this file:</span>
     <code id="path" dir="ltr"></code></p>
@@ -36,6 +42,7 @@
     <div class="msg" id="msg-wake_word" role="status" aria-live="polite" hidden></div>
   </div>
 
+  <div class="voice-advanced">
   <h2 data-i18n="voice.vad.title">Listening (voice activity)</h2>
   <p class="hint" data-i18n="voice.vad.hint">The plugin that decides where your speech starts and stops, once the
     wake word has fired.</p>
@@ -59,6 +66,8 @@
     <div class="msg" id="msg-stt_module" role="status" aria-live="polite" hidden></div>
   </div>
 
+  </div>
+
   <h2 data-i18n="voice.tts.title">Text to speech</h2>
   <p class="hint" data-i18n="voice.tts.hint">The plugin that speaks the device's replies. A fallback is tried only
     when the primary one fails.</p>
@@ -76,6 +85,7 @@
     <div class="msg" id="msg-tts_module" role="status" aria-live="polite" hidden></div>
   </div>
 
+  <div class="voice-advanced">
   <details class="advanced">
   <summary data-i18n="voice.advanced">Advanced — pipeline order and transformers</summary>
   <p class="hint" data-i18n="voice.advancedHint">Most people never need to change these. They decide how the
@@ -117,6 +127,7 @@
     <div class="msg" id="msg-metadata_transformers" role="status" aria-live="polite" hidden></div>
   </div>
   </details>
+  </div>
 
   <h2 data-i18n="voice.lang.title">Language</h2>
   <p class="hint" data-i18n="voice.lang.hint">The language the device speaks and listens in, for example
@@ -353,6 +364,19 @@ OvosWebUI.ready(function () {
         "Sent. If you heard nothing, no voice is installed yet, or save your choice and try again."));
     }).catch(function (e) { say("msg-tts_module", e.message, true); });
   });
+
+  // One page, two addresses: /voice holds the everyday settings (wake word,
+  // voice, language); /voice-all holds every voice setting.
+  var everything = window.location.pathname.replace(/\/$/, "") === "/voice-all";
+  document.querySelectorAll(".voice-advanced").forEach(function (n) { n.hidden = !everything; });
+  el("intro-everyday").hidden = everything;
+  el("more-everyday").hidden = everything;
+  el("intro-all").hidden = !everything;
+  if (everything) {
+    el("voice-h1").setAttribute("data-i18n", "nav.voiceAll");
+    el("voice-h1").textContent = t("nav.voiceAll", "All voice settings");
+    document.title = el("voice-h1").textContent + " — OpenVoiceOS";
+  }
 
   el("voice-body").hidden = true;
   load();
