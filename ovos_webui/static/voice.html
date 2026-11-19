@@ -16,11 +16,9 @@
   <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
 <nav aria-label="Site" data-i18n-attr="aria-label:nav.aria"></nav>
 <main id="main" tabindex="-1">
-  <p class="hint" data-i18n="voice.intro">These are the settings that decide how the device listens and speaks: the
-    wake word, how it tells speech from silence, the plugins that turn speech into text and text into speech, the
-    order it tries to understand a command, and the language. Every change is written into your own layer of
-    <code>mycroft.conf</code>, the same file the Settings page's Advanced tab edits — this page just gives each
-    setting a plain picker.</p>
+  <p class="hint" data-i18n="voice.intro">How the device listens and speaks: the wake word, how it tells speech
+    from silence, the plugins that turn speech into text and text into speech, and the language. Changes are saved
+    to your own layer of <code>mycroft.conf</code>, the same file you can edit as text on the Settings page.</p>
   <p class="hint" data-i18n="voice.restart">The wake word, the speech-to-text engine and the silence detector apply as soon as you save. The order the device tries to understand a command needs a restart, and so does changing the voice. If something does not change, restart the OVOS services.</p>
   <p class="hint"><span data-i18n="config.simple.file">Your changes are stored in your own layer of this file:</span>
     <code id="path" dir="ltr"></code></p>
@@ -140,7 +138,7 @@
   </div>
 
   <p class="hint foot"><a data-i18n="foot.manual"
-    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+    href="https://openvoiceos.github.io/beta-technical-manual/speech-service/">Learn more in the technical manual</a></p>
 </main>
 <script>
 OvosWebUI.ready(function () {

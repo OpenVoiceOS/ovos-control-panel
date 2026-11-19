@@ -83,7 +83,7 @@
   </div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
   <p class="hint foot"><a data-i18n="foot.manual"
-    href="https://openvoiceos.github.io/ovos-technical-manual/">Learn more in the technical manual</a></p>
+    href="https://openvoiceos.github.io/beta-technical-manual/personas/">Learn more in the technical manual</a></p>
 </main>
 <script>
 OvosWebUI.ready(function () {
@@ -277,7 +277,7 @@ OvosWebUI.ready(function () {
     if (!pid) { OvosWebUI.say("msg-activate", OvosWebUI.t("personas.chooseFirst", "Choose a persona first."), true); return; }
     if (!OvosWebUI.confirmed(OvosWebUI.t("personas.confirm.activate", "Make this the persona that answers your questions?"))) { return; }
     api("/api/personas/" + encodeURIComponent(pid) + "/activate", {method: "POST"}).then(function (r) {
-      OvosWebUI.say("msg-activate", OvosWebUI.t("personas.activated", "Saved. If the device was already answering as a persona, this one takes over right away. The first time you choose one, and for a persona you have just created, it answers after the OVOS services restart."));
+      OvosWebUI.say("msg-activate", OvosWebUI.t("personas.activated", "Saved. If a persona was already answering, this one takes over right away. If it is the first persona you choose, or one you just made, it starts answering after the OVOS services restart."));
       refresh(pid);
     }).catch(function (e) { OvosWebUI.say("msg-activate", e.message, true); });
   });
