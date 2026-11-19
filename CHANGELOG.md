@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a56](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a56) (2026-11-19)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a55...0.0.1a56)
+
+**Merged pull requests:**
+
+- chore: Configure Renovate [\#100](https://github.com/OpenVoiceOS/ovos-control-panel/pull/100) ([renovate[bot]](https://github.com/apps/renovate))
+
 ## [0.0.1a55](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a55) (2026-11-16)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a54...0.0.1a55)
