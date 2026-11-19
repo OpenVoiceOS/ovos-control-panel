@@ -54,7 +54,7 @@ def about(request_host: str = "") -> dict[str, Any]:
             {"label": "ovos-busmon", "url": "https://github.com/OpenVoiceOS/ovos-busmon"},
             {"label": "ovos-yaml-editor", "url": "https://github.com/OpenVoiceOS/ovos-yaml-editor"},
             {"label": "ovos-config", "url": "https://github.com/OpenVoiceOS/ovos-config"},
-            {"label": "OVOS documentation", "url": "https://openvoiceos.github.io/ovos-technical-manual/"},
+            {"label": "OVOS documentation", "url": "https://openvoiceos.github.io/beta-technical-manual/"},
             {"label": "OpenVoiceOS", "url": "https://openvoiceos.org"},
         ],
     }
