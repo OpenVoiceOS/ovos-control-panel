@@ -1377,3 +1377,95 @@ def test_a_panel_apart_from_the_device_hides_no_page(signed_in_page):
         page.unroute("**/api/nav/needs")
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
                       "localStorage.setItem('ovos-nav-more', '0'); }")
+
+
+def _json_route(page, pattern, body):
+    page.route(pattern, lambda r: r.fulfill(status=200, content_type="application/json",
+                                            body=json.dumps(body)))
+
+
+def test_the_skills_page_lists_opens_and_goes_back(signed_in_page):
+    page, url = signed_in_page
+    _json_route(page, "**/api/updates", {"packages": [
+        {"name": "ovos-skill-hello-world", "installed": "0.0.1", "latest": "0.1.0", "outdated": True}],
+        "outdated": 1})
+    try:
+        page.goto(f"{url}/skills")
+        page.wait_for_selector("#skilllist button.pick")
+        names = [n.splitlines()[0] for n in page.locator("#skilllist button.pick").all_inner_texts()]
+        assert "Hello World" in names and "Date Time" in names
+        hello = page.locator("#skilllist li", has_text="Hello World")
+        hello.locator(".badge").wait_for()
+
+        page.fill("#filter", "date")
+        assert page.locator("#skilllist button.pick").all_inner_texts() == ["Date Time"]
+        page.fill("#filter", "")
+
+        page.locator("#skilllist button.pick", has_text="Hello World").click()
+        assert page.locator("#detail").is_visible() and not page.locator("#mine").is_visible()
+        assert page.locator("#detail-title").inner_text() == "Hello World"
+        assert page.locator("#detail-slug").inner_text() == "ovos-skill-hello-world"
+        assert page.locator("#do-update").is_visible(), "the update offer shows on the skill"
+        assert page.locator("#do-remove").is_visible()
+        assert page.locator("#nosettings").is_visible()
+        assert "#ovos-skill-hello-world" in page.url
+
+        page.click("#back")
+        assert page.locator("#mine").is_visible() and not page.locator("#detail").is_visible()
+    finally:
+        page.unroute("**/api/updates")
+
+
+def test_find_more_searches_skills_only(signed_in_page):
+    page, url = signed_in_page
+    seen = []
+
+    def search(route):
+        seen.append(route.request.url)
+        route.fulfill(status=200, content_type="application/json", body=json.dumps({
+            "results": [{"name": "skill-homeassistant", "kind": "skill", "installed": False},
+                        {"name": "ovos-skill-hello-world", "kind": "skill", "installed": True}],
+            "total": 2, "kinds": ["skill"], "cache_age": 60}))
+
+    page.route("**/api/plugins/search*", search)
+    try:
+        page.goto(f"{url}/")
+        page.goto(f"{url}/skills#find")
+        page.wait_for_selector("#find:not([hidden])")
+        assert page.locator("#tab-find").get_attribute("aria-current") == "true"
+        page.fill("#q", "home")
+        page.click("#go")
+        page.wait_for_selector("#results [data-add]")
+        assert any("kind=skill" in u for u in seen)
+        assert page.locator('#results [data-add="skill-homeassistant"]').count() == 1
+        page.locator('#results [data-open="ovos-skill-hello-world"]').click()
+        assert page.locator("#detail-title").inner_text() == "Hello World"
+    finally:
+        page.unroute("**/api/plugins/search*")
+
+
+def test_the_old_abilities_address_lands_on_skills(signed_in_page):
+    page, url = signed_in_page
+    page.goto(f"{url}/abilities")
+    page.wait_for_selector("#skilllist button.pick")
+    assert page.url.rstrip("/").endswith("/skills")
+    assert page.locator('nav a[aria-current="page"]').get_attribute("href") == "/skills"
+
+
+def test_a_skill_with_settings_opens_its_settings_and_switch(signed_in_page, make_skill):
+    page, url = signed_in_page
+    make_skill("ovos-skill-hello-world.openvoiceos", {"greeting": "hi"},
+               meta={"skillMetadata": {"sections": [{"name": "General", "fields": [
+                   {"name": "greeting", "type": "text", "label": "Greeting", "value": ""}]}]}})
+    page.goto(f"{url}/")
+    page.goto(f"{url}/skills#ovos-skill-hello-world.openvoiceos")
+    page.wait_for_selector("#detail:not([hidden])")
+    assert page.locator("#detail-slug").inner_text() == "ovos-skill-hello-world"
+    page.wait_for_selector("#editor:not([hidden])")
+    assert page.locator('#form input[name="greeting"]').input_value() == "hi"
+    assert not page.locator("#nosettings").is_visible()
+    page.wait_for_selector("#enable-card:not([hidden])")
+    assert page.locator("#enable-toggle").inner_text()
+    # listed once: the settings folder and the package are the same skill
+    page.click("#back")
+    assert page.locator("#skilllist button.pick", has_text="Hello World").count() == 1

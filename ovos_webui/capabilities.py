@@ -20,6 +20,14 @@ def _pretty(name: str) -> str:
     return base.title() or name
 
 
+def _is_skill_package(name: str) -> bool:
+    """A skill package by its name: the panel's own skill families, plus the
+    other conventions skills are published under (``*-skill-*``)."""
+    from ovos_webui.pypi import classify
+
+    return classify(name) == "skill" or "-skill-" in name
+
+
 def _summaries() -> dict[str, str]:
     """Map installed skill distribution name -> its one-line Summary."""
     from importlib.metadata import distributions
@@ -30,7 +38,7 @@ def _summaries() -> dict[str, str]:
             name = (dist.metadata["Name"] or "").lower().replace("_", "-")
         except (KeyError, TypeError):  # pragma: no cover - broken metadata
             continue
-        if name.startswith("ovos-skill-") or "-skill-" in name:
+        if _is_skill_package(name):
             summary = ""
             try:
                 summary = dist.metadata["Summary"] or ""
@@ -41,7 +49,13 @@ def _summaries() -> dict[str, str]:
 
 
 def list_capabilities() -> dict[str, Any]:
-    """Return the installed skills, each with a name, description and id."""
+    """Return the installed skills, each with a name, description and id.
+
+    ``skill_id`` is set for a skill that has a settings directory (its
+    settings and its on/off switch work by that id). ``package`` is the
+    installed distribution, when it can be told, so the skill can be updated
+    or removed; a skill whose package cannot be told has ``None``.
+    """
     from ovos_webui import skillsio
 
     summaries = _summaries()
@@ -58,6 +72,8 @@ def list_capabilities() -> dict[str, Any]:
             dist = sid.split(".")[0].replace("_", "-").lower()
             skills.append({
                 "id": sid,
+                "skill_id": sid,
+                "package": dist if dist in summaries else None,
                 "name": _pretty(sid),
                 "description": summaries.get(dist, ""),
                 "configurable": True,
@@ -73,6 +89,8 @@ def list_capabilities() -> dict[str, Any]:
             continue
         skills.append({
             "id": dist,
+            "skill_id": None,
+            "package": dist,
             "name": _pretty(dist),
             "description": summary,
             "configurable": False,

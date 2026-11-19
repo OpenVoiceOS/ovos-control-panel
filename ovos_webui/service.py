@@ -71,6 +71,11 @@ STATIC_DIR = Path(__file__).parent / "static"
 #: A quiet spell at least this long resets the failed-login count (module level
 #: so tests can shorten it).
 THROTTLE_DECAY = 30.0
+#: Pages that moved. The old address still works and lands on the new page.
+MOVED_PAGES = {
+    "/abilities": "/skills",
+}
+
 PAGES = {
     "/": "index.html",
     "/config": "config.html",
@@ -85,7 +90,6 @@ PAGES = {
     "/tryit": "tryit.html",
     "/setup": "setup.html",
     "/controls": "controls.html",
-    "/abilities": "abilities.html",
     "/network": "network.html",
     "/system": "system.html",
     "/media": "media.html",
@@ -621,6 +625,16 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
 
     for route, filename in PAGES.items():
         pages.get(route)(_page_handler(filename))
+
+    def _moved_handler(target: str):
+        def handler(request: Request) -> RedirectResponse:
+            # keep a #fragment working: the browser carries it over itself
+            query = ("?" + request.url.query) if request.url.query else ""
+            return RedirectResponse(target + query, status_code=308)
+        return handler
+
+    for route, target in MOVED_PAGES.items():
+        pages.get(route, include_in_schema=False)(_moved_handler(target))
 
     @pages.get("/static/{asset:path}")
     def static_asset(asset: str) -> FileResponse:

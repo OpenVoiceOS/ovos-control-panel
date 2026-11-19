@@ -24,7 +24,6 @@
   <a href="/backup" data-i18n="nav.backup">Backup</a>
   <a href="/about" data-i18n="nav.about">About</a>
   <a href="/controls" data-i18n="nav.controls">Device</a>
-  <a href="/abilities" data-i18n="nav.abilities">Abilities</a>
 </nav>
 <main id="main" tabindex="-1">
   <p class="hint" data-i18n="plugins.what">Plugins add abilities to your device — a voice, a way to hear you, a way to answer.</p>
@@ -52,6 +51,8 @@
   <div class="card" id="recommended" data-i18n="plugins.loading">Loading…</div>
 
   <h2 data-i18n="plugins.find.title">Find a plugin</h2>
+  <p class="hint"><span data-i18n="plugins.skillsMoved">Looking for skills? They are on the</span>
+    <a href="/skills#find" data-i18n="plugins.skillsMoved.link">Skills page</a>.</p>
   <div class="card">
     <label data-i18n="plugins.search.label">Search<input id="q" placeholder="for example: piper, vosk, wikipedia" data-i18n-attr="placeholder:plugins.search.placeholder"></label>
     <label data-i18n="plugins.kind.label">Kind<select id="kind"><option value="" data-i18n="plugins.kind.any">Any</option></select></label>
@@ -127,7 +128,7 @@ OvosWebUI.ready(function () {
   function fillKinds(kinds) {
     if (el("kind").dataset.filled) { return; }
     el("kind").innerHTML = '<option value="">' + esc(OvosWebUI.t("plugins.kind.any", "Any")) + "</option>"
-      + kinds.map(function (k) { return '<option value="' + esc(k) + '">' + esc(k) + "</option>"; }).join("");
+      + kinds.filter(function (k) { return k !== "skill"; }).map(function (k) { return '<option value="' + esc(k) + '">' + esc(k) + "</option>"; }).join("");
     el("kind").dataset.filled = "1";
   }
 
@@ -149,11 +150,13 @@ OvosWebUI.ready(function () {
       + (refresh ? "&refresh=true" : "");
     return api(url).then(function (r) {
       fillKinds(r.kinds);
-      var shown = r.results.slice(0, MAX_RESULTS);
-      var more = r.results.length - shown.length;
+      // skills have their own page; this one is for everything else
+      var plugins = r.results.filter(function (x) { return x.kind !== "skill"; });
+      var shown = plugins.slice(0, MAX_RESULTS);
+      var more = plugins.length - shown.length;
       el("cacheinfo").textContent = r.offline
         ? OvosWebUI.t("plugins.offline", "PyPI could not be reached, so only the plugins already installed are listed.")
-        : OvosWebUI.t("plugins.listUpdated", "List updated") + " " + age(r.cache_age) + ". " + r.total + " " + OvosWebUI.t("plugins.pluginsMatch", "plugin(s) match.")
+        : OvosWebUI.t("plugins.listUpdated", "List updated") + " " + age(r.cache_age) + ". " + plugins.length + " " + OvosWebUI.t("plugins.pluginsMatch", "plugin(s) match.")
           + (r.stale ? " " + OvosWebUI.t("plugins.stale", "PyPI could not be reached, so this list may be old.") : "");
       el("results").innerHTML = shown.length
         ? shown.map(card).join("")
