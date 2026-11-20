@@ -238,40 +238,57 @@ nav a {
   transition: background 0.15s, color 0.15s;
 }
 nav a:hover { color: var(--ink); background: var(--accent-wash); }
-/* The menu is grouped: the everyday pages, then "Show more", then the
- * advanced groups, each under a small heading. The wrappers take no box of
- * their own, so the links stay items of the nav's own flex layout (wrapping
- * pills on a phone, a column on the desktop rail). A folded group is hidden. */
-nav .nav-group, nav .nav-advanced { display: contents; }
-nav .nav-group[hidden], nav .nav-group.nav-empty, nav a[hidden] { display: none; }
-nav .nav-heading {
+/* The menu is grouped: the everyday pages, then an "Advanced" divider and
+ * one foldable row per advanced group. The wrappers take no box of their own,
+ * so the links stay items of the nav's own flex layout (wrapping pills on a
+ * phone, a column on the desktop rail). A folded group's links are hidden. */
+nav .nav-group, nav .nav-links { display: contents; }
+nav .nav-links[hidden], nav .nav-group.nav-empty, nav a[hidden] { display: none; }
+nav .nav-divider {
   flex-basis: 100%;
-  margin: 0.7rem 0 0.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.9rem 0 0.2rem;
   padding: 0 0.85rem;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--muted);
 }
-nav button.nav-more {
+nav .nav-divider::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+nav button.nav-fold {
   flex-basis: 100%;
   min-height: 44px;
-  margin-top: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   padding: 0.5rem 0.85rem;
-  border: 1px dashed var(--line);
+  border: none;
   border-radius: 999px;
   background: none;
-  color: var(--muted);
+  color: var(--ink);
   font: inherit;
   font-weight: 600;
   font-size: 0.95rem;
   text-align: start;
   cursor: pointer;
 }
-nav button.nav-more:hover { color: var(--ink); background: var(--accent-wash); }
-nav button.nav-more::before { content: "\25B8\00A0"; }
-nav button.nav-more[aria-expanded="true"]::before { content: "\25BE\00A0"; }
+nav button.nav-fold:hover { background: var(--accent-wash); }
+nav button.nav-fold::after {
+  content: "";
+  width: 0.5em; height: 0.5em;
+  flex: 0 0 auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  color: var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+[dir="rtl"] nav button.nav-fold::after { transform: rotate(135deg); }
+nav button.nav-fold[aria-expanded="true"]::after { transform: rotate(45deg); }
 nav a[aria-current="page"] {
   background: var(--accent-strong);
   color: var(--accent-ink);
@@ -391,9 +408,11 @@ main { padding: 1.1rem; max-width: 62rem; margin: 0 auto; }
     padding: 0.6rem 0.9rem;
   }
   /* In the rail's column a 100% basis would be 100% of the height. */
-  nav button.nav-more, nav .nav-heading { flex-basis: auto; }
-  nav button.nav-more { border-radius: var(--radius-sm); font-size: 1rem; padding: 0.6rem 0.9rem; }
-  nav .nav-heading { padding: 0 0.9rem; }
+  nav button.nav-fold, nav .nav-divider { flex-basis: auto; }
+  nav button.nav-fold { border-radius: var(--radius-sm); font-size: 1rem; padding: 0.6rem 0.9rem; }
+  nav .nav-divider { padding: 0 0.9rem; }
+  /* A group's pages sit indented under its row. */
+  nav .nav-links a { margin-inline-start: 0.9rem; }
   main {
     grid-area: main;
     max-width: 66rem;
