@@ -188,12 +188,15 @@ OvosWebUI.ready(function () {
     var q = action === "install"
       ? OvosWebUI.t("plugins.confirm.install", "Install") + " " + name + " " + OvosWebUI.t("plugins.confirm.installSuffix", "on this device?")
       : OvosWebUI.t("plugins.confirm.remove", "Remove") + " " + name + " " + OvosWebUI.t("plugins.confirm.removeSuffix", "from this device?");
-    if (!OvosWebUI.confirmed(q)) { return; }
-    api("/api/plugins/" + action, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({package: name})
-    }).then(function (job) {
+    var started = action === "install"
+      ? OvosWebUI.installPackage(name, q)
+      : (OvosWebUI.confirmed(q) ? api("/api/plugins/" + action, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({package: name})
+      }) : Promise.resolve(null));
+    started.then(function (job) {
+      if (!job) { return; }
       el("joblog").textContent = job.lines.join("\n");
       watch(job.id, job.next);
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });

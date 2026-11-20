@@ -988,6 +988,15 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
                    for p in recommends.recommended_plugins(lang, data)]
         return {"lang": lang, "profiles": data, "plugins": plugins}
 
+    @privileged.post("/plugins/check")
+    def api_install_check(body: PackageBody) -> dict[str, Any]:
+        """What installing a package would change here, before it runs."""
+        from ovos_webui import installcheck
+        try:
+            return installcheck.check(body.package)
+        except installer.UnsafePackageName as err:
+            raise HTTPException(400, str(err))
+
     @privileged.post("/plugins/install")
     def api_install(body: PackageBody) -> dict[str, Any]:
         try:

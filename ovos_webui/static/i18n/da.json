@@ -1057,5 +1057,9 @@
  "skills.info.failed": "Detaljerne kunne ikke hentes.",
  "skills.by": "Af",
  "skills.version": "version",
- "skills.released": "udgivet"
+ "skills.released": "udgivet",
+ "install.checking": "Tjekker, hvad installation af {name} vil ændre…",
+ "install.downgrades": "Dette vil skifte disse installerede pakker til ældre versioner:",
+ "install.anyway": "Det kan få dele af OpenVoiceOS til at holde op med at virke. Installér alligevel?",
+ "install.wouldFail": "pip kunne ikke finde ud af denne installation, så den vil sandsynligvis mislykkes. Prøv alligevel?"
 }
