@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a58](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a58) (2026-11-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a57...0.0.1a58)
+
+**Merged pull requests:**
+
+- feat: restructure the menu, Skills and Voice pages [\#127](https://github.com/OpenVoiceOS/ovos-control-panel/pull/127) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a57](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a57) (2026-11-19)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a56...0.0.1a57)
@@ -412,73 +420,37 @@
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a10...0.0.1a11)
 
-**Merged pull requests:**
-
-- feat: Wi-Fi / network panel [\#12](https://github.com/OpenVoiceOS/ovos-control-panel/pull/12) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [0.0.1a10](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a10) (2026-08-12)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a9...0.0.1a10)
-
-**Merged pull requests:**
-
-- docs: STE nav footers and prose cleanup [\#11](https://github.com/OpenVoiceOS/ovos-control-panel/pull/11) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a9](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a9) (2026-08-12)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a8...0.0.1a9)
 
-**Merged pull requests:**
-
-- fix: plugin refs \(network-manager, pipeline family\), de-jargon, credits, static-asset auth [\#10](https://github.com/OpenVoiceOS/ovos-control-panel/pull/10) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [0.0.1a8](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a8) (2026-08-12)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a7...0.0.1a8)
-
-**Merged pull requests:**
-
-- docs: navigation hub, widescreen + mobile screenshots per page, tutorials, troubleshooting [\#9](https://github.com/OpenVoiceOS/ovos-control-panel/pull/9) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a7](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a7) (2026-08-12)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a6...0.0.1a7)
 
-**Merged pull requests:**
-
-- fix: unauthenticated pages redirect to /login, not a bare 401 \(found on ser9\) [\#8](https://github.com/OpenVoiceOS/ovos-control-panel/pull/8) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [0.0.1a6](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a6) (2026-08-12)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a5...0.0.1a6)
-
-**Merged pull requests:**
-
-- fix: webui hardening — 3-round adversarial + persona review \(incorporates \#5, \#6\) [\#7](https://github.com/OpenVoiceOS/ovos-control-panel/pull/7) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a5](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a5) (2026-08-11)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a4...0.0.1a5)
 
-**Merged pull requests:**
-
-- feat: manual theme control \(match-device / dark / light\) [\#4](https://github.com/OpenVoiceOS/ovos-control-panel/pull/4) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [0.0.1a4](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a4) (2026-08-11)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a3...0.0.1a4)
 
-**Merged pull requests:**
-
-- feat: try-it console, setup wizard, updates + release channel, backup history, skill disable, persona activation [\#3](https://github.com/OpenVoiceOS/ovos-control-panel/pull/3) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [0.0.1a3](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a3) (2026-08-11)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a2...0.0.1a3)
-
-**Merged pull requests:**
-
-- feat: plugin browser, persona creator, resource translation + OVOS theme, a11y, i18n [\#2](https://github.com/OpenVoiceOS/ovos-control-panel/pull/2) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a2](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a2) (2026-08-10)
 
