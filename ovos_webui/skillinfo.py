@@ -74,10 +74,18 @@ def is_ovos_skill_listing(project_json: dict[str, Any]) -> bool:
     return requires_ovos((project_json.get("info") or {}).get("requires_dist"))
 
 
+#: The entry point groups a skill registers under: ``opm.skill`` is the one
+#: ovos-plugin-manager uses now, ``ovos.plugin.skill`` the older name it still
+#: reads.
+SKILL_GROUPS = ("opm.skill", "ovos.plugin.skill")
+_GROUP_RE = re.compile(rb"^\s*\[\s*(" + b"|".join(re.escape(g.encode()) for g in SKILL_GROUPS)
+                       + rb")\s*\]", re.M)
+
+
 def installed_is_ovos_skill(dist: metadata.Distribution) -> bool:
     """Judge an installed package: it registers a skill, or depends on OVOS."""
     try:
-        if any(ep.group == "ovos.plugin.skill" for ep in dist.entry_points):
+        if any(ep.group in SKILL_GROUPS for ep in dist.entry_points):
             return True
     except Exception:  # noqa: BLE001 - broken metadata is not a skill
         return False
@@ -228,7 +236,7 @@ def _wheel_skill_json(files: list[dict[str, Any]], lang: str) -> tuple[dict[str,
         if chosen:
             info = _from_skill_json(zf.read(chosen))
         entry = next((n for n in names if n.endswith(".dist-info/entry_points.txt")), None)
-        registers = bool(entry and b"ovos.plugin.skill" in zf.read(entry))
+        registers = bool(entry and _GROUP_RE.search(zf.read(entry)))
     return info, registers
 
 
