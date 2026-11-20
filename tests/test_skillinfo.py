@@ -28,7 +28,7 @@ def fake_pypi(monkeypatch, tmp_path):
         "ovos_skill_tales/locale/da-dk/skill.json": json.dumps({
             "name": "Eventyr", "examples": ["Fortæl en historie"]}).encode(),
         "ovos_skill_tales-1.0.dist-info/entry_points.txt":
-            b"[ovos.plugin.skill]\ntales.someone = ovos_skill_tales:TalesSkill\n",
+            b"[opm.skill]\ntales.someone = ovos_skill_tales:TalesSkill\n",
     })
     project = {
         "info": {"version": "1.0", "author": "Someone", "license": "MIT", "summary": "Tales",
@@ -176,4 +176,17 @@ def test_an_installed_namesake_is_not_listed_as_a_skill():
     assert not capabilities._is_skill_package("skill-audit", _Dist(["click"]))
     assert capabilities._is_skill_package("skill-homeassistant", _Dist(["ovos-workshop"]))
     assert capabilities._is_skill_package("skill-news", _Dist([], ["ovos.plugin.skill"]))
+    assert capabilities._is_skill_package("skill-wolfie", _Dist([], ["opm.skill"]))
     assert capabilities._is_skill_package("ovos-skill-hello-world", _Dist([]))
+
+
+@pytest.mark.parametrize("text,registers", [
+    (b"[opm.skill]\nx.y = m:S\n", True),
+    (b"[ovos.plugin.skill]\nx.y = m:S\n", True),
+    (b"[console_scripts]\nopm.skill = m:main\n", False),
+    (b"[opm.skill.config]\nx = m:c\n", False),
+])
+def test_both_skill_entry_point_groups_count(text, registers):
+    """opm.skill is the group ovos-plugin-manager uses now, ovos.plugin.skill
+    the older one; a name that only mentions one is not a registration."""
+    assert bool(skillinfo._GROUP_RE.search(text)) is registers
