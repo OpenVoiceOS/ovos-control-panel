@@ -227,6 +227,10 @@ def set_release_channel(channel: str, bus=None) -> dict[str, Any]:
     its constraints file and whether it takes pre-releases -- unless it uses
     a constraints file chosen by hand. The services read that setting when
     they start, so ``restart`` says whether they need a restart to use it.
+
+    The restart is only needed until the installers read the setting when
+    they install (OpenVoiceOS/ovos-core#1032 and OpenVoiceOS/ovos-utils#473).
+    Once released, ``restart`` can be dropped for versions that have them.
     """
     from ovos_webui import configio
 
