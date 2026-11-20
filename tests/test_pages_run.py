@@ -1394,6 +1394,52 @@ def _json_route(page, pattern, body):
                                             body=json.dumps(body)))
 
 
+def test_the_plugins_page_puts_the_installer_on_the_channel(signed_in_page):
+    """When the device's installer does not follow the chosen channel the page
+    says so; the fix sets it, and a restart is offered because the services
+    read that setting when they start."""
+    page, url = signed_in_page
+    posted = []
+
+    def channel(route):
+        if route.request.method == "POST":
+            posted.append(json.loads(route.request.post_data))
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(
+                {"ok": True, "channel": "alpha", "restart": True,
+                 "installer": {"follows": True, "custom": None}}))
+        else:
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(
+                {"channel": "alpha", "channels": ["stable", "alpha"],
+                 "installer": {"follows": False, "custom": None}}))
+
+    page.route("**/api/updates/channel", channel)
+    try:
+        page.goto(f"{url}/plugins")
+        page.locator("#installer-off").wait_for()
+        assert page.locator("#restart-row").is_hidden()
+        page.click("#installer-fix")
+        page.locator("#restart-row").wait_for()
+        assert posted == [{"channel": "alpha"}]
+        assert page.locator("#installer-off").is_hidden()
+        assert "restart" in page.locator("#msg-channel").inner_text()
+    finally:
+        page.unroute("**/api/updates/channel")
+
+
+def test_the_plugins_page_names_a_constraints_file_chosen_by_hand(signed_in_page):
+    page, url = signed_in_page
+    _json_route(page, "**/api/updates/channel", {
+        "channel": "stable", "channels": ["stable", "alpha"],
+        "installer": {"follows": False, "custom": "/home/ovos/mine.txt"}})
+    try:
+        page.goto(f"{url}/plugins")
+        page.locator("#installer-custom").wait_for()
+        assert page.locator("#installer-custom-file").inner_text() == "/home/ovos/mine.txt"
+        assert page.locator("#installer-off").is_hidden()
+    finally:
+        page.unroute("**/api/updates/channel")
+
+
 def test_the_skills_page_lists_opens_and_goes_back(signed_in_page):
     page, url = signed_in_page
     _json_route(page, "**/api/updates", {"packages": [

@@ -1061,7 +1061,8 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_channel_get() -> dict[str, Any]:
         from ovos_webui import updates
         return {"channel": updates.release_channel(),
-                "channels": list(updates.CHANNELS)}
+                "channels": list(updates.CHANNELS),
+                "installer": updates.installer_follows()}
 
     @privileged.post("/updates/channel")
     def api_channel_set(body: ChannelBody) -> dict[str, Any]:

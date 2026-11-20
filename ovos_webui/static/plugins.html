@@ -38,7 +38,12 @@
     </div>
     <p class="hint" data-i18n="plugins.channel.hint">OpenVoiceOS publishes an alpha for every merged fix.
       "Latest fixes" gets them right away; "Steady releases" waits for a numbered release.</p>
+    <p class="msg" id="installer-off" hidden><span data-i18n="plugins.channel.notFollowing">Installs on this device do not follow this channel yet, so an install could bring in the wrong versions of OpenVoiceOS.</span>
+      <button class="secondary" id="installer-fix" data-i18n="plugins.channel.makeFollow">Make installs follow this channel</button></p>
+    <p class="hint" id="installer-custom" hidden><span data-i18n="plugins.channel.custom">Installs use a constraints file chosen by hand, which the channel does not change:</span>
+      <code id="installer-custom-file"></code></p>
     <div class="msg" id="msg-channel" role="status" aria-live="polite" hidden></div>
+    <div class="row" id="restart-row" hidden><button class="secondary" id="restart-now" data-i18n="about.power_restart">Restart the voice services</button></div>
   </div>
   <details class="tech">
     <summary data-i18n="plugins.conflicts.summary">Package check</summary>
@@ -306,19 +311,45 @@ OvosWebUI.ready(function () {
     }
   }
 
-  api("/api/updates/channel").then(function (r) { markChannel(r.channel); }).catch(function () {});
+  var currentChannel = "stable";
+  function showInstaller(info) {
+    info = info || {};
+    el("installer-off").hidden = !!(info.follows || info.custom);
+    el("installer-custom").hidden = !info.custom;
+    el("installer-custom-file").textContent = info.custom || "";
+  }
+  function setChannel(channel) {
+    api("/api/updates/channel", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({channel: channel})
+    }).then(function (r) {
+      currentChannel = channel;
+      markChannel(channel);
+      showInstaller(r.installer);
+      el("restart-row").hidden = !r.restart;
+      OvosWebUI.say("msg-channel", r.restart
+        ? OvosWebUI.t("plugins.channel.savedRestart", "Saved. Installs follow this channel once the voice services restart.")
+        : OvosWebUI.t("plugins.channel.saved", "Saved. Installs and upgrades now follow this channel."));
+      loadUpdates(true);
+    }).catch(function (e) { OvosWebUI.say("msg-channel", e.message, true); });
+  }
+  api("/api/updates/channel").then(function (r) {
+    currentChannel = r.channel;
+    markChannel(r.channel);
+    showInstaller(r.installer);
+  }).catch(function () {});
   ["stable", "alpha"].forEach(function (channel) {
-    el("ch-" + channel).addEventListener("click", function () {
-      api("/api/updates/channel", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({channel: channel})
-      }).then(function () {
-        markChannel(channel);
-        OvosWebUI.say("msg-channel", OvosWebUI.t("plugins.channel.saved", "Saved. Installs and upgrades now follow this channel."));
-        loadUpdates(true);
-      }).catch(function (e) { OvosWebUI.say("msg-channel", e.message, true); });
-    });
+    el("ch-" + channel).addEventListener("click", function () { setChannel(channel); });
+  });
+  el("installer-fix").addEventListener("click", function () { setChannel(currentChannel); });
+  el("restart-now").addEventListener("click", function () {
+    if (!OvosWebUI.confirmed(OvosWebUI.t("about.power_confirm_restart",
+      "Restart the voice services? The device stops answering for a moment."))) { return; }
+    api("/api/system/restart_services", {method: "POST"}).then(function () {
+      el("restart-row").hidden = true;
+      OvosWebUI.say("msg-channel", OvosWebUI.t("about.power_sent", "Sent. If the system plugin is installed, it happens now."));
+    }).catch(function (e) { OvosWebUI.say("msg-channel", e.message, true); });
   });
 
   api("/api/updates/conflicts").then(function (r) {
