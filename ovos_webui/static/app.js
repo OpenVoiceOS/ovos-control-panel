@@ -174,8 +174,8 @@
   //
   // Each page says where it belongs, so the menu can be built from this list:
   //   group  the menu group: "everyday" (always shown), "voice", "understanding",
-  //          "device", "screen" or "maintenance" (shown under "Show more")
-  //   level  "everyday" or "advanced"; the simple view shows only "everyday"
+  //          "device", "screen" or "maintenance" (folded under "Show more")
+  //   level  "everyday" or "advanced"
   //   needs  the capability the page depends on (a plugin or a screen), or null.
   //          Pages whose need is not met can be left out of the menu.
   // Kept JSON-shaped (quoted keys, no trailing comma) so the tests can read it.
@@ -185,11 +185,11 @@
     {"path": "/tryit", "key": "nav.tryit", "label": "Try it", "group": "everyday", "level": "everyday", "needs": null},
     {"path": "/controls", "key": "nav.controls", "label": "Device", "group": "everyday", "level": "everyday", "needs": null},
     {"path": "/network", "key": "nav.network", "label": "Network", "group": "everyday", "level": "everyday", "needs": null},
-    {"path": "/voice", "key": "nav.voice", "label": "Voice settings", "group": "everyday", "level": "everyday", "needs": null},
+    {"path": "/voice", "key": "nav.voice", "label": "Voice and language", "group": "everyday", "level": "everyday", "needs": null},
     {"path": "/skills", "key": "nav.skills", "label": "Skills", "group": "everyday", "level": "everyday", "needs": null},
-    {"path": "/abilities", "key": "nav.abilities", "label": "Abilities", "group": "everyday", "level": "everyday", "needs": null},
     {"path": "/backup", "key": "nav.backup", "label": "Backup", "group": "everyday", "level": "everyday", "needs": null},
     {"path": "/about", "key": "nav.about", "label": "About", "group": "everyday", "level": "everyday", "needs": null},
+    {"path": "/voice-all", "key": "nav.voiceAll", "label": "All voice settings", "group": "voice", "level": "advanced", "needs": null},
     {"path": "/servers", "key": "nav.servers", "label": "Servers", "group": "voice", "level": "advanced", "needs": null},
     {"path": "/translate", "key": "nav.translate", "label": "Translate", "group": "voice", "level": "advanced", "needs": null},
     {"path": "/intents", "key": "nav.intents", "label": "Intents", "group": "understanding", "level": "advanced", "needs": null},
@@ -205,28 +205,138 @@
     {"path": "/config", "key": "nav.settings", "label": "Settings", "group": "maintenance", "level": "advanced", "needs": null},
     {"path": "/sound", "key": "nav.sound", "label": "Send over sound", "group": "maintenance", "level": "advanced", "needs": null}
   ];
-  // Simple mode hides the advanced pages, leaving only what a non-technical
-  // owner needs day to day. It is a per-browser choice, off by default, and it
-  // only changes which nav links show — every page still works if reached
-  // directly. The page you are on is always kept in the nav so a link can never
-  // strand you on a hidden page.
-  var SIMPLE_KEY = "ovos-simple";
-  function simpleMode() {
-    try { return window.localStorage.getItem(SIMPLE_KEY) === "1"; } catch (e) { return false; }
+  // The menu shows the everyday pages, then an "Advanced" divider and one
+  // row per advanced group. Each row folds its own pages open and shut, and
+  // which rows are open is remembered per browser; all start folded. Every
+  // link is always in the DOM -- a folded group's links are only hidden --
+  // and the group holding the page you are on opens when the page loads, so
+  // a link can never strand you on a page the menu does not show.
+  var GROUPS = [
+    ["voice", "nav.group.voice", "Voice"],
+    ["understanding", "nav.group.understanding", "Understanding"],
+    ["device", "nav.group.device", "Device"],
+    ["screen", "nav.group.screen", "Screen"],
+    ["maintenance", "nav.group.maintenance", "Maintenance"]
+  ];
+  var OPEN_KEY = "ovos-nav-open";
+  // The old header switch stored "ovos-simple"; "0" meant someone had asked
+  // for every page, so every group starts open for them.
+  var OLD_SIMPLE_KEY = "ovos-simple";
+  function openGroups() {
+    try {
+      var v = window.localStorage.getItem(OPEN_KEY);
+      if (v === null) {
+        return window.localStorage.getItem(OLD_SIMPLE_KEY) === "0"
+          ? GROUPS.map(function (g) { return g[0]; }) : [];
+      }
+      var list = JSON.parse(v);
+      return Array.isArray(list) ? list : [];
+    } catch (e) { return []; }
+  }
+  function saveOpen(list) {
+    try { window.localStorage.setItem(OPEN_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
+  }
+  function herePath() {
+    return window.location.pathname.replace(/\/$/, "") || "/";
+  }
+  function navLink(item) {
+    return '<a href="' + item.path + '" data-i18n="' + item.key + '">'
+      + esc(t(item.key, item.label)) + "</a>";
   }
   function renderNav() {
     var nav = document.querySelector('nav[aria-label], nav#sitenav');
     if (!nav) { return; }
-    var here = window.location.pathname.replace(/\/$/, "") || "/";
-    var items = simpleMode()
-      ? NAV.filter(function (x) { return x.level === "everyday" || x.path === here; })
-      : NAV;
-    nav.innerHTML = items.map(function (item) {
-      return '<a href="' + item.path + '" data-i18n="' + item.key + '">'
-        + esc(t(item.key, item.label)) + "</a>";
+    var html = '<div class="nav-group nav-everyday">'
+      + NAV.filter(function (x) { return x.group === "everyday"; }).map(navLink).join("")
+      + "</div>";
+    html += '<span class="nav-divider" data-i18n="nav.advanced">'
+      + esc(t("nav.advanced", "Advanced")) + "</span>";
+    html += GROUPS.map(function (g) {
+      var items = NAV.filter(function (x) { return x.group === g[0]; });
+      if (!items.length) { return ""; }
+      return '<div class="nav-group" data-group="' + g[0] + '">'
+        + '<button type="button" class="nav-fold" aria-expanded="false" aria-controls="navl-' + g[0] + '">'
+        + '<span data-i18n="' + g[1] + '">' + esc(t(g[1], g[2])) + "</span></button>"
+        + '<div class="nav-links" id="navl-' + g[0] + '">' + items.map(navLink).join("") + "</div></div>";
     }).join("");
+    nav.innerHTML = html;
+    var here = herePath();
+    var current = NAV.filter(function (x) { return x.path === here; })[0];
+    var open = openGroups();
+    nav.querySelectorAll(".nav-group[data-group]").forEach(function (g) {
+      var name = g.getAttribute("data-group");
+      foldGroup(g, open.indexOf(name) >= 0 || !!(current && current.group === name));
+      g.querySelector(".nav-fold").addEventListener("click", function () {
+        var now = g.querySelector(".nav-fold").getAttribute("aria-expanded") !== "true";
+        foldGroup(g, now);
+        var list = openGroups().filter(function (x) { return x !== name; });
+        if (now) { list.push(name); }
+        saveOpen(list);
+      });
+    });
   }
-
+  function foldGroup(g, open) {
+    g.querySelector(".nav-fold").setAttribute("aria-expanded", open ? "true" : "false");
+    g.querySelector(".nav-links").hidden = !open;
+  }
+  // Pages whose need is not met (a plugin or a screen the device lacks) are
+  // left out of the menu, and a group left empty goes with them. The answer
+  // is kept for a few minutes per tab so the menu does not jump on every page.
+  // Until it is known, and when the panel runs apart from the assistant (its
+  // own packages then say nothing about the device's), every page shows.
+  var NEEDS_KEY = "ovos-nav-needs";
+  var NEEDS_TTL = 5 * 60 * 1000;
+  function cachedNeeds() {
+    try {
+      var c = JSON.parse(window.sessionStorage.getItem(NEEDS_KEY) || "null");
+      return c && Date.now() - c.at < NEEDS_TTL ? c.data : null;
+    } catch (e) { return null; }
+  }
+  function unmet(data, item) {
+    return !!(data && data.colocated && item.needs && data.needs
+      && data.needs[item.needs] && data.needs[item.needs].met === false);
+  }
+  function applyNeeds(data) {
+    var nav = document.querySelector('nav[aria-label], nav#sitenav');
+    if (!nav) { return; }
+    var here = herePath();
+    NAV.forEach(function (item) {
+      var a = nav.querySelector('a[href="' + item.path + '"]');
+      if (a) { a.hidden = unmet(data, item) && item.path !== here; }
+    });
+    nav.querySelectorAll(".nav-group").forEach(function (g) {
+      var links = g.querySelectorAll("a[href]");
+      var shown = Array.prototype.filter.call(links, function (a) { return !a.hidden; });
+      g.classList.toggle("nav-empty", links.length > 0 && shown.length === 0);
+    });
+    var current = NAV.filter(function (x) { return x.path === here; })[0];
+    var note = document.getElementById("needs-note");
+    if (current && unmet(data, current)) {
+      if (!note) {
+        var main = document.querySelector("main");
+        if (!main) { return; }
+        note = document.createElement("p");
+        note.id = "needs-note";
+        note.className = "msg needs-note";
+        note.setAttribute("role", "note");
+        main.insertBefore(note, main.firstChild);
+      }
+      var pkg = data.needs[current.needs].suggest;
+      var parts = t("nav.needs.missing", "This page needs {pkg}, which is not installed on this device.")
+        .split("{pkg}");
+      note.innerHTML = esc(parts[0]) + "<code>" + esc(pkg) + "</code>" + esc(parts.slice(1).join(""))
+        + ' <a href="/plugins">' + esc(t("nav.needs.install", "Install it on the Plugins page")) + "</a>.";
+    } else if (note) {
+      note.parentNode.removeChild(note);
+    }
+  }
+  function loadNeeds() {
+    applyNeeds(cachedNeeds());
+    return api("/api/nav/needs").then(function (data) {
+      try { window.sessionStorage.setItem(NEEDS_KEY, JSON.stringify({at: Date.now(), data: data})); } catch (e) { /* ignore */ }
+      applyNeeds(data);
+    }).catch(function () { /* not answered: keep every page */ });
+  }
   function markNav() {
     var here = window.location.pathname.replace(/\/$/, "") || "/";
     document.querySelectorAll("nav a").forEach(function (a) {
@@ -340,43 +450,6 @@
     headerTools().appendChild(live);
   }
 
-  // A Simple-mode control lives in every header, next to the theme control. It
-  // shows or hides the advanced pages and re-draws the nav in place.
-  function labelSimpleButton(button) {
-    var on = simpleMode();
-    button.textContent = on ? "☰" : "⋯";
-    button.setAttribute("aria-pressed", on ? "true" : "false");
-    var label = on ? t("simple.on", "Simple view on — show all pages")
-      : t("simple.off", "Show only the everyday pages");
-    button.setAttribute("aria-label", label);
-    button.setAttribute("title", label);
-  }
-  function mountSimpleToggle() {
-    var header = document.querySelector("header");
-    if (!header || document.getElementById("simple-toggle")) { return; }
-    var button = document.createElement("button");
-    button.id = "simple-toggle";
-    button.type = "button";
-    button.className = "theme-toggle";
-    var live = document.createElement("span");
-    live.className = "visually-hidden";
-    live.setAttribute("aria-live", "polite");
-    labelSimpleButton(button);
-    button.addEventListener("click", function () {
-      var next = simpleMode() ? "0" : "1";
-      try { window.localStorage.setItem(SIMPLE_KEY, next); } catch (e) { /* ignore */ }
-      labelSimpleButton(button);
-      renderNav();
-      markNav();
-      applyI18n(document.querySelector('nav[aria-label], nav#sitenav'));
-      live.textContent = simpleMode()
-        ? t("simple.nowOn", "Showing only the everyday pages.")
-        : t("simple.nowOff", "Showing all pages.");
-    });
-    headerTools().appendChild(button);
-    headerTools().appendChild(live);
-  }
-
   // A larger-text control in every header. Cycles normal → large → larger,
   // persists the choice, and names the current size for a screen reader.
   var TEXT_NAME = {normal: "normal", large: "large", xlarge: "largest"};
@@ -438,6 +511,44 @@
       + ", " + d.toLocaleTimeString(lang, {hour: "2-digit", minute: "2-digit"});
   }
 
+  // Install a package, after saying what it would change. The panel first asks
+  // the device what pip would do (a dry run); a downgrade of anything installed
+  // is listed in the question, and a run pip could not work out says it would
+  // most likely fail. Resolves to the install job, or null when the person
+  // said no. ``question`` is the page's own "Install X?".
+  function installPackage(name, question) {
+    var note = document.getElementById("install-check");
+    if (!note) {
+      note = document.createElement("p");
+      note.id = "install-check";
+      note.className = "msg";
+      note.setAttribute("role", "status");
+      var main = document.querySelector("main");
+      if (main) { main.insertBefore(note, main.firstChild); }
+    }
+    note.hidden = false;
+    note.textContent = t("install.checking", "Checking what installing {name} would change…").split("{name}").join(name);
+    var post = function (path) {
+      return api(path, {method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({package: name})});
+    };
+    return post("/api/plugins/check").catch(function () { return {checked: false}; }).then(function (r) {
+      note.hidden = true;
+      var ask = question;
+      if (r && r.checked && r.downgrades && r.downgrades.length) {
+        ask = question + "\n\n" + t("install.downgrades",
+          "This would change these installed packages to older versions:") + "\n"
+          + r.downgrades.map(function (d) { return "  " + d.name + " " + d.from + " \u2192 " + d.to; }).join("\n")
+          + "\n\n" + t("install.anyway", "That can stop parts of OpenVoiceOS from working. Install anyway?");
+      } else if (r && r.reason === "pip-failed") {
+        ask = question + "\n\n" + t("install.wouldFail",
+          "pip could not work out this install, so it would most likely fail. Try anyway?");
+      }
+      if (!window.OvosWebUI.confirmed(ask)) { return null; }
+      return post("/api/plugins/install");
+    });
+  }
+
   window.OvosWebUI = {
     api: api, el: el, say: say, sayHtml: sayHtml, esc: esc, t: t, applyI18n: applyI18n,
     fmtDateTime: fmtDateTime,
@@ -447,7 +558,6 @@
         markNav();
         mountMenuToggle();
         mountThemeToggle();
-        mountSimpleToggle();
         mountTextToggle();
         // One status call drives both the language/direction and the banner,
         // then the page runs with translations already applied.
@@ -455,12 +565,13 @@
           showBanner(s);
           return loadLocale(s && s.lang);
         }).catch(function () { /* offline or not signed in: stay in English */ })
-          .then(function () { renameMenu(); })
+          .then(function () { renameMenu(); loadNeeds(); })
           .then(function () {
             try { fn(); } catch (e) { console.error(e); }
           });
       });
     },
-    confirmed: function (question) { return window.confirm(question); }
+    confirmed: function (question) { return window.confirm(question); },
+    installPackage: installPackage
   };
 })();

@@ -168,8 +168,14 @@ def test_token_change_reissues_cookie(token_client):
 
 
 def test_new_pages_render(client):
-    for page in ("/controls", "/abilities"):
-        assert client.get(page).status_code == 200
+    assert client.get("/controls").status_code == 200
+
+
+def test_the_abilities_page_moved_to_skills(client):
+    r = client.get("/abilities", follow_redirects=False)
+    assert r.status_code == 308
+    assert r.headers["location"] == "/skills"
+    assert client.get("/abilities").status_code == 200
 
 
 # ── installer delegates over the bus ─────────────────────────────────────────

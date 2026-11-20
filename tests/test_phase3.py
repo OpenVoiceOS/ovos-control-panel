@@ -552,3 +552,63 @@ def test_a_backup_is_stamped_when_it_is_taken(tmp_path):
     os.utime(target, ns=(old, old))
     backup = make_backup(target)
     assert backup.stat().st_mtime_ns > old + 1800 * 10**9
+
+
+# ── the device's installer follows the channel ──────────────────────────────
+def _installer():
+    return configio.read_user_config().get("skills", {}).get("installer", {})
+
+
+def test_choosing_a_channel_sets_the_devices_installer_to_it():
+    result = updates.set_release_channel("alpha")
+    assert _installer()["constraints"].endswith("/constraints-alpha.txt")
+    assert _installer()["allow_alphas"] is True
+    assert result["installer"] == {"follows": True, "custom": None}
+    assert result["restart"] is True, "the services read it when they start"
+
+    result = updates.set_release_channel("stable")
+    assert _installer()["constraints"].endswith("/constraints-stable.txt")
+    assert _installer()["allow_alphas"] is False
+    assert result["restart"] is True
+
+
+def test_choosing_the_channel_it_already_follows_needs_no_restart():
+    updates.set_release_channel("alpha")
+    assert updates.set_release_channel("alpha")["restart"] is False
+
+
+def test_alphas_on_with_stable_constraints_is_not_following():
+    """What a device set by hand often has: pre-releases on, but no
+    constraints, so ovos-core uses the stable file and pins OVOS back."""
+    atomic_write(configio.user_config_path(), json.dumps(
+        {"webui": {"release_channel": "alpha"}, "skills": {"installer": {"allow_alphas": True}}}))
+    assert updates.installer_follows() == {"follows": False, "custom": None}
+    updates.set_release_channel("alpha")
+    assert updates.installer_follows()["follows"] is True
+
+
+def test_the_short_spelling_of_the_channel_file_counts_as_the_channel():
+    atomic_write(configio.user_config_path(), json.dumps({"skills": {"installer": {
+        "constraints": "https://raw.githubusercontent.com/OpenVoiceOS/ovos-releases/main/constraints-alpha.txt",
+        "allow_alphas": True}}}))
+    assert updates.installer_follows("alpha") == {"follows": True, "custom": None}
+    updates.set_release_channel("stable")
+    assert _installer()["constraints"].endswith("/constraints-stable.txt")
+
+
+@pytest.mark.parametrize("chosen", [
+    "https://raw.githubusercontent.com/OpenVoiceOS/ovos-releases/refs/heads/main/constraints-testing.txt",
+    "/home/ovos/my-constraints.txt",
+])
+def test_a_constraints_file_chosen_by_hand_is_left_alone(chosen):
+    atomic_write(configio.user_config_path(), json.dumps(
+        {"skills": {"installer": {"constraints": chosen}}}))
+    result = updates.set_release_channel("alpha")
+    assert _installer() == {"constraints": chosen}
+    assert result["installer"] == {"follows": False, "custom": chosen}
+    assert result["restart"] is False
+
+
+def test_the_channel_route_says_whether_installs_follow(client):
+    body = client.get("/api/updates/channel").json()
+    assert set(body["installer"]) == {"follows", "custom"}

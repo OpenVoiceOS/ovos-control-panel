@@ -53,7 +53,7 @@ translation is never mistaken for one a person checked.
 ## If it doesn't work
 
 If the skill list is empty, install a skill first from the
-[Plugins](plugins.md) page. For anything else, see
+[Skills](skills.md) page. For anything else, see
 [troubleshooting.md](troubleshooting.md).
 
 ---

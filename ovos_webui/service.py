@@ -71,10 +71,16 @@ STATIC_DIR = Path(__file__).parent / "static"
 #: A quiet spell at least this long resets the failed-login count (module level
 #: so tests can shorten it).
 THROTTLE_DECAY = 30.0
+#: Pages that moved. The old address still works and lands on the new page.
+MOVED_PAGES = {
+    "/abilities": "/skills",
+}
+
 PAGES = {
     "/": "index.html",
     "/config": "config.html",
     "/voice": "voice.html",
+    "/voice-all": "voice.html",
     "/skills": "skills.html",
     "/backup": "backup.html",
     "/about": "about.html",
@@ -85,7 +91,6 @@ PAGES = {
     "/tryit": "tryit.html",
     "/setup": "setup.html",
     "/controls": "controls.html",
-    "/abilities": "abilities.html",
     "/network": "network.html",
     "/system": "system.html",
     "/media": "media.html",
@@ -284,10 +289,6 @@ class WifiSsidBody(BaseModel):
 
 class SshBody(BaseModel):
     enabled: bool
-
-
-class LanguageBody(BaseModel):
-    lang: str = Field(..., max_length=32)
 
 
 class Mark1DisplayBody(BaseModel):
@@ -621,6 +622,16 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
 
     for route, filename in PAGES.items():
         pages.get(route)(_page_handler(filename))
+
+    def _moved_handler(target: str):
+        def handler(request: Request) -> RedirectResponse:
+            # keep a #fragment working: the browser carries it over itself
+            query = ("?" + request.url.query) if request.url.query else ""
+            return RedirectResponse(target + query, status_code=308)
+        return handler
+
+    for route, target in MOVED_PAGES.items():
+        pages.get(route, include_in_schema=False)(_moved_handler(target))
 
     @pages.get("/static/{asset:path}")
     def static_asset(asset: str) -> FileResponse:
@@ -977,6 +988,15 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
                    for p in recommends.recommended_plugins(lang, data)]
         return {"lang": lang, "profiles": data, "plugins": plugins}
 
+    @privileged.post("/plugins/check")
+    def api_install_check(body: PackageBody) -> dict[str, Any]:
+        """What installing a package would change here, before it runs."""
+        from ovos_webui import installcheck
+        try:
+            return installcheck.check(body.package)
+        except installer.UnsafePackageName as err:
+            raise HTTPException(400, str(err))
+
     @privileged.post("/plugins/install")
     def api_install(body: PackageBody) -> dict[str, Any]:
         try:
@@ -1041,7 +1061,8 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_channel_get() -> dict[str, Any]:
         from ovos_webui import updates
         return {"channel": updates.release_channel(),
-                "channels": list(updates.CHANNELS)}
+                "channels": list(updates.CHANNELS),
+                "installer": updates.installer_follows()}
 
     @privileged.post("/updates/channel")
     def api_channel_set(body: ChannelBody) -> dict[str, Any]:
@@ -1169,11 +1190,6 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         from ovos_webui import system
         return system.factory_reset(_need_bus())
 
-    @privileged.post("/system/language")
-    def api_set_language(body: LanguageBody) -> dict[str, Any]:
-        from ovos_webui import system
-        return system.set_language(_need_bus(), body.lang)
-
     @privileged.get("/system/connectivity")
     def api_connectivity() -> dict[str, Any]:
         from ovos_webui import system
@@ -1206,6 +1222,12 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_capabilities_status() -> dict[str, Any]:
         from ovos_webui import phal
         return phal.capability_status()
+
+    @api.get("/nav/needs")
+    def api_nav_needs() -> dict[str, Any]:
+        """Which page needs are met, so the menu can leave out what cannot work."""
+        from ovos_webui import phal
+        return phal.page_needs()
 
     @api.get("/device/volume")
     def api_volume_get() -> dict[str, Any]:
@@ -1522,6 +1544,29 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         return {"ok": True, "sent": "ovos.ggwave.disable"}
 
     # ── what can it do: the installed skills ─────────────────────────────────
+    @api.get("/skillinfo/{package}")
+    def api_skill_info(package: str) -> dict[str, Any]:
+        """Who made a skill, where its source is, and what to say to it."""
+        from ovos_webui import skillinfo
+        try:
+            return skillinfo.info(package)
+        except skillinfo.NotASkill as err:
+            raise HTTPException(400, str(err)) from err
+        except (OSError, ValueError) as err:
+            raise HTTPException(502, f"could not read the details: {err}") from err
+
+    @api.get("/skillinfo/{package}/icon")
+    def api_skill_icon(package: str) -> Response:
+        """A skill's icon, fetched by the panel so the page stays on its origin."""
+        from ovos_webui import skillinfo
+        found = skillinfo.icon(package)
+        if found is None:
+            raise HTTPException(404, "this skill has no icon to show")
+        data, kind = found
+        return Response(data, media_type=kind,
+                        headers={"Cache-Control": "private, max-age=86400",
+                                 "X-Content-Type-Options": "nosniff"})
+
     @api.get("/capabilities")
     def api_abilities() -> dict[str, Any]:
         from ovos_webui import capabilities

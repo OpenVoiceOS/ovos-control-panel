@@ -25,7 +25,6 @@
   <a href="/backup" data-i18n="nav.backup">Backup</a>
   <a href="/about" data-i18n="nav.about">About</a>
   <a href="/controls" data-i18n="nav.controls">Device</a>
-  <a href="/abilities" data-i18n="nav.abilities">Abilities</a>
 </nav>
 <main id="main" tabindex="-1">
   <p class="hint" data-i18n="setup.intro">Six short steps get a fresh device talking.
@@ -184,12 +183,8 @@ OvosWebUI.ready(function () {
   }
 
   function install(name) {
-    if (!OvosWebUI.confirmed(t("setup.confirm.install", "Install") + " " + name + "?")) { return; }
-    api("/api/plugins/install", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({package: name})
-    }).then(function (job) {
+    OvosWebUI.installPackage(name, t("setup.confirm.install", "Install") + " " + name + "?").then(function (job) {
+      if (!job) { return; }
       el("joblog-card").hidden = false;
       el("joblog").textContent = job.lines.join("\n");
       watch(job.id, job.next);

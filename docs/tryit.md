@@ -51,7 +51,7 @@ introduced anywhere on this page.
 ## If it doesn't work
 
 "complete_intent_failure" means no skill matched. Try rephrasing, or check
-the [Abilities](abilities.md) page for what the device can do. For anything
+the [Skills](skills.md) page for what the device can do. For anything
 else, see [troubleshooting.md](troubleshooting.md).
 
 ---

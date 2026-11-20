@@ -20,7 +20,6 @@
   <a href="/controls" data-i18n="nav.controls">Device</a>
   <a href="/config" data-i18n="nav.settings">Settings</a>
   <a href="/skills" data-i18n="nav.skills">Skills</a>
-  <a href="/abilities" data-i18n="nav.abilities">Abilities</a>
   <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
   <a href="/personas" data-i18n="nav.personas">Personas</a>
   <a href="/translate" data-i18n="nav.translate">Translate</a>
@@ -186,10 +185,12 @@ OvosWebUI.ready(function () {
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   }
   function install(pkg) {
-    if (!OvosWebUI.confirmed(t("controls.confirmInstall", "Install") + " " + pkg + "?")) { return; }
-    api("/api/plugins/install", {method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({package: pkg})})
-      .then(function (job) { OvosWebUI.say("msg", t("controls.installing", "Installing…")); jobWatch(job.id, job.next); })
+    OvosWebUI.installPackage(pkg, t("controls.confirmInstall", "Install") + " " + pkg + "?")
+      .then(function (job) {
+        if (!job) { return; }
+        OvosWebUI.say("msg", t("controls.installing", "Installing…"));
+        jobWatch(job.id, job.next);
+      })
       .catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   }
 

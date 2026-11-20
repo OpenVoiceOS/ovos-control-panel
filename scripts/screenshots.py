@@ -71,6 +71,7 @@ STATES = {"dashboard-degraded": ("/", "skills")}
 
 SECTIONS = {
     "about-power": ("/controls", "#power-card"),
+    "skills-detail": ("/skills#ovos-skill-date-time.openvoiceos", "#detail"),
     "backup-history": ("/backup", "#history"),
     "plugins-updates": ("/plugins", "#updates"),
 }
@@ -201,6 +202,26 @@ def shoot(url: str, token: str, out: Path, only: str | None,
                 # text that refers to them is about the controls in them and
                 # not about how they reflow.
                 if label == "wide" and not suffix and sections:
+                    if only is None:
+                        # The menu with every advanced group open: on any
+                        # page only the group of that page is.
+                        page.goto(f"{url}/")
+                        page.wait_for_load_state("networkidle")
+                        for fold in page.locator("nav button.nav-fold").all():
+                            if fold.get_attribute("aria-expanded") != "true":
+                                fold.click()
+                        # The last click leaves the pointer over a link, which
+                        # would show as hovered in the picture.
+                        page.mouse.move(width - 5, height - 5)
+                        page.add_style_tag(content=(
+                            "nav { position: static; height: auto; "
+                            "overflow: visible; }"))
+                        _still(page)
+                        target = out / "menu-groups.png"
+                        page.locator("nav").first.screenshot(path=str(target))
+                        page.evaluate("() => localStorage.removeItem('ovos-nav-open')")
+                        taken += 1
+                        print(f"  {_shown(target)}")
                     for name, (route, selector) in SECTIONS.items():
                         if only is not None and only not in route:
                             continue

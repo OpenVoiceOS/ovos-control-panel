@@ -2,7 +2,9 @@ name: Build Tests
 
 on:
   pull_request:
-    branches: [dev, master, main]
+    # feat/** so pull requests into a feature branch (feat/navigation-v2) are
+    # tested too; only a merge into dev publishes anything.
+    branches: [dev, master, main, 'feat/**']
   workflow_dispatch:
 
 jobs:

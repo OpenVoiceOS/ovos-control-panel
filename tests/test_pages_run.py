@@ -1266,3 +1266,370 @@ def test_a_player_that_cannot_be_asked_about_likes_hides_the_list(signed_in_page
                                         "uris": ["file"]}]},
                 likes={"ok": False, "entries": []})
     assert page.locator("#likes-wrap").is_hidden()
+
+
+def _visible_nav(page):
+    return page.evaluate("""() => [...document.querySelectorAll("nav a[href]")]
+      .filter(a => a.offsetParent !== null).map(a => a.getAttribute("href"))""")
+
+
+def _fold(page, group):
+    return page.locator(f'nav .nav-group[data-group="{group}"] button.nav-fold')
+
+
+def test_the_menu_groups_start_folded_and_open_one_at_a_time(signed_in_page):
+    """Everyday pages always show; under the "Advanced" divider each group is
+    a row that folds its own pages, and which rows are open is remembered."""
+    page, url = signed_in_page
+    page.goto(f"{url}/")
+    page.evaluate("() => { localStorage.removeItem('ovos-nav-open'); "
+                  "localStorage.removeItem('ovos-simple'); }")
+    page.reload()
+    page.wait_for_load_state("networkidle")
+
+    assert page.locator("#simple-toggle").count() == 0, "the header switch is gone"
+    assert page.locator("nav .nav-divider").is_visible()
+    assert page.locator("nav button.nav-fold").count() == 5
+    folded = _visible_nav(page)
+    assert "/about" in folded and "/skills" in folded
+    assert "/intents" not in folded and "/plugins" not in folded
+
+    understanding = _fold(page, "understanding")
+    assert understanding.get_attribute("aria-expanded") == "false"
+    understanding.click()
+    assert understanding.get_attribute("aria-expanded") == "true"
+    shown = _visible_nav(page)
+    assert {"/intents", "/transformers", "/personas"} <= set(shown)
+    assert "/plugins" not in shown, "only the opened group unfolds"
+
+    page.reload()
+    page.wait_for_load_state("networkidle")
+    assert _fold(page, "understanding").get_attribute("aria-expanded") == "true"
+    assert _fold(page, "maintenance").get_attribute("aria-expanded") == "false"
+    _fold(page, "understanding").click()
+    assert "/intents" not in _visible_nav(page)
+    page.evaluate("() => localStorage.removeItem('ovos-nav-open')")
+
+
+def test_the_group_of_the_page_you_are_on_opens(signed_in_page):
+    page, url = signed_in_page
+    page.goto(f"{url}/")
+    page.evaluate("() => localStorage.removeItem('ovos-nav-open')")
+    page.goto(f"{url}/intents")
+    page.wait_for_load_state("networkidle")
+    shown = _visible_nav(page)
+    assert {"/intents", "/transformers", "/personas"} <= set(shown)
+    assert "/plugins" not in shown
+    assert _fold(page, "understanding").get_attribute("aria-expanded") == "true"
+    assert page.locator('nav a[aria-current="page"]').get_attribute("href") == "/intents"
+
+
+def test_someone_who_had_every_page_on_keeps_them(signed_in_page):
+    """The old header switch stored ovos-simple=0 for "show all pages"."""
+    page, url = signed_in_page
+    page.goto(f"{url}/")
+    page.evaluate("() => { localStorage.removeItem('ovos-nav-open'); "
+                  "localStorage.setItem('ovos-simple', '0'); }")
+    page.reload()
+    page.wait_for_load_state("networkidle")
+    assert "/plugins" in _visible_nav(page) and "/intents" in _visible_nav(page)
+    page.evaluate("() => localStorage.removeItem('ovos-simple')")
+
+
+def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
+    """A need that is not met takes its page out of the menu (and an emptied
+    group with it); reaching the page anyway says what it needs."""
+    page, url = signed_in_page
+    needs = {"colocated": True, "needs": {
+        k: {"met": k in ("system", "media"), "suggest": "pkg-" + k}
+        for k in ("system", "sensors", "media", "app-launcher", "wallpaper", "mark1")}}
+
+    def answer(route):
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(needs))
+
+    page.route("**/api/nav/needs", answer)
+    try:
+        page.goto(f"{url}/")
+        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
+                      "localStorage.setItem('ovos-nav-open', JSON.stringify(['voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
+        page.reload()
+        page.wait_for_function("() => document.querySelector('nav a[href=\"/wallpaper\"]').hidden")
+        shown = _visible_nav(page)
+        assert "/system" in shown and "/media" in shown
+        assert not {"/sensors", "/apps", "/wallpaper", "/mark1"} & set(shown)
+        assert not page.locator('nav .nav-group[data-group="screen"]').is_visible()
+
+        page.goto(f"{url}/wallpaper")
+        note = page.locator("#needs-note")
+        note.wait_for()
+        assert "pkg-wallpaper" in note.inner_text()
+        assert note.locator('a[href="/plugins"]').count() == 1
+        assert "/wallpaper" in _visible_nav(page), "the page you are on stays in the menu"
+    finally:
+        page.unroute("**/api/nav/needs")
+        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
+                      "localStorage.removeItem('ovos-nav-open'); }")
+
+
+def test_a_panel_apart_from_the_device_hides_no_page(signed_in_page):
+    page, url = signed_in_page
+    needs = {"colocated": False, "needs": {"wallpaper": {"met": False, "suggest": "x"}}}
+    page.route("**/api/nav/needs", lambda r: r.fulfill(
+        status=200, content_type="application/json", body=json.dumps(needs)))
+    try:
+        page.goto(f"{url}/")
+        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
+                      "localStorage.setItem('ovos-nav-open', JSON.stringify(['voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
+        page.reload()
+        page.wait_for_load_state("networkidle")
+        assert "/wallpaper" in _visible_nav(page)
+    finally:
+        page.unroute("**/api/nav/needs")
+        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
+                      "localStorage.removeItem('ovos-nav-open'); }")
+
+
+def _json_route(page, pattern, body):
+    page.route(pattern, lambda r: r.fulfill(status=200, content_type="application/json",
+                                            body=json.dumps(body)))
+
+
+def test_the_plugins_page_puts_the_installer_on_the_channel(signed_in_page):
+    """When the device's installer does not follow the chosen channel the page
+    says so; the fix sets it, and a restart is offered because the services
+    read that setting when they start."""
+    page, url = signed_in_page
+    posted = []
+
+    def channel(route):
+        if route.request.method == "POST":
+            posted.append(json.loads(route.request.post_data))
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(
+                {"ok": True, "channel": "alpha", "restart": True,
+                 "installer": {"follows": True, "custom": None}}))
+        else:
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(
+                {"channel": "alpha", "channels": ["stable", "alpha"],
+                 "installer": {"follows": False, "custom": None}}))
+
+    page.route("**/api/updates/channel", channel)
+    try:
+        page.goto(f"{url}/plugins")
+        page.locator("#installer-off").wait_for()
+        assert page.locator("#restart-row").is_hidden()
+        page.click("#installer-fix")
+        page.locator("#restart-row").wait_for()
+        assert posted == [{"channel": "alpha"}]
+        assert page.locator("#installer-off").is_hidden()
+        assert "restart" in page.locator("#msg-channel").inner_text()
+    finally:
+        page.unroute("**/api/updates/channel")
+
+
+def test_the_plugins_page_names_a_constraints_file_chosen_by_hand(signed_in_page):
+    page, url = signed_in_page
+    _json_route(page, "**/api/updates/channel", {
+        "channel": "stable", "channels": ["stable", "alpha"],
+        "installer": {"follows": False, "custom": "/home/ovos/mine.txt"}})
+    try:
+        page.goto(f"{url}/plugins")
+        page.locator("#installer-custom").wait_for()
+        assert page.locator("#installer-custom-file").inner_text() == "/home/ovos/mine.txt"
+        assert page.locator("#installer-off").is_hidden()
+    finally:
+        page.unroute("**/api/updates/channel")
+
+
+def test_the_skills_page_lists_opens_and_goes_back(signed_in_page):
+    page, url = signed_in_page
+    _json_route(page, "**/api/updates", {"packages": [
+        {"name": "ovos-skill-hello-world", "installed": "0.0.1", "latest": "0.1.0", "outdated": True}],
+        "outdated": 1})
+    try:
+        page.goto(f"{url}/skills")
+        page.wait_for_selector("#skilllist button.pick")
+        names = [n.splitlines()[0] for n in page.locator("#skilllist button.pick").all_inner_texts()]
+        assert "Hello World" in names and "Date Time" in names
+        hello = page.locator("#skilllist li", has_text="Hello World")
+        hello.locator(".badge").wait_for()
+
+        page.fill("#filter", "date")
+        assert page.locator("#skilllist button.pick").all_inner_texts() == ["Date Time"]
+        page.fill("#filter", "")
+
+        page.locator("#skilllist button.pick", has_text="Hello World").click()
+        assert page.locator("#detail").is_visible() and not page.locator("#mine").is_visible()
+        assert page.locator("#detail-title").inner_text() == "Hello World"
+        assert page.locator("#detail-slug").inner_text() == "ovos-skill-hello-world"
+        assert page.locator("#do-update").is_visible(), "the update offer shows on the skill"
+        assert page.locator("#do-remove").is_visible()
+        assert page.locator("#nosettings").is_visible()
+        assert "#ovos-skill-hello-world" in page.url
+
+        page.click("#back")
+        assert page.locator("#mine").is_visible() and not page.locator("#detail").is_visible()
+    finally:
+        page.unroute("**/api/updates")
+
+
+def test_find_more_searches_skills_only(signed_in_page):
+    page, url = signed_in_page
+    seen = []
+
+    def search(route):
+        seen.append(route.request.url)
+        route.fulfill(status=200, content_type="application/json", body=json.dumps({
+            "results": [{"name": "skill-homeassistant", "kind": "skill", "installed": False},
+                        {"name": "ovos-skill-hello-world", "kind": "skill", "installed": True}],
+            "total": 2, "kinds": ["skill"], "cache_age": 60}))
+
+    page.route("**/api/plugins/search*", search)
+    try:
+        page.goto(f"{url}/")
+        page.goto(f"{url}/skills#find")
+        page.wait_for_selector("#find:not([hidden])")
+        assert page.locator("#tab-find").get_attribute("aria-current") == "true"
+        page.fill("#q", "home")
+        page.click("#go")
+        page.wait_for_selector("#results [data-add]")
+        assert any("kind=skill" in u for u in seen)
+        assert page.locator('#results [data-add="skill-homeassistant"]').count() == 1
+        page.locator('#results [data-open="ovos-skill-hello-world"]').click()
+        assert page.locator("#detail-title").inner_text() == "Hello World"
+    finally:
+        page.unroute("**/api/plugins/search*")
+
+
+def test_the_old_abilities_address_lands_on_skills(signed_in_page):
+    page, url = signed_in_page
+    page.goto(f"{url}/abilities")
+    page.wait_for_selector("#skilllist button.pick")
+    assert page.url.rstrip("/").endswith("/skills")
+    assert page.locator('nav a[aria-current="page"]').get_attribute("href") == "/skills"
+
+
+def test_a_skill_with_settings_opens_its_settings_and_switch(signed_in_page, make_skill):
+    page, url = signed_in_page
+    make_skill("ovos-skill-hello-world.openvoiceos", {"greeting": "hi"},
+               meta={"skillMetadata": {"sections": [{"name": "General", "fields": [
+                   {"name": "greeting", "type": "text", "label": "Greeting", "value": ""}]}]}})
+    page.goto(f"{url}/")
+    page.goto(f"{url}/skills#ovos-skill-hello-world.openvoiceos")
+    page.wait_for_selector("#detail:not([hidden])")
+    assert page.locator("#detail-slug").inner_text() == "ovos-skill-hello-world"
+    page.wait_for_selector("#editor:not([hidden])")
+    assert page.locator('#form input[name="greeting"]').input_value() == "hi"
+    assert not page.locator("#nosettings").is_visible()
+    page.wait_for_selector("#enable-card:not([hidden])")
+    assert page.locator("#enable-toggle").inner_text()
+    # listed once: the settings folder and the package are the same skill
+    page.click("#back")
+    assert page.locator("#skilllist button.pick", has_text="Hello World").count() == 1
+
+
+def test_voice_and_language_shows_the_everyday_settings(signed_in_page):
+    page, url = signed_in_page
+    page.goto(f"{url}/voice")
+    page.wait_for_load_state("networkidle")
+    assert page.locator("h1").inner_text() == "Voice and language"
+    page.wait_for_selector("#voice-body:not([hidden])")
+    assert page.locator("#wake_word-select").is_visible()
+    assert page.locator("#tts_module-select").is_visible()
+    assert page.locator("#lang-input").is_visible()
+    for n in page.locator(".voice-advanced").all():
+        assert n.is_hidden()
+    assert page.locator('#more-everyday a[href="/voice-all"]').is_visible()
+
+
+def test_all_voice_settings_shows_everything(signed_in_page):
+    page, url = signed_in_page
+    page.goto(f"{url}/voice-all")
+    page.wait_for_load_state("networkidle")
+    assert page.locator("h1").inner_text() == "All voice settings"
+    assert page.locator("#more-everyday").is_hidden()
+    assert page.locator("#intro-all").is_visible()
+    assert page.locator(".voice-advanced").count() == 2
+    for n in page.locator(".voice-advanced").all():
+        assert not n.evaluate("n => n.hidden")
+    assert page.locator('nav a[aria-current="page"]').get_attribute("href") == "/voice-all"
+
+
+def test_the_internet_status_moved_to_network(signed_in_page):
+    page, url = signed_in_page
+    page.goto(f"{url}/network")
+    page.wait_for_load_state("networkidle")
+    assert page.locator("#internet-card").is_visible()
+    page.goto(f"{url}/system")
+    page.wait_for_load_state("networkidle")
+    assert page.locator("#language").count() == 0
+    assert page.locator("#location-card").is_visible()
+
+
+def test_a_skill_from_find_more_can_be_looked_at_before_installing(signed_in_page):
+    page, url = signed_in_page
+    _json_route(page, "**/api/plugins/search*", {
+        "results": [{"name": "ovos-skill-tales", "kind": "skill", "installed": False}],
+        "total": 1, "kinds": ["skill"], "cache_age": 60})
+    _json_route(page, "**/api/skillinfo/ovos-skill-tales", {
+        "package": "ovos-skill-tales", "installed": False, "title": "Tales", "description": "Fairy tales",
+        "examples": ["Tell me a story"], "author": "Someone", "version": "1.0",
+        "released": "2026-10-01T10:00:00Z", "license": "MIT", "source": "https://github.com/someone/tales",
+        "pypi": "https://pypi.org/project/ovos-skill-tales/", "is_ovos_skill": True, "has_icon": False})
+    try:
+        page.goto(f"{url}/")
+        page.goto(f"{url}/skills#find")
+        page.wait_for_selector("#find:not([hidden])")
+        page.fill("#q", "tales")
+        page.click("#go")
+        page.click('[data-preview="ovos-skill-tales"]')
+        page.wait_for_selector("#detail-examples:not([hidden])")
+        assert page.locator("#detail-title").inner_text() == "Tales"
+        assert "Someone" in page.locator("#detail-meta").inner_text()
+        assert page.locator("#link-source").get_attribute("href") == "https://github.com/someone/tales"
+        assert page.locator("#examples-list li").all_inner_texts() == ["Tell me a story"]
+        assert page.locator("#do-install").is_visible()
+        assert not page.locator("#do-remove").is_visible() and not page.locator("#settings-part").is_visible()
+        page.click("#back")
+        assert page.locator("#find").is_visible(), "back from a preview returns to the search"
+    finally:
+        page.unroute("**/api/plugins/search*")
+        page.unroute("**/api/skillinfo/ovos-skill-tales")
+
+
+def test_installing_says_what_it_would_downgrade_and_can_be_called_off(signed_in_page):
+    page, url = signed_in_page
+    _json_route(page, "**/api/plugins/search*", {
+        "results": [{"name": "ovos-skill-tales", "kind": "skill", "installed": False}],
+        "total": 1, "kinds": ["skill"], "cache_age": 60})
+    _json_route(page, "**/api/plugins/check", {
+        "package": "ovos-skill-tales", "checked": True, "upgrades": [], "new": [],
+        "downgrades": [{"name": "ovos-bus-client", "from": "2.11.29", "to": "1.3.7"}]})
+    installs = []
+    page.route("**/api/plugins/install", lambda r: (installs.append(1), r.fulfill(
+        status=200, content_type="application/json",
+        body=json.dumps({"id": "x", "state": "done", "lines": [], "next": 0})))[1])
+    asked = []
+
+    def answer(dialog):
+        asked.append(dialog.message)
+        dialog.dismiss()
+
+    page.on("dialog", answer)
+    try:
+        page.goto(f"{url}/")
+        page.goto(f"{url}/skills#find")
+        page.wait_for_selector("#find:not([hidden])")
+        page.fill("#q", "tales")
+        page.click("#go")
+        page.click('#results [data-add="ovos-skill-tales"]')
+        page.wait_for_function("() => !document.getElementById('install-check') "
+                               "|| document.getElementById('install-check').hidden")
+        page.wait_for_timeout(300)
+        assert asked, "the install asks first"
+        assert "ovos-bus-client 2.11.29 → 1.3.7" in asked[0]
+        assert "older versions" in asked[0]
+        assert installs == [], "saying no installs nothing"
+    finally:
+        page.remove_listener("dialog", answer)
+        for pattern in ("**/api/plugins/search*", "**/api/plugins/check", "**/api/plugins/install"):
+            page.unroute(pattern)
