@@ -1538,3 +1538,42 @@ def test_a_skill_from_find_more_can_be_looked_at_before_installing(signed_in_pag
     finally:
         page.unroute("**/api/plugins/search*")
         page.unroute("**/api/skillinfo/ovos-skill-tales")
+
+
+def test_installing_says_what_it_would_downgrade_and_can_be_called_off(signed_in_page):
+    page, url = signed_in_page
+    _json_route(page, "**/api/plugins/search*", {
+        "results": [{"name": "ovos-skill-tales", "kind": "skill", "installed": False}],
+        "total": 1, "kinds": ["skill"], "cache_age": 60})
+    _json_route(page, "**/api/plugins/check", {
+        "package": "ovos-skill-tales", "checked": True, "upgrades": [], "new": [],
+        "downgrades": [{"name": "ovos-bus-client", "from": "2.11.29", "to": "1.3.7"}]})
+    installs = []
+    page.route("**/api/plugins/install", lambda r: (installs.append(1), r.fulfill(
+        status=200, content_type="application/json",
+        body=json.dumps({"id": "x", "state": "done", "lines": [], "next": 0})))[1])
+    asked = []
+
+    def answer(dialog):
+        asked.append(dialog.message)
+        dialog.dismiss()
+
+    page.on("dialog", answer)
+    try:
+        page.goto(f"{url}/")
+        page.goto(f"{url}/skills#find")
+        page.wait_for_selector("#find:not([hidden])")
+        page.fill("#q", "tales")
+        page.click("#go")
+        page.click('#results [data-add="ovos-skill-tales"]')
+        page.wait_for_function("() => !document.getElementById('install-check') "
+                               "|| document.getElementById('install-check').hidden")
+        page.wait_for_timeout(300)
+        assert asked, "the install asks first"
+        assert "ovos-bus-client 2.11.29 → 1.3.7" in asked[0]
+        assert "older versions" in asked[0]
+        assert installs == [], "saying no installs nothing"
+    finally:
+        page.remove_listener("dialog", answer)
+        for pattern in ("**/api/plugins/search*", "**/api/plugins/check", "**/api/plugins/install"):
+            page.unroute(pattern)

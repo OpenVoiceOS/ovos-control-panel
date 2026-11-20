@@ -458,12 +458,15 @@ OvosWebUI.ready(function () {
 
   // ── install, update, remove ──────────────────────────────────────────────
   function run(action, name, question) {
-    if (!OvosWebUI.confirmed(question)) { return; }
-    api("/api/plugins/" + action, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({package: name})
-    }).then(function (job) {
+    var started = action === "install"
+      ? OvosWebUI.installPackage(name, question)
+      : (OvosWebUI.confirmed(question) ? api("/api/plugins/" + action, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({package: name})
+      }) : Promise.resolve(null));
+    started.then(function (job) {
+      if (!job) { return; }
       el("jobbox").hidden = false;
       el("joblog").textContent = job.lines.join("\n");
       watch(job.id, job.next);

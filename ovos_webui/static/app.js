@@ -505,6 +505,44 @@
       + ", " + d.toLocaleTimeString(lang, {hour: "2-digit", minute: "2-digit"});
   }
 
+  // Install a package, after saying what it would change. The panel first asks
+  // the device what pip would do (a dry run); a downgrade of anything installed
+  // is listed in the question, and a run pip could not work out says it would
+  // most likely fail. Resolves to the install job, or null when the person
+  // said no. ``question`` is the page's own "Install X?".
+  function installPackage(name, question) {
+    var note = document.getElementById("install-check");
+    if (!note) {
+      note = document.createElement("p");
+      note.id = "install-check";
+      note.className = "msg";
+      note.setAttribute("role", "status");
+      var main = document.querySelector("main");
+      if (main) { main.insertBefore(note, main.firstChild); }
+    }
+    note.hidden = false;
+    note.textContent = t("install.checking", "Checking what installing {name} would change…").split("{name}").join(name);
+    var post = function (path) {
+      return api(path, {method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({package: name})});
+    };
+    return post("/api/plugins/check").catch(function () { return {checked: false}; }).then(function (r) {
+      note.hidden = true;
+      var ask = question;
+      if (r && r.checked && r.downgrades && r.downgrades.length) {
+        ask = question + "\n\n" + t("install.downgrades",
+          "This would change these installed packages to older versions:") + "\n"
+          + r.downgrades.map(function (d) { return "  " + d.name + " " + d.from + " \u2192 " + d.to; }).join("\n")
+          + "\n\n" + t("install.anyway", "That can stop parts of OpenVoiceOS from working. Install anyway?");
+      } else if (r && r.reason === "pip-failed") {
+        ask = question + "\n\n" + t("install.wouldFail",
+          "pip could not work out this install, so it would most likely fail. Try anyway?");
+      }
+      if (!window.OvosWebUI.confirmed(ask)) { return null; }
+      return post("/api/plugins/install");
+    });
+  }
+
   window.OvosWebUI = {
     api: api, el: el, say: say, sayHtml: sayHtml, esc: esc, t: t, applyI18n: applyI18n,
     fmtDateTime: fmtDateTime,
@@ -527,6 +565,7 @@
           });
       });
     },
-    confirmed: function (question) { return window.confirm(question); }
+    confirmed: function (question) { return window.confirm(question); },
+    installPackage: installPackage
   };
 })();

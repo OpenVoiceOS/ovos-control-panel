@@ -332,6 +332,9 @@ def invalidate_installed_cache() -> None:
     """
     _INSTALLED_CACHE["val"] = None
     _INSTALLED_CACHE["ts"] = 0.0
+    # what an install would change depends on what is installed
+    from ovos_webui import installcheck
+    installcheck.forget()
 _INSTALLED_LOCK = threading.Lock()
 
 

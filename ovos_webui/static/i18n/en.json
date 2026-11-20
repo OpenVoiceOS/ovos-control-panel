@@ -1057,5 +1057,9 @@
  "skills.info.failed": "The details could not be fetched.",
  "skills.by": "By",
  "skills.version": "version",
- "skills.released": "released"
+ "skills.released": "released",
+ "install.checking": "Checking what installing {name} would change…",
+ "install.downgrades": "This would change these installed packages to older versions:",
+ "install.anyway": "That can stop parts of OpenVoiceOS from working. Install anyway?",
+ "install.wouldFail": "pip could not work out this install, so it would most likely fail. Try anyway?"
 }

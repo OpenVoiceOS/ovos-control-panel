@@ -183,12 +183,8 @@ OvosWebUI.ready(function () {
   }
 
   function install(name) {
-    if (!OvosWebUI.confirmed(t("setup.confirm.install", "Install") + " " + name + "?")) { return; }
-    api("/api/plugins/install", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({package: name})
-    }).then(function (job) {
+    OvosWebUI.installPackage(name, t("setup.confirm.install", "Install") + " " + name + "?").then(function (job) {
+      if (!job) { return; }
       el("joblog-card").hidden = false;
       el("joblog").textContent = job.lines.join("\n");
       watch(job.id, job.next);

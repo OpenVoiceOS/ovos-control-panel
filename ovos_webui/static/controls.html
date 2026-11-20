@@ -185,10 +185,12 @@ OvosWebUI.ready(function () {
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   }
   function install(pkg) {
-    if (!OvosWebUI.confirmed(t("controls.confirmInstall", "Install") + " " + pkg + "?")) { return; }
-    api("/api/plugins/install", {method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({package: pkg})})
-      .then(function (job) { OvosWebUI.say("msg", t("controls.installing", "Installing…")); jobWatch(job.id, job.next); })
+    OvosWebUI.installPackage(pkg, t("controls.confirmInstall", "Install") + " " + pkg + "?")
+      .then(function (job) {
+        if (!job) { return; }
+        OvosWebUI.say("msg", t("controls.installing", "Installing…"));
+        jobWatch(job.id, job.next);
+      })
       .catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   }
 
