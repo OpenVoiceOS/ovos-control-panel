@@ -1,7 +1,7 @@
 # Network
 
-The Network page shows the Wi-Fi networks near the device, and lets you
-join, leave, or forget one.
+The Network page shows whether the device is online, shows the Wi-Fi networks
+near it, and lets you join, leave, or forget one.
 
 ![The Network page](img/network-wide.png)
 
@@ -9,18 +9,21 @@ join, leave, or forget one.
 
 ## What it needs
 
-This page needs the `ovos-PHAL-plugin-network-manager` plugin, installed
+The Wi-Fi part needs the `ovos-PHAL-plugin-network-manager` plugin, installed
 and running on the device. Install it on the [Plugins](plugins.md) page.
 Without it, the page shows a message that the plugin is missing instead of
-a network list.
+a network list. The internet status needs
+`ovos-PHAL-plugin-connectivity-events`.
 
 ## Read it top to bottom
 
-The page has two parts, in this order:
+The page has three parts, in this order:
 
-1. **Current network** — the network the device is connected to now, with
+1. **Internet**: whether the device is on a network and can reach the
+   internet. Press **Refresh** to check again.
+2. **Current network** — the network the device is connected to now, with
    **Disconnect** and **Forget this network** buttons.
-2. **Available networks** — every network the device can reach, found by
+3. **Available networks** — every network the device can reach, found by
    the last scan. Press **Scan** to look again. Each network shows its name
    and its security type exactly as `nmcli` reports it, such as `WPA2` or
    `WPA2 WPA3`. An open network reports nothing at all, and the page shows it

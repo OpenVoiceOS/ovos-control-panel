@@ -95,4 +95,4 @@ valid. The page tells you what is wrong. For anything else, see
 [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Setup](setup.md) · [Home](README.md) · [Voice settings →](voice-settings.md)
+[← Setup](setup.md) · [Home](README.md) · [Voice and language →](voice-settings.md)

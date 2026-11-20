@@ -1,7 +1,8 @@
 # Plugins
 
 The Plugins page finds OVOS plugins, the voices, listeners and other add-ons
-a device needs, and installs or removes them.
+a device needs, and installs or removes them. Skills are not here: they have
+their own [Skills](skills.md) page, and this page links to it.
 
 ![The Plugins page](img/plugins-wide.png)
 
@@ -26,7 +27,7 @@ not fetched from the internet.
 ## Find a plugin
 
 Type part of a name in the search box, or choose a kind (a voice, a
-speech-to-text engine, a skill, and so on) and search. The list comes from
+speech-to-text engine, a wake word, and so on) and search. The list comes from
 PyPI and is kept for a while so the page stays fast; **Update the list from
 PyPI** fetches it again.
 
@@ -41,15 +42,22 @@ sends the request somewhere unexpected.
 ## Install and remove
 
 Each result says whether it is already installed. **Install** starts the
-install and shows a live log as it runs. **Remove** uninstalls it. One install
+install and shows a live log as it runs.
+
+Before it starts, the page asks pip what the install would do, without doing
+it (`pip install --dry-run`, with the same constraints file and options as the
+device's installer). If the install would downgrade an OpenVoiceOS package
+that is already installed, the page lists each one with the version it would
+go from and to, and asks before it goes ahead. If pip says the install would
+fail, the page says that instead. This check only runs when the control panel
+shares its environment with the assistant; otherwise it cannot see the
+device's packages, and the install is asked for as before. **Remove** uninstalls it. One install
 runs at a time.
 
 Installing changes the software on the device, so it **always needs a token**,
 even on `127.0.0.1` where the rest of the page is open. Set one first — see
 [security.md](security.md). After installing or removing a plugin, restart the
 service that uses it — the **Device** page restarts the voice services together.
-A skill is the exception: the skills service rescans about every thirty seconds
-and picks a newly installed one up on its own.
 
 ## Where installs actually run
 

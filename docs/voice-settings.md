@@ -1,12 +1,23 @@
-# Voice settings
+# Voice and language
 
-The Voice settings page gives plain pickers for the settings that decide how
-the device listens and speaks. The Settings page's Advanced tab can already
-change these, as raw text. This page shows the same values as dropdowns and
-lists, with the current value in use, and the options limited to what is
-really installed.
+This page gives plain pickers for the settings that decide how the device
+listens and speaks. The Settings page's Advanced tab can already change these,
+as raw text. This page shows the same values as dropdowns and lists, with the
+current value in use, and the options limited to what is really installed.
 
-![The Voice settings page](img/voice-wide.png)
+It comes in two forms, at two addresses:
+
+- **Voice and language** (`/voice`, in the everyday part of the menu) shows
+  what most people change: the wake word, the voice and the language.
+- **All voice settings** (`/voice-all`, under Voice in the advanced part of
+  the menu) adds listening, speech to text, the pipeline order and the
+  transformers. A link at the top of the everyday page leads there.
+
+Both are the same page and save the same way.
+
+![The Voice and language page](img/voice-wide.png)
+
+![All voice settings](img/voice-all-wide.png)
 
 ![The same page on a phone](img/voice-mobile.png)
 
@@ -19,9 +30,11 @@ really installed.
   Text to speech or Speech to text. Both also take an optional fallback,
   tried only when the primary plugin fails.
 - **Change the order the device tries to understand you**: reorder the list
-  under Pipeline order.
-- **Turn a transformer on or off**: check or uncheck it under Transformers.
-- **Switch the device's language**: set it under Language.
+  under Pipeline order, on All voice settings.
+- **Turn a transformer on or off**: check or uncheck it under Transformers, on
+  All voice settings.
+- **Switch the device's language**: set it under Language. This is the one
+  place the panel sets the language.
 
 ## Wake word
 
@@ -101,4 +114,4 @@ examples are a language that is not a valid code, or a pipeline list with a
 repeated entry. For anything else, see [troubleshooting.md](troubleshooting.md).
 
 ---
-[← Settings](configuration.md) · [Home](README.md) · [Skill settings →](skill-settings.md)
+[← Settings](configuration.md) · [Home](README.md) · [Skills →](skills.md)
