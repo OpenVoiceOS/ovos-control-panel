@@ -50,7 +50,7 @@ where services are split across containers, restart the container that owns the
 service yourself. The plugin is installed into that container, not into the
 panel's own environment.
 
-A skill plugin is the exception: the skills service rescans about every thirty
+A skill is the exception: the skills service rescans about every thirty
 seconds and loads a newly installed skill on its own.
 
 ## "Sent. Listen to the device" but I hear nothing

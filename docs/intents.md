@@ -44,4 +44,4 @@ so it needs an access token, the same as the other device pages. Set one on the
 [Settings](configuration.md) page first.
 
 ---
-[← Abilities](abilities.md) · [Home](README.md) · [Plugins →](plugins.md)
+[← Skills](skills.md) · [Home](README.md) · [Plugins →](plugins.md)

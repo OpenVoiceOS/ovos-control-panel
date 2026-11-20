@@ -1,7 +1,8 @@
 # ovos-control-panel
 
 A local web page for an OpenVoiceOS device. It runs on the device. It shows you
-if the device works, it lets you change the settings, and it makes backups.
+if the device works, it lets you change the settings, it installs skills and
+plugins, and it makes backups.
 
 There is no cloud account and no internet connection. Every file the page needs
 is in the package.
@@ -12,16 +13,27 @@ is in the package.
 
 ## What you can do
 
+The menu shows the everyday pages first. These are the ones a new user meets:
+
 | Page | What it does |
 | --- | --- |
 | [Dashboard](docs/dashboard.md) | Shows if the message bus and each OVOS service answer. |
-| [Settings](docs/configuration.md) | Changes your layer of `mycroft.conf`, as a form or as raw JSON or YAML. |
-| [Skills](docs/skill-settings.md) | Changes the settings of each installed skill. |
-| [Plugins](docs/plugins.md) | Finds OVOS plugins and installs them on the device. |
-| [Personas](docs/personas.md) | Makes and edits personas — the ordered list of solvers that answer you. |
-| [Translate](docs/translate.md) | Translates what a skill says and hears into your language. |
+| [Setup](docs/setup.md) | Walks a fresh device through language, plugins and a first question. |
+| [Voice and language](docs/voice-settings.md) | The wake word, the voice and the language. |
+| [Skills](docs/skills.md) | What the device can do: the skills on it, their settings, and new ones to install. |
 | [Backup](docs/backup-restore.md) | Downloads a copy of your settings, and puts a copy back. |
-| [About](docs/about.md) | Shows the installed package versions and useful links. |
+
+Try it, Device, Network and About are there too. Below them, under
+**Advanced**, five groups fold open one at a time:
+
+- **Voice**: every voice setting, self-hosted servers, translation
+- **Understanding**: intents, transformers, personas
+- **Device**: system, sensors, media
+- **Screen**: apps, wallpaper, the Mark-1 faceplate
+- **Maintenance**: plugins and updates, the raw settings, send over sound
+
+A page the device cannot use, because a plugin or the hardware is missing,
+leaves the menu. Every page is described in the [full guide](docs/README.md).
 
 Signing in is covered in [security.md](docs/security.md). The interface is
 keyboard- and screen-reader-friendly and follows the device language, including
