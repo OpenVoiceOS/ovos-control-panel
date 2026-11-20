@@ -8,6 +8,9 @@ Three concerns live here, all read-only towards the system:
   ``webui.release_channel`` key of the user configuration. ``stable`` follows
   released versions; ``alpha`` also follows pre-releases (OVOS publishes an
   alpha for every merge, so this is the "get fixes now" channel).
+* :func:`installer_follows` says whether the device's own installer
+  (``skills.installer`` in the configuration, read by ovos-core and the other
+  services) installs against the same channel; setting the channel sets it.
 * :func:`dependency_conflicts` runs ``pip check`` — an argument vector with no
   user input in it at all — and returns what pip reports.
 
@@ -29,6 +32,16 @@ from typing import Any
 from ovos_utils.log import LOG
 
 CHANNELS = ("stable", "alpha")
+_RELEASES = "https://raw.githubusercontent.com/OpenVoiceOS/ovos-releases/refs/heads/main/"
+#: The constraints file the device's installer uses for each channel. With
+#: none configured it uses the stable one, the same as ovos-core.
+CHANNEL_CONSTRAINTS = {c: f"{_RELEASES}constraints-{c}.txt" for c in CHANNELS}
+#: A constraints setting the channel may replace: none, or one of the files
+#: above (also spelled without ``refs/heads``). Anything else -- the testing
+#: file, a local file -- was chosen by hand and is left alone.
+_CHANNEL_FILE_RE = re.compile(
+    r"^https://raw\.githubusercontent\.com/OpenVoiceOS/ovos-releases/"
+    r"(?:refs/heads/)?main/constraints-(stable|alpha)\.txt$")
 
 #: How long a fetched latest-version answer stays fresh, in seconds.
 CACHE_TTL = 6 * 3600
@@ -185,16 +198,61 @@ def release_channel() -> str:
     return value if value in CHANNELS else "stable"
 
 
+def installer_follows(channel: str | None = None) -> dict[str, Any]:
+    """Say whether the device's installer installs against ``channel``.
+
+    ``follows`` is true when its constraints file and its ``allow_alphas``
+    match the channel. ``custom`` names a constraints file chosen by hand,
+    which the channel does not replace.
+    """
+    from ovos_webui import configio
+
+    channel = channel or release_channel()
+    constraints = configio.user_or_merged(["skills", "installer", "constraints"]) or ""
+    alphas = bool(configio.user_or_merged(["skills", "installer", "allow_alphas"]))
+    if not isinstance(constraints, str):
+        constraints = ""
+    found = _CHANNEL_FILE_RE.match(constraints) if constraints else None
+    if constraints and not found:
+        return {"follows": False, "custom": constraints}
+    current = found.group(1) if found else "stable"
+    return {"follows": current == channel and alphas == (channel == "alpha"),
+            "custom": None}
+
+
 def set_release_channel(channel: str, bus=None) -> dict[str, Any]:
-    """Write the release channel into the user configuration layer."""
+    """Write the release channel into the user configuration layer.
+
+    The device's installer is set to the same channel in the same write --
+    its constraints file and whether it takes pre-releases -- unless it uses
+    a constraints file chosen by hand. The services read that setting when
+    they start, so ``restart`` says whether they need a restart to use it.
+
+    The restart is only needed until the installers read the setting when
+    they install (OpenVoiceOS/ovos-core#1032 and OpenVoiceOS/ovos-utils#473).
+    Once released, ``restart`` can be dropped for versions that have them.
+    """
     from ovos_webui import configio
 
     if channel not in CHANNELS:
         raise ValueError(f"the channel must be one of {', '.join(CHANNELS)}")
-    result = configio.mutate(
-        lambda data: configio.set_in(data, ["webui", "release_channel"], channel),
-        bus=bus)
+    before = installer_follows(channel)
+
+    def change(data):
+        configio.set_in(data, ["webui", "release_channel"], channel)
+        if not before["custom"] and not before["follows"]:
+            configio.set_in(data, ["skills", "installer", "constraints"],
+                            CHANNEL_CONSTRAINTS[channel])
+            configio.set_in(data, ["skills", "installer", "allow_alphas"],
+                            channel == "alpha")
+
+    result = configio.mutate(change, bus=bus)
     result["channel"] = channel
+    result["installer"] = installer_follows(channel)
+    result["restart"] = not before["custom"] and not before["follows"]
+    if result["restart"]:
+        from ovos_webui import installcheck
+        installcheck.forget()
     return result
 
 
