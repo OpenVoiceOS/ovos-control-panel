@@ -1048,5 +1048,14 @@
  "nav.voiceAll": "كل إعدادات الصوت",
  "voice.more.lead": "التعرف على الكلام، وكيف يميّز الكلام من الصمت، والترتيب الذي يحاول به فهمك، كلها في",
  "system.location.title": "الموقع",
- "network.internet.title": "الإنترنت"
+ "network.internet.title": "الإنترنت",
+ "skills.link.source": "الشيفرة المصدرية",
+ "skills.link.pypi": "PyPI",
+ "skills.examples": "جرّب أن تقول",
+ "skills.notOvos": "لا تبدو هذه الحزمة مهارة من OpenVoiceOS: فهي لا تسجّل أي مهارة ولا تعتمد على أي حزمة من OVOS.",
+ "skills.info.loading": "جارٍ البحث عن التفاصيل…",
+ "skills.info.failed": "تعذّر جلب التفاصيل.",
+ "skills.by": "من",
+ "skills.version": "الإصدار",
+ "skills.released": "صدرت في"
 }

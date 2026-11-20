@@ -733,6 +733,19 @@ ul.picklist button.pick::after {
 [dir="rtl"] ul.picklist button.pick::after { content: "\2039" / ""; }
 ul.picklist button.pick:hover { color: var(--accent); background: var(--card-soft); }
 ul.picklist .pick-name { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+/* A skill's icon: small in the list, larger on the skill's own page. */
+img.skill-icon { width: 1.6rem; height: 1.6rem; border-radius: 6px; object-fit: contain; flex: 0 0 auto; }
+img.skill-icon.large { width: 3.5rem; height: 3.5rem; border-radius: 12px; }
+.skill-head { display: flex; align-items: center; gap: 0.8rem; margin-top: 1.2rem; }
+.skill-head h2 { margin: 0; }
+ul.examples { margin: 0.3rem 0 0.8rem; padding-inline-start: 1.2rem; }
+ul.examples li { margin: 0.2rem 0; }
+#detail-links a { margin-inline-end: 1rem; }
+/* A title that opens something, without looking like an action button. */
+button.linklike {
+  background: none; border: none; box-shadow: none; padding: 0; width: auto; min-height: 0;
+  color: var(--accent); font: inherit; font-weight: inherit; text-decoration: underline; cursor: pointer;
+}
 ul.picklist.rowlist li { display: block; }
 ul.picklist.rowlist li .hint { margin: 0.1rem 0.5rem 0.2rem; }
 ul.picklist.rowlist li .slug { margin-inline-start: 0.5rem; }

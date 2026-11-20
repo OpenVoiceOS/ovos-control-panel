@@ -137,6 +137,71 @@ def cache_path() -> Path:
     return Path(get_xdg_cache_save_path()) / "webui-pypi-index.json"
 
 
+#: How long checking the ``skill-*`` names may take in one index update.
+SKILL_CHECK_BUDGET = 60
+#: Parallel PyPI requests while checking them.
+SKILL_CHECK_WORKERS = 8
+
+
+def _skill_check_path() -> Path:
+    return cache_path().parent / "webui-skill-check.json"
+
+
+def _needs_skill_check(name: str) -> bool:
+    """Names in the skill family that the name alone does not vouch for.
+
+    ``ovos-skill-*`` is the OVOS convention. Most packages called ``skill-*``
+    on PyPI are not OpenVoiceOS skills at all, so those are checked.
+    """
+    return classify(name) == "skill" and not name.lower().startswith("ovos-skill-")
+
+
+def check_skill_names(names: list[str]) -> set[str]:
+    """Return the names that are *not* OpenVoiceOS skills.
+
+    A real skill depends on OVOS, Neon or Mycroft packages; that is read from
+    PyPI's JSON, one small request per name, and remembered, so only new names
+    are looked up. A name that could not be checked is kept.
+    """
+    import concurrent.futures
+    from ovos_webui.skillinfo import is_ovos_skill_listing
+
+    path = _skill_check_path()
+    try:
+        known = json.loads(path.read_text(encoding="utf-8"))
+        known = known if isinstance(known, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        known = {}
+    todo = [n for n in names if _needs_skill_check(n) and n.lower() not in known]
+
+    def one(name: str) -> tuple[str, bool | None]:
+        try:
+            with _open(_project_json_url(name)) as response:
+                return name, is_ovos_skill_listing(json.loads(response.read(4 * 1024 * 1024)))
+        except (urllib.error.URLError, OSError, TimeoutError, ValueError):
+            return name, None
+
+    if todo:
+        pool = concurrent.futures.ThreadPoolExecutor(SKILL_CHECK_WORKERS)
+        try:
+            for future in concurrent.futures.as_completed(
+                    [pool.submit(one, n) for n in todo], timeout=SKILL_CHECK_BUDGET):
+                name, ok = future.result()
+                if ok is not None:
+                    known[name.lower()] = ok
+        except concurrent.futures.TimeoutError:
+            LOG.info("checking the skill names took too long; the rest is checked next time")
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)
+        try:
+            from ovos_webui.fsutils import atomic_write
+            path.parent.mkdir(parents=True, exist_ok=True)
+            atomic_write(path, json.dumps(known), backup=False)
+        except OSError:
+            pass
+    return {n for n in names if known.get(n.lower()) is False}
+
+
 def read_cache() -> dict[str, Any] | None:
     """Return the cached index, or ``None`` when there is none."""
     path = cache_path()
@@ -196,7 +261,9 @@ def fetch_index() -> dict[str, Any]:
         kind = classify(name)
         if kind:
             packages[name] = kind
-    data = {"fetched": time.time(), "packages": packages}
+    for name in check_skill_names(list(packages)):
+        packages.pop(name, None)
+    data = {"fetched": time.time(), "packages": packages, "skills_checked": True}
     path = cache_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     from ovos_webui.fsutils import atomic_write
@@ -215,7 +282,10 @@ def index(refresh: bool = False) -> dict[str, Any]:
     global _INDEX_LAST
     data = read_cache()
     age = cache_age(data)
-    if not refresh and data is not None and age is not None and age < CACHE_TTL:
+    # An index cached before the skill names were checked is refreshed, so the
+    # packages that only borrow the name drop out of the list.
+    if (not refresh and data is not None and age is not None and age < CACHE_TTL
+            and data.get("skills_checked")):
         return data
     # Do not block a request thread waiting for someone else's fetch, and do
     # not re-fetch if one just completed — serve the cache instead.
@@ -298,6 +368,17 @@ def installed_versions() -> dict[str, str]:
         return out
 
 
+def _installed_skill(name: str) -> bool:
+    """An installed package from the skill family that really is a skill."""
+    from importlib import metadata
+    from ovos_webui.skillinfo import installed_is_ovos_skill
+
+    try:
+        return installed_is_ovos_skill(metadata.distribution(name))
+    except metadata.PackageNotFoundError:
+        return False
+
+
 def search(query: str = "", kind: str = "", refresh: bool = False,
            limit: int = 200) -> dict[str, Any]:
     """Return the packages that match ``query`` and ``kind``.
@@ -315,6 +396,8 @@ def search(query: str = "", kind: str = "", refresh: bool = False,
     for name in have:
         found = classify(name)
         if found and name not in merged:
+            if found == "skill" and _needs_skill_check(name) and not _installed_skill(name):
+                continue
             merged[name] = found
 
     query = (query or "").strip().lower()

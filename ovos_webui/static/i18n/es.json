@@ -1048,5 +1048,14 @@
  "nav.voiceAll": "Todos los ajustes de voz",
  "voice.more.lead": "La voz a texto, cómo distingue la voz del silencio y el orden en que intenta entenderle están en",
  "system.location.title": "Ubicación",
- "network.internet.title": "Internet"
+ "network.internet.title": "Internet",
+ "skills.link.source": "Código fuente",
+ "skills.link.pypi": "PyPI",
+ "skills.examples": "Pruebe a decir",
+ "skills.notOvos": "Este paquete no parece una habilidad de OpenVoiceOS: no registra ninguna habilidad ni depende de ningún paquete de OVOS.",
+ "skills.info.loading": "Buscando los detalles…",
+ "skills.info.failed": "No se pudieron obtener los detalles.",
+ "skills.by": "De",
+ "skills.version": "versión",
+ "skills.released": "publicada el"
 }

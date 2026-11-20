@@ -1534,6 +1534,29 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         return {"ok": True, "sent": "ovos.ggwave.disable"}
 
     # ── what can it do: the installed skills ─────────────────────────────────
+    @api.get("/skillinfo/{package}")
+    def api_skill_info(package: str) -> dict[str, Any]:
+        """Who made a skill, where its source is, and what to say to it."""
+        from ovos_webui import skillinfo
+        try:
+            return skillinfo.info(package)
+        except skillinfo.NotASkill as err:
+            raise HTTPException(400, str(err)) from err
+        except (OSError, ValueError) as err:
+            raise HTTPException(502, f"could not read the details: {err}") from err
+
+    @api.get("/skillinfo/{package}/icon")
+    def api_skill_icon(package: str) -> Response:
+        """A skill's icon, fetched by the panel so the page stays on its origin."""
+        from ovos_webui import skillinfo
+        found = skillinfo.icon(package)
+        if found is None:
+            raise HTTPException(404, "this skill has no icon to show")
+        data, kind = found
+        return Response(data, media_type=kind,
+                        headers={"Cache-Control": "private, max-age=86400",
+                                 "X-Content-Type-Options": "nosniff"})
+
     @api.get("/capabilities")
     def api_abilities() -> dict[str, Any]:
         from ovos_webui import capabilities
