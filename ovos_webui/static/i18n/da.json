@@ -1048,5 +1048,14 @@
  "nav.voiceAll": "Alle stemmeindstillinger",
  "voice.more.lead": "Tale til tekst, hvordan den skelner tale fra stilhed, og rækkefølgen, den prøver at forstå dig i, ligger under",
  "system.location.title": "Placering",
- "network.internet.title": "Internet"
+ "network.internet.title": "Internet",
+ "skills.link.source": "Kildekode",
+ "skills.link.pypi": "PyPI",
+ "skills.examples": "Prøv at sige",
+ "skills.notOvos": "Denne pakke ligner ikke en OpenVoiceOS-skill: den registrerer ingen skill og afhænger ikke af nogen OVOS-pakke.",
+ "skills.info.loading": "Henter detaljerne…",
+ "skills.info.failed": "Detaljerne kunne ikke hentes.",
+ "skills.by": "Af",
+ "skills.version": "version",
+ "skills.released": "udgivet"
 }

@@ -1507,3 +1507,34 @@ def test_the_internet_status_moved_to_network(signed_in_page):
     page.wait_for_load_state("networkidle")
     assert page.locator("#language").count() == 0
     assert page.locator("#location-card").is_visible()
+
+
+def test_a_skill_from_find_more_can_be_looked_at_before_installing(signed_in_page):
+    page, url = signed_in_page
+    _json_route(page, "**/api/plugins/search*", {
+        "results": [{"name": "ovos-skill-tales", "kind": "skill", "installed": False}],
+        "total": 1, "kinds": ["skill"], "cache_age": 60})
+    _json_route(page, "**/api/skillinfo/ovos-skill-tales", {
+        "package": "ovos-skill-tales", "installed": False, "title": "Tales", "description": "Fairy tales",
+        "examples": ["Tell me a story"], "author": "Someone", "version": "1.0",
+        "released": "2026-10-01T10:00:00Z", "license": "MIT", "source": "https://github.com/someone/tales",
+        "pypi": "https://pypi.org/project/ovos-skill-tales/", "is_ovos_skill": True, "has_icon": False})
+    try:
+        page.goto(f"{url}/")
+        page.goto(f"{url}/skills#find")
+        page.wait_for_selector("#find:not([hidden])")
+        page.fill("#q", "tales")
+        page.click("#go")
+        page.click('[data-preview="ovos-skill-tales"]')
+        page.wait_for_selector("#detail-examples:not([hidden])")
+        assert page.locator("#detail-title").inner_text() == "Tales"
+        assert "Someone" in page.locator("#detail-meta").inner_text()
+        assert page.locator("#link-source").get_attribute("href") == "https://github.com/someone/tales"
+        assert page.locator("#examples-list li").all_inner_texts() == ["Tell me a story"]
+        assert page.locator("#do-install").is_visible()
+        assert not page.locator("#do-remove").is_visible() and not page.locator("#settings-part").is_visible()
+        page.click("#back")
+        assert page.locator("#find").is_visible(), "back from a preview returns to the search"
+    finally:
+        page.unroute("**/api/plugins/search*")
+        page.unroute("**/api/skillinfo/ovos-skill-tales")

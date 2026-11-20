@@ -20,12 +20,20 @@ def _pretty(name: str) -> str:
     return base.title() or name
 
 
-def _is_skill_package(name: str) -> bool:
-    """A skill package by its name: the panel's own skill families, plus the
-    other conventions skills are published under (``*-skill-*``)."""
+def _is_skill_package(name: str, dist=None) -> bool:
+    """A skill package: ``ovos-skill-*`` by its name; any other skill-looking
+    name (``skill-*``, ``*-skill-*``) only if it registers a skill or depends
+    on OVOS, because most packages called that are something else."""
     from ovos_webui.pypi import classify
 
-    return classify(name) == "skill" or "-skill-" in name
+    if name.startswith("ovos-skill-"):
+        return True
+    if classify(name) != "skill" and "-skill-" not in name:
+        return False
+    if dist is None:
+        return True
+    from ovos_webui.skillinfo import installed_is_ovos_skill
+    return installed_is_ovos_skill(dist)
 
 
 def _summaries() -> dict[str, str]:
@@ -38,7 +46,7 @@ def _summaries() -> dict[str, str]:
             name = (dist.metadata["Name"] or "").lower().replace("_", "-")
         except (KeyError, TypeError):  # pragma: no cover - broken metadata
             continue
-        if _is_skill_package(name):
+        if _is_skill_package(name, dist):
             summary = ""
             try:
                 summary = dist.metadata["Summary"] or ""

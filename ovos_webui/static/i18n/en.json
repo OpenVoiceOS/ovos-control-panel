@@ -1048,5 +1048,14 @@
  "nav.voiceAll": "All voice settings",
  "voice.more.lead": "Speech to text, how it tells speech from silence and the order it tries to understand you are under",
  "system.location.title": "Location",
- "network.internet.title": "Internet"
+ "network.internet.title": "Internet",
+ "skills.link.source": "Source code",
+ "skills.link.pypi": "PyPI",
+ "skills.examples": "Try saying",
+ "skills.notOvos": "This package does not look like an OpenVoiceOS skill: it registers no skill and depends on no OVOS package.",
+ "skills.info.loading": "Looking up the details…",
+ "skills.info.failed": "The details could not be fetched.",
+ "skills.by": "By",
+ "skills.version": "version",
+ "skills.released": "released"
 }

@@ -43,15 +43,29 @@
 
   <section id="detail" tabindex="-1" aria-labelledby="detail-title" hidden>
     <div class="row"><button class="secondary" id="back" data-i18n="skills.back">All skills</button></div>
-    <h2 id="detail-title"></h2>
-    <p class="hint" id="detail-desc"></p>
+    <div class="skill-head">
+      <img class="skill-icon large" id="detail-icon" alt="" hidden>
+      <h2 id="detail-title"></h2>
+    </div>
+    <p id="detail-desc"></p>
+    <p class="hint" id="detail-meta"></p>
+    <p class="hint" id="detail-links" hidden>
+      <a id="link-source" rel="noopener noreferrer" target="_blank" hidden data-i18n="skills.link.source">Source code</a>
+      <a id="link-pypi" rel="noopener noreferrer" target="_blank" data-i18n="skills.link.pypi">PyPI</a>
+    </p>
     <code class="slug" id="detail-slug"></code>
+    <div id="detail-examples" hidden>
+      <h3 data-i18n="skills.examples">Try saying</h3>
+      <ul class="examples" id="examples-list"></ul>
+    </div>
+    <p class="msg err" id="detail-notovos" hidden data-i18n="skills.notOvos">This package does not look like an OpenVoiceOS skill: it registers no skill and depends on no OVOS package.</p>
     <p class="hint" id="detail-newer" hidden></p>
     <div class="row" id="detail-actions">
+      <button id="do-install" hidden data-i18n="plugins.button.install">Install</button>
       <button id="do-update" hidden data-i18n="skills.action.update">Update</button>
       <button class="secondary" id="do-remove" hidden data-i18n="skills.action.remove">Remove</button>
     </div>
-    <p><a id="do-intents" href="/intents" data-i18n="skills.action.intents">See what it understands</a></p>
+    <p id="intents-line"><a id="do-intents" href="/intents" data-i18n="skills.action.intents">See what it understands</a></p>
     <p class="hint" id="detail-nopkg" hidden data-i18n="skills.noPackage">The package this skill comes from could not be found, so it can't be updated or removed here.</p>
     <div class="card" id="enable-card" hidden>
       <span id="enable-state"></span>
@@ -59,6 +73,7 @@
       <p class="hint" data-i18n="skills.enable.hint">A turned-off skill stays installed but does not load. Turning one on takes effect within a minute. Turning one off takes effect when the OVOS services restart.</p>
       <div class="msg" id="msg-enable" role="status" aria-live="polite" hidden></div>
     </div>
+    <div id="settings-part">
     <h3 data-i18n="skills.settings.title">Settings</h3>
     <p class="hint" id="nosettings" hidden data-i18n="skills.noSettings">This skill has no settings to change.</p>
     <div id="editor" role="region" aria-labelledby="detail-title" hidden>
@@ -70,6 +85,7 @@
         <button id="save" data-i18n="skills.save">Save</button>
         <button class="secondary" id="reload" data-i18n="skills.undo">Undo my edits</button>
       </div>
+    </div>
     </div>
   </section>
 
@@ -237,8 +253,9 @@ OvosWebUI.ready(function () {
     var badges = (s.package && outdated[s.package])
       ? ' <span class="badge starting">' + esc(t("skills.badge.update", "update available")) + "</span>" : "";
     var desc = s.description || t("skills.noDesc", "This skill does not describe itself.");
+    var icon = s.package ? '<img class="skill-icon" alt="" hidden data-icon="' + esc(s.package) + '">' : "";
     return '<li><button class="pick" data-id="' + esc(s.id) + '" aria-controls="detail">'
-      + '<span class="pick-name">' + esc(s.name) + badges + "</span></button>"
+      + '<span class="pick-name">' + icon + esc(s.name) + badges + "</span></button>"
       + '<p class="hint">' + esc(desc) + "</p>"
       + '<code class="slug">' + esc(s.package || s.id) + "</code></li>";
   }
@@ -258,6 +275,7 @@ OvosWebUI.ready(function () {
       return;
     }
     el("skilllist").innerHTML = shown.map(row).join("");
+    el("skilllist").querySelectorAll("img[data-icon]").forEach(loadIcon);
     el("skilllist").querySelectorAll("button.pick").forEach(function (b) {
       b.addEventListener("click", function () { openSkill(b.getAttribute("data-id"), true); });
     });
@@ -285,6 +303,66 @@ OvosWebUI.ready(function () {
     return all.filter(function (s) { return s.id === id; })[0] || null;
   }
 
+  // An icon is fetched through the panel. One that does not load stays hidden.
+  function loadIcon(img) {
+    var pkg = img.getAttribute("data-icon");
+    img.addEventListener("load", function () { img.hidden = false; });
+    img.addEventListener("error", function () { img.remove(); });
+    img.loading = "lazy";
+    img.src = "/api/skillinfo/" + encodeURIComponent(pkg) + "/icon";
+  }
+
+  function fmtDay(iso) {
+    try {
+      return new Date(iso).toLocaleDateString(document.documentElement.lang || undefined,
+        {day: "numeric", month: "short", year: "numeric"});
+    } catch (e) { return iso; }
+  }
+
+  var infoFor = null;
+  function showInfo(pkg, fallbackTitle) {
+    infoFor = pkg;
+    el("detail-icon").hidden = true;
+    el("detail-icon").removeAttribute("src");
+    el("detail-meta").textContent = t("skills.info.loading", "Looking up the details…");
+    el("detail-links").hidden = true;
+    el("detail-examples").hidden = true;
+    el("detail-notovos").hidden = true;
+    if (!pkg) { el("detail-meta").textContent = ""; return Promise.resolve(); }
+    return api("/api/skillinfo/" + encodeURIComponent(pkg)).then(function (i) {
+      if (infoFor !== pkg) { return; }
+      if (i.title && fallbackTitle) { el("detail-title").textContent = i.title; }
+      if (i.description || i.summary) { el("detail-desc").textContent = i.description || i.summary; }
+      var bits = [];
+      if (i.author) { bits.push(t("skills.by", "By") + " " + i.author); }
+      if (i.version) { bits.push(t("skills.version", "version") + " " + i.version); }
+      if (i.released) { bits.push(t("skills.released", "released") + " " + fmtDay(i.released)); }
+      if (i.license) { bits.push(i.license); }
+      el("detail-meta").textContent = bits.join(" · ");
+      el("link-source").hidden = !i.source;
+      if (i.source) { el("link-source").href = i.source; }
+      el("link-pypi").href = i.pypi;
+      el("detail-links").hidden = false;
+      el("examples-list").innerHTML = (i.examples || []).map(function (e) {
+        return "<li><q>" + esc(e) + "</q></li>";
+      }).join("");
+      el("detail-examples").hidden = !(i.examples || []).length;
+      el("detail-notovos").hidden = i.is_ovos_skill !== false;
+      if (i.has_icon) {
+        el("detail-icon").onload = function () { el("detail-icon").hidden = false; };
+        el("detail-icon").onerror = function () { el("detail-icon").hidden = true; };
+        el("detail-icon").src = "/api/skillinfo/" + encodeURIComponent(pkg) + "/icon";
+      }
+    }).catch(function () {
+      if (infoFor === pkg) {
+        el("detail-meta").textContent = t("skills.info.failed", "The details could not be fetched.");
+        el("link-pypi").href = "https://pypi.org/project/" + encodeURIComponent(pkg) + "/";
+        el("link-source").hidden = true;
+        el("detail-links").hidden = false;
+      }
+    });
+  }
+
   function showActions(s) {
     var latest = s.package && outdated[s.package];
     el("detail-newer").hidden = !latest;
@@ -306,7 +384,12 @@ OvosWebUI.ready(function () {
     el("detail-title").textContent = s.name;
     el("detail-desc").textContent = s.description || t("skills.noDesc", "This skill does not describe itself.");
     el("detail-slug").textContent = s.package || s.id;
+    preview = null;
+    el("do-install").hidden = true;
+    el("intents-line").hidden = false;
+    el("settings-part").hidden = false;
     showActions(s);
+    showInfo(s.package, false);
     el("editor").hidden = true;
     el("enable-card").hidden = true;
     el("nosettings").hidden = !!s.skill_id;
@@ -318,8 +401,40 @@ OvosWebUI.ready(function () {
     if (focus) { el("detail").focus(); }
   }
 
+  // A skill from Find more that is not installed: its details and Install.
+  var preview = null;
+  function openPreview(name, focus) {
+    open = null;
+    current = null;
+    preview = name;
+    el("mine").hidden = true;
+    el("find").hidden = true;
+    el("tabs").hidden = true;
+    el("detail").hidden = false;
+    el("detail-title").textContent = prettyPackage(name);
+    el("detail-desc").textContent = "";
+    el("detail-slug").textContent = name;
+    el("detail-newer").hidden = true;
+    el("do-update").hidden = true;
+    el("do-remove").hidden = true;
+    el("detail-nopkg").hidden = true;
+    el("enable-card").hidden = true;
+    el("intents-line").hidden = true;
+    el("settings-part").hidden = true;
+    el("do-install").hidden = false;
+    showInfo(name, true);
+    if (focus) { el("detail").focus(); }
+  }
+
+  el("do-install").addEventListener("click", function () {
+    if (preview) {
+      run("install", preview, fill(t("skills.confirm.install", "Install {name} on this device?"), preview));
+    }
+  });
+
   function showTab(which) {
     open = null;
+    preview = null;
     current = null;
     el("detail").hidden = true;
     el("tabs").hidden = false;
@@ -335,7 +450,11 @@ OvosWebUI.ready(function () {
   }
   el("tab-mine").addEventListener("click", function () { showTab("mine"); });
   el("tab-find").addEventListener("click", function () { showTab("find"); el("q").focus(); });
-  el("back").addEventListener("click", function () { showTab("mine"); el("filter").focus(); });
+  el("back").addEventListener("click", function () {
+    if (preview) { showTab("find"); el("q").focus(); return; }
+    showTab("mine");
+    el("filter").focus();
+  });
 
   // ── install, update, remove ──────────────────────────────────────────────
   function run(action, name, question) {
@@ -366,8 +485,13 @@ OvosWebUI.ready(function () {
       } else {
         OvosWebUI.say("msg", t("plugins.job.failed", "The job failed. Read the output above."), true);
       }
-      var was = open && open.id;
+      var was = open && open.id, installed = preview;
       loadList().then(loadUpdates).then(function () {
+        if (installed) {
+          var now = all.filter(function (x) { return x.package === installed.toLowerCase(); })[0];
+          if (now) { openSkill(now.id, false); }
+          return;
+        }
         if (was) {
           if (find(was)) { openSkill(was, false); } else { showTab("mine"); }
         }
@@ -419,7 +543,9 @@ OvosWebUI.ready(function () {
           ? '<button class="secondary" data-open="' + esc(p.name) + '">' + esc(t("skills.open", "Open")) + "</button>"
           : '<button class="secondary" data-add="' + esc(p.name) + '" aria-label="'
             + esc(t("plugins.button.install", "Install") + " " + p.name) + '">' + esc(t("plugins.button.install", "Install")) + "</button>";
-        return '<div class="card"><strong>' + esc(prettyPackage(p.name)) + "</strong> " + state
+        var title = p.installed ? esc(prettyPackage(p.name))
+          : '<button class="linklike" data-preview="' + esc(p.name) + '">' + esc(prettyPackage(p.name)) + "</button>";
+        return '<div class="card"><strong>' + title + "</strong> " + state
           + '<code class="slug">' + esc(p.name) + "</code>"
           + '<div class="row">' + action + "</div></div>";
       }).join("") : '<div class="card">' + esc(t("plugins.nothingMatched", "Nothing matched.")) + "</div>";
@@ -428,6 +554,9 @@ OvosWebUI.ready(function () {
           var name = b.getAttribute("data-add");
           run("install", name, fill(t("skills.confirm.install", "Install {name} on this device?"), name));
         });
+      });
+      el("results").querySelectorAll("[data-preview]").forEach(function (b) {
+        b.addEventListener("click", function () { openPreview(b.getAttribute("data-preview"), true); });
       });
       el("results").querySelectorAll("[data-open]").forEach(function (b) {
         b.addEventListener("click", function () {

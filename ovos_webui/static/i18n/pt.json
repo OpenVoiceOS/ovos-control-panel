@@ -1048,5 +1048,14 @@
  "nav.voiceAll": "Todas as definições de voz",
  "voice.more.lead": "A fala para texto, como distingue a fala do silêncio e a ordem em que tenta entendê-lo estão em",
  "system.location.title": "Localização",
- "network.internet.title": "Internet"
+ "network.internet.title": "Internet",
+ "skills.link.source": "Código-fonte",
+ "skills.link.pypi": "PyPI",
+ "skills.examples": "Experimente dizer",
+ "skills.notOvos": "Este pacote não parece uma skill do OpenVoiceOS: não regista nenhuma skill nem depende de nenhum pacote do OVOS.",
+ "skills.info.loading": "A procurar os detalhes…",
+ "skills.info.failed": "Não foi possível obter os detalhes.",
+ "skills.by": "De",
+ "skills.version": "versão",
+ "skills.released": "publicada a"
 }
