@@ -205,28 +205,36 @@
     {"path": "/config", "key": "nav.settings", "label": "Settings", "group": "maintenance", "level": "advanced", "needs": null},
     {"path": "/sound", "key": "nav.sound", "label": "Send over sound", "group": "maintenance", "level": "advanced", "needs": null}
   ];
-  // The menu shows the everyday pages always and folds the advanced groups
-  // behind "Show more", inside the menu itself. The choice is remembered per
-  // browser and starts folded. Every link is always in the DOM -- a folded
-  // group is only hidden -- and the group holding the page you are on stays
-  // open, so a link can never strand you on a page the menu does not show.
+  // The menu shows the everyday pages, then an "Advanced" divider and one
+  // row per advanced group. Each row folds its own pages open and shut, and
+  // which rows are open is remembered per browser; all start folded. Every
+  // link is always in the DOM -- a folded group's links are only hidden --
+  // and the group holding the page you are on opens when the page loads, so
+  // a link can never strand you on a page the menu does not show.
   var GROUPS = [
-    ["voice", "nav.group.voice", "Voice, advanced"],
+    ["voice", "nav.group.voice", "Voice"],
     ["understanding", "nav.group.understanding", "Understanding"],
-    ["device", "nav.group.device", "Device, advanced"],
+    ["device", "nav.group.device", "Device"],
     ["screen", "nav.group.screen", "Screen"],
     ["maintenance", "nav.group.maintenance", "Maintenance"]
   ];
-  var MORE_KEY = "ovos-nav-more";
-  // The header button this replaces stored "ovos-simple"; "0" meant someone
-  // had asked for every page, so they start unfolded.
+  var OPEN_KEY = "ovos-nav-open";
+  // The old header switch stored "ovos-simple"; "0" meant someone had asked
+  // for every page, so every group starts open for them.
   var OLD_SIMPLE_KEY = "ovos-simple";
-  function showMore() {
+  function openGroups() {
     try {
-      var v = window.localStorage.getItem(MORE_KEY);
-      if (v === null) { return window.localStorage.getItem(OLD_SIMPLE_KEY) === "0"; }
-      return v === "1";
-    } catch (e) { return false; }
+      var v = window.localStorage.getItem(OPEN_KEY);
+      if (v === null) {
+        return window.localStorage.getItem(OLD_SIMPLE_KEY) === "0"
+          ? GROUPS.map(function (g) { return g[0]; }) : [];
+      }
+      var list = JSON.parse(v);
+      return Array.isArray(list) ? list : [];
+    } catch (e) { return []; }
+  }
+  function saveOpen(list) {
+    try { window.localStorage.setItem(OPEN_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
   }
   function herePath() {
     return window.location.pathname.replace(/\/$/, "") || "/";
@@ -241,23 +249,35 @@
     var html = '<div class="nav-group nav-everyday">'
       + NAV.filter(function (x) { return x.group === "everyday"; }).map(navLink).join("")
       + "</div>";
-    html += '<button type="button" class="nav-more" id="nav-more" aria-expanded="false"'
-      + ' aria-controls="nav-advanced"></button>';
-    html += '<div class="nav-advanced" id="nav-advanced">' + GROUPS.map(function (g) {
+    html += '<span class="nav-divider" data-i18n="nav.advanced">'
+      + esc(t("nav.advanced", "Advanced")) + "</span>";
+    html += GROUPS.map(function (g) {
       var items = NAV.filter(function (x) { return x.group === g[0]; });
       if (!items.length) { return ""; }
-      return '<div class="nav-group" role="group" data-group="' + g[0] + '" aria-labelledby="navg-' + g[0] + '">'
-        + '<span class="nav-heading" id="navg-' + g[0] + '" data-i18n="' + g[1] + '">'
-        + esc(t(g[1], g[2])) + "</span>" + items.map(navLink).join("") + "</div>";
-    }).join("") + "</div>";
+      return '<div class="nav-group" data-group="' + g[0] + '">'
+        + '<button type="button" class="nav-fold" aria-expanded="false" aria-controls="navl-' + g[0] + '">'
+        + '<span data-i18n="' + g[1] + '">' + esc(t(g[1], g[2])) + "</span></button>"
+        + '<div class="nav-links" id="navl-' + g[0] + '">' + items.map(navLink).join("") + "</div></div>";
+    }).join("");
     nav.innerHTML = html;
-    var button = nav.querySelector("#nav-more");
-    button.addEventListener("click", function () {
-      var next = !showMore();
-      try { window.localStorage.setItem(MORE_KEY, next ? "1" : "0"); } catch (e) { /* ignore */ }
-      foldNav(nav);
+    var here = herePath();
+    var current = NAV.filter(function (x) { return x.path === here; })[0];
+    var open = openGroups();
+    nav.querySelectorAll(".nav-group[data-group]").forEach(function (g) {
+      var name = g.getAttribute("data-group");
+      foldGroup(g, open.indexOf(name) >= 0 || !!(current && current.group === name));
+      g.querySelector(".nav-fold").addEventListener("click", function () {
+        var now = g.querySelector(".nav-fold").getAttribute("aria-expanded") !== "true";
+        foldGroup(g, now);
+        var list = openGroups().filter(function (x) { return x !== name; });
+        if (now) { list.push(name); }
+        saveOpen(list);
+      });
     });
-    foldNav(nav);
+  }
+  function foldGroup(g, open) {
+    g.querySelector(".nav-fold").setAttribute("aria-expanded", open ? "true" : "false");
+    g.querySelector(".nav-links").hidden = !open;
   }
   // Pages whose need is not met (a plugin or a screen the device lacks) are
   // left out of the menu, and a group left empty goes with them. The answer
@@ -317,20 +337,6 @@
       applyNeeds(data);
     }).catch(function () { /* not answered: keep every page */ });
   }
-  function foldNav(nav) {
-    var open = showMore();
-    var here = herePath();
-    var current = NAV.filter(function (x) { return x.path === here; })[0];
-    nav.querySelectorAll(".nav-advanced .nav-group").forEach(function (g) {
-      g.hidden = !open && !(current && current.group === g.getAttribute("data-group"));
-    });
-    var button = nav.querySelector("#nav-more");
-    var key = open ? "nav.less" : "nav.more";
-    button.setAttribute("aria-expanded", open ? "true" : "false");
-    button.setAttribute("data-i18n", key);
-    button.textContent = t(key, open ? "Show less" : "Show more");
-  }
-
   function markNav() {
     var here = window.location.pathname.replace(/\/$/, "") || "/";
     document.querySelectorAll("nav a").forEach(function (a) {

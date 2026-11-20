@@ -1273,43 +1273,54 @@ def _visible_nav(page):
       .filter(a => a.offsetParent !== null).map(a => a.getAttribute("href"))""")
 
 
-def test_the_menu_starts_folded_and_unfolds_in_place(signed_in_page):
-    """Everyday pages always show; the advanced groups fold behind "Show more"
-    inside the menu, and the choice is remembered."""
+def _fold(page, group):
+    return page.locator(f'nav .nav-group[data-group="{group}"] button.nav-fold')
+
+
+def test_the_menu_groups_start_folded_and_open_one_at_a_time(signed_in_page):
+    """Everyday pages always show; under the "Advanced" divider each group is
+    a row that folds its own pages, and which rows are open is remembered."""
     page, url = signed_in_page
     page.goto(f"{url}/")
-    page.evaluate("() => { localStorage.removeItem('ovos-nav-more'); "
+    page.evaluate("() => { localStorage.removeItem('ovos-nav-open'); "
                   "localStorage.removeItem('ovos-simple'); }")
     page.reload()
     page.wait_for_load_state("networkidle")
 
     assert page.locator("#simple-toggle").count() == 0, "the header switch is gone"
-    more = page.locator("nav #nav-more")
-    assert more.get_attribute("aria-expanded") == "false"
+    assert page.locator("nav .nav-divider").is_visible()
+    assert page.locator("nav button.nav-fold").count() == 5
     folded = _visible_nav(page)
     assert "/about" in folded and "/skills" in folded
     assert "/intents" not in folded and "/plugins" not in folded
 
-    more.click()
-    assert more.get_attribute("aria-expanded") == "true"
-    assert "/intents" in _visible_nav(page)
+    understanding = _fold(page, "understanding")
+    assert understanding.get_attribute("aria-expanded") == "false"
+    understanding.click()
+    assert understanding.get_attribute("aria-expanded") == "true"
+    shown = _visible_nav(page)
+    assert {"/intents", "/transformers", "/personas"} <= set(shown)
+    assert "/plugins" not in shown, "only the opened group unfolds"
 
     page.reload()
     page.wait_for_load_state("networkidle")
-    assert page.locator("nav #nav-more").get_attribute("aria-expanded") == "true"
-    assert "/plugins" in _visible_nav(page)
-    page.evaluate("() => localStorage.setItem('ovos-nav-more', '0')")
+    assert _fold(page, "understanding").get_attribute("aria-expanded") == "true"
+    assert _fold(page, "maintenance").get_attribute("aria-expanded") == "false"
+    _fold(page, "understanding").click()
+    assert "/intents" not in _visible_nav(page)
+    page.evaluate("() => localStorage.removeItem('ovos-nav-open')")
 
 
-def test_the_group_of_the_page_you_are_on_stays_open(signed_in_page):
+def test_the_group_of_the_page_you_are_on_opens(signed_in_page):
     page, url = signed_in_page
     page.goto(f"{url}/")
-    page.evaluate("() => localStorage.setItem('ovos-nav-more', '0')")
+    page.evaluate("() => localStorage.removeItem('ovos-nav-open')")
     page.goto(f"{url}/intents")
     page.wait_for_load_state("networkidle")
     shown = _visible_nav(page)
     assert {"/intents", "/transformers", "/personas"} <= set(shown)
     assert "/plugins" not in shown
+    assert _fold(page, "understanding").get_attribute("aria-expanded") == "true"
     assert page.locator('nav a[aria-current="page"]').get_attribute("href") == "/intents"
 
 
@@ -1317,13 +1328,12 @@ def test_someone_who_had_every_page_on_keeps_them(signed_in_page):
     """The old header switch stored ovos-simple=0 for "show all pages"."""
     page, url = signed_in_page
     page.goto(f"{url}/")
-    page.evaluate("() => { localStorage.removeItem('ovos-nav-more'); "
+    page.evaluate("() => { localStorage.removeItem('ovos-nav-open'); "
                   "localStorage.setItem('ovos-simple', '0'); }")
     page.reload()
     page.wait_for_load_state("networkidle")
-    assert page.locator("nav #nav-more").get_attribute("aria-expanded") == "true"
-    page.evaluate("() => { localStorage.removeItem('ovos-simple'); "
-                  "localStorage.setItem('ovos-nav-more', '0'); }")
+    assert "/plugins" in _visible_nav(page) and "/intents" in _visible_nav(page)
+    page.evaluate("() => localStorage.removeItem('ovos-simple')")
 
 
 def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
@@ -1341,7 +1351,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
     try:
         page.goto(f"{url}/")
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
-                      "localStorage.setItem('ovos-nav-more', '1'); }")
+                      "localStorage.setItem('ovos-nav-open', JSON.stringify(['voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
         page.reload()
         page.wait_for_function("() => document.querySelector('nav a[href=\"/wallpaper\"]').hidden")
         shown = _visible_nav(page)
@@ -1358,7 +1368,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
     finally:
         page.unroute("**/api/nav/needs")
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
-                      "localStorage.setItem('ovos-nav-more', '0'); }")
+                      "localStorage.removeItem('ovos-nav-open'); }")
 
 
 def test_a_panel_apart_from_the_device_hides_no_page(signed_in_page):
@@ -1369,14 +1379,14 @@ def test_a_panel_apart_from_the_device_hides_no_page(signed_in_page):
     try:
         page.goto(f"{url}/")
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
-                      "localStorage.setItem('ovos-nav-more', '1'); }")
+                      "localStorage.setItem('ovos-nav-open', JSON.stringify(['voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
         page.reload()
         page.wait_for_load_state("networkidle")
         assert "/wallpaper" in _visible_nav(page)
     finally:
         page.unroute("**/api/nav/needs")
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
-                      "localStorage.setItem('ovos-nav-more', '0'); }")
+                      "localStorage.removeItem('ovos-nav-open'); }")
 
 
 def _json_route(page, pattern, body):
