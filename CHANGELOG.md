@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.1a59](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a59) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a58...0.0.1a59)
+
+**Merged pull requests:**
+
+- feat: let a page bring its body, routes, strings and files [\#133](https://github.com/OpenVoiceOS/ovos-control-panel/pull/133) ([andlo](https://github.com/andlo))
+- feat: build the menu from a page registry [\#132](https://github.com/OpenVoiceOS/ovos-control-panel/pull/132) ([andlo](https://github.com/andlo))
+- docs: draft the contract for pages [\#131](https://github.com/OpenVoiceOS/ovos-control-panel/pull/131) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a58](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a58) (2026-11-20)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a57...0.0.1a58)
@@ -396,25 +406,13 @@
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a13...0.0.1a14)
 
-**Merged pull requests:**
-
-- fix: allow WebAssembly in the CSP so the ggwave sound engine loads [\#15](https://github.com/OpenVoiceOS/ovos-control-panel/pull/15) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [0.0.1a13](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a13) (2026-08-12)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a12...0.0.1a13)
 
-**Merged pull requests:**
-
-- feat: send data to nearby devices over sound \(ggwave panel\) [\#13](https://github.com/OpenVoiceOS/ovos-control-panel/pull/13) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [0.0.1a12](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a12) (2026-08-12)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a11...0.0.1a12)
-
-**Merged pull requests:**
-
-- chore: shorten the AI-assistance note in credits [\#14](https://github.com/OpenVoiceOS/ovos-control-panel/pull/14) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a11](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a11) (2026-08-12)
 
