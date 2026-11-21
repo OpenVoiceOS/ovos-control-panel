@@ -172,7 +172,15 @@ class Registry:
         used = {x[3]["group"] for x in shown}
         ordered = sorted((g for g in groups.values() if g["id"] in used),
                          key=lambda g: (rank[g["id"]], g["id"]))
-        return {"groups": ordered, "pages": [x[3] for x in shown]}
+        return {"groups": ordered, "pages": [x[3] for x in shown], "langs": self.langs()}
+
+    def langs(self) -> list[str]:
+        """Every language there are strings for: the panel's and the pages'."""
+        found = {p.name[:-5] for p in resources.files("ovos_webui").joinpath("static", "i18n").iterdir()
+                 if p.name.endswith(".json")}
+        for page in self.pages:
+            found.update(page.strings)
+        return sorted(found - {"en"})
 
     def nav_json(self, prefs: Prefs | None = None) -> str:
         """The menu as JSON that is safe inside a ``<script>`` element."""
@@ -253,15 +261,22 @@ def _resource(module: str, spec: Any):
     return target
 
 
-def _folder(module: str, name: Any):
-    """A folder next to the module, or None."""
-    if not name:
+def _folder(module: str, spec: Any):
+    """A folder: a path next to the module, or (package, path). The path may
+    have several parts ("gui/images"), none of them hidden or a parent."""
+    if not spec:
         return None
-    if not isinstance(name, str) or "/" in name or "\\" in name or name.startswith("."):
-        raise PageError(f"not a plain folder name: {name!r}")
-    target = resources.files(module).joinpath(name)
+    if isinstance(spec, (tuple, list)) and len(spec) == 2:
+        module, spec = spec
+    if not isinstance(spec, str) or "\\" in spec or spec.startswith("/") \
+            or any(not part or part.startswith(".") for part in spec.split("/")):
+        raise PageError(f"not a folder in the package: {spec!r}")
+    try:
+        target = resources.files(module).joinpath(*spec.split("/"))
+    except (ModuleNotFoundError, TypeError) as e:
+        raise PageError(f"cannot find {spec!r} in {module}: {e}") from e
     if not target.is_dir():
-        raise PageError(f"the folder {name!r} is missing from {module}")
+        raise PageError(f"the folder {spec!r} is missing from {module}")
     return target
 
 
@@ -274,9 +289,14 @@ def _strings(folder) -> dict[str, dict[str, str]]:
         name = item.name
         if not name.endswith(".json") or not item.is_file():
             continue
-        lang = name[:-5].lower()
-        if not _LANG_RE.match(lang):
+        code = name[:-5].lower().replace("_", "-")
+        if not _LANG_RE.match(code):
             raise PageError(f"not a language file: {name}")
+        # The browser asks for the language alone (da, not da-dk), so a
+        # regional file counts for its language, unless that has a file too.
+        lang = code.split("-")[0]
+        if lang in out and code != lang:
+            continue
         raw = item.read_bytes()
         if len(raw) > MAX_STRINGS:
             raise PageError(f"{name} is too large")

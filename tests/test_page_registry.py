@@ -291,3 +291,24 @@ def test_a_page_route_wins_over_a_shell_route_with_a_parameter(client, bus):
     POST /api/system/{action}; without a device both answer, the page's own."""
     r = client.post("/api/system/ssh", json={"enabled": True})
     assert r.status_code != 404
+
+
+def test_a_page_can_point_at_a_folder_deeper_in_its_package(guardian_pkg, tmp_path):
+    (tmp_path / guardian_pkg / "gui" / "images").mkdir(parents=True)
+    (tmp_path / guardian_pkg / "gui" / "images" / "logo.png").write_bytes(b"\x89PNG")
+    reg = pages.load(_own() + [_guardian(guardian_pkg, assets=(guardian_pkg, "gui/images"))])
+    page = reg.by_path()["/emkay/guardian"]
+    assert page.assets.joinpath("logo.png").is_file()
+
+
+@pytest.mark.parametrize("bad", ["../x", "gui/../x", ".hidden", "/etc", "gui//images"])
+def test_an_assets_path_out_of_the_package_is_refused(guardian_pkg, bad):
+    reg = pages.load(_own() + [_guardian(guardian_pkg, assets=bad)])
+    assert "/emkay/guardian" not in reg.by_path()
+
+
+def test_a_regional_language_file_counts_for_its_language(guardian_pkg, tmp_path):
+    (tmp_path / guardian_pkg / "i18n" / "de-DE.json").write_text('{"guardian.mode": "Modus"}')
+    reg = pages.load(_own() + [_guardian(guardian_pkg)])
+    assert reg.by_path()["/emkay/guardian"].strings["de"] == {"guardian.mode": "Modus"}
+    assert "de" in reg.nav()["langs"]

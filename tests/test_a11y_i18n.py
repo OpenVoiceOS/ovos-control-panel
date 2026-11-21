@@ -121,17 +121,18 @@ def test_every_page_can_be_reached_from_the_navigation():
     )
 
 
-def test_app_js_knows_every_shipped_locale():
-    """app.js only fetches the languages it lists, so the list and the files
-    must agree: a new locale file that is missing from the list would never be
-    loaded, and a listed language with no file would 404 on every page."""
-    import re
+def test_the_menu_names_every_language_with_strings():
+    """app.js only fetches the languages the menu data lists, so the list must
+    hold every shipped locale file and every page's own languages: a language
+    missing from it would never be loaded, and a listed language with no
+    strings would 404 on every page."""
     from pathlib import Path
 
+    from ovos_webui import pages
     from ovos_webui.service import STATIC_DIR
 
-    js = (Path(STATIC_DIR) / "app.js").read_text(encoding="utf-8")
-    listed = set(re.findall(r"(\w+): 1", re.search(
-        r"var LOCALES = \{([^}]*)\}", js).group(1)))
+    reg = pages.load()
     shipped = {p.stem for p in (Path(STATIC_DIR) / "i18n").glob("*.json")} - {"en"}
-    assert listed == shipped
+    langs = set(reg.nav()["langs"])
+    assert shipped <= langs
+    assert langs == shipped | {lang for p in reg.pages for lang in p.strings} - {"en"}

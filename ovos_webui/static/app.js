@@ -152,16 +152,15 @@
     return base;
   }
 
-  // The languages that ship a file in static/i18n/. Asking for one that does
-  // not exist answered 404 on every page load, a console error on a device in
-  // any other language; English is the fallback either way. A test keeps this
-  // list in step with the files.
-  var LOCALES = {ar: 1, da: 1, es: 1, pt: 1};
-
+  // The languages there are strings for -- the panel's own and every page's
+  // -- come with the menu data (MENU.langs). Asking for one that has none
+  // answered 404 on every page load, a console error on a device in any other
+  // language; English is the fallback either way.
   // Load the locale file for a language, fall back to English, and apply it.
   function loadLocale(lang) {
     var base = setLangDir(lang);
-    if (!LOCALES[base]) { return Promise.resolve(); }
+    readMenu();
+    if ((MENU.langs || []).indexOf(base) === -1) { return Promise.resolve(); }
     return fetch("/static/i18n/" + base + ".json", {credentials: "same-origin"})
       .then(function (r) { return r.ok ? r.json() : {}; })
       .then(function (dict) { STRINGS = dict || {}; applyI18n(document); })
