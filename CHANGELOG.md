@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a61](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a61) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a60...0.0.1a61)
+
+**Merged pull requests:**
+
+- feat: let the configuration arrange the menu and brand the panel [\#135](https://github.com/OpenVoiceOS/ovos-control-panel/pull/135) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a60](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a60) (2026-11-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a59...0.0.1a60)
@@ -397,10 +405,6 @@
 ## [0.0.1a16](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a16) (2026-08-12)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a15...0.0.1a16)
-
-**Merged pull requests:**
-
-- feat: Media panel — now playing, transport and volume [\#17](https://github.com/OpenVoiceOS/ovos-control-panel/pull/17) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a15](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a15) (2026-08-12)
 
