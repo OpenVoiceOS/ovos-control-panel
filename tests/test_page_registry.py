@@ -312,3 +312,57 @@ def test_a_regional_language_file_counts_for_its_language(guardian_pkg, tmp_path
     reg = pages.load(_own() + [_guardian(guardian_pkg)])
     assert reg.by_path()["/emkay/guardian"].strings["de"] == {"guardian.mode": "Modus"}
     assert "de" in reg.nav()["langs"]
+
+
+# ── a page that takes uploads ────────────────────────────────────────────────
+def _upload_routes(r):
+    from fastapi import Request
+
+    @r.api.post("/guardian/upload")
+    async def upload(request: Request):
+        return {"size": len(await request.body())}
+
+    @r.api.post("/guardian/note")
+    async def note(request: Request):
+        return {"size": len(await request.body())}
+
+
+def test_a_page_may_take_larger_uploads_on_routes_it_names(guardian_pkg, monkeypatch, bus):
+    from fastapi.testclient import TestClient
+
+    from ovos_webui.service import create_app
+    eps = _own() + [_guardian(guardian_pkg, routes=_upload_routes,
+                              uploads={"/api/guardian/upload": 3 * 1024 * 1024})]
+    monkeypatch.setattr(pages, "_entry_points", lambda: eps)
+    app = create_app(bus=bus, host="127.0.0.1", token=None, connect_bus=False)
+    blob = b"x" * (2 * 1024 * 1024)
+    with TestClient(app, base_url="http://127.0.0.1:8500",
+                    headers={"Origin": "http://127.0.0.1:8500"}) as c:
+        assert c.post("/api/guardian/upload", content=blob).json() == {"size": len(blob)}
+        assert c.post("/api/guardian/note", content=blob).status_code == 413, "only the named route"
+        assert c.post("/api/guardian/upload", content=blob * 2).status_code == 413, "up to its size"
+
+
+@pytest.mark.parametrize("uploads, why", [
+    ({"/static/x": 10}, "/api/"), ({"/api/guardian/upload": 0}, "size"),
+    ({"/api/guardian/{x}": 10}, "/api/"), ({"/api/guardian/upload": True}, "size"),
+])
+def test_bad_uploads_leave_the_page_out(guardian_pkg, uploads, why):
+    reg = pages.load(_own() + [_guardian(guardian_pkg, routes=_upload_routes, uploads=uploads)])
+    assert "/emkay/guardian" not in reg.by_path()
+    assert why in reg.problems[-1]["error"]
+
+
+def test_uploads_must_name_a_route_the_page_adds(guardian_pkg):
+    from fastapi import APIRouter
+    reg = pages.load(_own() + [_guardian(guardian_pkg, routes=_upload_routes,
+                                         uploads={"/api/guardian/other": 10})])
+    pages.mount_routes(reg, lambda page: pages.Routes(
+        api=APIRouter(prefix="/api"), privileged=APIRouter(prefix="/api"),
+        need_bus=lambda: None, config=None), set(), lambda r: None)
+    assert "/emkay/guardian" not in reg.by_path()
+    assert "/api/guardian/other" in reg.problems[-1]["error"]
+
+
+def test_an_upload_size_is_capped():
+    assert pages.MAX_PAGE_UPLOAD == 64 * 1024 * 1024
