@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a63](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a63) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a62...0.0.1a63)
+
+**Merged pull requests:**
+
+- feat: let a page take larger uploads on routes it names [\#137](https://github.com/OpenVoiceOS/ovos-control-panel/pull/137) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a62](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a62) (2026-11-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a61...0.0.1a62)
@@ -397,10 +405,6 @@
 ## [0.0.1a18](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a18) (2026-08-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a17...0.0.1a18)
-
-**Merged pull requests:**
-
-- fix: audit wave-1 findings \(volume scaling, validation bounds, reply correlation\) [\#19](https://github.com/OpenVoiceOS/ovos-control-panel/pull/19) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a17](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a17) (2026-08-13)
 
