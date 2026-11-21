@@ -32,7 +32,8 @@ MAX_ICON = 16 * 1024
 #: The blocks this panel draws. A block of another type is drawn as "this
 #: needs a newer control panel", and the rest of the page still works.
 BLOCKS = frozenset({"text", "status", "list", "actions", "form", "choice"})
-FIELD_TYPES = frozenset({"text", "password", "number", "slider", "checkbox", "select", "lines"})
+FIELD_TYPES = frozenset({"text", "password", "url", "number", "slider", "checkbox", "select", "lines"})
+_URL_RE = re.compile(r"^https?://[^\s/]+\S*$")
 #: A page's messages start with its own prefix, never with one of these.
 RESERVED_BUS = ("mycroft.", "ovos.skills.", "ovos.skill.", "ovos.common_play.", "ovos.phal.",
                 "ovos.PHAL.", "ovos.intent", "ovos.utterance", "ovos.webui.", "system.",
@@ -241,6 +242,7 @@ class _Checker:
                     raise DescribedError(f"{where}: {num} must be a number")
                 out[num] = raw[num]
         out["max_length"] = min(int(raw.get("max_length", 300)), MAX_VALUE)
+        out["required"] = bool(raw.get("required", False))
         if "default" in raw:
             # a value equal to it leaves the setting out of the file
             out["default"] = raw["default"]
@@ -540,11 +542,25 @@ def form_values(decl: dict, given: Any) -> dict[str, Any]:
             if fixed and "options_from" not in f and value not in fixed:
                 raise DescribedError(f"{name} is not one of its options")
         else:
-            value = _text(value, f["max_length"])
+            value = _text(value, f["max_length"]).strip() if kind == "url" else _text(value, f["max_length"])
             if kind == "password" and value == "":
                 continue    # an empty password keeps the one there is
+            if kind == "url" and value:
+                value = value.rstrip("/")
+                if not _URL_RE.match(value):
+                    raise DescribedError(f"{name} is an address that starts with http:// or https://")
+        if f.get("required") and value in ("", None, []):
+            raise DescribedError(f"{name} is needed")
         out[name] = value
     return out
+
+
+def missing(decl: dict, values: dict, existing: Any) -> list[str]:
+    """Required fields neither given now nor saved before (a password left
+    empty keeps the one there is, so one is needed the first time only)."""
+    existing = existing if isinstance(existing, dict) else {}
+    return [f["name"] for f in decl["block"]["fields"]
+            if f.get("required") and f["name"] not in values and not existing.get(f["name"])]
 
 
 # ── the routes a described page gets ─────────────────────────────────────────
@@ -696,7 +712,9 @@ def routes_for(pid: str, refs: dict[str, dict]):
             block = decl["block"]
             if "config" in block:
                 path = block["config"].split(".")
-
+                lacking = missing(decl, values, r.config.user_or_merged(path))
+                if lacking:
+                    raise HTTPException(400, ", ".join(lacking) + " is needed")
                 defaults = {f["name"]: f["default"] for f in block["fields"] if "default" in f}
 
                 def change(user: dict) -> None:

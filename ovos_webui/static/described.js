@@ -316,10 +316,12 @@ OvosWebUI.ready(function () {
             input.rows = 4; input.spellcheck = false;
           } else {
             input = document.createElement("input");
-            input.type = {password: "password", number: "number", slider: "range"}[f.type] || "text";
+            input.type = {password: "password", number: "number", slider: "range", url: "url"}[f.type] || "text";
             if (f.type === "password") { input.autocomplete = "new-password"; }
             ["min", "max", "step"].forEach(function (k) { if (f[k] !== undefined) { input[k] = f[k]; } });
-            if (f.type === "text" || f.type === "password") { input.maxLength = f.max_length; }
+            if (f.type === "text" || f.type === "password" || f.type === "url") { input.maxLength = f.max_length; }
+            if (f.type === "url") { input.placeholder = "https://"; input.spellcheck = false; }
+            if (f.required) { input.required = true; }
           }
           if (f.type === "slider") {
             // the value beside it: a percent for 0..1

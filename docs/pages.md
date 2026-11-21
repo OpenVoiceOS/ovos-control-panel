@@ -116,8 +116,8 @@ or a download, `{"label", "download", "file":
 {"data": <answer field, base64>, "name": "{name}.mid", "type": <media type>}}`,
 with `when` (`"field"` or `"!field"` on the row) and `confirm` (a label).
 A field is `{"name", "label", "type"}`, the type one of `text`, `password`,
-`number`, `slider`, `checkbox`, `select` (`options`, or `options_from` a
-query) and `lines`, with `hint`, `min`, `max`, `step` and `max_length`.
+`url` (http:// or https://), `number`, `slider`, `checkbox`, `select`
+(`options`, or `options_from` a query) and `lines`, with `required`, with `hint`, `min`, `max`, `step` and `max_length`.
 A field can have a `default` (a value equal to it is left out of
 `mycroft.conf`, so the file says only what was changed), `show_when`
 (`{"synth": "port"}`: shown only for that value of another field), and a
@@ -127,7 +127,8 @@ checkbox `on` and `off` values for a setting that is not true or false
 
 In `{field}` a field can be nested (`{ports.outputs}`), a list is joined with
 commas, a value can be shown as a date (`{saved:date}`), or as a label
-(`{engine@midi.engine}` shows the label `midi.engine.fluidsynth`).
+(`{engine@midi.engine}` shows the label `midi.engine.fluidsynth`, or nothing
+when there is no such label; the label can hold the answer's values too).
 
 A block this panel does not know is shown as "this part needs a newer control
 panel"; the rest of the page still works.
