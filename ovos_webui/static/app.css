@@ -247,18 +247,14 @@ nav a:hover { color: var(--ink); background: var(--accent-wash); }
  * phone, a column on the desktop rail). A folded group's links are hidden. */
 nav .nav-group, nav .nav-links { display: contents; }
 nav .nav-links[hidden], nav .nav-group.nav-empty, nav a[hidden] { display: none; }
-/* "Advanced" folds every advanced group away at once. It reads as a small
- * section label with a rule, and the rows it holds sit under it. */
-nav .nav-advanced > button.nav-fold {
-  margin-top: 0.9rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--muted);
+/* "Advanced" folds every advanced group away at once. A rule above it sets
+ * the advanced part of the menu apart; the rows it holds sit under it. */
+nav .nav-advanced > button.nav-fold { margin-top: 0.7rem; position: relative; }
+nav .nav-advanced > button.nav-fold::before { margin: 0; }
+nav .nav-advanced > button.nav-fold > span::before {
+  content: ""; position: absolute; inset-inline: 0.85rem; top: -0.4rem;
+  border-top: 1px solid var(--line);
 }
-nav .nav-advanced > button.nav-fold > span { flex: 1; display: flex; align-items: center; gap: 0.6rem; }
-nav .nav-advanced > button.nav-fold > span::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 nav button.nav-fold {
   flex-basis: 100%;
   min-height: 44px;
@@ -270,14 +266,24 @@ nav button.nav-fold {
   border: none;
   border-radius: 999px;
   background: none;
-  color: var(--ink);
+  color: var(--muted);
   font: inherit;
   font-weight: 600;
   font-size: 0.95rem;
   text-align: start;
   cursor: pointer;
 }
-nav button.nav-fold:hover { background: var(--accent-wash); }
+nav button.nav-fold:hover { color: var(--ink); background: var(--accent-wash); }
+/* the row's icon, drawn like a page's (see nav a::before) */
+nav button.nav-fold::before {
+  content: "";
+  width: 1.05em; height: 1.05em;
+  flex: 0 0 auto;
+  background-color: currentColor;
+  -webkit-mask: center/contain no-repeat var(--icon, var(--no-icon));
+  mask: center/contain no-repeat var(--icon, var(--no-icon));
+}
+nav button.nav-fold > span { flex: 1; }
 nav button.nav-fold::after {
   content: "";
   width: 0.5em; height: 0.5em;
@@ -393,6 +399,8 @@ main { padding: 1.1rem; max-width: 62rem; margin: 0 auto; }
   nav .nav-links a { margin-inline-start: 0.9rem; }
   nav .nav-sub > button.nav-fold { margin-inline-start: 0.9rem; }
   nav .nav-sub .nav-links a { margin-inline-start: 1.8rem; }
+  /* About sits at the foot of the rail when there is room. */
+  nav .nav-end a { margin-top: auto; }
   main {
     grid-area: main;
     max-width: 66rem;

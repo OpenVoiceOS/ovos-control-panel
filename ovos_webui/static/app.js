@@ -202,6 +202,8 @@
   var OLD_SIMPLE_KEY = "ovos-simple";
   //: The row that holds every advanced group. No group is called this.
   var ADVANCED = "advanced";
+  //: The page at the foot of the menu.
+  var LAST = "about";
   function openGroups() {
     try {
       var v = window.localStorage.getItem(OPEN_KEY);
@@ -235,10 +237,15 @@
       + (item.key ? ' data-i18n="' + esc(item.key) + '"' : "") + ">"
       + esc(t(item.key, item.label)) + "</a>";
   }
+  // Each foldable row has an icon like the pages, so a row reads as part of
+  // the same menu. The panel's groups have their own; any other gets a folder.
+  var GROUP_ICONS = ["library", "music", "voice", "understanding", "device", "screen",
+    "maintenance", "advanced"];
   function foldRow(id, key, label, inner, cls) {
     var gid = esc(id);
+    var icon = "/static/nav/" + (GROUP_ICONS.indexOf(id) >= 0 ? id : "group") + ".svg";
     return '<div class="nav-group' + (cls ? " " + cls : "") + '" data-group="' + gid + '">'
-      + '<button type="button" class="nav-fold" aria-expanded="false" aria-controls="navl-' + gid + '">'
+      + '<button type="button" class="nav-fold" style="--icon: url(' + icon + ')" aria-expanded="false" aria-controls="navl-' + gid + '">'
       + "<span" + (key ? ' data-i18n="' + esc(key) + '"' : "") + ">" + esc(t(key, label))
       + "</span></button>"
       + '<div class="nav-links" id="navl-' + gid + '">' + inner + "</div></div>";
@@ -252,11 +259,14 @@
     if (!nav || !NAV.length) { return; }
     var html = MENU.groups.filter(function (g) { return g.level === "everyday"; }).map(function (g) {
       if (g.id !== "everyday") { return groupRow(g, "nav-everyday"); }
-      var items = NAV.filter(function (x) { return x.group === g.id; });
+      var items = NAV.filter(function (x) { return x.group === g.id && x.id !== LAST; });
       return '<div class="nav-group nav-everyday">' + items.map(navLink).join("") + "</div>";
     }).join("");
     var advanced = GROUPS.map(function (g) { return groupRow(g, "nav-sub"); }).join("");
     if (advanced) { html += foldRow(ADVANCED, "nav.advanced", "Advanced", advanced, "nav-advanced"); }
+    // About goes last, at the foot of the menu
+    var last = NAV.filter(function (x) { return x.id === LAST && x.group === "everyday"; });
+    if (last.length) { html += '<div class="nav-group nav-end">' + last.map(navLink).join("") + "</div>"; }
     nav.innerHTML = html;
     var here = herePath();
     var current = NAV.filter(function (x) { return x.path === here; })[0];
