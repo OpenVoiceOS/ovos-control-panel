@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a60](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a60) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a59...0.0.1a60)
+
+**Merged pull requests:**
+
+- refactor: move every page into its own folder, routes and strings [\#134](https://github.com/OpenVoiceOS/ovos-control-panel/pull/134) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a59](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a59) (2026-11-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a58...0.0.1a59)
@@ -397,10 +405,6 @@
 ## [0.0.1a15](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a15) (2026-08-12)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a14...0.0.1a15)
-
-**Merged pull requests:**
-
-- docs: Network panel page + wide/mobile screenshots for the new panels [\#16](https://github.com/OpenVoiceOS/ovos-control-panel/pull/16) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a14](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a14) (2026-08-12)
 
