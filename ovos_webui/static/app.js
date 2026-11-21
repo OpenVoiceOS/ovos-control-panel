@@ -18,6 +18,32 @@
   }
   applyTheme(storedTheme());
 
+  // The page is served in English and translated in the browser. To keep a
+  // page from showing English and then switching, the strings of the last
+  // language are kept for the session (per panel version), applied before the
+  // menu is drawn, and the page is held back from painting until they are on.
+  // A first visit, or a language with no strings, waits at most a moment.
+  var LANG_KEY = "ovos-lang", STRINGS_KEY = "ovos-strings.";
+  var ASSET_V = (function () {
+    try { return (document.currentScript.src.split("?v=")[1] || ""); } catch (e) { return ""; }
+  })();
+  var lastLang = null;
+  try { lastLang = window.localStorage.getItem(LANG_KEY); } catch (e) { /* none */ }
+  function releasePaint() { document.documentElement.classList.remove("i18n-wait"); }
+  if (lastLang && lastLang.split("-")[0] !== "en") {
+    document.documentElement.classList.add("i18n-wait");
+    setTimeout(releasePaint, 1500);
+  }
+  function keptStrings(base) {
+    try {
+      var c = JSON.parse(window.sessionStorage.getItem(STRINGS_KEY + base) || "null");
+      return c && c.v === ASSET_V ? c.d : null;
+    } catch (e) { return null; }
+  }
+  function keepStrings(base, dict) {
+    try { window.sessionStorage.setItem(STRINGS_KEY + base, JSON.stringify({v: ASSET_V, d: dict})); } catch (e) { /* full */ }
+  }
+
   // Larger-text mode, applied at head-parse time too so text never jumps size
   // after the page paints. Cycles normal → large → larger.
   var TEXT_KEY = "ovos-text", TEXT_SIZES = ["normal", "large", "xlarge"];
@@ -159,12 +185,16 @@
   // Load the locale file for a language, fall back to English, and apply it.
   function loadLocale(lang) {
     var base = setLangDir(lang);
+    try { window.localStorage.setItem(LANG_KEY, lang || "en"); } catch (e) { /* ignore */ }
     readMenu();
-    if ((MENU.langs || []).indexOf(base) === -1) { return Promise.resolve(); }
+    if ((MENU.langs || []).indexOf(base) === -1) { STRINGS = {}; releasePaint(); return Promise.resolve(); }
+    var kept = keptStrings(base);
+    if (kept) { STRINGS = kept; applyI18n(document); releasePaint(); return Promise.resolve(); }
     return fetch("/static/i18n/" + base + ".json", {credentials: "same-origin"})
       .then(function (r) { return r.ok ? r.json() : {}; })
-      .then(function (dict) { STRINGS = dict || {}; applyI18n(document); })
-      .catch(function () { /* keep the English already on the page */ });
+      .then(function (dict) { STRINGS = dict || {}; keepStrings(base, STRINGS); applyI18n(document); })
+      .catch(function () { /* keep the English already on the page */ })
+      .then(releasePaint);
   }
 
   // The menu comes from the page registry on the server, which puts it in the
@@ -202,6 +232,8 @@
   var OLD_SIMPLE_KEY = "ovos-simple";
   //: The row that holds every advanced group. No group is called this.
   var ADVANCED = "advanced";
+  //: The page at the foot of the menu.
+  var LAST = "about";
   function openGroups() {
     try {
       var v = window.localStorage.getItem(OPEN_KEY);
@@ -235,10 +267,15 @@
       + (item.key ? ' data-i18n="' + esc(item.key) + '"' : "") + ">"
       + esc(t(item.key, item.label)) + "</a>";
   }
+  // Each foldable row has an icon like the pages, so a row reads as part of
+  // the same menu. The panel's groups have their own; any other gets a folder.
+  var GROUP_ICONS = ["library", "music", "voice", "understanding", "device", "screen",
+    "maintenance", "advanced"];
   function foldRow(id, key, label, inner, cls) {
     var gid = esc(id);
+    var icon = "/static/nav/" + (GROUP_ICONS.indexOf(id) >= 0 ? id : "group") + ".svg";
     return '<div class="nav-group' + (cls ? " " + cls : "") + '" data-group="' + gid + '">'
-      + '<button type="button" class="nav-fold" aria-expanded="false" aria-controls="navl-' + gid + '">'
+      + '<button type="button" class="nav-fold" style="--icon: url(' + icon + ')" aria-expanded="false" aria-controls="navl-' + gid + '">'
       + "<span" + (key ? ' data-i18n="' + esc(key) + '"' : "") + ">" + esc(t(key, label))
       + "</span></button>"
       + '<div class="nav-links" id="navl-' + gid + '">' + inner + "</div></div>";
@@ -252,11 +289,14 @@
     if (!nav || !NAV.length) { return; }
     var html = MENU.groups.filter(function (g) { return g.level === "everyday"; }).map(function (g) {
       if (g.id !== "everyday") { return groupRow(g, "nav-everyday"); }
-      var items = NAV.filter(function (x) { return x.group === g.id; });
+      var items = NAV.filter(function (x) { return x.group === g.id && x.id !== LAST; });
       return '<div class="nav-group nav-everyday">' + items.map(navLink).join("") + "</div>";
     }).join("");
     var advanced = GROUPS.map(function (g) { return groupRow(g, "nav-sub"); }).join("");
     if (advanced) { html += foldRow(ADVANCED, "nav.advanced", "Advanced", advanced, "nav-advanced"); }
+    // About goes last, at the foot of the menu
+    var last = NAV.filter(function (x) { return x.id === LAST && x.group === "everyday"; });
+    if (last.length) { html += '<div class="nav-group nav-end">' + last.map(navLink).join("") + "</div>"; }
     nav.innerHTML = html;
     var here = herePath();
     var current = NAV.filter(function (x) { return x.path === here; })[0];
@@ -275,6 +315,18 @@
         saveOpen(list);
       });
     });
+  }
+  // The rail sits under the header and fills the rest of the window (app.css,
+  // --head-h); the header can wrap to two lines, so its height is measured.
+  function keepHeaderHeight() {
+    var head = document.querySelector("header");
+    if (!head) { return; }
+    var set = function () {
+      document.documentElement.style.setProperty("--head-h", head.offsetHeight + "px");
+    };
+    set();
+    if (typeof ResizeObserver === "function") { new ResizeObserver(set).observe(head); }
+    else { window.addEventListener("resize", set); }
   }
   function foldGroup(g, open) {
     g.querySelector(":scope > .nav-fold").setAttribute("aria-expanded", open ? "true" : "false");
@@ -557,7 +609,13 @@
     ready: function (fn) {
       document.addEventListener("DOMContentLoaded", function () {
         readMenu();
+        // the last language's strings, if this session has them, before the
+        // menu is drawn; the status call below confirms the language
+        var early = lastLang && keptStrings(lastLang.split("-")[0]);
+        if (early) { setLangDir(lastLang); STRINGS = early; }
         renderNav();
+        if (early) { applyI18n(document); releasePaint(); }
+        keepHeaderHeight();
         markNav();
         mountMenuToggle();
         mountThemeToggle();
@@ -567,7 +625,7 @@
         api("/api/status").then(function (s) {
           showBanner(s);
           return loadLocale(s && s.lang);
-        }).catch(function () { /* offline or not signed in: stay in English */ })
+        }).catch(function () { /* offline or not signed in: stay in English */ releasePaint(); })
           .then(function () { renameMenu(); loadNeeds(); })
           .then(function () {
             try { fn(); } catch (e) { console.error(e); }

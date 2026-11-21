@@ -1,0 +1,172 @@
+  <p class="hint" data-i18n="panel.intro">How the control panel itself looks and behaves: its name and colour, which added pages it shows, and the token that guards it.</p>
+
+  <h2 data-i18n="panel.look.title">Name and colour</h2>
+  <div class="card">
+    <label><span data-i18n="panel.look.name">Name</span>
+      <input type="text" id="look-name" maxlength="40" autocomplete="off"></label>
+    <label class="color-pick"><span data-i18n="panel.look.accent">Colour</span>
+      <input type="color" id="look-accent"></label>
+    <p class="hint" data-i18n="panel.look.hint">The name is shown in the header, the window title and on the sign in page. The colour is used for buttons, links and the chosen page in the menu.</p>
+    <ul class="plain msg err" id="look-warnings" hidden></ul>
+    <div class="row">
+      <button id="look-save" data-i18n="panel.look.save">Save</button>
+      <button class="secondary" id="look-reset" data-i18n="panel.look.reset">Back to the default</button>
+    </div>
+    <div class="msg" id="msg-look" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="panel.pages.title">Added pages</h2>
+  <div class="card" id="pages-card">
+    <p class="hint" data-i18n="panel.pages.hint">Pages that skills and plugins add to the panel. Untick one to take it out of the menu on this device.</p>
+    <ul class="plain" id="pages-added" hidden></ul>
+    <p class="hint" id="pages-none" data-i18n="panel.pages.none">No other package has added a page.</p>
+    <div id="pages-off" hidden>
+      <p data-i18n="panel.pages.off">The panel's own pages that are turned off:</p>
+      <ul class="plain" id="pages-off-list"></ul>
+    </div>
+    <div class="msg" id="msg-pages" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="token.title">Access token</h2>
+  <div class="card">
+    <p class="hint" id="token-state" data-i18n="token.checking">Checking…</p>
+    <label id="token-current-wrap" hidden>
+      <span data-i18n="token.current">Current token</span>
+      <input type="password" id="token-current" autocomplete="current-password"></label>
+    <label>
+      <span data-i18n="token.new">New token</span>
+      <input type="password" id="token-new" autocomplete="new-password"></label>
+    <div class="row">
+      <button class="secondary" id="token-generate" data-i18n="token.generate">Generate one for me</button>
+    </div>
+    <p class="hint" data-i18n="token.hint">A good token is long and random. Press the button to have a strong
+      one made for you, write it down, then save. It is stored in your configuration and needed to sign in.
+      This session stays signed in after you change it.</p>
+    <details class="tech">
+      <summary data-i18n="token.how">Make one yourself instead</summary>
+      <p class="hint">For example, the output of
+        <code>python3 -c "import secrets; print(secrets.token_urlsafe(32))"</code>.</p>
+    </details>
+    <div class="row"><button id="token-save" data-i18n="token.save">Save token</button></div>
+    <div class="msg" id="msg-token" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <p class="hint foot"><a data-i18n="foot.manual"
+    href="https://github.com/OpenVoiceOS/ovos-control-panel/blob/dev/docs/pages.md">Learn more in the technical manual</a></p>
+<script>
+OvosWebUI.ready(function () {
+  var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
+  var json = {"Content-Type": "application/json"};
+  var DEFAULT_ACCENT = "#c81f26";
+
+  // ── name and colour ──────────────────────────────────────────────────────
+  function showLook(r) {
+    el("look-name").value = r.name || "";
+    el("look-name").placeholder = r.default_name || "";
+    el("look-accent").value = r.accent && /^#[0-9a-f]{6}$/i.test(r.accent) ? r.accent : DEFAULT_ACCENT;
+    showWarnings(r.warnings || []);
+  }
+  function showWarnings(list) {
+    el("look-warnings").hidden = !list.length;
+    el("look-warnings").innerHTML = list.map(function (w) { return "<li>" + esc(w) + "</li>"; }).join("");
+  }
+  function loadLook() { return api("/api/panel/look").then(showLook).catch(function (e) { OvosWebUI.say("msg-look", e.message, true); }); }
+  function saveLook(body, said) {
+    return api("/api/panel/look", {method: "POST", headers: json, body: JSON.stringify(body)}).then(function (r) {
+      showWarnings(r.warnings || []);
+      OvosWebUI.say("msg-look", said);
+      return loadLook();
+    }).catch(function (e) { OvosWebUI.say("msg-look", e.message, true); });
+  }
+  el("look-save").addEventListener("click", function () {
+    var accent = el("look-accent").value.toLowerCase();
+    saveLook({name: el("look-name").value.trim(), accent: accent === DEFAULT_ACCENT ? "" : accent},
+      t("panel.look.saved", "Saved. It shows on the next page you open."));
+  });
+  el("look-reset").addEventListener("click", function () {
+    saveLook({name: "", accent: ""}, t("panel.look.wasReset", "Back to the default. It shows on the next page you open."));
+  });
+  loadLook();
+
+  // ── added pages: a switch each ───────────────────────────────────────────
+  // the menu already has each page's title in the device's language
+  function titleOf(p) {
+    var a = document.querySelector('nav a[data-page="' + p.id + '"]');
+    var text = a ? ((a.querySelector("span") || a).textContent || "").trim() : "";
+    return text || p.title;
+  }
+  api("/api/pages").then(function (r) {
+    var added = r.pages.filter(function (p) { return !p.builtin; });
+    var off = r.pages.filter(function (p) { return p.builtin && p.disabled; });
+    el("pages-added").hidden = !added.length;
+    el("pages-none").hidden = !!added.length;
+    el("pages-added").innerHTML = added.map(function (p) {
+      var o = p.origin || {}, title = titleOf(p);
+      var icon = o.icon ? '<img class="page-origin-icon" src="' + esc(o.icon) + '" alt="">' : "";
+      return '<li class="page-switch"><label class="check"><input type="checkbox" data-page="' + esc(p.id) + '"'
+        + (p.disabled ? "" : " checked") + ' aria-label="' + esc(t("panel.pages.show", "Shown") + ": " + title) + '">'
+        + icon + esc(title) + "</label> "
+        + '<small class="hint">' + (o.name ? esc(o.name) + " · " : "") + esc(p.package)
+        + " <code>" + esc(p.version) + "</code></small></li>";
+    }).join("");
+    el("pages-off").hidden = !off.length;
+    el("pages-off-list").innerHTML = off.map(function (p) {
+      return "<li>" + esc(p.title) + ' <button class="secondary" data-on="' + esc(p.id) + '">'
+        + esc(t("panel.pages.turnOn", "Turn on")) + "</button></li>";
+    }).join("");
+  }).catch(function () { el("pages-card").hidden = true; });
+
+  function switchPage(id, enabled) {
+    return api("/api/pages/" + encodeURIComponent(id) + "/enabled", {
+      method: "POST", headers: json, body: JSON.stringify({enabled: enabled})
+    }).then(function () {
+      OvosWebUI.say("msg-pages", t("panel.pages.saved", "Saved. The menu changes on the next page you open."));
+    }).catch(function (e) { OvosWebUI.say("msg-pages", e.message, true); });
+  }
+  el("pages-added").addEventListener("change", function (ev) {
+    var box = ev.target.closest("input[data-page]");
+    if (box) { switchPage(box.getAttribute("data-page"), box.checked); }
+  });
+  el("pages-off-list").addEventListener("click", function (ev) {
+    var btn = ev.target.closest("button[data-on]");
+    if (btn) { switchPage(btn.getAttribute("data-on"), true).then(function () { btn.closest("li").remove(); }); }
+  });
+
+  // ── access token: set the first one, or change it ─────────────────────────
+  var hasToken = false;
+  api("/api/status").then(function (s) {
+    hasToken = !!(s && s.auth);
+    el("token-current-wrap").hidden = !hasToken;
+    el("token-state").textContent = hasToken
+      ? t("token.set", "This device has a token. Enter the current one to change it.")
+      : t("token.none", "This device has no token yet. Setting one locks it down.");
+  }).catch(function () {});
+
+  // Make a strong token in the browser, so nobody has to open a terminal. Uses
+  // the browser's cryptographic random source, encoded url-safe like the Python
+  // example. It is shown, not hidden, so you can write it down before saving.
+  el("token-generate").addEventListener("click", function () {
+    var bytes = new Uint8Array(24);
+    (window.crypto || window.msCrypto).getRandomValues(bytes);
+    var token = btoa(String.fromCharCode.apply(null, bytes))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    var input = el("token-new");
+    input.type = "text";
+    input.value = token;
+    OvosWebUI.say("msg-token", t("token.generated",
+      "A strong token is filled in below. Write it down, then press Save token."));
+  });
+
+  el("token-save").addEventListener("click", function () {
+    var body = {new: el("token-new").value};
+    if (hasToken) { body.current = el("token-current").value; }
+    api("/api/auth/token", {method: "POST", headers: json, body: JSON.stringify(body)}).then(function () {
+      OvosWebUI.say("msg-token", t("token.saved", "Token saved. You are still signed in."));
+      el("token-current").value = ""; el("token-new").value = "";
+      hasToken = true;
+      el("token-current-wrap").hidden = false;
+      el("token-state").textContent = t("token.set", "This device has a token. Enter the current one to change it.");
+    }).catch(function (e) { OvosWebUI.say("msg-token", e.message, true); });
+  });
+});
+</script>

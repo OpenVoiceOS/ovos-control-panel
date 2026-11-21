@@ -152,8 +152,10 @@ comes from under its name in the menu.
 
 Where the panel shows an icon for a skill or plugin (the Skills page, the
 search results, the About page's list of pages) and the package brings none,
-it shows its own: one for a skill, one for a PHAL plugin and one for any other
-plugin, in `static/icons/`.
+it shows its own, in grey because they are stand-ins: a speech bubble for a
+skill, a plug for a PHAL plugin, a speaker for TTS, a microphone for STT, and
+so on by kind (`KIND_ICONS`), and a puzzle piece for any other plugin. They are
+in `static/icons/`.
 
 How the menu behaves does not change: groups fold, the open ones are remembered,
 the group of the page you are on opens, and pages the device cannot use leave
@@ -397,6 +399,7 @@ you cannot get the panel back into shape:
 - Skills
 - Backup
 - About
+- Control panel (the panel's own settings: its name and colour, the added pages, the token)
 
 Everything else, the panel's own pages included, can be disabled.
 

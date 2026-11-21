@@ -19,7 +19,6 @@
  "config.simple.reassure": "Normalmente não precisa de alterar nada aqui.",
  "config.simple.where": "Onde estas definições ficam guardadas",
  "config.simple.applies": "O dispositivo aplica a maioria destas assim que guarda. Se algo não mudar, reinicie os serviços do OVOS.",
- "token.title": "Token de acesso",
  "config.where.title": "De onde vem uma definição",
  "config.where.hint": "O OVOS lê a sua configuração de vários ficheiros, um após o outro, e um ficheiro posterior prevalece. Se mudou alguma coisa e nada aconteceu, provavelmente um ficheiro posterior também a define. Escreva uma definição para ver de que ficheiro vem o seu valor.",
  "config.where.aria": "Definição a consultar",
@@ -38,18 +37,9 @@
  "config.layer.xdg": "um ficheiro do utilizador",
  "config.layer.patch": "uma alteração em execução de uma skill ou do bus",
  "config.layer.missing": "(não está neste dispositivo)",
- "token.current": "Token atual",
- "token.new": "Novo token",
- "token.hint": "Um bom token é longo e aleatório. Prima o botão para gerar um forte, escreva-o num sítio seguro e depois guarde. É guardado na sua configuração e é necessário para iniciar sessão. Esta sessão mantém-se iniciada depois de o alterar.",
- "token.how": "Criar um eu próprio",
- "token.save": "Guardar token",
- "token.set": "Este dispositivo tem um token. Introduza o atual para o alterar.",
- "token.none": "Este dispositivo ainda não tem token. Definir um protege-o.",
- "token.saved": "Token guardado. A sua sessão continua iniciada.",
- "token.generate": "Gerar um para mim",
- "token.generated": "Um token forte está preenchido abaixo. Escreva-o num sítio seguro e depois prima Guardar token.",
  "config.undo.confirm": "Anular a sua última alteração e voltar às definições anteriores?",
  "config.undo.doing": "A repor…",
  "config.undo.done": "As definições anteriores foram repostas.",
- "config.undo.none": "Ainda não há nenhuma versão anterior para recuar."
+ "config.undo.none": "Ainda não há nenhuma versão anterior para recuar.",
+ "config.token.moved": "O token de acesso define-se na página Painel de controlo"
 }

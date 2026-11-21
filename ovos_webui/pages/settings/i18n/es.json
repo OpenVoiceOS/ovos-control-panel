@@ -19,7 +19,6 @@
  "config.simple.reassure": "Normalmente no hace falta cambiar nada aquí.",
  "config.simple.where": "Dónde viven estos ajustes",
  "config.simple.applies": "El dispositivo aplica la mayoría en cuanto guarda. Si algo no cambia, reinicie los servicios de OVOS.",
- "token.title": "Token de acceso",
  "config.where.title": "De dónde viene un ajuste",
  "config.where.hint": "OVOS lee su configuración de varios archivos, uno tras otro, y un archivo posterior prevalece. Si cambió algo y no pasó nada, probablemente un archivo posterior también lo define. Escriba un ajuste para ver de qué archivo viene su valor.",
  "config.where.aria": "Ajuste a consultar",
@@ -38,18 +37,9 @@
  "config.layer.xdg": "un archivo de usuario",
  "config.layer.patch": "un cambio en marcha de una habilidad o del bus",
  "config.layer.missing": "(no está en este dispositivo)",
- "token.current": "Token actual",
- "token.new": "Token nuevo",
- "token.hint": "Un buen token es largo y aleatorio. Pulse el botón para que se genere uno seguro, anótelo y luego guarde. Se guarda en su configuración y se necesita para iniciar sesión. Esta sesión sigue conectada después de cambiarlo.",
- "token.how": "Crear uno yo mismo",
- "token.save": "Guardar token",
- "token.set": "Este dispositivo tiene un token. Introduzca el actual para cambiarlo.",
- "token.none": "Este dispositivo todavía no tiene token. Establecer uno lo protege.",
- "token.saved": "Token guardado. Sigue con la sesión iniciada.",
- "token.generate": "Generar uno para mí",
- "token.generated": "Se ha rellenado abajo un token seguro. Anótelo y luego pulse Guardar token.",
  "config.undo.confirm": "¿Deshacer su último cambio y volver a los ajustes anteriores?",
  "config.undo.doing": "Restaurando…",
  "config.undo.done": "Se han restaurado los ajustes anteriores.",
- "config.undo.none": "Todavía no hay ninguna versión anterior a la que volver."
+ "config.undo.none": "Todavía no hay ninguna versión anterior a la que volver.",
+ "config.token.moved": "El token de acceso se configura en la página Panel de control"
 }

@@ -166,3 +166,26 @@ def test_a_page_is_turned_off_and_on_from_the_panel(token_client):
     assert "disabled" not in _json.loads(conf.read_text())["webui"]["pages"]
     assert c.post("/api/pages/about/enabled", json={"enabled": False}).status_code == 400
     assert c.post("/api/pages/nope/enabled", json={"enabled": False}).status_code == 404
+
+
+# ── the control panel's own name and colour ──────────────────────────────────
+def test_the_panel_name_and_colour_are_set_and_reset(token_client):
+    import json as _json
+
+    from ovos_webui import configio
+    c = token_client
+    c.headers["Authorization"] = "Bearer s3cret-token"
+    conf = configio.user_config_path()
+    r = c.post("/api/panel/look", json={"name": "Emkay", "accent": "#1F6FEB"})
+    assert r.status_code == 200
+    look = _json.loads(conf.read_text())["webui"]["branding"]
+    assert look["name"] == "Emkay"
+    assert look["colors"] == {"accent": "#1f6feb", "accent-strong": "#195bc1"}
+    now = c.get("/api/panel/look").json()
+    assert now["name"] == "Emkay" and now["accent"] == "#1f6feb" and now["yours"]
+    c.post("/api/panel/look", json={"name": "", "accent": ""})
+    assert "branding" not in _json.loads(conf.read_text()).get("webui", {})
+    assert c.post("/api/panel/look", json={"name": "<b>x</b>"}).status_code == 400
+    assert c.post("/api/panel/look", json={"accent": "red"}).status_code == 400
+    assert c.post("/api/pages/panel/enabled", json={"enabled": False}).status_code == 400, \
+        "the page that turns pages back on stays on"

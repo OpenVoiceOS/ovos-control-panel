@@ -22,7 +22,8 @@
  "about.ai_assisted": "Hecho con ayuda de IA.",
  "about.pages_off": "Desactivadas en este dispositivo:",
  "about.pages_settings": "Estos ajustes no se pudieron usar:",
- "about.pages_show": "Visible",
- "about.pages_turn_on": "Activar",
- "about.pages_saved": "Guardado. El menú cambia en la próxima página que abras."
+ "about.pages_switch": "Activa y desactiva páginas en la página Panel de control",
+ "about.developed_further": "Desarrollado además por ",
+ "about.and": " y ",
+ "about.developed_further_what": ": el registro de páginas, las páginas que traen skills y plugins, el menú agrupado y la marca."
 }

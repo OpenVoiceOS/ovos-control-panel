@@ -424,7 +424,11 @@ def test_a_skill_page_is_named_from_its_skill_json(guardian_pkg, tmp_path):
 def test_the_generic_icon_follows_the_kind_of_package():
     assert pages.generic_icon("ovos-skill-jamband") == "/static/icons/skill.svg"
     assert pages.generic_icon("ovos-phal-plugin-midi") == "/static/icons/phal.svg"
-    assert pages.generic_icon("ovos-tts-plugin-piper") == "/static/icons/plugin.svg"
+    assert pages.generic_icon("ovos-tts-plugin-piper") == "/static/icons/tts.svg"
+    assert pages.generic_icon("ovos-solver-plugin-wolfram-alpha") == "/static/icons/plugin.svg"
+    from ovos_webui.service import STATIC_DIR
+    for name in set(pages.KIND_ICONS.values()) | {"plugin"}:
+        assert (STATIC_DIR / "icons" / f"{name}.svg").is_file()
 
 
 def test_two_pages_with_the_same_title_say_where_they_come_from(guardian_pkg):
@@ -434,3 +438,11 @@ def test_two_pages_with_the_same_title_say_where_they_come_from(guardian_pkg):
     items = {p["id"]: p for p in reg.nav()["pages"]}
     assert items["guardian"].get("from") and items["guardian2"].get("from")
     assert "from" not in items["about"], "only titles that clash"
+
+
+def test_the_shell_links_its_assets_by_version():
+    """A browser fetches the new script after an update, not an old one."""
+    from ovos_webui.version import __version__
+    reg = pages.load(_own())
+    html = pages.render(reg.by_id()["about"], reg.nav_json())
+    assert f'/static/app.js?v={__version__}' in html and f'/static/app.css?v={__version__}' in html

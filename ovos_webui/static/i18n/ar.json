@@ -157,5 +157,7 @@
  "install.wouldFail": "لم يتمكن pip من حل هذا التثبيت، لذا فمن المرجح أن يفشل. هل تريد المحاولة رغم ذلك؟",
  "nav.group.library": "المكتبة",
  "nav.group.music": "الموسيقى",
- "page.from": "من"
+ "page.from": "من",
+ "nav.panel": "لوحة التحكم",
+ "hdr.panel": "إعدادات لوحة التحكم نفسها"
 }

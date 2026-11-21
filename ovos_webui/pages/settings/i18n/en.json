@@ -19,7 +19,6 @@
  "config.simple.reassure": "You usually don't need to change anything here.",
  "config.simple.where": "Where these settings live",
  "config.simple.applies": "The device picks most of these up as soon as you save. If something does not change, restart the OVOS services.",
- "token.title": "Access token",
  "config.where.title": "Where a setting comes from",
  "config.where.hint": "OVOS reads its configuration from several files, one after another, and a later file wins. If you changed something and nothing happened, a later file probably sets it too. Type a setting to see which file its value comes from.",
  "config.where.aria": "Setting to look up",
@@ -38,18 +37,9 @@
  "config.layer.xdg": "a user file",
  "config.layer.patch": "a runtime change from a skill or the bus",
  "config.layer.missing": "(not on this device)",
- "token.current": "Current token",
- "token.new": "New token",
- "token.hint": "A good token is long and random. Press the button to have a strong one made for you, write it down, then save. It is stored in your configuration and needed to sign in. This session stays signed in after you change it.",
- "token.how": "Make one yourself instead",
- "token.save": "Save token",
- "token.set": "This device has a token. Enter the current one to change it.",
- "token.none": "This device has no token yet. Setting one locks it down.",
- "token.saved": "Token saved. You are still signed in.",
- "token.generate": "Generate one for me",
- "token.generated": "A strong token is filled in below. Write it down, then press Save token.",
  "config.undo.confirm": "Undo your last change and go back to the previous settings?",
  "config.undo.doing": "Restoring…",
  "config.undo.done": "Restored the previous settings.",
- "config.undo.none": "There is no earlier version to go back to yet."
+ "config.undo.none": "There is no earlier version to go back to yet.",
+ "config.token.moved": "Set the access token on the Control panel page"
 }

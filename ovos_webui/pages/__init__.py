@@ -44,7 +44,7 @@ GROUPS: tuple[dict[str, Any], ...] = (
 #: Paths a page may not take: the shell's own.
 RESERVED = ("/api", "/static", "/pages", "/login", "/logout", "/healthz")
 #: The pages that always ship with the panel and cannot be turned off.
-CORE = frozenset({"dashboard", "settings", "plugins", "skills", "backup", "about"})
+CORE = frozenset({"dashboard", "settings", "plugins", "skills", "backup", "about", "panel"})
 #: The panel's own distribution, to tell its pages from added ones.
 OWN_DIST = "ovos-control-panel"
 
@@ -64,7 +64,7 @@ MAX_STRINGS = 256 * 1024
 BUILTIN = (
     "dashboard", "setup", "tryit", "controls", "network", "voice", "skills", "backup",
     "about", "voice_all", "servers", "translate", "intents", "transformers", "personas",
-    "system", "sensors", "media", "apps", "wallpaper", "mark1", "plugins", "settings",
+    "system", "sensors", "media", "apps", "wallpaper", "mark1", "plugins", "settings", "panel",
     "sound",
 )
 
@@ -594,12 +594,18 @@ def origin(page: Page, lang: str | None = None) -> dict[str, Any] | None:
     return _ORIGINS[key]
 
 
+#: The panel's own icon for each kind of package; any other kind of plugin
+#: gets the puzzle piece.
+KIND_ICONS = {"skill": "skill", "phal": "phal", "tts": "tts", "stt": "stt",
+              "wake_word": "wake_word", "vad": "wake_word", "gui": "gui",
+              "media": "media", "media_provider": "media", "translate": "language",
+              "lang_detect": "language", "persona": "persona"}
+
+
 def generic_icon(package: str) -> str:
-    """The panel's own icon for a package that brings none: a skill, a PHAL
-    plugin, or any other plugin."""
+    """The panel's own icon for a package that brings none, by its kind."""
     from ovos_webui.pypi import classify
-    kind = classify(package)
-    return "/static/icons/" + ("skill" if kind == "skill" else "phal" if kind == "phal" else "plugin") + ".svg"
+    return "/static/icons/" + KIND_ICONS.get(classify(package) or "", "plugin") + ".svg"
 
 
 def _skill_json_name(page: Page, lang: str) -> str | None:
@@ -653,7 +659,11 @@ def render(page: Page, nav_json: str, brand: dict[str, Any] | None = None) -> st
         parts = {"title": _esc(page.label), "heading": _esc(heading),
                  "heading_key": f' data-i18n="{_esc(page.heading_key)}"' if page.heading_key else "",
                  "id": _esc(page.id), "nav": tag, "brand": _esc(brand["name"]), "mark": mark,
-                 "origin": _origin_html(page)}
+                 "origin": _origin_html(page),
+                 # the version in the asset links, so a browser fetches the
+                 # new stylesheet and script after an update instead of
+                 # running an old script against new pages
+                 "v": _esc(_own_version())}
         out = _shell()
         for name, value in parts.items():
             out = out.replace("{{" + name + "}}", value)
