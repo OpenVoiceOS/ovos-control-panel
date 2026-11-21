@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.1a68](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a68) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a67...0.0.1a68)
+
+**Merged pull requests:**
+
+- feat: a plugin can take over one of the panel's own pages [\#143](https://github.com/OpenVoiceOS/ovos-control-panel/pull/143) ([andlo](https://github.com/andlo))
+- feat: richer search results, and whether a recommended plugin is in use [\#142](https://github.com/OpenVoiceOS/ovos-control-panel/pull/142) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a67](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a67) (2026-11-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a66...0.0.1a67)
@@ -390,17 +399,9 @@
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a23...0.0.1a24)
 
-**Merged pull requests:**
-
-- fix: audit wave-5 \(global decaying login throttle; regression from wave-3\) [\#25](https://github.com/OpenVoiceOS/ovos-control-panel/pull/25) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [0.0.1a23](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a23) (2026-08-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a22...0.0.1a23)
-
-**Merged pull requests:**
-
-- fix: audit wave-4 frontend \(login i18n, personas escaping, translate/try-it races\) [\#24](https://github.com/OpenVoiceOS/ovos-control-panel/pull/24) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a22](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a22) (2026-08-13)
 
