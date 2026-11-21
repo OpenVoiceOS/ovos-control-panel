@@ -370,7 +370,10 @@ main { padding: 1.1rem; max-width: 62rem; margin: 0 auto; }
     padding-bottom: 0;
   }
   .skip, .banner { grid-column: 1 / -1; }
-  header { grid-area: head; }
+  /* The header stays at the top and the rail fills the rest of the window,
+   * so the foot of the rail (About) is always in view. --head-h is the
+   * header's height, kept by app.js. */
+  header { grid-area: head; position: sticky; top: 0; z-index: 11; }
   nav {
     grid-area: nav;
     flex-direction: column;
@@ -378,9 +381,9 @@ main { padding: 1.1rem; max-width: 62rem; margin: 0 auto; }
     flex-wrap: nowrap;
     gap: 0.15rem;
     position: sticky;
-    top: 0;
+    top: var(--head-h, 0px);
     align-self: start;
-    height: 100vh;
+    height: calc(100vh - var(--head-h, 0px));
     overflow-y: auto;
     border-inline-end: 1px solid var(--line);
     border-bottom: none;

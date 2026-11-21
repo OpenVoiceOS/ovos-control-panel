@@ -316,6 +316,18 @@
       });
     });
   }
+  // The rail sits under the header and fills the rest of the window (app.css,
+  // --head-h); the header can wrap to two lines, so its height is measured.
+  function keepHeaderHeight() {
+    var head = document.querySelector("header");
+    if (!head) { return; }
+    var set = function () {
+      document.documentElement.style.setProperty("--head-h", head.offsetHeight + "px");
+    };
+    set();
+    if (typeof ResizeObserver === "function") { new ResizeObserver(set).observe(head); }
+    else { window.addEventListener("resize", set); }
+  }
   function foldGroup(g, open) {
     g.querySelector(":scope > .nav-fold").setAttribute("aria-expanded", open ? "true" : "false");
     g.querySelector(":scope > .nav-links").hidden = !open;
@@ -603,6 +615,7 @@
         if (early) { setLangDir(lastLang); STRINGS = early; }
         renderNav();
         if (early) { applyI18n(document); releasePaint(); }
+        keepHeaderHeight();
         markNav();
         mountMenuToggle();
         mountThemeToggle();
