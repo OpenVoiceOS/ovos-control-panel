@@ -21,5 +21,8 @@
  "about.intro": "Esta página muestra lo que hay instalado, para ayudar cuando informe de un problema.",
  "about.ai_assisted": "Hecho con ayuda de IA.",
  "about.pages_off": "Desactivadas en este dispositivo:",
- "about.pages_settings": "Estos ajustes no se pudieron usar:"
+ "about.pages_settings": "Estos ajustes no se pudieron usar:",
+ "about.pages_show": "Visible",
+ "about.pages_turn_on": "Activar",
+ "about.pages_saved": "Guardado. El menú cambia en la próxima página que abras."
 }

@@ -21,5 +21,8 @@
  "about.intro": "This page lists what is installed, to help when you report a problem.",
  "about.ai_assisted": "Made with the help of AI.",
  "about.pages_off": "Turned off on this device:",
- "about.pages_settings": "These settings could not be used:"
+ "about.pages_settings": "These settings could not be used:",
+ "about.pages_show": "Shown",
+ "about.pages_turn_on": "Turn on",
+ "about.pages_saved": "Saved. The menu changes on the next page you open."
 }

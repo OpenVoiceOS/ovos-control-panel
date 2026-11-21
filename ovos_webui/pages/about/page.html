@@ -64,7 +64,8 @@ OvosWebUI.ready(function () {
     var off = r.pages.filter(function (p) { return p.disabled; });
     el("pages-off").hidden = !off.length;
     el("pages-off-list").innerHTML = off.map(function (p) {
-      return "<li>" + esc(p.title) + " <code>" + esc(p.id) + "</code></li>";
+      return "<li>" + esc(p.title) + " <code>" + esc(p.id) + '</code> <button class="secondary" data-on="'
+        + esc(p.id) + '">' + esc(OvosWebUI.t("about.pages_turn_on", "Turn on")) + "</button></li>";
     }).join("");
     var notes = (r.settings || []).concat((r.branding && r.branding.warnings) || []);
     el("pages-settings").hidden = !notes.length;
@@ -73,14 +74,36 @@ OvosWebUI.ready(function () {
       .replace("{own}", own.length).replace("{added}", added.length);
     el("pages-added").hidden = !added.length;
     el("pages-none").hidden = !!added.length;
+    // each added page: where it comes from, and a switch to show it or not
     el("pages-added").innerHTML = added.map(function (p) {
-      return '<li><a href="' + esc(p.path) + '">' + esc(p.title) + "</a> \u2014 "
-        + esc(p.package) + " <code>" + esc(p.version) + "</code></li>";
+      var o = p.origin || {};
+      var icon = o.icon ? '<img class="page-origin-icon" src="' + esc(o.icon) + '" alt="">' : "";
+      return '<li class="page-switch"><label class="check"><input type="checkbox" data-page="' + esc(p.id) + '"'
+        + (p.disabled ? "" : " checked") + ' aria-label="' + esc(OvosWebUI.t("about.pages_show", "Shown") + ": " + p.title) + '">'
+        + icon + (p.disabled ? esc(p.title) : '<a href="' + esc(p.path) + '">' + esc(p.title) + "</a>") + "</label> "
+        + '<small class="hint">' + (o.name ? esc(o.name) + " \u00b7 " : "") + esc(p.package)
+        + " <code>" + esc(p.version) + "</code></small></li>";
     }).join("");
     el("pages-problems").hidden = !r.problems.length;
     el("pages-problem-list").innerHTML = r.problems.map(function (p) {
       return "<li><strong>" + esc(p.page) + "</strong> (" + esc(p.package) + "): " + esc(p.error) + "</li>";
     }).join("");
   }).catch(function () { el("pages-card").hidden = true; });
+
+  function switchPage(id, enabled) {
+    return OvosWebUI.api("/api/pages/" + encodeURIComponent(id) + "/enabled", {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({enabled: enabled})
+    }).then(function () {
+      OvosWebUI.say("msg", OvosWebUI.t("about.pages_saved", "Saved. The menu changes on the next page you open."));
+    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+  }
+  el("pages-added").addEventListener("change", function (ev) {
+    var box = ev.target.closest("input[data-page]");
+    if (box) { switchPage(box.getAttribute("data-page"), box.checked); }
+  });
+  el("pages-off-list").addEventListener("click", function (ev) {
+    var btn = ev.target.closest("button[data-on]");
+    if (btn) { switchPage(btn.getAttribute("data-on"), true).then(function () { btn.closest("li").remove(); }); }
+  });
 });
 </script>

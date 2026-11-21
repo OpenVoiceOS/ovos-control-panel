@@ -88,6 +88,10 @@ class PackageBody(BaseModel):
     package: str = Field(..., max_length=100)
 
 
+class PageSwitch(BaseModel):
+    enabled: bool
+
+
 class UtteranceBody(BaseModel):
     text: str = Field(max_length=500)
 
@@ -691,11 +695,34 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         """Every page in the menu, where it comes from, and the ones left out."""
         prefs = _prefs()
         brand = branding.read()
-        return {"pages": [dict(p.about(), disabled=p.id in prefs.disabled)
+        return {"pages": [dict(p.about(), disabled=p.id in prefs.disabled,
+                               core=p.id in page_registry.CORE, origin=page_registry.origin(p))
                           for p in registry.pages],
                 "problems": list(registry.problems),
                 "settings": prefs.problems,
                 "branding": {"name": brand["name"], "warnings": branding.warnings(brand)}}
+
+    @privileged.post("/pages/{page_id}/enabled")
+    def api_page_enabled(page_id: str, body: PageSwitch) -> dict[str, Any]:
+        """Turn a page on or off on this device (webui.pages.disabled). The
+        core pages stay on."""
+        if page_id not in registry.by_id():
+            raise HTTPException(404, "there is no such page")
+        if page_id in page_registry.CORE:
+            raise HTTPException(400, "the core pages stay on")
+
+        def change(user: dict) -> None:
+            pages_cfg = user.setdefault("webui", {}).setdefault("pages", {})
+            off = [p for p in pages_cfg.get("disabled") or [] if p != page_id]
+            if not body.enabled:
+                off.append(page_id)
+            if off:
+                pages_cfg["disabled"] = sorted(set(off))
+            else:
+                pages_cfg.pop("disabled", None)
+
+        configio.mutate(change, bus=state["bus"])
+        return {"id": page_id, "enabled": body.enabled}
 
 
     @api.get("/capabilities")
