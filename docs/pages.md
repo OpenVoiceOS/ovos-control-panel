@@ -117,7 +117,7 @@ or a download, `{"label", "download", "file":
 with `when` (`"field"` or `"!field"` on the row) and `confirm` (a label).
 A field is `{"name", "label", "type"}`, the type one of `text`, `password`,
 `url` (http:// or https://), `number`, `slider`, `checkbox`, `select`
-(`options`, or `options_from` a query) and `lines`, with `required`, with `hint`, `min`, `max`, `step` and `max_length`.
+(`options`, or `options_from` a query) and `lines`, with `required`, `hint`, `min`, `max`, `step` and `max_length`.
 A field can have a `default` (a value equal to it is left out of
 `mycroft.conf`, so the file says only what was changed), `show_when`
 (`{"synth": "port"}`: shown only for that value of another field), and a
