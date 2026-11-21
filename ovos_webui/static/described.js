@@ -64,7 +64,7 @@ OvosWebUI.ready(function () {
     var b = document.createElement("button");
     b.textContent = t(action.label);
     var danger = action.send && /delete|remove|forget|reset|wipe|erase/i.test(action.send);
-    b.className = danger ? "danger" : (action.download ? "secondary" : "");
+    b.className = danger ? "danger" : (action.download || action.secondary ? "secondary" : "");
     b.addEventListener("click", onClick);
     return b;
   }
@@ -174,7 +174,7 @@ OvosWebUI.ready(function () {
           input.type = "text"; input.maxLength = block.rename.max_length; input.value = item[block.rename.field] || title;
           input.setAttribute("aria-label", t("common.name"));
           r.appendChild(input);
-          r.appendChild(button({label: "common.rename"}, function () {
+          r.appendChild(button({label: "common.rename", secondary: true}, function () {
             post(block.rename.privileged ? "/act" : "/act-open",
                  {ref: block.ref + ".rename", key: key, value: input.value.trim(), params: params})
               .then(function () { say(msgId, t("common.saved")); load(); })
