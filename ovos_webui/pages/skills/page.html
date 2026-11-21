@@ -491,6 +491,53 @@ OvosWebUI.ready(function () {
       .replace(/\b\w/g, function (c) { return c.toUpperCase(); }) || name;
   }
 
+  // A search result is only a package name. What the skill calls itself, who
+  // made it, what it does and its icon are looked up as a result scrolls into
+  // view, a few at a time, so a long list does not ask PyPI for everything.
+  var enrichQueue = [], enriching = 0, ENRICH_AT_ONCE = 3;
+  var seen = typeof IntersectionObserver === "function"
+    ? new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { seen.unobserve(e.target); enrichQueue.push(e.target); nextEnrich(); }
+      });
+    }, {rootMargin: "200px"}) : null;
+  function enrichLater(card) {
+    if (seen) { seen.observe(card); } else { enrichQueue.push(card); nextEnrich(); }
+  }
+  function nextEnrich() {
+    while (enriching < ENRICH_AT_ONCE && enrichQueue.length) {
+      var card = enrichQueue.shift();
+      if (!card.isConnected) { continue; }
+      enriching += 1;
+      enrich(card).catch(function () { /* the plain name stays */ }).then(function () {
+        enriching -= 1;
+        nextEnrich();
+      });
+    }
+  }
+  function enrich(card) {
+    var pkg = card.getAttribute("data-pkg");
+    return api("/api/skillinfo/" + encodeURIComponent(pkg)).then(function (i) {
+      if (i.title) { card.querySelector(".result-title").textContent = i.title; }
+      if (i.author) {
+        var by = card.querySelector(".result-by");
+        by.textContent = t("skills.by", "By") + " " + i.author;
+        by.hidden = false;
+      }
+      var what = i.description || i.summary;
+      if (what) {
+        var desc = card.querySelector(".result-desc");
+        desc.textContent = what.length > 200 ? what.slice(0, 197) + "…" : what;
+        desc.hidden = false;
+      }
+      if (i.has_icon) {
+        var img = card.querySelector("img.skill-icon");
+        img.setAttribute("data-icon", pkg);
+        loadIcon(img);
+      }
+    });
+  }
+
   var searching = false;
   function search() {
     var q = el("q").value.trim();
@@ -516,12 +563,17 @@ OvosWebUI.ready(function () {
           ? '<button class="secondary" data-open="' + esc(p.name) + '">' + esc(t("skills.open", "Open")) + "</button>"
           : '<button class="secondary" data-add="' + esc(p.name) + '" aria-label="'
             + esc(t("plugins.button.install", "Install") + " " + p.name) + '">' + esc(t("plugins.button.install", "Install")) + "</button>";
-        var title = p.installed ? esc(prettyPackage(p.name))
-          : '<button class="linklike" data-preview="' + esc(p.name) + '">' + esc(prettyPackage(p.name)) + "</button>";
-        return '<div class="card"><strong>' + title + "</strong> " + state
+        var title = '<span class="result-title">' + esc(prettyPackage(p.name)) + "</span>";
+        if (!p.installed) {
+          title = '<button class="linklike" data-preview="' + esc(p.name) + '">' + title + "</button>";
+        }
+        return '<div class="card result" data-pkg="' + esc(p.name) + '">'
+          + '<div class="result-head"><img class="skill-icon" alt="" hidden><strong>' + title + "</strong> " + state + "</div>"
+          + '<p class="hint result-by" hidden></p><p class="result-desc" hidden></p>'
           + '<code class="slug">' + esc(p.name) + "</code>"
           + '<div class="row">' + action + "</div></div>";
       }).join("") : '<div class="card">' + esc(t("plugins.nothingMatched", "Nothing matched.")) + "</div>";
+      el("results").querySelectorAll(".result[data-pkg]").forEach(enrichLater);
       el("results").querySelectorAll("[data-add]").forEach(function (b) {
         b.addEventListener("click", function () {
           var name = b.getAttribute("data-add");

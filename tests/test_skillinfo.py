@@ -209,3 +209,12 @@ def test_a_skill_json_without_an_author_keeps_the_package_author():
     assert skillinfo._from_skill_json(b'{"name": "Tales"}')["skill_author"] is None
     assert skillinfo._from_skill_json(b'{"author": "  "}')["skill_author"] is None
     assert skillinfo._from_skill_json(b'{"author": "Emkay-Voice"}')["skill_author"] == "Emkay-Voice"
+
+
+def test_a_plugin_is_looked_up_for_the_plugins_page_but_not_as_a_skill(monkeypatch):
+    monkeypatch.setattr(skillinfo, "_gather", lambda package: {"package": package, "author": "Someone"})
+    assert skillinfo.info("ovos-tts-plugin-piper", plugins=True)["author"] == "Someone"
+    with pytest.raises(skillinfo.NotASkill):
+        skillinfo.info("ovos-tts-plugin-piper")
+    with pytest.raises(skillinfo.NotASkill):
+        skillinfo.info("requests", plugins=True)

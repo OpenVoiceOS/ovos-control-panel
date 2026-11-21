@@ -574,14 +574,16 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
 
     @api.get("/plugins/recommended")
     def api_recommended(lang: str = "") -> dict[str, Any]:
+        merged = configio.read_merged_config()
         if not lang:
-            lang = configio.read_merged_config().get("lang") or "en-us"
+            lang = merged.get("lang") or "en-us"
         if len(lang) > 32:
             raise HTTPException(400, "that is not a language code")
         from ovos_webui.pypi import installed_versions
         have = installed_versions()
         data = recommends.for_language(lang)  # computed once, reused below
-        plugins = [dict(p, installed=p["module"].lower() in have)
+        plugins = [dict(p, installed=p["module"].lower() in have,
+                        in_use=recommends.in_use(merged, p["section"], p["module"]))
                    for p in recommends.recommended_plugins(lang, data)]
         return {"lang": lang, "profiles": data, "plugins": plugins}
 

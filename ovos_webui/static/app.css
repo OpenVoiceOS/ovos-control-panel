@@ -746,6 +746,10 @@ img.skill-icon { width: 1.6rem; height: 1.6rem; border-radius: 6px; object-fit: 
 img.skill-icon.large { width: 3.5rem; height: 3.5rem; border-radius: 12px; }
 .skill-head { display: flex; align-items: center; gap: 0.8rem; margin-top: 1.2rem; }
 .skill-head h2 { margin: 0; }
+/* A search result: icon and name on one line, then who made it and what it does. */
+.result-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.card.result .result-by { margin: 0.2rem 0 0; }
+.card.result .result-desc { margin: 0.3rem 0 0.2rem; }
 ul.examples { margin: 0.3rem 0 0.8rem; padding-inline-start: 1.2rem; }
 ul.examples li { margin: 0.2rem 0; }
 #detail-links a { margin-inline-end: 1rem; }

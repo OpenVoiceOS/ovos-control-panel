@@ -152,3 +152,19 @@ def recommended_plugins(lang: str, data: dict | None = None) -> list[dict[str, s
             out.append({"module": entry["module"], "section": entry["section"],
                         "profile": profile})
     return out
+
+
+def in_use(config: dict[str, Any], section: str, module: str) -> bool:
+    """Whether ``config`` uses ``module`` in ``section`` ("stt", "listener.vad").
+
+    Installed is not the same as in use: a device can have a recommended STT
+    plugin installed and still listen with another one.
+    """
+    node: Any = config
+    for key in (section or "").split("."):
+        if not key:
+            continue
+        node = node.get(key) if isinstance(node, dict) else None
+    if not isinstance(node, dict):
+        return False
+    return module in (node.get("module"), node.get("fallback_module"))

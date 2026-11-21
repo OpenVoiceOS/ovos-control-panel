@@ -60,5 +60,8 @@
  "plugins.job.finished.settings.post": " لتفعيلها في قسمها.",
  "plugins.conflicts.envCaveat": "يفحص هذا الحزم المثبتة إلى جانب لوحة التحكم. إذا كانت لوحة التحكم تعمل بمعزل عن المساعد (مثلاً في حاوية خاصة بها)، فقد تختلف حزم الجهاز نفسه.",
  "plugins.skillsMoved": "تبحث عن المهارات؟ إنها في",
- "plugins.skillsMoved.link": "صفحة المهارات"
+ "plugins.skillsMoved.link": "صفحة المهارات",
+ "plugins.by": "من",
+ "plugins.badge.inUse": "قيد الاستخدام",
+ "plugins.badge.installedIdle": "مثبَّت، غير مستخدم"
 }

@@ -60,5 +60,8 @@
  "plugins.job.finished.settings.post": " para a ativar na sua secção.",
  "plugins.conflicts.envCaveat": "Isto verifica os pacotes instalados junto do painel de controlo. Se o painel de controlo correr à parte do assistente (por exemplo, no seu próprio contentor), os pacotes do dispositivo podem ser diferentes.",
  "plugins.skillsMoved": "Procura skills? Estão na",
- "plugins.skillsMoved.link": "página Skills"
+ "plugins.skillsMoved.link": "página Skills",
+ "plugins.by": "De",
+ "plugins.badge.inUse": "em uso",
+ "plugins.badge.installedIdle": "instalado, sem uso"
 }

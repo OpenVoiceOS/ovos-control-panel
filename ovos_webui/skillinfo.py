@@ -277,7 +277,8 @@ _REMOTE: dict[str, tuple[float, dict[str, Any]]] = {}
 REMOTE_TTL = 60 * 60
 
 
-def _checked_name(package: str) -> str:
+def _checked_name(package: str, plugins: bool = False) -> str:
+    """A safe package name from the OVOS families; a skill unless ``plugins``."""
     from ovos_webui.installer import UnsafePackageName, validate_package_name
     from ovos_webui.pypi import classify
 
@@ -285,7 +286,8 @@ def _checked_name(package: str) -> str:
         package = validate_package_name(package)
     except UnsafePackageName as err:
         raise NotASkill(str(err)) from err
-    if classify(package) != "skill":
+    kind = classify(package)
+    if kind is None or (kind != "skill" and not plugins):
         raise NotASkill("that is not a skill package")
     return package
 
@@ -316,9 +318,13 @@ def _gather(package: str) -> dict[str, Any]:
     return out
 
 
-def info(package: str) -> dict[str, Any]:
-    """Return what is known about one skill package, installed or not."""
-    out = _gather(_checked_name(package))
+def info(package: str, plugins: bool = False) -> dict[str, Any]:
+    """Return what is known about one skill package, installed or not.
+
+    With ``plugins`` any package from the OVOS plugin families is looked up the
+    same way; a plugin has no skill.json, so it gets the package metadata.
+    """
+    out = _gather(_checked_name(package, plugins))
     out["has_icon"] = _icon_allowed(out.pop("icon_url", None))
     return out
 

@@ -60,5 +60,8 @@
  "plugins.job.finished.settings.post": " para activarlo en su sección.",
  "plugins.conflicts.envCaveat": "Esto comprueba los paquetes instalados junto al panel de control. Si el panel de control se ejecuta aparte del asistente (por ejemplo, en su propio contenedor), los paquetes del dispositivo pueden ser distintos.",
  "plugins.skillsMoved": "¿Busca habilidades? Están en la",
- "plugins.skillsMoved.link": "página Habilidades"
+ "plugins.skillsMoved.link": "página Habilidades",
+ "plugins.by": "De",
+ "plugins.badge.inUse": "en uso",
+ "plugins.badge.installedIdle": "instalado, sin usar"
 }

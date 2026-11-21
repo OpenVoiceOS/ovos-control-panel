@@ -13,6 +13,17 @@ class ChannelBody(BaseModel):
 
 
 def routes(r) -> None:
+    @r.api.get("/plugins/info/{package}")
+    def api_plugin_info(package: str) -> dict[str, Any]:
+        """Who made a plugin and what it says it does, for the search list."""
+        from ovos_webui import skillinfo
+        try:
+            return skillinfo.info(package, plugins=True)
+        except skillinfo.NotASkill as err:
+            raise HTTPException(400, str(err)) from err
+        except (OSError, ValueError) as err:
+            raise HTTPException(502, f"could not read the details: {err}") from err
+
     @r.privileged.post("/plugins/upgrade")
     def api_upgrade(body: PackageBody) -> dict[str, Any]:
         try:

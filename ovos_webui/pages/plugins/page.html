@@ -82,13 +82,54 @@ OvosWebUI.ready(function () {
     var button = r.installed
       ? '<button class="secondary" data-remove="' + esc(r.name) + '" aria-label="' + esc(OvosWebUI.t("plugins.button.remove", "Remove") + " " + r.name) + '">' + OvosWebUI.t("plugins.button.remove", "Remove") + '</button>'
       : '<button class="secondary" data-add="' + esc(r.name) + '" aria-label="' + esc(OvosWebUI.t("plugins.button.install", "Install") + " " + r.name) + '">' + OvosWebUI.t("plugins.button.install", "Install") + '</button>';
-    return '<div class="card"><strong>' + esc(prettyName(r.name)) + "</strong> " + state
+    return '<div class="card result" data-pkg="' + esc(r.name) + '"><strong>' + esc(prettyName(r.name)) + "</strong> " + state
       + '<p class="hint">' + esc(plainLabel(r.kind, kindLabels))
       + '<code class="slug">' + esc(r.name) + "</code></p>"
+      + '<p class="hint result-by" hidden></p><p class="result-desc" hidden></p>'
       + '<div class="row">' + button + "</div></div>";
   }
 
+  // A result is only a package name. Who made it and what it says it does are
+  // looked up as it scrolls into view, a few at a time.
+  var enrichQueue = [], enriching = 0, ENRICH_AT_ONCE = 3;
+  var seen = typeof IntersectionObserver === "function"
+    ? new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { seen.unobserve(e.target); enrichQueue.push(e.target); nextEnrich(); }
+      });
+    }, {rootMargin: "200px"}) : null;
+  function enrichLater(card) {
+    if (seen) { seen.observe(card); } else { enrichQueue.push(card); nextEnrich(); }
+  }
+  function nextEnrich() {
+    while (enriching < ENRICH_AT_ONCE && enrichQueue.length) {
+      var card = enrichQueue.shift();
+      if (!card.isConnected) { continue; }
+      enriching += 1;
+      enrich(card).catch(function () { /* the plain name stays */ }).then(function () {
+        enriching -= 1;
+        nextEnrich();
+      });
+    }
+  }
+  function enrich(card) {
+    return api("/api/plugins/info/" + encodeURIComponent(card.getAttribute("data-pkg"))).then(function (i) {
+      if (i.author) {
+        var by = card.querySelector(".result-by");
+        by.textContent = OvosWebUI.t("plugins.by", "By") + " " + i.author;
+        by.hidden = false;
+      }
+      var what = i.description || i.summary;
+      if (what) {
+        var desc = card.querySelector(".result-desc");
+        desc.textContent = what.length > 200 ? what.slice(0, 197) + "…" : what;
+        desc.hidden = false;
+      }
+    });
+  }
+
   function bind() {
+    el("results").querySelectorAll(".result[data-pkg]").forEach(enrichLater);
     el("results").querySelectorAll("[data-add]").forEach(function (b) {
       b.addEventListener("click", function () { run("install", b.getAttribute("data-add")); });
     });
@@ -346,9 +387,13 @@ OvosWebUI.ready(function () {
       return;
     }
     el("recommended").innerHTML = "<ul class='plain rowlist'>" + r.plugins.map(function (p) {
-      var installedBadge = p.installed
-        ? ' <span class="badge ready">' + OvosWebUI.t("plugins.badge.installed", "installed") + "</span>"
-        : "";
+      // Installed is not in use: say which, so a device that listens with
+      // another plugin does not look like it uses this one.
+      var installedBadge = p.in_use
+        ? ' <span class="badge ready">' + esc(OvosWebUI.t("plugins.badge.inUse", "in use")) + "</span>"
+        : p.installed
+          ? ' <span class="badge">' + esc(OvosWebUI.t("plugins.badge.installedIdle", "installed, not in use")) + "</span>"
+          : "";
       var sectionLabel = plainLabel(p.section, kindLabels);
       var profileLabel = plainLabel(p.profile, profileLabels);
       return "<li><strong>" + esc(prettyName(p.module)) + "</strong> — "

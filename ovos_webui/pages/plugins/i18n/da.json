@@ -60,5 +60,8 @@
  "plugins.job.finished.settings.post": " for at gøre den aktiv i sin sektion.",
  "plugins.conflicts.envCaveat": "Dette tjekker de pakker, der er installeret sammen med kontrolpanelet. Hvis kontrolpanelet kører adskilt fra assistenten (for eksempel i sin egen container), kan enhedens egne pakker være anderledes.",
  "plugins.skillsMoved": "Leder du efter skills? De ligger på",
- "plugins.skillsMoved.link": "siden Skills"
+ "plugins.skillsMoved.link": "siden Skills",
+ "plugins.by": "Af",
+ "plugins.badge.inUse": "i brug",
+ "plugins.badge.installedIdle": "installeret, ikke i brug"
 }
