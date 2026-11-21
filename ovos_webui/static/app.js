@@ -18,6 +18,32 @@
   }
   applyTheme(storedTheme());
 
+  // The page is served in English and translated in the browser. To keep a
+  // page from showing English and then switching, the strings of the last
+  // language are kept for the session (per panel version), applied before the
+  // menu is drawn, and the page is held back from painting until they are on.
+  // A first visit, or a language with no strings, waits at most a moment.
+  var LANG_KEY = "ovos-lang", STRINGS_KEY = "ovos-strings.";
+  var ASSET_V = (function () {
+    try { return (document.currentScript.src.split("?v=")[1] || ""); } catch (e) { return ""; }
+  })();
+  var lastLang = null;
+  try { lastLang = window.localStorage.getItem(LANG_KEY); } catch (e) { /* none */ }
+  function releasePaint() { document.documentElement.classList.remove("i18n-wait"); }
+  if (lastLang && lastLang.split("-")[0] !== "en") {
+    document.documentElement.classList.add("i18n-wait");
+    setTimeout(releasePaint, 1500);
+  }
+  function keptStrings(base) {
+    try {
+      var c = JSON.parse(window.sessionStorage.getItem(STRINGS_KEY + base) || "null");
+      return c && c.v === ASSET_V ? c.d : null;
+    } catch (e) { return null; }
+  }
+  function keepStrings(base, dict) {
+    try { window.sessionStorage.setItem(STRINGS_KEY + base, JSON.stringify({v: ASSET_V, d: dict})); } catch (e) { /* full */ }
+  }
+
   // Larger-text mode, applied at head-parse time too so text never jumps size
   // after the page paints. Cycles normal → large → larger.
   var TEXT_KEY = "ovos-text", TEXT_SIZES = ["normal", "large", "xlarge"];
@@ -159,12 +185,16 @@
   // Load the locale file for a language, fall back to English, and apply it.
   function loadLocale(lang) {
     var base = setLangDir(lang);
+    try { window.localStorage.setItem(LANG_KEY, lang || "en"); } catch (e) { /* ignore */ }
     readMenu();
-    if ((MENU.langs || []).indexOf(base) === -1) { return Promise.resolve(); }
+    if ((MENU.langs || []).indexOf(base) === -1) { STRINGS = {}; releasePaint(); return Promise.resolve(); }
+    var kept = keptStrings(base);
+    if (kept) { STRINGS = kept; applyI18n(document); releasePaint(); return Promise.resolve(); }
     return fetch("/static/i18n/" + base + ".json", {credentials: "same-origin"})
       .then(function (r) { return r.ok ? r.json() : {}; })
-      .then(function (dict) { STRINGS = dict || {}; applyI18n(document); })
-      .catch(function () { /* keep the English already on the page */ });
+      .then(function (dict) { STRINGS = dict || {}; keepStrings(base, STRINGS); applyI18n(document); })
+      .catch(function () { /* keep the English already on the page */ })
+      .then(releasePaint);
   }
 
   // The menu comes from the page registry on the server, which puts it in the
@@ -567,7 +597,12 @@
     ready: function (fn) {
       document.addEventListener("DOMContentLoaded", function () {
         readMenu();
+        // the last language's strings, if this session has them, before the
+        // menu is drawn; the status call below confirms the language
+        var early = lastLang && keptStrings(lastLang.split("-")[0]);
+        if (early) { setLangDir(lastLang); STRINGS = early; }
         renderNav();
+        if (early) { applyI18n(document); releasePaint(); }
         markNav();
         mountMenuToggle();
         mountThemeToggle();
@@ -577,7 +612,7 @@
         api("/api/status").then(function (s) {
           showBanner(s);
           return loadLocale(s && s.lang);
-        }).catch(function () { /* offline or not signed in: stay in English */ })
+        }).catch(function () { /* offline or not signed in: stay in English */ releasePaint(); })
           .then(function () { renameMenu(); loadNeeds(); })
           .then(function () {
             try { fn(); } catch (e) { console.error(e); }

@@ -901,3 +901,7 @@ section.credits h2 { font-size: 0.85rem; margin-bottom: 0.4rem; }
 section.credits p { margin: 0.3rem 0; }
 section.credits img { max-width: 180px; width: 100%; height: auto; opacity: 0.85; }
 label.color-pick input[type="color"] { display: block; width: 4rem; height: 2.4rem; padding: 0.15rem; }
+
+/* Held back while the page's language is put on (app.js), so it does not
+ * show in English first. app.js lets go after at most a moment. */
+html.i18n-wait body { visibility: hidden; }

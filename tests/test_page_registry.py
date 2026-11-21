@@ -438,3 +438,11 @@ def test_two_pages_with_the_same_title_say_where_they_come_from(guardian_pkg):
     items = {p["id"]: p for p in reg.nav()["pages"]}
     assert items["guardian"].get("from") and items["guardian2"].get("from")
     assert "from" not in items["about"], "only titles that clash"
+
+
+def test_the_shell_links_its_assets_by_version():
+    """A browser fetches the new script after an update, not an old one."""
+    from ovos_webui.version import __version__
+    reg = pages.load(_own())
+    html = pages.render(reg.by_id()["about"], reg.nav_json())
+    assert f'/static/app.js?v={__version__}' in html and f'/static/app.css?v={__version__}' in html

@@ -659,7 +659,11 @@ def render(page: Page, nav_json: str, brand: dict[str, Any] | None = None) -> st
         parts = {"title": _esc(page.label), "heading": _esc(heading),
                  "heading_key": f' data-i18n="{_esc(page.heading_key)}"' if page.heading_key else "",
                  "id": _esc(page.id), "nav": tag, "brand": _esc(brand["name"]), "mark": mark,
-                 "origin": _origin_html(page)}
+                 "origin": _origin_html(page),
+                 # the version in the asset links, so a browser fetches the
+                 # new stylesheet and script after an update instead of
+                 # running an old script against new pages
+                 "v": _esc(_own_version())}
         out = _shell()
         for name, value in parts.items():
             out = out.replace("{{" + name + "}}", value)
