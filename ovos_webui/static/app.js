@@ -39,14 +39,21 @@
     document.documentElement.classList.add("i18n-wait");
     setTimeout(releasePaint, 1500);
   }
+  // The kept strings are for this panel version and this set of pages: a
+  // page installed since brings strings of its own, so they are read again.
+  function stringsVersion() {
+    var node = document.getElementById("ovos-nav"), text = node ? node.textContent : "", h = 0;
+    for (var i = 0; i < text.length; i++) { h = (h * 31 + text.charCodeAt(i)) | 0; }
+    return ASSET_V + "|" + h;
+  }
   function keptStrings(base) {
     try {
       var c = JSON.parse(window.sessionStorage.getItem(STRINGS_KEY + base) || "null");
-      return c && c.v === ASSET_V ? c.d : null;
+      return c && c.v === stringsVersion() ? c.d : null;
     } catch (e) { return null; }
   }
   function keepStrings(base, dict) {
-    try { window.sessionStorage.setItem(STRINGS_KEY + base, JSON.stringify({v: ASSET_V, d: dict})); } catch (e) { /* full */ }
+    try { window.sessionStorage.setItem(STRINGS_KEY + base, JSON.stringify({v: stringsVersion(), d: dict})); } catch (e) { /* full */ }
   }
 
   // Larger-text mode, applied at head-parse time too so text never jumps size
