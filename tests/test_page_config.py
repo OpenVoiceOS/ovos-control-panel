@@ -148,3 +148,21 @@ def test_a_section_keeps_the_system_layer_under_the_users():
                                   {"release_channel": "alpha", "branding": {"colors": {"ink": "#000000"}}})
     assert merged == {"branding": {"name": "Emkay", "colors": {"accent": "#111111", "ink": "#000000"}},
                       "release_channel": "alpha"}
+
+
+# ── turning a page on and off from the About page ────────────────────────────
+def test_a_page_is_turned_off_and_on_from_the_panel(token_client):
+    import json as _json
+
+    from ovos_webui import configio
+    c = token_client
+    c.headers["Authorization"] = "Bearer s3cret-token"
+    conf = configio.user_config_path()
+    assert c.post("/api/pages/wallpaper/enabled", json={"enabled": False}).json()["enabled"] is False
+    assert _json.loads(conf.read_text())["webui"]["pages"]["disabled"] == ["wallpaper"]
+    assert c.get("/wallpaper").status_code == 404
+    assert next(p for p in c.get("/api/pages").json()["pages"] if p["id"] == "wallpaper")["disabled"]
+    c.post("/api/pages/wallpaper/enabled", json={"enabled": True})
+    assert "disabled" not in _json.loads(conf.read_text())["webui"]["pages"]
+    assert c.post("/api/pages/about/enabled", json={"enabled": False}).status_code == 400
+    assert c.post("/api/pages/nope/enabled", json={"enabled": False}).status_code == 404

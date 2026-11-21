@@ -21,5 +21,8 @@
  "about.intro": "Denne side viser, hvad der er installeret, som hjælp, når du rapporterer et problem.",
  "about.ai_assisted": "Lavet med hjælp fra AI.",
  "about.pages_off": "Slået fra på denne enhed:",
- "about.pages_settings": "Disse indstillinger kunne ikke bruges:"
+ "about.pages_settings": "Disse indstillinger kunne ikke bruges:",
+ "about.pages_show": "Vist",
+ "about.pages_turn_on": "Slå til",
+ "about.pages_saved": "Gemt. Menuen ændrer sig på den næste side, du åbner."
 }
