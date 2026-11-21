@@ -6,11 +6,12 @@
 >   checks on a page description, groups a page brings, the menu built from
 >   the registry, `needs`, icons, `heading`, `routes`, `assets`, per-page
 >   `i18n`, wrapping a page's body in the shell, and the list of pages on the
->   About page. All of the panel's own pages are registered this way;
->   Wallpaper, Apps and Sensors use every part.
+>   About page. Every one of the panel's own pages uses it: each is a body in
+>   its own folder, with its own routes and strings where it has any. What
+>   several pages share (configuration, plugins and installs, voice, events,
+>   system actions, sign in) stays with the shell.
 > - **Not yet:** the bus bridge, `webui.pages`, `webui.groups` and
->   `webui.branding`. The rest of the panel's own pages are still whole
->   documents with their routes in `service.py`; they move over one by one.
+>   `webui.branding`.
 
 The control panel is a small shell. The shell does the sign in, the menu,
 the languages, the look and the safety checks. Everything you see in the menu
@@ -104,7 +105,7 @@ PAGE = {
 | `order` | no | Position within the group, lowest first. Default 100. |
 | `needs` | no | Packages that make the page work; any one of them is enough. If none is installed on a device that shares the assistant's environment, the page leaves the menu, and says it needs the first one if you reach it anyway. |
 | `icon` | no | An SVG file (at most 16 KB) in the page's folder. It is used as a mask, so it takes the menu's colour. |
-| `html` | yes | The page's body, as a file name next to the module the entry point is in, or as `(package, name)`. The shell wraps it in the common header and menu, inside `<main>`; a `<style>` or `<script>` element in it stays where it is. A whole document (starting with `<!doctype html>`) is served as it is, with the menu added to its head; the panel's own pages still use that while they move over. |
+| `html` | yes | The page's body, as a file name next to the module the entry point is in, or as `(package, name)`. The shell wraps it in the common header and menu, inside `<main>`; a `<style>` or `<script>` element in it stays where it is. A whole document (starting with `<!doctype html>`) is served as it is, with the menu added to its head. |
 | `assets` | no | A folder of files served under `/pages/<id>/`. |
 | `i18n` | no | A folder of `<lang>.json` files. See [Languages](#languages). |
 | `bus` | no | The messages the page may send and listen for. See [The bus bridge](#the-bus-bridge). |

@@ -25,14 +25,15 @@ def _archive(members: dict[str, bytes]) -> bytes:
 
 
 def test_restore_runs_off_the_event_loop(client, monkeypatch):
-    from ovos_webui import backupio, service
+    from ovos_webui import backupio
+    from ovos_webui.pages.backup import api as backup_routes
     called: dict = {}
 
     async def spy(fn, *args):
         called["fn"] = fn
         return {"restored": [], "backups": []}
 
-    monkeypatch.setattr(service, "run_in_threadpool", spy)
+    monkeypatch.setattr(backup_routes, "run_in_threadpool", spy)
     blob = _archive({"config/mycroft.conf": b"{}"})
     r = client.post("/api/restore", content=blob,
                     headers={"content-type": "application/gzip"})

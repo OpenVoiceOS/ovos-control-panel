@@ -1,0 +1,20 @@
+{
+ "hdr.servers": "Servidores",
+ "servers.intro": "Dirija la voz a texto, el texto a voz y la traducción a servidores propios, en lugar de a los públicos predeterminados. Si indica más de un servidor, el dispositivo los prueba en orden y pasa al siguiente cuando uno no responde.",
+ "servers.needsPlugin": "Cada lista solo tiene efecto cuando el dispositivo está configurado para usar el complemento de servidor de ese motor (por ejemplo, ovos-stt-plugin-server). Establezca antes el complemento en la página de Ajustes.",
+ "servers.publicNote": "Dejar una lista vacía no supone ningún problema: el complemento de servidor correspondiente recurre entonces a sus propios servidores públicos predeterminados.",
+ "servers.stt.title": "Voz a texto",
+ "servers.tts.title": "Texto a voz",
+ "servers.translate.title": "Traducción",
+ "servers.moduleLine": "Se aplica al complemento {kind}: {module}",
+ "servers.translate.modules": "Se aplica al complemento de detección ({d}) y al complemento de traducción ({m}).",
+ "servers.addPlaceholder": "https://su-servidor.ejemplo.com",
+ "servers.add": "Añadir",
+ "servers.save": "Guardar",
+ "servers.saving": "Guardando…",
+ "servers.saved": "Guardado.",
+ "servers.remove": "Eliminar",
+ "servers.up": "Subir",
+ "servers.down": "Bajar",
+ "servers.empty": "No hay servidores establecidos. Se aplican los predeterminados públicos propios del complemento."
+}

@@ -8,4 +8,6 @@ PAGE = {
     "order": 10,
     "html": "page.html",
     "icon": "icon.svg",
+    "heading": {"key": "", "label": "OpenVoiceOS"},
+    "i18n": "i18n",
 }

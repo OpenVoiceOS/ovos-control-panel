@@ -1,0 +1,23 @@
+{
+ "about.loading": "Indlæser…",
+ "about.links_heading": "Links",
+ "about.packages_heading": "Installerede pakker",
+ "about.packages_hint": "Oplys disse versionsnumre, når du rapporterer et problem.",
+ "about.pages_heading": "Sider",
+ "about.pages_none": "Ingen anden pakke har tilføjet en side.",
+ "about.pages_problems": "Disse sider kunne ikke indlæses og er udeladt:",
+ "about.pages_count": "{own} af siderne er kontrolpanelets egne, og {added} kommer fra andre pakker.",
+ "about.credits_heading": "Tak til",
+ "about.developed_by": "Udviklet af ",
+ "about.developed_for": " for",
+ "about.funded_by": "Finansieret af ",
+ "about.funded_sep": " / ",
+ "about.funded_grant": " under tilskudsaftale nr. ",
+ "about.funded_programme": ", gennem Europa-Kommissionens ",
+ "about.funded_end": "-program.",
+ "about.version_prefix": "version ",
+ "about.no_package": "Der blev ikke fundet nogen OpenVoiceOS-pakke.",
+ "hdr.about": "Om denne enhed",
+ "about.intro": "Denne side viser, hvad der er installeret, som hjælp, når du rapporterer et problem.",
+ "about.ai_assisted": "Lavet med hjælp fra AI."
+}

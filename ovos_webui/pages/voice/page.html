@@ -1,21 +1,3 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="same-origin">
-<title>Voice and language — OpenVoiceOS</title>
-<link rel="stylesheet" href="/static/app.css">
-<link rel="manifest" href="/static/manifest.webmanifest">
-<script src="/static/app.js"></script>
-</head>
-<body>
-<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
-<div class="banner" id="banner" role="alert" hidden></div>
-<header><h1 id="voice-h1" data-i18n="voice.title">Voice and language</h1>
-  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
-<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria"></nav>
-<main id="main" tabindex="-1">
   <p class="hint" id="intro-everyday" data-i18n="voice.intro">The wake word the device listens for, the voice it
     speaks with, and its language. Changes are saved to your own layer of <code>mycroft.conf</code>, the same file you
     can edit as text on the Settings page.</p>
@@ -150,7 +132,6 @@
 
   <p class="hint foot"><a data-i18n="foot.manual"
     href="https://openvoiceos.github.io/beta-technical-manual/speech-service/">Learn more in the technical manual</a></p>
-</main>
 <script>
 OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t, say = OvosWebUI.say;
@@ -372,15 +353,8 @@ OvosWebUI.ready(function () {
   el("intro-everyday").hidden = everything;
   el("more-everyday").hidden = everything;
   el("intro-all").hidden = !everything;
-  if (everything) {
-    el("voice-h1").setAttribute("data-i18n", "nav.voiceAll");
-    el("voice-h1").textContent = t("nav.voiceAll", "All voice settings");
-    document.title = el("voice-h1").textContent + " — OpenVoiceOS";
-  }
 
   el("voice-body").hidden = true;
   load();
 });
 </script>
-</body>
-</html>

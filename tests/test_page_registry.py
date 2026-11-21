@@ -233,7 +233,7 @@ def test_a_page_whose_routes_clash_is_left_out(guardian_pkg):
         need_bus=lambda: None, config=None), taken, included.append)
     assert "/emkay/guardian" not in reg.by_path()
     assert "GET /api/health" in reg.problems[-1]["error"]
-    assert len(included) == 3, "the panel's own pages with routes are still mounted"
+    assert len(included) == len([p for p in reg.pages if p.routes]), "the other pages with routes are still mounted"
 
 
 def test_a_page_whose_routes_fail_is_left_out(guardian_pkg):
@@ -266,3 +266,28 @@ def test_the_panels_own_page_strings_cover_every_language():
             keys = set(page.strings["en"])
             for lang, table in page.strings.items():
                 assert set(table) == keys, (page.id, lang)
+
+
+def test_a_page_cannot_take_a_shell_address_through_a_parameter(guardian_pkg):
+    """Pages' routes are matched first, so /api/{anything} would swallow the
+    shell's own routes."""
+    from fastapi import APIRouter
+
+    def routes(r):
+        @r.api.get("/{anything}")
+        def swallow(anything: str):
+            return {}
+
+    reg = pages.load(_own() + [_guardian(guardian_pkg, routes=routes)])
+    pages.mount_routes(reg, lambda: pages.Routes(
+        api=APIRouter(prefix="/api"), privileged=APIRouter(prefix="/api"),
+        need_bus=lambda: None, config=None), {("GET", "/api/health")}, lambda r: None)
+    assert "/emkay/guardian" not in reg.by_path()
+    assert "GET /api/{anything}" in reg.problems[-1]["error"]
+
+
+def test_a_page_route_wins_over_a_shell_route_with_a_parameter(client, bus):
+    """POST /api/system/ssh belongs to the System page, although the shell has
+    POST /api/system/{action}; without a device both answer, the page's own."""
+    r = client.post("/api/system/ssh", json={"enabled": True})
+    assert r.status_code != 404

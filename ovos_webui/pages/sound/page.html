@@ -1,34 +1,4 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="same-origin">
-<title>Send over sound — OpenVoiceOS</title>
-<link rel="stylesheet" href="/static/app.css">
-<link rel="manifest" href="/static/manifest.webmanifest">
-<script src="/static/app.js"></script>
 <script src="/static/vendor/ggwave/ggwave.js"></script>
-</head>
-<body>
-<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
-<div class="banner" id="banner" role="alert" hidden></div>
-<header><h1 data-i18n="hdr.sound">Send over sound</h1>
-  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
-<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
-  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
-  <a href="/tryit" data-i18n="nav.tryit">Try it</a>
-  <a href="/controls" data-i18n="nav.controls">Device</a>
-  <a href="/config" data-i18n="nav.settings">Settings</a>
-  <a href="/skills" data-i18n="nav.skills">Skills</a>
-  <a href="/plugins" data-i18n="nav.plugins">Plugins</a>
-  <a href="/personas" data-i18n="nav.personas">Personas</a>
-  <a href="/translate" data-i18n="nav.translate">Translate</a>
-  <a href="/sound" data-i18n="nav.sound">Send over sound</a>
-  <a href="/backup" data-i18n="nav.backup">Backup</a>
-  <a href="/about" data-i18n="nav.about">About</a>
-</nav>
-<main id="main" tabindex="-1">
   <p class="hint" data-i18n="sound.intro">Play a short sound to send data to a nearby OVOS device — no
     network needed. The device needs the ggwave listener installed and turned on, and its microphone
     needs to hear this speaker.</p>
@@ -124,7 +94,6 @@
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
   <p class="hint foot"><a data-i18n="foot.manual"
     href="https://openvoiceos.github.io/beta-technical-manual/audio-transformers/">Learn more in the technical manual</a></p>
-</main>
 <script>
 OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
@@ -319,5 +288,3 @@ OvosWebUI.ready(function () {
   });
 });
 </script>
-</body>
-</html>

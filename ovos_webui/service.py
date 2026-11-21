@@ -21,7 +21,7 @@ import os
 import re
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -41,12 +41,8 @@ from fastapi.responses import (
 )
 from ovos_utils.log import LOG
 from pydantic import BaseModel, Field
-from starlette.concurrency import run_in_threadpool
 
-from ovos_webui import (backupio, configio, health, installer, meta, personas,
-                        pypi, recommends, servers, skillsio, transformcfg,
-                        translate, voicecfg)
-from ovos_webui import intents
+from ovos_webui import configio, health, installer, pypi, recommends, voicecfg
 from ovos_webui import pages as page_registry
 from ovos_webui.auth import (
     COOKIE_NAME,
@@ -55,9 +51,7 @@ from ovos_webui.auth import (
     check_host,
     policy_from_config,
 )
-from ovos_webui.fsutils import (MAX_PAYLOAD_BYTES, MAX_UPLOAD_BYTES,
-                                UnsafeIdentifier,
-                                validate_skill_id as fsutils_validate_skill_id)
+from ovos_webui.fsutils import MAX_PAYLOAD_BYTES, MAX_UPLOAD_BYTES
 from ovos_webui.limits import BodyLimitMiddleware
 from ovos_webui.version import __version__
 
@@ -90,6 +84,14 @@ SYSTEM_ACTIONS = {
 UPLOAD_PATHS = frozenset({"/api/restore"})
 
 
+class PackageBody(BaseModel):
+    package: str = Field(..., max_length=100)
+
+
+class UtteranceBody(BaseModel):
+    text: str = Field(max_length=500)
+
+
 class ConfigBody(BaseModel):
     text: str = Field(..., description="the whole user layer, as JSON or YAML")
     format: str = Field("json", pattern="^(json|yaml)$")
@@ -104,210 +106,13 @@ class VoiceBody(BaseModel):
     value: Any = None
 
 
-class SettingsBody(BaseModel):
-    settings: dict[str, Any]
-
-
 class LoginBody(BaseModel):
     token: str = Field(..., max_length=512)
-
-
-class PackageBody(BaseModel):
-    package: str = Field(..., max_length=100)
-
-
-class PersonaBody(BaseModel):
-    persona: dict[str, Any]
-
-
-class PersonaTestBody(BaseModel):
-    question: str = Field(..., max_length=2000)
-
-
-class TranslateBody(BaseModel):
-    lines: list[str]
-    source: str = Field(..., max_length=16)
-    target: str = Field(..., max_length=16)
-    plugin: str | None = Field(None, max_length=128)
-
-
-class UtteranceBody(BaseModel):
-    text: str = Field(max_length=500)
-
-
-class ChannelBody(BaseModel):
-    channel: str = Field(max_length=16)
-
-
-class ServersBody(BaseModel):
-    urls: list[str] = Field(default_factory=list, max_length=servers.MAX_URLS)
-
-
-class ChainStateBody(BaseModel):
-    #: plugin name -> on(true)/off(false, kept with ``"active": false``)
-    enabled: dict[str, bool] = Field(default_factory=dict)
-    #: optional run order; an empty list clears it, ``None`` leaves it untouched
-    order: list[str] | None = None
-
-
-class PluginConfigBody(BaseModel):
-    config: dict[str, Any] = Field(default_factory=dict)
-
-
-class BidirectionalBody(BaseModel):
-    enable: bool
-    #: the languages to translate to and from; ``None`` leaves them unchanged
-    secondary_langs: list[str] | None = None
-    #: the utterance plugin's flags; ``None`` leaves them at their defaults
-    flags: dict[str, bool] | None = None
-
-
-class SoxBody(BaseModel):
-    enable: bool
-    #: SoX effects as {effect: {param: number}}; ``None`` leaves them unchanged
-    effects: dict[str, dict[str, float]] | None = None
-
-
-class DescribeIntentBody(BaseModel):
-    skill_id: str = Field(max_length=intents.MAX_SKILL_ID)
-    intent_name: str = Field(max_length=255)
-    lang: str = Field(max_length=16)
-
-
-class DryRunBody(BaseModel):
-    utterance: str = Field(max_length=intents.MAX_UTTERANCE)
-
-
-class SkillActiveBody(BaseModel):
-    active: bool
-class BackupIdBody(BaseModel):
-    id: str = Field(max_length=512)
-
-
-class EnabledBody(BaseModel):
-    enabled: bool
-
-
-class GgwaveListenBody(BaseModel):
-    enabled: bool
-
-
-class VolumeBody(BaseModel):
-    percent: int = Field(ge=0, le=100, strict=True)
-
-
-class MediaVolumeBody(BaseModel):
-    percent: int = Field(ge=0, le=100, strict=True)
-
-
-class MediaSeekBody(BaseModel):
-    #: Milliseconds from the start of the track. A day is more than any
-    #: track, and the player refuses anything that is not a real number.
-    position: int = Field(ge=0, le=86_400_000, strict=True)
-
-
-class MediaEntryBody(BaseModel):
-    """One media entry, as the player itself describes it, and optionally the
-    set it was picked from. Not validated field by field here:
-    `media.play_entry` refuses anything the player would refuse, using the
-    player's own rule, so the two cannot drift apart."""
-    entry: dict[str, Any]
-    #: Absent means "the caller does not know the set"; the service reads the
-    #: device's own. An empty list means "the set is empty" and reads nothing.
-    among: list[dict[str, Any]] | None = None
-
-
-class MediaToggleBody(BaseModel):
-    """Shuffle and repeat: both are on-or-off, and the name reaches the
-    generated API documentation, so it should not say shuffle on the repeat
-    route."""
-    enabled: bool
-
-
-class MuteBody(BaseModel):
-    muted: bool
 
 
 class TokenBody(BaseModel):
     current: str | None = Field(None, max_length=512)
     new: str = Field(max_length=512)
-
-
-class OverrideBody(BaseModel):
-    lines: list[str]
-
-
-class WifiConnectBody(BaseModel):
-    ssid: str = Field(..., max_length=64)
-    password: str = Field("", max_length=128)
-    security: str = Field("", max_length=64)
-
-
-class WifiSsidBody(BaseModel):
-    ssid: str = Field(..., max_length=64)
-
-
-class SshBody(BaseModel):
-    enabled: bool
-
-
-class Mark1DisplayBody(BaseModel):
-    # Bound both dimensions so a huge nested body is rejected during validation
-    # rather than fully materialized (the faceplate is exactly 8 rows x 32 cols;
-    # mark1._valid_grid re-checks the exact shape).
-    grid: Annotated[list[Annotated[list[int], Field(max_length=32)]],
-                    Field(max_length=8)]
-    x: int = Field(0, ge=-64, le=64)
-    y: int = Field(0, ge=-64, le=64)
-    clear: bool = True
-
-
-class Mark1TextBody(BaseModel):
-    text: str = Field("", max_length=500)
-
-
-class Mark1AnimBody(BaseModel):
-    kind: str = Field(..., max_length=16)
-
-
-class Mark1VisemeBody(BaseModel):
-    code: int = Field(ge=0, le=6)
-
-
-class Mark1ColorBody(BaseModel):
-    r: int = Field(ge=0, le=255)
-    g: int = Field(ge=0, le=255)
-    b: int = Field(ge=0, le=255)
-
-
-class Mark1PixelBody(BaseModel):
-    # 24 eye pixels, twelve per ring. Pinned to mark1.EYE_PIXEL_COUNT by a
-    # test rather than read from it: mark1 is imported lazily by the routes
-    # that use it, and a module-level import here would pull it in on start.
-    idx: int = Field(ge=0, le=23)
-    r: int = Field(ge=0, le=255)
-    g: int = Field(ge=0, le=255)
-    b: int = Field(ge=0, le=255)
-
-
-class Mark1SideBody(BaseModel):
-    side: str = Field(..., max_length=8)
-
-
-class Mark1PercentBody(BaseModel):
-    percentage: int = Field(ge=0, le=100)
-
-
-class Mark1LevelBody(BaseModel):
-    level: int = Field(ge=1, le=30)
-
-
-class Mark1VolumeBody(BaseModel):
-    volume: int = Field(ge=0, le=11)
-
-
-class Mark1TimesBody(BaseModel):
-    times: int = Field(ge=1, le=20)
 
 
 def _connect_bus():
@@ -659,31 +464,11 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             raise HTTPException(400, str(err)) from None
         return configio.write_user_config(data, bus=state["bus"])
 
-    @api.post("/config/undo")
-    def api_config_undo() -> dict[str, Any]:
-        try:
-            return configio.undo_last(bus=state["bus"])
-        except configio.ConfigError as err:
-            raise HTTPException(400, str(err)) from None
 
     @api.get("/config/merged")
     def api_config_merged() -> dict[str, Any]:
         return {"config": configio.read_merged_config()}
 
-    @api.get("/config/layers")
-    def api_config_layers() -> dict[str, Any]:
-        from ovos_webui import layers
-        # Without the values: this says which files exist, in what order they
-        # merge, and which of them this device's policy ignores.
-        return {"layers": [{k: v for k, v in layer.items() if k != "data"}
-                           for layer in layers.stack()]}
-
-    @api.get("/config/resolve")
-    def api_config_resolve(key: str) -> dict[str, Any]:
-        from ovos_webui import layers
-        if not key or len(key) > 200:
-            raise HTTPException(400, "key must be a dotted configuration key")
-        return layers.resolve(key)
 
     @api.get("/config/quick")
     def api_quick_get() -> dict[str, Any]:
@@ -716,164 +501,8 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_plugins() -> dict[str, Any]:
         return {"plugins": configio.plugin_options()}
 
-    # ── self-hosted servers (STT / TTS / translate) ─────────────────────────
-    # These write the user configuration layer, exactly like /api/config and
-    # /api/config/quick above — no bus message is specific to this feature.
-    # Reads sit on ``api``; the write changes what the device does, so it sits
-    # on ``privileged`` like the other device-changing routes.
-    @privileged.get("/servers")
-    def api_servers_get() -> dict[str, Any]:
-        return {kind: servers.get_servers(kind) for kind in servers.KINDS}
 
-    @privileged.post("/servers/{kind}")
-    def api_servers_set(kind: str, body: ServersBody) -> dict[str, Any]:
-        if kind not in servers.KINDS:
-            raise HTTPException(404, f"unknown kind '{kind}'")
-        result = servers.set_servers(kind, body.urls, bus=state["bus"])
-        if "error" in result:
-            raise HTTPException(400, result["error"])
-        return result
 
-    # ── transformer chains ────────────────────────────────────────────────────
-    # The six transformer chains (utterance/metadata/intent/audio/dialog/tts)
-    # each live in their own config section. These routes turn plugins on and
-    # off, order them, and edit a plugin's own config block — all writes to the
-    # user configuration layer, like /api/config. No feature-specific bus message.
-    @privileged.get("/transformers")
-    def api_transformers_get() -> dict[str, Any]:
-        return transformcfg.get_chains()
-
-    @privileged.post("/transformers/{chain}")
-    def api_transformers_set(chain: str, body: ChainStateBody) -> dict[str, Any]:
-        try:
-            return transformcfg.set_chain_state(chain, body.enabled, body.order,
-                                                bus=state["bus"])
-        except transformcfg.TransformerConfigError as err:
-            raise HTTPException(400, str(err)) from None
-
-    @privileged.post("/transformers/{chain}/{name}/config")
-    def api_transformer_plugin_config(chain: str, name: str,
-                                      body: PluginConfigBody) -> dict[str, Any]:
-        try:
-            return transformcfg.set_plugin_config(chain, name, body.config,
-                                                  bus=state["bus"])
-        except transformcfg.TransformerConfigError as err:
-            raise HTTPException(400, str(err)) from None
-
-    # Bidirectional translation is two transformer plugins plus secondary_langs,
-    # written together so "talk in language X, hear the answer in X" is one switch.
-    @privileged.get("/bidirectional")
-    def api_bidirectional_get() -> dict[str, Any]:
-        return transformcfg.get_bidirectional()
-
-    @privileged.post("/bidirectional")
-    def api_bidirectional_set(body: BidirectionalBody) -> dict[str, Any]:
-        try:
-            return transformcfg.set_bidirectional(
-                body.enable, body.secondary_langs, body.flags, bus=state["bus"])
-        except transformcfg.TransformerConfigError as err:
-            raise HTTPException(400, str(err)) from None
-
-    # SoX voice tuning: a curated view over the tts transformer that applies
-    # sound effects (pitch, tempo, reverb, …) to the synthesized speech.
-    @privileged.get("/sox")
-    def api_sox_get() -> dict[str, Any]:
-        return transformcfg.get_sox()
-
-    @privileged.post("/sox")
-    def api_sox_set(body: SoxBody) -> dict[str, Any]:
-        try:
-            return transformcfg.set_sox(body.enable, body.effects, bus=state["bus"])
-        except transformcfg.TransformerConfigError as err:
-            raise HTTPException(400, str(err)) from None
-
-    # ── intent inspector ──────────────────────────────────────────────────────
-    # Read-only queries into the intent engine, plus activate/deactivate. Every
-    # one is an existing bus query (see ovos_webui/intents.py); no new message.
-    @privileged.get("/intents")
-    def api_intents_list(skill_id: str | None = None,
-                         lang: str | None = None) -> dict[str, Any]:
-        return intents.list_intents(_need_bus(), skill_id, lang)
-
-    @privileged.get("/intents/active")
-    def api_intents_active() -> dict[str, Any]:
-        return intents.get_active_skills(_need_bus())
-
-    @privileged.post("/intents/describe")
-    def api_intents_describe(body: DescribeIntentBody) -> dict[str, Any]:
-        return intents.describe_intent(_need_bus(), body.skill_id,
-                                       body.intent_name, body.lang)
-
-    @privileged.post("/intents/dry-run")
-    def api_intents_dry_run(body: DryRunBody) -> dict[str, Any]:
-        try:
-            utterance = intents.check_utterance(body.utterance)
-        except intents.IntentError as err:
-            raise HTTPException(400, str(err)) from None
-        return intents.dry_run(_need_bus(), utterance)
-
-    @privileged.post("/intents/skills/{skill_id}/active")
-    def api_intents_skill_active(skill_id: str, body: SkillActiveBody) -> dict[str, Any]:
-        try:
-            return intents.set_skill_active(_need_bus(), skill_id, body.active)
-        except intents.IntentError as err:
-            raise HTTPException(400, str(err)) from None
-
-        # ── skill settings ───────────────────────────────────────────────────────
-    @api.get("/skills")
-    def api_skills() -> dict[str, Any]:
-        return {"skills": skillsio.list_skills()}
-
-    @api.get("/skills/{skill_id}")
-    def api_skill_get(skill_id: str) -> dict[str, Any]:
-        try:
-            return {
-                "skill_id": skill_id,
-                "settings": skillsio.read_settings(skill_id),
-                "meta": skillsio.settings_meta(skill_id),
-                "generated_meta": skillsio.find_settingsmeta(skill_id) is None,
-                "path": str(skillsio.settings_path(skill_id)),
-            }
-        except (UnsafeIdentifier, skillsio.SkillSettingsError) as err:
-            raise HTTPException(400, str(err)) from None
-
-    @api.put("/skills/{skill_id}")
-    def api_skill_put(skill_id: str, body: SettingsBody) -> dict[str, Any]:
-        try:
-            return skillsio.write_settings(skill_id, body.settings)
-        except (UnsafeIdentifier, skillsio.SkillSettingsError) as err:
-            raise HTTPException(400, str(err)) from None
-
-    # ── backup and restore ───────────────────────────────────────────────────
-    @api.get("/backup")
-    def api_backup() -> Response:
-        blob = backupio.make_archive()
-        name = backupio.archive_name()
-        return Response(content=blob, media_type="application/gzip",
-                        headers={"Content-Disposition": f'attachment; filename="{name}"'})
-
-    async def _read_upload(request: Request) -> bytes:
-        ctype = request.headers.get("content-type", "")
-        if ctype.startswith("multipart/form-data"):
-            form = await request.form()
-            upload = form.get("file")
-            if not hasattr(upload, "read"):
-                # A plain text field named "file", or nothing at all, has no
-                # file to read. Answer 400 rather than let ``.read`` raise 500.
-                raise HTTPException(400, "no file was sent")
-            return await upload.read()
-        return await request.body()
-
-    @api.post("/restore")
-    async def api_restore(request: Request) -> dict[str, Any]:
-        blob = await _read_upload(request)
-        try:
-            # restore_archive does synchronous, fsync-heavy file I/O under a
-            # lock; run it off the event loop so a restore cannot stall every
-            # other request (this is an async route).
-            return await run_in_threadpool(backupio.restore_archive, blob, state["bus"])
-        except (backupio.RestoreError, UnsafeIdentifier) as err:
-            raise HTTPException(400, str(err)) from None
 
     # ── plugin catalog and installer ─────────────────────────────────────────
     # Reads sit on the ``api`` router (host + cross-site + sign-in). Anything
@@ -965,84 +594,12 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         return {"current": current.as_dict(since=10 ** 9) if current else None,
                 "recent": installer.INSTALLER.recent()}
 
-    # ── updates, release channel, dependency health ──────────────────────────
+    # ── updates: what can be upgraded ────────────────────────────────────────
     @api.get("/updates")
     def api_updates(refresh: bool = False) -> dict[str, Any]:
         from ovos_webui import updates
         return updates.check_updates(refresh=refresh)
 
-    @privileged.post("/plugins/upgrade")
-    def api_upgrade(body: PackageBody) -> dict[str, Any]:
-        try:
-            return installer.INSTALLER.upgrade(body.package, bus=state["bus"]).as_dict()
-        except installer.UnsafePackageName as err:
-            raise HTTPException(400, str(err))
-        except installer.InstallerBusy as err:
-            raise HTTPException(409, str(err))
-        except installer.InstallerUnavailable as err:
-            raise HTTPException(503, str(err))
-        except LookupError as err:
-            raise HTTPException(404, str(err))
-
-    @api.get("/updates/channel")
-    def api_channel_get() -> dict[str, Any]:
-        from ovos_webui import updates
-        return {"channel": updates.release_channel(),
-                "channels": list(updates.CHANNELS),
-                "installer": updates.installer_follows()}
-
-    @privileged.post("/updates/channel")
-    def api_channel_set(body: ChannelBody) -> dict[str, Any]:
-        from ovos_webui import updates
-        try:
-            return updates.set_release_channel(body.channel, bus=state["bus"])
-        except ValueError as err:
-            raise HTTPException(400, str(err))
-
-    @api.get("/updates/conflicts")
-    def api_conflicts() -> dict[str, Any]:
-        from ovos_webui import updates
-        return updates.dependency_conflicts()
-
-    # ── backup history: the backups every save keeps on the device ───────────
-    @api.get("/backups")
-    def api_backups() -> dict[str, Any]:
-        from ovos_webui import history
-        return {"backups": history.list_backups()}
-
-    @api.get("/backups/show")
-    def api_backup_show(id: str) -> dict[str, Any]:
-        from ovos_webui import history
-        try:
-            return history.read_backup(id)
-        except UnsafeIdentifier as err:
-            raise HTTPException(400, str(err))
-        except LookupError as err:
-            raise HTTPException(404, str(err))
-
-    @api.post("/backups/revert")
-    def api_backup_revert(body: BackupIdBody) -> dict[str, Any]:
-        from ovos_webui import history
-        try:
-            return history.revert(body.id, bus=state["bus"])
-        except UnsafeIdentifier as err:
-            raise HTTPException(400, str(err))
-        except LookupError as err:
-            raise HTTPException(404, str(err))
-
-    # ── try it: the round trip a spoken sentence would take ──────────────────
-    # Sending an utterance is running a command on the device, so it sits on
-    # ``privileged`` — a token is always required, like the installer.
-    @privileged.post("/tryit/ask")
-    def api_tryit(body: UtteranceBody) -> dict[str, Any]:
-        from ovos_webui import tryit
-        if state["bus"] is None or not health.bus_reachable(state["bus"]):
-            raise HTTPException(503, "the message bus is not reachable")
-        lang = configio.read_merged_config().get("lang") or "en-us"
-        try:
-            return tryit.ask(state["bus"], body.text, lang)
-        except ValueError as err:
-            raise HTTPException(400, str(err))
 
     @privileged.post("/tryit/speak")
     def api_tryit_speak(body: UtteranceBody) -> dict[str, Any]:
@@ -1063,69 +620,6 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         from ovos_webui.events import LOG_SINGLETON
         return LOG_SINGLETON.since(max(0, since))
 
-    # ── skill enable / disable via the blacklist ─────────────────────────────
-    @api.get("/skills/{skill_id}/enabled")
-    def api_skill_enabled(skill_id: str) -> dict[str, Any]:
-        try:
-            skill_id = fsutils_validate_skill_id(skill_id)
-        except UnsafeIdentifier as err:
-            raise HTTPException(400, str(err))
-        blacklist = configio.user_or_merged(
-            ["skills", "blacklisted_skills"]) or []
-        return {"skill_id": skill_id, "enabled": skill_id not in blacklist}
-
-    @api.put("/skills/{skill_id}/enabled")
-    def api_skill_set_enabled(skill_id: str, body: EnabledBody) -> dict[str, Any]:
-        try:
-            skill_id = fsutils_validate_skill_id(skill_id)
-        except UnsafeIdentifier as err:
-            raise HTTPException(400, str(err))
-        def change(data):
-            blacklist = list(configio.get_in(data, ["skills", "blacklisted_skills"])
-                             or [])
-            if body.enabled:
-                blacklist = [s for s in blacklist if s != skill_id]
-            elif skill_id not in blacklist:
-                blacklist.append(skill_id)
-            configio.set_in(data, ["skills", "blacklisted_skills"], blacklist)
-
-        result = configio.mutate(change, bus=state["bus"])
-        result.update({"skill_id": skill_id, "enabled": body.enabled})
-        return result
-
-    # ── system: SSH, factory reset, device language, connectivity, IP geo ────
-    # These sit BEFORE the "/system/{action}" wildcard below: FastAPI matches
-    # routes in registration order, and a wildcard registered first would
-    # swallow "/system/ssh" etc. as an unknown action (404) rather than ever
-    # reaching these handlers. Every route sits on the privileged router: SSH
-    # and factory reset change what the device will accept next, and a
-    # factory reset is destructive — a token is always required, like the
-    # network and power actions.
-    @privileged.get("/system/ssh")
-    def api_ssh_status() -> dict[str, Any]:
-        from ovos_webui import system
-        return system.ssh_status(_need_bus())
-
-    @privileged.post("/system/ssh")
-    def api_ssh_set(body: SshBody) -> dict[str, Any]:
-        from ovos_webui import system
-        bus = _need_bus()
-        return system.ssh_enable(bus) if body.enabled else system.ssh_disable(bus)
-
-    @privileged.post("/system/factory-reset")
-    def api_factory_reset() -> dict[str, Any]:
-        from ovos_webui import system
-        return system.factory_reset(_need_bus())
-
-    @privileged.get("/system/connectivity")
-    def api_connectivity() -> dict[str, Any]:
-        from ovos_webui import system
-        return system.connectivity(_need_bus())
-
-    @privileged.post("/system/detect-location")
-    def api_detect_location() -> dict[str, Any]:
-        from ovos_webui import system
-        return system.detect_location(_need_bus())
 
     # ── system actions: bus messages PHAL may act on ─────────────────────────
     @privileged.post("/system/{action}")
@@ -1161,343 +655,6 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         return {"pages": [p.about() for p in registry.pages],
                 "problems": list(registry.problems)}
 
-    @api.get("/device/volume")
-    def api_volume_get() -> dict[str, Any]:
-        from ovos_webui import devicecontrol
-        return devicecontrol.get_volume(_need_bus())
-
-    @privileged.post("/device/volume")
-    def api_volume_set(body: VolumeBody) -> dict[str, Any]:
-        from ovos_webui import devicecontrol
-        try:
-            return devicecontrol.set_volume(_need_bus(), body.percent)
-        except ValueError as err:
-            raise HTTPException(400, str(err))
-
-    @privileged.post("/device/volume/mute")
-    def api_volume_mute(body: MuteBody) -> dict[str, Any]:
-        from ovos_webui import devicecontrol
-        return devicecontrol.set_mute(_need_bus(), body.muted)
-
-    @api.get("/device/mic")
-    def api_mic_get() -> dict[str, Any]:
-        from ovos_webui import devicecontrol
-        return devicecontrol.get_mic(_need_bus())
-
-    @privileged.post("/device/mic/mute")
-    def api_mic_mute(body: MuteBody) -> dict[str, Any]:
-        from ovos_webui import devicecontrol
-        return devicecontrol.set_mic_mute(_need_bus(), body.muted)
-
-    # ── Wi-Fi: scan and join networks over the network-manager PHAL plugin ────
-    # The plugin runs with root (the admin PHAL process) and joining a network
-    # changes device state — and can drop this very browser's link to the
-    # device — so every route sits on the privileged router: a token is always
-    # required, like the installer and the power actions.
-    @privileged.get("/network/status")
-    def api_network_status() -> dict[str, Any]:
-        from ovos_webui import network
-        status = network.connected(_need_bus())
-        status.update(network.local_links())
-        return status
-
-    @privileged.post("/network/scan")
-    def api_network_scan() -> dict[str, Any]:
-        # POST, not GET: a scan drives an nmcli rescan on the device.
-        from ovos_webui import network
-        return {"networks": network.scan(_need_bus())}
-
-    @privileged.post("/network/connect")
-    def api_network_connect(body: WifiConnectBody) -> dict[str, Any]:
-        from ovos_webui import network
-        return network.connect(_need_bus(), body.ssid, body.password, body.security)
-
-    @privileged.post("/network/disconnect")
-    def api_network_disconnect(body: WifiSsidBody) -> dict[str, Any]:
-        from ovos_webui import network
-        return network.disconnect(_need_bus(), body.ssid)
-
-    @privileged.post("/network/forget")
-    def api_network_forget(body: WifiSsidBody) -> dict[str, Any]:
-        from ovos_webui import network
-        return network.forget(_need_bus(), body.ssid)
-
-    # ── media: now-playing, transport, and volume over OCP / ovos-media ──────
-    # All /media/* routes are privileged: even the reads (status, available,
-    # volume) expose what's playing and current device state, so they should
-    # not be readable on a token-less device, matching the transport and
-    # volume-set/mute routes that change state.
-    @privileged.get("/media/status")
-    def api_media_status() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.status(_need_bus())
-
-    @privileged.get("/media/progress")
-    def api_media_progress() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.track_progress(_need_bus())
-
-    @privileged.post("/media/seek")
-    def api_media_seek(body: MediaSeekBody) -> dict[str, Any]:
-        from ovos_webui import media
-        return media.seek_to(_need_bus(), body.position)
-
-    @privileged.post("/media/shuffle")
-    def api_media_shuffle(body: MediaToggleBody) -> dict[str, Any]:
-        from ovos_webui import media
-        return media.set_shuffle(_need_bus(), body.enabled)
-
-    @privileged.post("/media/repeat")
-    def api_media_repeat(body: MediaToggleBody) -> dict[str, Any]:
-        from ovos_webui import media
-        return media.set_repeat(_need_bus(), body.enabled)
-
-    @privileged.get("/media/candidates")
-    def api_media_candidates() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.candidates(_need_bus())
-
-    @privileged.get("/media/likes")
-    def api_media_likes() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.likes(_need_bus())
-
-    @privileged.post("/media/play_entry")
-    def api_media_play_entry(body: MediaEntryBody) -> dict[str, Any]:
-        from ovos_webui import media
-        return media.play_entry(_need_bus(), body.entry, body.among)
-
-    @privileged.get("/media/backends")
-    def api_media_backends() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.backends(_need_bus())
-
-    @privileged.get("/media/available")
-    def api_media_available() -> dict[str, Any]:
-        from ovos_webui import media
-        return {"available": media.available(_need_bus())}
-
-    @privileged.post("/media/play_pause")
-    def api_media_play_pause() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.play_pause(_need_bus())
-
-    @privileged.post("/media/pause")
-    def api_media_pause() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.pause(_need_bus())
-
-    @privileged.post("/media/resume")
-    def api_media_resume() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.resume(_need_bus())
-
-    @privileged.post("/media/stop")
-    def api_media_stop() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.stop(_need_bus())
-
-    @privileged.post("/media/next")
-    def api_media_next() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.next(_need_bus())
-
-    @privileged.post("/media/previous")
-    def api_media_previous() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.previous(_need_bus())
-
-    @privileged.get("/media/volume")
-    def api_media_volume_get() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.get_volume(_need_bus())
-
-    @privileged.post("/media/volume")
-    def api_media_volume_set(body: MediaVolumeBody) -> dict[str, Any]:
-        from ovos_webui import media
-        try:
-            return media.set_volume(_need_bus(), body.percent)
-        except ValueError as err:
-            raise HTTPException(400, str(err))
-
-    @privileged.post("/media/mute")
-    def api_media_mute() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.mute(_need_bus())
-
-    @privileged.post("/media/unmute")
-    def api_media_unmute() -> dict[str, Any]:
-        from ovos_webui import media
-        return media.unmute(_need_bus())
-
-    # ── Mark-1 faceplate: eyes + mouth over enclosure.* ───────────────────────
-    # Every route changes what the faceplate shows, so all of it sits on the
-    # privileged router, like the network and system controls.
-    @privileged.get("/mark1/available")
-    def api_mark1_available() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.available(_need_bus())
-
-    @privileged.get("/mark1/eyes")
-    def api_mark1_eyes_state() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.eyes_state(_need_bus())
-
-    @privileged.post("/mark1/eyes/pixel")
-    def api_mark1_eyes_pixel(body: Mark1PixelBody) -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.set_pixel(_need_bus(), body.idx, body.r, body.g, body.b)
-
-    @privileged.get("/mark1/firmware")
-    def api_mark1_firmware() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.firmware(_need_bus())
-
-    @privileged.post("/mark1/firmware/update")
-    def api_mark1_firmware_update() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.firmware_update(_need_bus())
-
-    @privileged.post("/mark1/display")
-    def api_mark1_display(body: Mark1DisplayBody) -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.display_grid(_need_bus(), body.grid, body.x, body.y, body.clear)
-
-    @privileged.post("/mark1/mouth/text")
-    def api_mark1_mouth_text(body: Mark1TextBody) -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.mouth_text(_need_bus(), body.text)
-
-    @privileged.post("/mark1/mouth/reset")
-    def api_mark1_mouth_reset() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.mouth_reset(_need_bus())
-
-    @privileged.post("/mark1/mouth/anim")
-    def api_mark1_mouth_anim(body: Mark1AnimBody) -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.mouth_anim(_need_bus(), body.kind)
-
-    @privileged.post("/mark1/mouth/viseme")
-    def api_mark1_mouth_viseme(body: Mark1VisemeBody) -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.mouth_viseme(_need_bus(), body.code)
-
-    @privileged.post("/mark1/eyes/color")
-    def api_mark1_eyes_color(body: Mark1ColorBody) -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.eyes_color(_need_bus(), body.r, body.g, body.b)
-
-    @privileged.post("/mark1/eyes/on")
-    def api_mark1_eyes_on() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.eyes_on(_need_bus())
-
-    @privileged.post("/mark1/eyes/off")
-    def api_mark1_eyes_off() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.eyes_off(_need_bus())
-
-    @privileged.post("/mark1/eyes/reset")
-    def api_mark1_eyes_reset() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.eyes_reset(_need_bus())
-
-    @privileged.post("/mark1/eyes/narrow")
-    def api_mark1_eyes_narrow() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.eyes_narrow(_need_bus())
-
-    @privileged.post("/mark1/eyes/spin")
-    def api_mark1_eyes_spin() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.eyes_spin(_need_bus())
-
-    @privileged.post("/mark1/eyes/blink")
-    def api_mark1_eyes_blink(body: Mark1SideBody) -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.eyes_blink(_need_bus(), body.side)
-
-    @privileged.post("/mark1/eyes/look")
-    def api_mark1_eyes_look(body: Mark1SideBody) -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.eyes_look(_need_bus(), body.side)
-
-    @privileged.post("/mark1/eyes/fill")
-    def api_mark1_eyes_fill(body: Mark1PercentBody) -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.eyes_fill(_need_bus(), body.percentage)
-
-    @privileged.post("/mark1/eyes/brightness")
-    def api_mark1_eyes_brightness(body: Mark1LevelBody) -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.eyes_brightness(_need_bus(), body.level)
-
-    @privileged.post("/mark1/eyes/volume")
-    def api_mark1_eyes_volume(body: Mark1VolumeBody) -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.eyes_volume(_need_bus(), body.volume)
-
-    @privileged.post("/mark1/system/reset")
-    def api_mark1_system_reset() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.system_reset(_need_bus())
-
-    @privileged.post("/mark1/system/mute")
-    def api_mark1_system_mute() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.system_mute(_need_bus())
-
-    @privileged.post("/mark1/system/unmute")
-    def api_mark1_system_unmute() -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.system_unmute(_need_bus())
-
-    @privileged.post("/mark1/system/blink")
-    def api_mark1_system_blink(body: Mark1TimesBody) -> dict[str, Any]:
-        from ovos_webui import mark1
-        return mark1.system_blink(_need_bus(), body.times)
-
-    # ── ggwave listener: turn the device's sound receiver on or off ──────────
-    # Fire-and-forget, like /system/{action} — the ggwave audio transformer
-    # plugin does not answer a query, it just starts or stops listening.
-    @privileged.post("/ggwave/listen")
-    def api_ggwave_listen(body: GgwaveListenBody) -> dict[str, Any]:
-        from ovos_bus_client.message import Message
-        if body.enabled:
-            # The plugin's handle_enable never reads message.data and it runs no
-            # timer, so there is no auto-off to ask for: it listens until
-            # something disables it. Sending a timeout would promise a safety
-            # net that does not exist. Reported as
-            # OpenVoiceOS/ovos-audio-transformer-plugin-ggwave#46.
-            _need_bus().emit(Message("ovos.ggwave.enable", {}, {"source": "ovos-webui"}))
-            return {"ok": True, "sent": "ovos.ggwave.enable"}
-        _need_bus().emit(Message("ovos.ggwave.disable", {}, {"source": "ovos-webui"}))
-        return {"ok": True, "sent": "ovos.ggwave.disable"}
-
-    # ── what can it do: the installed skills ─────────────────────────────────
-    @api.get("/skillinfo/{package}")
-    def api_skill_info(package: str) -> dict[str, Any]:
-        """Who made a skill, where its source is, and what to say to it."""
-        from ovos_webui import skillinfo
-        try:
-            return skillinfo.info(package)
-        except skillinfo.NotASkill as err:
-            raise HTTPException(400, str(err)) from err
-        except (OSError, ValueError) as err:
-            raise HTTPException(502, f"could not read the details: {err}") from err
-
-    @api.get("/skillinfo/{package}/icon")
-    def api_skill_icon(package: str) -> Response:
-        """A skill's icon, fetched by the panel so the page stays on its origin."""
-        from ovos_webui import skillinfo
-        found = skillinfo.icon(package)
-        if found is None:
-            raise HTTPException(404, "this skill has no icon to show")
-        data, kind = found
-        return Response(data, media_type=kind,
-                        headers={"Cache-Control": "private, max-age=86400",
-                                 "X-Content-Type-Options": "nosniff"})
 
     @api.get("/capabilities")
     def api_abilities() -> dict[str, Any]:
@@ -1536,145 +693,6 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
                             path="/", max_age=30 * 24 * 3600)
         return {"ok": True, "had_token": had_token}
 
-    # ── personas ─────────────────────────────────────────────────────────────
-    @api.get("/personas")
-    def api_personas() -> dict[str, Any]:
-        active = configio.user_or_merged(
-            ["intents", "persona", "default_persona"])
-        return {"personas": personas.list_personas(),
-                "solvers": personas.available_solvers(),
-                "memory_plugins": personas.available_memory_plugins(),
-                "active": active,
-                "path": str(personas.personas_root())}
-
-    @api.post("/personas/{persona_id}/activate")
-    def api_persona_activate(persona_id: str) -> dict[str, Any]:
-        try:
-            data = personas.read_persona(persona_id)
-        except UnsafeIdentifier as err:
-            raise HTTPException(400, str(err))
-        except LookupError as err:
-            raise HTTPException(404, str(err))
-        except personas.PersonaError as err:
-            raise HTTPException(400, str(err))
-        # The persona service matches ``default_persona`` against the *name*
-        # a persona declares, so that is what goes in the configuration.
-        name = data.get("name") or persona_id
-        result = configio.mutate(
-            lambda user: configio.set_in(
-                user, ["intents", "persona", "default_persona"], name),
-            bus=state["bus"])
-        # Warn if the persona's solvers are not installed — activating it is the
-        # moment the user commits, so a silently-broken persona must be flagged.
-        result.update({"active": name, "persona_id": persona_id,
-                       "missing_solvers": personas.missing_solvers(data)})
-        return result
-
-    @api.get("/personas/{persona_id}")
-    def api_persona_get(persona_id: str) -> dict[str, Any]:
-        try:
-            data = personas.read_persona(persona_id)
-        except UnsafeIdentifier as err:
-            raise HTTPException(400, str(err))
-        except LookupError as err:
-            raise HTTPException(404, str(err))
-        except personas.PersonaError as err:
-            raise HTTPException(400, str(err))
-        return {"persona_id": persona_id, "persona": data,
-                "missing_solvers": personas.missing_solvers(data)}
-
-    @api.put("/personas/{persona_id}")
-    def api_persona_put(persona_id: str, body: PersonaBody) -> dict[str, Any]:
-        try:
-            return personas.write_persona(persona_id, body.persona)
-        except UnsafeIdentifier as err:
-            raise HTTPException(400, str(err))
-        except personas.PersonaError as err:
-            raise HTTPException(400, str(err))
-
-    @api.delete("/personas/{persona_id}")
-    def api_persona_delete(persona_id: str) -> dict[str, Any]:
-        try:
-            return personas.delete_persona(persona_id)
-        except UnsafeIdentifier as err:
-            raise HTTPException(400, str(err))
-        except LookupError as err:
-            raise HTTPException(404, str(err))
-
-    @api.post("/personas/{persona_id}/try")
-    def api_persona_try(persona_id: str, body: PersonaTestBody) -> dict[str, Any]:
-        try:
-            return personas.try_persona(persona_id, body.question)
-        except UnsafeIdentifier as err:
-            raise HTTPException(400, str(err))
-        except LookupError as err:
-            raise HTTPException(404, str(err))
-        except personas.PersonaError as err:
-            raise HTTPException(400, str(err))
-
-    # ── resource translation ─────────────────────────────────────────────────
-    @api.get("/translate/skills")
-    def api_tr_skills() -> dict[str, Any]:
-        return {"skills": translate.list_skills(),
-                "plugins": translate.translation_plugins(),
-                "root": str(translate.user_resources_root())}
-
-    @api.get("/translate/{skill_id}/languages")
-    def api_tr_langs(skill_id: str) -> dict[str, Any]:
-        try:
-            return {"languages": translate.source_languages(skill_id)}
-        except UnsafeIdentifier as err:
-            raise HTTPException(400, str(err))
-
-    @api.get("/translate/{skill_id}/{lang}/files")
-    def api_tr_files(skill_id: str, lang: str) -> dict[str, Any]:
-        try:
-            return {"files": translate.list_resources(skill_id, lang)}
-        except (UnsafeIdentifier, translate.TranslateError) as err:
-            raise HTTPException(400, str(err))
-
-    @api.get("/translate/{skill_id}/{lang}/file/{file_name}")
-    def api_tr_file(skill_id: str, lang: str, file_name: str) -> dict[str, Any]:
-        try:
-            return {"source": translate.read_source(skill_id, lang, file_name),
-                    "override": translate.read_override(skill_id, lang, file_name)}
-        except (UnsafeIdentifier, translate.TranslateError) as err:
-            raise HTTPException(400, str(err))
-        except LookupError as err:
-            raise HTTPException(404, str(err))
-
-    @api.post("/translate/{skill_id}/{lang}/machine")
-    def api_tr_machine(skill_id: str, lang: str,
-                       body: TranslateBody) -> dict[str, Any]:
-        try:
-            translate.validate_skill_id(skill_id)
-            translate.validate_lang(lang)
-            return translate.machine_translate(body.lines, body.source, body.target,
-                                               body.plugin)
-        except (UnsafeIdentifier, translate.TranslateError) as err:
-            raise HTTPException(400, str(err))
-
-    @api.put("/translate/{skill_id}/{lang}/file/{file_name}")
-    def api_tr_put(skill_id: str, lang: str, file_name: str,
-                   body: OverrideBody) -> dict[str, Any]:
-        try:
-            return translate.write_override(skill_id, lang, file_name, body.lines)
-        except (UnsafeIdentifier, translate.TranslateError) as err:
-            raise HTTPException(400, str(err))
-
-    @api.delete("/translate/{skill_id}/{lang}/file/{file_name}")
-    def api_tr_delete(skill_id: str, lang: str, file_name: str) -> dict[str, Any]:
-        try:
-            return translate.delete_override(skill_id, lang, file_name)
-        except (UnsafeIdentifier, translate.TranslateError) as err:
-            raise HTTPException(400, str(err))
-        except LookupError as err:
-            raise HTTPException(404, str(err))
-
-    # ── about ────────────────────────────────────────────────────────────────
-    @api.get("/about")
-    def api_about(request: Request) -> dict[str, Any]:
-        return meta.about(request.headers.get("host", ""))
 
     # ── pages from the registry ──────────────────────────────────────────────
     # A page may add its own API routes. It gets routers with the same checks
@@ -1684,7 +702,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             api=APIRouter(prefix="/api", dependencies=[Depends(guard)]),
             privileged=APIRouter(prefix="/api",
                                  dependencies=[Depends(guard), Depends(guard_privileged)]),
-            need_bus=_need_bus, config=configio)
+            need_bus=_need_bus, config=configio, bus=lambda: state["bus"])
 
     page_routers: list[page_registry.Routes] = []
     taken = {(m, r.path) for router in (public, pages, api, privileged)
@@ -1705,13 +723,16 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     for page in registry.pages:
         pages.get(page.path)(_page_handler(page))
 
+    # Pages' routes go before the shell's own, so a shell route with a
+    # parameter (POST /api/system/{action}) does not answer for a page's
+    # (POST /api/system/ssh). mount_routes made sure no page takes a shell's.
     app.include_router(public)
     app.include_router(pages)
-    app.include_router(api)
-    app.include_router(privileged)
     for r in page_routers:
         app.include_router(r.api)
         app.include_router(r.privileged)
+    app.include_router(api)
+    app.include_router(privileged)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):

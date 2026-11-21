@@ -254,7 +254,7 @@ class TestMouthEventsGating:
 def test_the_pixel_route_accepts_exactly_the_pixels_that_exist():
     """The route's bound is a literal; this is what keeps it honest."""
     from ovos_webui import mark1
-    from ovos_webui.service import Mark1PixelBody
+    from ovos_webui.pages.mark1.api import Mark1PixelBody
 
     bound = Mark1PixelBody.model_fields["idx"].metadata
     highest = next(m.le for m in bound if hasattr(m, "le"))

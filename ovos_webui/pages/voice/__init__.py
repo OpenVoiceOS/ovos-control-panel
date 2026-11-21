@@ -8,4 +8,6 @@ PAGE = {
     "order": 60,
     "html": "page.html",
     "icon": "icon.svg",
+    "heading": {"key": "voice.title", "label": "Voice and language"},
+    "i18n": "i18n",
 }
