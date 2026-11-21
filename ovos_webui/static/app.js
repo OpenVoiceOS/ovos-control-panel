@@ -221,6 +221,12 @@
   function navLink(item) {
     var icon = item.icon && ICON_RE.test(item.icon)
       ? ' style="--icon: url(' + item.icon + ')"' : "";
+    if (item.from) {
+      // two pages with the same title: each says where it comes from
+      return '<a href="' + esc(item.path) + '" data-page="' + esc(item.id) + '"' + icon + "><span"
+        + (item.key ? ' data-i18n="' + esc(item.key) + '"' : "") + ">" + esc(t(item.key, item.label))
+        + '</span><small class="nav-from">' + esc(item.from) + "</small></a>";
+    }
     return '<a href="' + esc(item.path) + '" data-page="' + esc(item.id) + '"' + icon
       + (item.key ? ' data-i18n="' + esc(item.key) + '"' : "") + ">"
       + esc(t(item.key, item.label)) + "</a>";

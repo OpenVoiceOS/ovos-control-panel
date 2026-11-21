@@ -141,6 +141,15 @@ packages define the same group id, the first one wins and the other is named in
 the log; the panel's own groups always win, so a page may define one of them
 too, for panels older than the group.
 
+### Where a page comes from
+
+The shell puts a line at the top of every page that is not the panel's own:
+the page's icon, the skill's name from its `skill.json` in the device's
+language (with the skill's own icon, when it has one), and the package and
+version. A page cannot leave it out. When two pages in the menu have the same
+title, as two music services might, each also shows where it comes from under
+its name in the menu.
+
 How the menu behaves does not change: groups fold, the open ones are remembered,
 the group of the page you are on opens, and pages the device cannot use leave
 the menu.

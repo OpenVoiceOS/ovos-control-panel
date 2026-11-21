@@ -102,6 +102,8 @@ class Page:
     assets: Any = None
     #: Routes of the page's own that take an upload: path -> largest body.
     uploads: dict[str, int] = field(default_factory=dict)
+    #: The module the page was described in (ovos_skill_documents.panel).
+    module: str = ""
 
     def nav(self) -> dict[str, Any]:
         """What the browser's menu needs to know about the page."""
@@ -176,6 +178,17 @@ class Registry:
             order = move.get("order", page.order)
             shown.append((rank[item["group"]], order, seq[page.id], item))
         shown.sort(key=lambda x: x[:3])
+        # Pages with the same title (two music services) say where they come from
+        by_title: dict[str, list[dict[str, Any]]] = {}
+        for x in shown:
+            by_title.setdefault((x[3]["key"] or x[3]["label"]).lower(), []).append(x[3])
+        pages = {p.id: p for p in self.pages}
+        for same in by_title.values():
+            if len(same) > 1:
+                for item in same:
+                    found = origin(pages[item["id"]])
+                    if found:
+                        item["from"] = found["name"] or found["package"]
         used = {x[3]["group"] for x in shown}
         ordered = sorted((g for g in groups.values() if g["id"] in used),
                          key=lambda g: (rank[g["id"]], g["id"]))
@@ -402,7 +415,7 @@ def parse(desc: Any, module: str, package: str, version: str, builtin: bool) -> 
                 manual=desc.get("manual"), heading_key=heading_key, heading=heading,
                 fragment=not html.lstrip()[:15].lower().startswith("<!doctype"),
                 strings=_strings(_folder(module, desc.get("i18n"))),
-                assets=_folder(module, desc.get("assets")), uploads=uploads)
+                assets=_folder(module, desc.get("assets")), uploads=uploads, module=module)
     return page, groups
 
 
@@ -525,6 +538,70 @@ def _esc(text: str) -> str:
             .replace('"', "&quot;"))
 
 
+# ── where an added page comes from ───────────────────────────────────────────
+#: (package, version, language) -> what origin() found; a package's files do
+#: not change while its version stays the same
+_ORIGINS: dict[tuple[str, str, str], dict[str, Any]] = {}
+
+
+def origin(page: Page, lang: str | None = None) -> dict[str, Any] | None:
+    """Where a page that is not the panel's own comes from: its package and
+    version, and for a skill its name in the device's language and its icon,
+    from its skill.json. Two pages can then be told apart (two music services
+    with near the same page), and a page cannot pass for the panel's own.
+    None for the panel's own pages."""
+    if page.builtin or not page.package:
+        return None
+    from ovos_webui import skillinfo
+    lang = lang or skillinfo._device_lang()  # noqa: SLF001 - one reading of the language
+    key = (page.package, page.version or "", lang)
+    if key not in _ORIGINS:
+        found: dict[str, Any] = {"package": page.package, "version": page.version or "",
+                                 "name": None, "icon": None}
+        try:
+            info = skillinfo._local_info(metadata.distribution(page.package), lang)  # noqa: SLF001
+            found["name"] = info.get("title")
+            if info.get("is_ovos_skill") and skillinfo._icon_allowed(info.get("icon_url")):  # noqa: SLF001
+                found["icon"] = f"/api/skillinfo/{page.package}/icon"
+        except Exception as err:  # noqa: BLE001 - the package and version are enough
+            LOG.debug("page %s: no skill.json read from %s: %s", page.id, page.package, err)
+        if not found["name"]:
+            found["name"] = _skill_json_name(page, lang)
+        _ORIGINS[key] = found
+    return _ORIGINS[key]
+
+
+def _skill_json_name(page: Page, lang: str) -> str | None:
+    """A skill's name from the skill.json next to its code, for an install
+    whose file list does not name it (an editable install)."""
+    from ovos_webui import skillinfo
+    top = (page.module or "").split(".")[0]
+    if not top:
+        return None
+    try:
+        locale = resources.files(top).joinpath("locale")
+        paths = [f"{d.name}/skill.json" for d in locale.iterdir() if d.joinpath("skill.json").is_file()]
+        chosen = skillinfo.pick_skill_json(paths, lang)
+        if chosen:
+            return skillinfo._from_skill_json(locale.joinpath(chosen).read_bytes()).get("title")  # noqa: SLF001
+    except Exception:  # noqa: BLE001 - no name, then
+        return None
+    return None
+
+
+def _origin_html(page: Page) -> str:
+    """The line at the top of an added page that says where it comes from."""
+    found = origin(page)
+    if not found:
+        return ""
+    icon = (f'<img class="page-origin-icon" src="{_esc(found["icon"])}" alt="">' if found["icon"] else
+            f'<img class="page-origin-icon" src="{_esc(page.icon)}" alt="">' if page.icon else "")
+    name = f'<span class="page-origin-name">{_esc(found["name"])}</span>' if found["name"] else ""
+    pkg = _esc(found["package"] + (" " + found["version"] if found["version"] else ""))
+    return (f'<p class="page-origin" data-package="{_esc(found["package"])}">{icon}{name}'
+            f'<span class="page-origin-pkg"><span data-i18n="page.from">From</span> {pkg}</span></p>\n')
+
+
 def render(page: Page, nav_json: str, brand: dict[str, Any] | None = None) -> str:
     """The page as served: with the menu data in its head, and a page body
     wrapped in the shell's header, menu and main, in the distribution's name.
@@ -545,7 +622,8 @@ def render(page: Page, nav_json: str, brand: dict[str, Any] | None = None) -> st
                 '<div class="wave" id="wave" aria-hidden="true">' + "<i></i>" * 28 + "</div>")
         parts = {"title": _esc(page.label), "heading": _esc(heading),
                  "heading_key": f' data-i18n="{_esc(page.heading_key)}"' if page.heading_key else "",
-                 "id": _esc(page.id), "nav": tag, "brand": _esc(brand["name"]), "mark": mark}
+                 "id": _esc(page.id), "nav": tag, "brand": _esc(brand["name"]), "mark": mark,
+                 "origin": _origin_html(page)}
         out = _shell()
         for name, value in parts.items():
             out = out.replace("{{" + name + "}}", value)

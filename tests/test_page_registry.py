@@ -366,3 +366,34 @@ def test_uploads_must_name_a_route_the_page_adds(guardian_pkg):
 
 def test_an_upload_size_is_capped():
     assert pages.MAX_PAGE_UPLOAD == 64 * 1024 * 1024
+
+
+# ── where an added page comes from ───────────────────────────────────────────
+def test_an_added_page_says_where_it_comes_from(guardian_pkg, monkeypatch):
+    (pages._ORIGINS).clear()
+    reg = pages.load(_own() + [_guardian(guardian_pkg)])
+    guardian = reg.by_id()["guardian"]
+    html = pages.render(guardian, reg.nav_json())
+    assert 'class="page-origin"' in html and guardian.package in html
+    assert guardian.version in html and 'data-i18n="page.from"' in html
+    own = pages.render(reg.by_id()["about"], reg.nav_json())
+    assert 'class="page-origin"' not in own, "the panel's own pages need no origin"
+
+
+def test_a_skill_page_is_named_from_its_skill_json(guardian_pkg, tmp_path):
+    (pages._ORIGINS).clear()
+    locale = tmp_path / guardian_pkg / "locale" / "da-dk"
+    locale.mkdir(parents=True)
+    (locale / "skill.json").write_text('{"name": "Vogteren"}', encoding="utf-8")
+    reg = pages.load(_own() + [_guardian(guardian_pkg)])
+    found = pages.origin(reg.by_id()["guardian"], "da-dk")
+    assert found["name"] == "Vogteren" and found["icon"] is None
+
+
+def test_two_pages_with_the_same_title_say_where_they_come_from(guardian_pkg):
+    (pages._ORIGINS).clear()
+    twin = _guardian(guardian_pkg, id="guardian2", path="/emkay/guardian2")
+    reg = pages.load(_own() + [_guardian(guardian_pkg), twin])
+    items = {p["id"]: p for p in reg.nav()["pages"]}
+    assert items["guardian"].get("from") and items["guardian2"].get("from")
+    assert "from" not in items["about"], "only titles that clash"

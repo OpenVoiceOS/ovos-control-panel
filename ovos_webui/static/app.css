@@ -876,3 +876,13 @@ details.advanced > summary {
   padding: 0.5rem 0;
 }
 details.advanced[open] > summary { margin-bottom: 0.5rem; }
+
+/* ── where a page added by a skill or plugin comes from ───────────────────── */
+.page-origin {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0.3rem 0.6rem;
+  margin: 0 0 1rem; color: var(--muted); font-size: 0.9rem;
+}
+.page-origin-icon { width: 2rem; height: 2rem; object-fit: contain; border-radius: var(--radius-sm); }
+.page-origin-name { color: var(--ink); font-weight: 650; font-size: 1rem; }
+.page-origin-pkg { font-family: var(--mono); font-size: 0.8rem; }
+nav a .nav-from { display: block; font-size: 0.72rem; font-weight: 500; opacity: 0.75; line-height: 1.1; }
