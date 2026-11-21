@@ -162,6 +162,10 @@ Apache-2.0 — see [LICENSE](LICENSE).
 Developed by [TigreGotico](https://tigregotico.pt) for
 [OpenVoiceOS](https://openvoiceos.org).
 
+Developed further by [Andreas Lorensen (andlo)](https://github.com/andlo) and
+[Emkay-Voice](https://github.com/emkay-voice): the page registry, pages
+brought by skills and plugins, the grouped menu and branding.
+
 Funded by [NGI0 Commons Fund](https://nlnet.nl/project/OpenVoiceOS) /
 [NLnet](https://nlnet.nl) under grant agreement No
 [101135429](https://cordis.europa.eu/project/id/101135429), through the European

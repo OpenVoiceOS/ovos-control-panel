@@ -102,7 +102,7 @@ PAGE = {
 | `path` | yes | Where the page is served. Must start with `/` and must not clash with another page or with `/api`, `/static`, `/login`, `/healthz`. A clash leaves the later page out. |
 | `title` | yes | An i18n key and the English text. Used in the menu and the window title. |
 | `heading` | no | An i18n key and the English text for the page's heading, when it should say more than the menu does ("About this device"). Default: the title. |
-| `group` | yes | An existing group (`everyday`, `voice`, `understanding`, `device`, `screen`, `maintenance`) or a group the page defines. See [The menu](#the-menu). |
+| `group` | yes | An existing group (`everyday`, `library`, `music`, `voice`, `understanding`, `device`, `screen`, `maintenance`) or a group the page defines. See [The menu](#the-menu). |
 | `order` | no | Position within the group, lowest first. Default 100. |
 | `needs` | no | Packages that make the page work; any one of them is enough. If none is installed on a device that shares the assistant's environment, the page leaves the menu, and says it needs the first one if you reach it anyway. |
 | `icon` | no | An SVG file (at most 16 KB) in the page's folder. It is used as a mask, so it takes the menu's colour. |
@@ -134,10 +134,12 @@ PAGE = {
 }
 ```
 
-`level` is `everyday` (always shown, at the top) or `advanced` (a foldable row
-under Advanced, as today). A group with no pages left shows nothing. If two
+`level` is `everyday` (always shown, at the top; a group other than `everyday`
+itself gets a small heading, as Library and Music do) or `advanced` (a foldable
+row under Advanced, as today). A group with no pages left shows nothing. If two
 packages define the same group id, the first one wins and the other is named in
-the log.
+the log; the panel's own groups always win, so a page may define one of them
+too, for panels older than the group.
 
 How the menu behaves does not change: groups fold, the open ones are remembered,
 the group of the page you are on opens, and pages the device cannot use leave
@@ -154,9 +156,11 @@ own pages, which are numbered in tens so there is always room. Lowest first.
 | Group | `order` | For | The panel's own pages |
 | --- | --- | --- | --- |
 | `everyday` | 0 | What most people use: always shown, at the top | Dashboard 10, Setup 20, Try it 30, Device 40, Network 50, Voice and language 60, Skills 70, Backup 80, About 90 |
+| `library` | 5 | What the device reads and plays for you: documents, books, podcasts, news, radio. Shown under the everyday pages, with a heading | Media 5 |
+| `music` | 6 | Music you make with the device: playing along, lessons, karaoke, instruments. Shown like Library | |
 | `voice` | 10 | How the device listens, speaks and translates | All voice settings 10, Servers 20, Translate 30 |
 | `understanding` | 20 | How it understands and who answers | Intents 10, Transformers 20, Personas 30 |
-| `device` | 30 | The hardware and what runs on it | System 10, Sensors 20, Media 30 |
+| `device` | 30 | The hardware and what runs on it | System 10, Sensors 20 |
 | `screen` | 40 | A device with a screen: what it shows | Apps 10, Wallpaper 20, Mark-1 faceplate 30 |
 | `maintenance` | 50 | Keeping the panel and the device in shape | Plugins 10, Settings 20, Send over sound 30 |
 
@@ -164,8 +168,10 @@ Some examples:
 
 - A page with facts about a device ("About Emkay") goes in `everyday` after
   About, `order` 95, or in `device`.
-- A page that shows what is on the screen, or what the player is playing,
-  goes in `screen`, or in `device` next to Media.
+- A page for a skill that reads or plays something (documents, e-books, a
+  podcast or news provider) goes in `library`; a page for making music
+  (a jam band, lessons, an instrument) in `music`.
+- A page that shows what is on the screen goes in `screen`.
 - A distribution's own group sits between the panel's: `order` 15 puts it
   between Voice and Understanding.
 

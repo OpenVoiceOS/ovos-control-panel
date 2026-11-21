@@ -229,8 +229,14 @@
     var nav = document.querySelector('nav[aria-label], nav#sitenav');
     if (!nav || !NAV.length) { return; }
     var html = MENU.groups.filter(function (g) { return g.level === "everyday"; }).map(function (g) {
+      var items = NAV.filter(function (x) { return x.group === g.id; });
+      if (!items.length) { return ""; }
+      // the everyday pages need no name; another everyday group, such as the
+      // Library, gets a small heading so its pages read as belonging together
+      var head = g.id === "everyday" ? "" : '<span class="nav-heading"'
+        + (g.key ? ' data-i18n="' + esc(g.key) + '"' : "") + ">" + esc(t(g.key, g.label)) + "</span>";
       return '<div class="nav-group nav-everyday" data-level-group="' + esc(g.id) + '">'
-        + NAV.filter(function (x) { return x.group === g.id; }).map(navLink).join("") + "</div>";
+        + head + items.map(navLink).join("") + "</div>";
     }).join("");
     if (GROUPS.length) {
       html += '<span class="nav-divider" data-i18n="nav.advanced">'

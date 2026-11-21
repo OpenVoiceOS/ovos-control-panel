@@ -261,6 +261,15 @@ nav .nav-divider {
   color: var(--muted);
 }
 nav .nav-divider::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+/* The heading of an everyday group other than the first (Library, Music). */
+nav .nav-heading {
+  flex-basis: 100%;
+  margin: 0.7rem 0 0.1rem;
+  padding: 0 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
 nav button.nav-fold {
   flex-basis: 100%;
   min-height: 44px;
@@ -388,9 +397,9 @@ main { padding: 1.1rem; max-width: 62rem; margin: 0 auto; }
     padding: 0.6rem 0.9rem;
   }
   /* In the rail's column a 100% basis would be 100% of the height. */
-  nav button.nav-fold, nav .nav-divider { flex-basis: auto; }
+  nav button.nav-fold, nav .nav-divider, nav .nav-heading { flex-basis: auto; }
   nav button.nav-fold { border-radius: var(--radius-sm); font-size: 1rem; padding: 0.6rem 0.9rem; }
-  nav .nav-divider { padding: 0 0.9rem; }
+  nav .nav-divider, nav .nav-heading { padding: 0 0.9rem; }
   /* A group's pages sit indented under its row. */
   nav .nav-links a { margin-inline-start: 0.9rem; }
   main {
