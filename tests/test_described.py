@@ -186,3 +186,19 @@ def test_buttons_with_fixed_data_and_settings_that_are_not_yes_or_no():
     bad["blocks"][0]["actions"][0]["data"] = {"x": "y" * 5000}
     with pytest.raises(described.DescribedError, match="small"):
         checked(bad, "ovos-phal-plugin-midi")
+
+
+def test_addresses_and_required_fields():
+    page = {"controlpanel": 1, "id": "ha", "bus": "ovos.ha_link.", "blocks": [
+        {"type": "form", "save": {"config": "PHAL.ovos-phal-plugin-ha-link"},
+         "fields": [{"name": "url", "label": "x", "type": "url", "required": True},
+                    {"name": "token", "label": "x", "type": "password", "required": True}]}]}
+    _, refs = checked(page, "ovos-phal-plugin-ha-link")
+    form = refs["b0.form"]
+    assert described.form_values(form, {"url": " http://ha.local:8123/ "}) == {"url": "http://ha.local:8123"}
+    with pytest.raises(described.DescribedError, match="http"):
+        described.form_values(form, {"url": "ha.local"})
+    with pytest.raises(described.DescribedError, match="needed"):
+        described.form_values(form, {"url": ""})
+    assert described.missing(form, {"url": "http://x"}, {}) == ["token"], "a token the first time"
+    assert described.missing(form, {"url": "http://x"}, {"token": "t"}) == [], "then it is kept"

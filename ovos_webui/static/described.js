@@ -49,7 +49,12 @@ OvosWebUI.ready(function () {
         var v = get(data, name);
         if (v === undefined || v === null) { return ""; }
         if (fmt === "date") { return day(v); }
-        if (prefix) { return t(prefix + "." + v); }
+        if (prefix) {
+          // a label per value; one that is not there shows nothing, and the
+          // label may carry the answer's values ({ha_version})
+          var key = prefix + "." + v, text = t(key);
+          return text === key ? "" : fill(text, data);
+        }
         return Array.isArray(v) ? v.join(", ") : String(v);
       });
   }
