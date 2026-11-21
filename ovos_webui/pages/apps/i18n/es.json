@@ -1,0 +1,16 @@
+{
+ "hdr.apps": "Aplicaciones",
+ "apps.intro": "Abra y cierre las aplicaciones de escritorio que un dispositivo con pantalla conoce. Esto necesita el complemento app-launcher en el dispositivo; sin él, la lista queda vacía.",
+ "apps.filter": "filtrar",
+ "apps.reload": "Recargar",
+ "apps.launch": "Abrir",
+ "apps.close": "Cerrar",
+ "apps.none": "Ninguna aplicación. ¿Está instalado el complemento app-launcher en el dispositivo?",
+ "apps.noneMatch": "Ninguna aplicación coincide con ese filtro.",
+ "apps.loading": "Cargando…",
+ "apps.unavailable": "El app-launcher no ha respondido. ¿Está instalado en el dispositivo?",
+ "apps.launching": "Abriendo {n}…",
+ "apps.closing": "Cerrando {n}…",
+ "apps.launched": "{n} abierta.",
+ "apps.closed": "{n} cerrada."
+}

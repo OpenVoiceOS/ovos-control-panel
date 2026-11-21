@@ -4,11 +4,13 @@
 >
 > - **Built:** the registry and the `opm.control_panel.page` entry point, the
 >   checks on a page description, groups a page brings, the menu built from
->   the registry, `needs`, icons, and the list of pages on the About page.
->   All of the panel's own pages are registered this way.
-> - **Not yet:** the bus bridge, `routes`, `assets`, per-page `i18n`, wrapping
->   a page's HTML in the shell (the panel's own pages are still whole
->   documents), `webui.pages`, `webui.groups` and `webui.branding`.
+>   the registry, `needs`, icons, `heading`, `routes`, `assets`, per-page
+>   `i18n`, wrapping a page's body in the shell, and the list of pages on the
+>   About page. All of the panel's own pages are registered this way;
+>   Wallpaper, Apps and Sensors use every part.
+> - **Not yet:** the bus bridge, `webui.pages`, `webui.groups` and
+>   `webui.branding`. The rest of the panel's own pages are still whole
+>   documents with their routes in `service.py`; they move over one by one.
 
 The control panel is a small shell. The shell does the sign in, the menu,
 the languages, the look and the safety checks. Everything you see in the menu
@@ -96,12 +98,13 @@ PAGE = {
 | `api_version` | yes | The version of this contract the page is written for. See [Versions](#versions). |
 | `id` | yes | Unique, lowercase, `a-z0-9-`. Settings and logs refer to the page by it. |
 | `path` | yes | Where the page is served. Must start with `/` and must not clash with another page or with `/api`, `/static`, `/login`, `/healthz`. A clash leaves the later page out. |
-| `title` | yes | An i18n key and the English text. |
+| `title` | yes | An i18n key and the English text. Used in the menu and the window title. |
+| `heading` | no | An i18n key and the English text for the page's heading, when it should say more than the menu does ("About this device"). Default: the title. |
 | `group` | yes | An existing group (`everyday`, `voice`, `understanding`, `device`, `screen`, `maintenance`) or a group the page defines. See [The menu](#the-menu). |
 | `order` | no | Position within the group, lowest first. Default 100. |
 | `needs` | no | Packages that make the page work; any one of them is enough. If none is installed on a device that shares the assistant's environment, the page leaves the menu, and says it needs the first one if you reach it anyway. |
 | `icon` | no | An SVG file (at most 16 KB) in the page's folder. It is used as a mask, so it takes the menu's colour. |
-| `html` | yes | The page's body, as a file name next to the module the entry point is in, or as `(package, name)`. The shell wraps it in the common header, menu and footer. |
+| `html` | yes | The page's body, as a file name next to the module the entry point is in, or as `(package, name)`. The shell wraps it in the common header and menu, inside `<main>`; a `<style>` or `<script>` element in it stays where it is. A whole document (starting with `<!doctype html>`) is served as it is, with the menu added to its head; the panel's own pages still use that while they move over. |
 | `assets` | no | A folder of files served under `/pages/<id>/`. |
 | `i18n` | no | A folder of `<lang>.json` files. See [Languages](#languages). |
 | `bus` | no | The messages the page may send and listen for. See [The bus bridge](#the-bus-bridge). |
@@ -152,8 +155,11 @@ them with its own strings for the device language.
 - Pages from other packages are not held to that. A page in English only works
   everywhere.
 - Keys are global, so a page prefixes its own keys with its id or its group
-  (`guardian.`, `emkay.`). The shell warns about a key that two pages define
-  differently.
+  (`guardian.`, `emkay.`). The panel's own strings always win, so a page can
+  not change what the shell or another page says. A key two pages define
+  differently keeps the first, and the log says so.
+- The merged strings for a language are served at `/static/i18n/<lang>.json`,
+  where `app.js` has always fetched them.
 
 ## The bus bridge
 
@@ -205,14 +211,15 @@ checks already on them:
 | --- | --- |
 | `r.api` | Reading and ordinary changes. Needs sign in when a token is set. |
 | `r.privileged` | Anything that changes software or controls the device. Always needs the token. |
-| `r.public` | Only what the sign in page needs. Pages from other packages do not get it. |
-
-It also gives `r.bus` (the panel's bus client, or `None`) and `r.config`
-(read and write the user's configuration layer, with backups, as the panel does
-today).
+It also gives `r.need_bus()`, which returns the message bus or answers 503
+when it is not reachable, and `r.config`, the panel's configuration module
+(read and write the user's configuration layer, with backups). There is no
+public router: only the shell answers without sign in.
 
 A page's routes live under `/api/`, and the path should start with the page's
-id or group. A route that clashes with an existing one leaves the page out.
+id or group. A page whose `routes` function fails, or that adds a route the
+panel or an earlier page already has, is left out entirely, because its HTML
+would not work without its routes.
 
 ## What the shell gives a page
 

@@ -1,0 +1,8 @@
+{
+ "hdr.sensors": "Sensores",
+ "sensors.intro": "Lecturas en directo de los sensores del dispositivo: temperatura, carga de la CPU, batería y cualquier otra cosa que un complemento de sensor indique. El dispositivo envía una lectura cada vez que un sensor cambia, así que los valores se rellenan y actualizan solos. Esto necesita el complemento ovos-PHAL-sensors.",
+ "sensors.none": "Todavía no hay sensores. Instale ovos-PHAL-sensors en el dispositivo, o espere a la primera lectura.",
+ "sensors.on": "activado",
+ "sensors.off": "desactivado",
+ "sensors.updated": "Se actualiza solo a medida que el dispositivo informa."
+}

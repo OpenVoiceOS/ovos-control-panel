@@ -73,7 +73,11 @@ def test_every_i18n_key_used_on_a_page_exists_in_the_locales():
 
     from ovos_webui.service import STATIC_DIR
 
-    en = json.loads((Path(STATIC_DIR) / "i18n" / "en.json").read_text(encoding="utf-8"))
+    from ovos_webui import pages
+
+    # the panel's strings with every page's own, as the browser gets them
+    en = pages.load().strings(
+        "en", json.loads((Path(STATIC_DIR) / "i18n" / "en.json").read_text(encoding="utf-8")))
     key_re = re.compile(r'([a-zA-Z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)')
     used: set[str] = set()
     for path in (sorted(Path(STATIC_DIR).glob("*.html"))

@@ -14,9 +14,11 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import time
 import mimetypes
 import os
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any
@@ -44,10 +46,7 @@ from starlette.concurrency import run_in_threadpool
 from ovos_webui import (backupio, configio, health, installer, meta, personas,
                         pypi, recommends, servers, skillsio, transformcfg,
                         translate, voicecfg)
-from ovos_webui import applauncher
 from ovos_webui import intents
-from ovos_webui import sensors as sensorlog
-from ovos_webui import wallpaper
 from ovos_webui import pages as page_registry
 from ovos_webui.auth import (
     COOKIE_NAME,
@@ -181,20 +180,6 @@ class DryRunBody(BaseModel):
 
 class SkillActiveBody(BaseModel):
     active: bool
-class AppNameBody(BaseModel):
-    name: str = Field(max_length=applauncher.MAX_NAME)
-class WallpaperUrlBody(BaseModel):
-    url: str = Field(max_length=wallpaper.MAX_URL)
-
-
-class WallpaperProviderBody(BaseModel):
-    provider_name: str = Field(max_length=255)
-
-
-class WallpaperRotationBody(BaseModel):
-    enabled: bool
-
-
 class BackupIdBody(BaseModel):
     id: str = Field(max_length=512)
 
@@ -586,21 +571,11 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
 
     # ── pages and assets ─────────────────────────────────────────────────────
     # Every page in the menu comes from the page registry, the panel's own
-    # included. Each is served with the menu in its head, so the menu is there
-    # as the page paints, with no request of its own.
+    # included. The pages themselves are served once every route is known
+    # (see "pages from the registry", below), because a page whose routes
+    # clash is left out.
     registry = page_registry.load()
     app.state.registry = registry
-    nav_json = registry.nav_json()
-
-    def _page_handler(page):
-        body = page_registry.render(page, nav_json)
-
-        def handler() -> HTMLResponse:
-            return HTMLResponse(body)
-        return handler
-
-    for page in registry.pages:
-        pages.get(page.path)(_page_handler(page))
 
     def _moved_handler(target: str):
         def handler(request: Request) -> RedirectResponse:
@@ -611,6 +586,34 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
 
     for route, target in MOVED_PAGES.items():
         pages.get(route, include_in_schema=False)(_moved_handler(target))
+
+    @pages.get("/static/i18n/{lang}.json", include_in_schema=False)
+    def static_strings(lang: str) -> JSONResponse:
+        """The strings for a language: the panel's, with each page's own."""
+        lang = lang.lower()
+        if not re.fullmatch(r"[a-z]{2,3}", lang):
+            raise HTTPException(404, "no such language")
+        path = STATIC_DIR / "i18n" / f"{lang}.json"
+        base = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        merged = registry.strings(lang, base)
+        if not merged:
+            raise HTTPException(404, "no such language")
+        return JSONResponse(merged)
+
+    @pages.get("/pages/{page_id}/{asset:path}", include_in_schema=False)
+    def page_asset(page_id: str, asset: str) -> Response:
+        """Serve a file from a page's own assets folder."""
+        page = registry.by_id().get(page_id)
+        parts = Path(asset).parts if asset else ()
+        if page is None or page.assets is None or not parts or asset.startswith("/") \
+                or any(p in ("", ".", "..") or p.startswith(".") for p in parts):
+            raise HTTPException(404, "no such asset")
+        target = page.assets.joinpath(*parts)
+        if not target.is_file():
+            raise HTTPException(404, "no such asset")
+        media, _ = mimetypes.guess_type(parts[-1])
+        return Response(target.read_bytes(), media_type=media or "application/octet-stream",
+                        headers={"X-Content-Type-Options": "nosniff"})
 
     @pages.get("/static/{asset:path}")
     def static_asset(asset: str) -> FileResponse:
@@ -815,61 +818,6 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             return intents.set_skill_active(_need_bus(), skill_id, body.active)
         except intents.IntentError as err:
             raise HTTPException(400, str(err)) from None
-
-    # ── application launcher ──────────────────────────────────────────
-    # Existing ovos-PHAL-plugin-app-launcher bus queries; no new message.
-    @privileged.get("/apps")
-    def api_apps_list() -> dict[str, Any]:
-        return applauncher.list_apps(_need_bus())
-
-    @privileged.post("/apps/launch")
-    def api_apps_launch(body: AppNameBody) -> dict[str, Any]:
-        try:
-            return applauncher.launch(_need_bus(), body.name)
-        except applauncher.AppLauncherError as err:
-            raise HTTPException(400, str(err)) from None
-
-    @privileged.post("/apps/close")
-    def api_apps_close(body: AppNameBody) -> dict[str, Any]:
-        try:
-            return applauncher.close(_need_bus(), body.name)
-        except applauncher.AppLauncherError as err:
-            raise HTTPException(400, str(err)) from None
-    # ── wallpaper ─────────────────────────────────────────────────────
-    # Existing ovos-PHAL-plugin-wallpaper-manager bus queries; no new message.
-    @privileged.get("/wallpaper")
-    def api_wallpaper_get() -> dict[str, Any]:
-        return wallpaper.get_state(_need_bus())
-
-    @privileged.post("/wallpaper/set")
-    def api_wallpaper_set(body: WallpaperUrlBody) -> dict[str, Any]:
-        try:
-            return wallpaper.set_wallpaper(_need_bus(), body.url)
-        except wallpaper.WallpaperError as err:
-            raise HTTPException(400, str(err)) from None
-
-    @privileged.post("/wallpaper/next")
-    def api_wallpaper_next() -> dict[str, Any]:
-        return wallpaper.next_wallpaper(_need_bus())
-
-    @privileged.post("/wallpaper/provider")
-    def api_wallpaper_provider(body: WallpaperProviderBody) -> dict[str, Any]:
-        try:
-            return wallpaper.set_provider(_need_bus(), body.provider_name)
-        except wallpaper.WallpaperError as err:
-            raise HTTPException(400, str(err)) from None
-
-    @privileged.post("/wallpaper/rotation")
-    def api_wallpaper_rotation(body: WallpaperRotationBody) -> dict[str, Any]:
-        return wallpaper.set_auto_rotation(_need_bus(), body.enabled)
-
-    # ── sensors ───────────────────────────────────────────────────────
-    # ovos-PHAL-sensors only broadcasts readings, so the app listens and keeps
-    # the latest of each. Read-only; nothing is sent. No new message type.
-    @api.get("/sensors")
-    def api_sensors_get() -> dict[str, Any]:
-        sensorlog.attach(_need_bus())
-        return sensorlog.snapshot()
 
         # ── skill settings ───────────────────────────────────────────────────────
     @api.get("/skills")
@@ -1728,10 +1676,42 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     def api_about(request: Request) -> dict[str, Any]:
         return meta.about(request.headers.get("host", ""))
 
+    # ── pages from the registry ──────────────────────────────────────────────
+    # A page may add its own API routes. It gets routers with the same checks
+    # as the panel's own, and is left out if it adds a route that exists.
+    def _make_page_routes() -> page_registry.Routes:
+        return page_registry.Routes(
+            api=APIRouter(prefix="/api", dependencies=[Depends(guard)]),
+            privileged=APIRouter(prefix="/api",
+                                 dependencies=[Depends(guard), Depends(guard_privileged)]),
+            need_bus=_need_bus, config=configio)
+
+    page_routers: list[page_registry.Routes] = []
+    taken = {(m, r.path) for router in (public, pages, api, privileged)
+             for r in router.routes for m in (getattr(r, "methods", None) or ())}
+    page_registry.mount_routes(registry, _make_page_routes, taken, page_routers.append)
+
+    # Each page is served with the menu in its head, so the menu is there as
+    # the page paints, with no request of its own.
+    nav_json = registry.nav_json()
+
+    def _page_handler(page):
+        body = page_registry.render(page, nav_json)
+
+        def handler() -> HTMLResponse:
+            return HTMLResponse(body)
+        return handler
+
+    for page in registry.pages:
+        pages.get(page.path)(_page_handler(page))
+
     app.include_router(public)
     app.include_router(pages)
     app.include_router(api)
     app.include_router(privileged)
+    for r in page_routers:
+        app.include_router(r.api)
+        app.include_router(r.privileged)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):

@@ -30,7 +30,10 @@ def _pages():
 
 
 def _en():
-    return json.loads((Path(STATIC_DIR) / "i18n" / "en.json").read_text(encoding="utf-8"))
+    """The panel's English strings with every page's own, as served."""
+    from ovos_webui import pages
+    return pages.load().strings(
+        "en", json.loads((Path(STATIC_DIR) / "i18n" / "en.json").read_text(encoding="utf-8")))
 
 
 class _Marked(HTMLParser):
