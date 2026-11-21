@@ -42,9 +42,59 @@ def registry_root() -> Path | None:
     return root if root.is_dir() else None
 
 
-def profiles() -> list[str]:
-    """Return the profiles the installed ovos-config has."""
-    root = registry_root()
+#: webui.recommends set to this uses OpenVoiceOS's own, even where the
+#: device came with others.
+OPENVOICEOS = "openvoiceos"
+
+
+def distribution_root() -> Path | None:
+    """The recommendations a distribution ships, from ``webui.recommends``: a
+    directory laid out like ovos-config's (``<profile>/<lang>.conf``)."""
+    from ovos_webui import configio
+    try:
+        value = configio.user_or_merged(["webui", "recommends"])
+    except Exception:  # noqa: BLE001 - a broken config falls back to OpenVoiceOS's
+        return None
+    if not isinstance(value, str) or not value.strip() or value.strip() == OPENVOICEOS:
+        return None
+    root = Path(value.strip()).expanduser()
+    return root if root.is_dir() else None
+
+
+def _has_language(root: Path, lang: str) -> bool:
+    for directory in root.iterdir():
+        if directory.is_dir() and directory.name != "platform":
+            stems = [p.stem for p in directory.glob("*.conf")]
+            if closest_lang(lang, stems, max_distance=MAX_LANG_DISTANCE) is not None:
+                return True
+    return False
+
+
+def root_for(lang: str) -> Path | None:
+    """Where the recommendations for ``lang`` come from: the distribution's,
+    when it has the language, otherwise OpenVoiceOS's own."""
+    mine = distribution_root()
+    if mine is not None and LANG_RE.match(lang or "") and _has_language(mine, lang.lower()):
+        return mine
+    return registry_root()
+
+
+def source() -> dict[str, Any]:
+    """Which recommendations are in use, and whether that is your choice or
+    what the device came with, for the panel to say."""
+    from ovos_webui import configio
+    mine = distribution_root()
+    try:
+        yours = configio.get_in(configio.read_user_config(), ["webui", "recommends"])
+    except Exception:  # noqa: BLE001
+        yours = None
+    return {"path": str(mine) if mine else None, "distribution": mine is not None,
+            "yours": yours if isinstance(yours, str) and yours.strip() else None}
+
+
+def profiles(root: Path | None = None) -> list[str]:
+    """Return the profiles a registry has (OpenVoiceOS's by default)."""
+    root = registry_root() if root is None else root
     if root is None:
         return []
     found = sorted(p.name for p in root.iterdir() if p.is_dir())
@@ -52,10 +102,10 @@ def profiles() -> list[str]:
                                         if p in PROFILE_ORDER else 99, p))
 
 
-def languages(profile: str = "base") -> list[str]:
+def languages(profile: str = "base", root: Path | None = None) -> list[str]:
     """Return the languages a profile has a file for."""
-    root = registry_root()
-    if root is None or not _safe_profile(profile):
+    root = registry_root() if root is None else root
+    if root is None or not _safe_profile(profile, root):
         return []
     directory = root / profile
     if not directory.is_dir():
@@ -63,9 +113,9 @@ def languages(profile: str = "base") -> list[str]:
     return sorted(p.stem for p in directory.glob("*.conf"))
 
 
-def _safe_profile(profile: str) -> bool:
+def _safe_profile(profile: str, root: Path | None = None) -> bool:
     """A profile is a plain directory name from the registry itself."""
-    return isinstance(profile, str) and profile in set(profiles())
+    return isinstance(profile, str) and profile in set(profiles(root))
 
 
 def _read(path: Path) -> dict[str, Any]:
@@ -83,15 +133,16 @@ def for_language(lang: str) -> dict[str, Any]:
     registries, in lower case (``pt-pt.conf``). The closest file wins, as in
     ``ovos-config autoconfigure``.
     """
-    root = registry_root()
-    if root is None:
-        return {"available": False, "profiles": {}}
     lang = (lang or "").lower()
     if not LANG_RE.match(lang):
         # Not a language code. Refuse it rather than build a path from it.
-        return {"available": True, "lang": lang, "profiles": {}}
+        return {"available": registry_root() is not None or distribution_root() is not None,
+                "lang": lang, "profiles": {}}
+    root = root_for(lang)
+    if root is None:
+        return {"available": False, "profiles": {}}
     out: dict[str, Any] = {}
-    for profile in profiles():
+    for profile in profiles(root):
         directory = root / profile
         if profile == "platform" or not directory.is_dir():
             continue
@@ -104,7 +155,8 @@ def for_language(lang: str) -> dict[str, Any]:
         if data:
             out[profile] = {"lang": path.stem, "config": data,
                             "plugins": _plugins_in(data)}
-    return {"available": True, "lang": lang, "profiles": out}
+    return {"available": True, "lang": lang, "profiles": out,
+            "from": "distribution" if root != registry_root() else "openvoiceos"}
 
 
 def _plugins_in(data: dict[str, Any]) -> list[dict[str, str]]:

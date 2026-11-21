@@ -189,3 +189,40 @@ def test_the_panel_name_and_colour_are_set_and_reset(token_client):
     assert c.post("/api/panel/look", json={"accent": "red"}).status_code == 400
     assert c.post("/api/pages/panel/enabled", json={"enabled": False}).status_code == 400, \
         "the page that turns pages back on stays on"
+
+
+def test_a_device_can_decide_the_theme_and_the_text_size(token_client):
+    import json as _json
+
+    from ovos_webui import configio
+    c = token_client
+    c.headers["Authorization"] = "Bearer s3cret-token"
+    assert '<html lang="en">' in c.get("/about").text
+    c.post("/api/panel/look", json={"theme": "dark", "text_size": "large"})
+    webui = _json.loads(configio.user_config_path().read_text())["webui"]
+    assert webui["theme"] == "dark" and webui["text_size"] == "large"
+    page = c.get("/about").text
+    assert '<html lang="en" data-theme="dark" data-theme-locked data-text="large" data-text-locked>' in page
+    assert c.get("/api/panel/look").json()["theme"] == "dark"
+    assert c.post("/api/panel/look", json={"theme": "pink"}).status_code == 400
+    c.post("/api/panel/look", json={"theme": "choose", "text_size": "choose"})
+    assert '<html lang="en">' in c.get("/about").text
+    assert _json.loads(configio.user_config_path().read_text())["webui"]["theme"] == "choose", \
+        "choosing is written as such, so it can undo a distribution's choice"
+
+
+def test_the_recommendations_folder_is_set_from_the_panel(token_client, tmp_path):
+    import json as _json
+
+    from ovos_webui import configio
+    c = token_client
+    c.headers["Authorization"] = "Bearer s3cret-token"
+    assert c.post("/api/panel/recommends", json={"path": str(tmp_path / "nope")}).status_code == 400
+    (tmp_path / "rec" / "base").mkdir(parents=True)
+    (tmp_path / "rec" / "base" / "da.conf").write_text("{}")
+    r = c.post("/api/panel/recommends", json={"path": str(tmp_path / "rec")})
+    assert r.status_code == 200 and r.json()["distribution"] is True
+    assert _json.loads(configio.user_config_path().read_text())["webui"]["recommends"] == str(tmp_path / "rec")
+    assert c.post("/api/panel/recommends", json={"path": "openvoiceos"}).json()["distribution"] is False
+    c.post("/api/panel/recommends", json={"path": ""})
+    assert "recommends" not in _json.loads(configio.user_config_path().read_text())["webui"]

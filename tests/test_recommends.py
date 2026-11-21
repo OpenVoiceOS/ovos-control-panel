@@ -132,3 +132,29 @@ def test_installed_is_not_in_use_unless_the_config_names_it():
     assert not recommends.in_use(config, "tts", "ovos-tts-plugin-server")
     assert recommends.in_use(config, "listener.VAD", "ovos-vad-plugin-silero")
     assert not recommends.in_use({"stt": "odd"}, "stt", "ovos-stt-plugin-vosk")
+
+
+def test_a_distribution_brings_its_own_and_falls_back_for_other_languages(tmp_path, monkeypatch):
+    _fake_registry(tmp_path, monkeypatch)
+    mine = tmp_path / "emkay"
+    (mine / "base").mkdir(parents=True)
+    (mine / "base" / "da.conf").write_text(json.dumps({"stt": {"module": "emkay-stt"}}))
+    monkeypatch.setattr(recommends, "distribution_root", lambda: mine)
+    da = recommends.for_language("da-dk")
+    assert da["from"] == "distribution"
+    assert da["profiles"]["base"]["plugins"] == [{"section": "stt", "module": "emkay-stt"}]
+    pt = recommends.for_language("pt")
+    assert pt["from"] == "openvoiceos", "a language the distribution has nothing for"
+    assert pt["profiles"]["base"]["plugins"][0]["module"] == "x"
+
+
+def test_the_distribution_folder_comes_from_the_configuration(tmp_path, monkeypatch):
+    from ovos_webui import configio
+    mine = tmp_path / "emkay"
+    mine.mkdir()
+    monkeypatch.setattr(configio, "user_or_merged", lambda path: str(mine))
+    assert recommends.distribution_root() == mine
+    monkeypatch.setattr(configio, "user_or_merged", lambda path: recommends.OPENVOICEOS)
+    assert recommends.distribution_root() is None, "openvoiceos undoes a distribution's folder"
+    monkeypatch.setattr(configio, "user_or_merged", lambda path: str(tmp_path / "missing"))
+    assert recommends.distribution_root() is None
