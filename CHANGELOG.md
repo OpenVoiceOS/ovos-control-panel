@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a64](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a64) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a63...0.0.1a64)
+
+**Merged pull requests:**
+
+- feat: Library and Music groups in the menu [\#138](https://github.com/OpenVoiceOS/ovos-control-panel/pull/138) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a63](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a63) (2026-11-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a62...0.0.1a63)
@@ -397,10 +405,6 @@
 ## [0.0.1a19](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a19) (2026-08-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a18...0.0.1a19)
-
-**Merged pull requests:**
-
-- fix: audit wave-2a \(history backup ordering, try-it serialization\) [\#20](https://github.com/OpenVoiceOS/ovos-control-panel/pull/20) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a18](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a18) (2026-08-13)
 
