@@ -48,7 +48,9 @@ OWN_DIST = "ovos-control-panel"
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 _PATH_RE = re.compile(r"^/[a-z0-9/_-]*$")
 _KNOWN = {"api_version", "id", "path", "title", "heading", "group", "groups", "order",
-          "needs", "icon", "html", "assets", "i18n", "bus", "routes", "manual"}
+          "needs", "icon", "html", "assets", "i18n", "bus", "routes", "uploads", "manual"}
+#: The largest upload a page may ask for, per request.
+MAX_PAGE_UPLOAD = 64 * 1024 * 1024
 _LANG_RE = re.compile(r"^[a-z]{2,3}(-[a-z0-9]{2,8})?$")
 #: Limits on what a page brings, so one broken page cannot fill the memory.
 MAX_HTML = 512 * 1024
@@ -95,6 +97,8 @@ class Page:
     strings: dict[str, dict[str, str]] = field(default_factory=dict)
     #: The folder served under /pages/<id>/, if the page has one.
     assets: Any = None
+    #: Routes of the page's own that take an upload: path -> largest body.
+    uploads: dict[str, int] = field(default_factory=dict)
 
     def nav(self) -> dict[str, Any]:
         """What the browser's menu needs to know about the page."""
@@ -366,6 +370,14 @@ def parse(desc: Any, module: str, package: str, version: str, builtin: bool) -> 
     routes = desc.get("routes")
     if routes is not None and not callable(routes):
         raise PageError("routes must be a function")
+    uploads = {}
+    for upath, size in (desc.get("uploads") or {}).items():
+        if not isinstance(upath, str) or not upath.startswith("/api/") or "{" in upath \
+                or not isinstance(size, int) or isinstance(size, bool) or size <= 0:
+            raise PageError(f"uploads: {upath!r} must be one of the page's /api/ routes, with a size in bytes")
+        uploads[upath] = min(size, MAX_PAGE_UPLOAD)
+    if uploads and routes is None:
+        raise PageError("uploads are for routes the page adds, and it adds none")
     groups = []
     for raw in desc.get("groups") or ():
         if not isinstance(raw, dict) or not _ID_RE.match(str(raw.get("id", ""))):
@@ -387,7 +399,7 @@ def parse(desc: Any, module: str, package: str, version: str, builtin: bool) -> 
                 manual=desc.get("manual"), heading_key=heading_key, heading=heading,
                 fragment=not html.lstrip()[:15].lower().startswith("<!doctype"),
                 strings=_strings(_folder(module, desc.get("i18n"))),
-                assets=_folder(module, desc.get("assets")))
+                assets=_folder(module, desc.get("assets")), uploads=uploads)
     return page, groups
 
 
@@ -600,6 +612,11 @@ def mount_routes(reg: Registry, make: Callable[[Page], Routes], taken: set[tuple
             for route in router.routes:
                 for method in getattr(route, "methods", None) or ():
                     mine.add((method, route.path))
+        undeclared = sorted(p for p in page.uploads
+                            if not any(path == p for _, path in mine))
+        if undeclared:
+            reg.drop(page, "uploads names routes it does not add: " + ", ".join(undeclared))
+            continue
         clash = sorted(
             {(m, p) for m, p in mine for sm, sp in shell
              if m == sm and _matcher(p).match(_sample(sp))}

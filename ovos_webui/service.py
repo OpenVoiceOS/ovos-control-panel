@@ -814,7 +814,15 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             "connect-src 'self'; form-action 'self'; frame-ancestors 'none'")
         return response
 
-    app.add_middleware(BodyLimitMiddleware, limit_for=body_limit_for,
+    # A page may take uploads on routes of its own (its "uploads"), up to
+    # the size it asked for and the registry allowed.
+    page_uploads = {path: size for page in registry.pages for path, size in page.uploads.items()}
+
+    def _limit_for(scope: dict[str, Any]) -> int:
+        size = page_uploads.get(scope.get("path"))
+        return size if size is not None else body_limit_for(scope)
+
+    app.add_middleware(BodyLimitMiddleware, limit_for=_limit_for,
                        status_code=TOO_LARGE)
     return app
 

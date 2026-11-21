@@ -111,6 +111,7 @@ PAGE = {
 | `i18n` | no | A folder of `<lang>.json` files. See [Languages](#languages). |
 | `bus` | no | The messages the page may send and listen for. See [The bus bridge](#the-bus-bridge). |
 | `routes` | no | Python only: a function that adds API routes. See [Pages with their own routes](#pages-with-their-own-routes). |
+| `uploads` | no | Routes of the page's own that take an upload, with the largest body each may take: `{"/api/documents/upload": 50 * 1024 * 1024}`. Every other request is held to 1 MB. The panel caps a page's upload at 64 MB. |
 | `manual` | no | Link for the "Learn more in the technical manual" line. |
 
 The files are read with `importlib.resources`, so a page works from a wheel, a
