@@ -294,8 +294,17 @@ class _Checker:
             rows = raw.get("rows") or []
             if not isinstance(rows, list):
                 raise DescribedError(f"{where}: rows must be a list")
-            out["rows"] = [{"label": _label(r.get("label"), where), "value": str(r.get("value", ""))[:300],
-                            "when": _when(r.get("when"), where)} for r in rows if isinstance(r, dict)]
+            out["rows"] = []
+            for r in rows:
+                if not isinstance(r, dict):
+                    continue
+                row = {"label": _label(r.get("label"), where), "value": str(r.get("value", ""))[:300],
+                       "when": _when(r.get("when"), where)}
+                # a label for the value (a hint), and one for when it is empty
+                for extra in ("text", "empty"):
+                    if r.get(extra) is not None:
+                        row[extra] = _label(r[extra], where)
+                out["rows"].append(row)
             if "text" not in out and not out["rows"]:
                 raise DescribedError(f"{where}: a status has a text or rows")
         if kind == "list":

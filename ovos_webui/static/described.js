@@ -157,7 +157,8 @@ OvosWebUI.ready(function () {
             if (!holds(r.when, data)) { return; }
             var dt = document.createElement("dt"), dd = document.createElement("dd");
             dt.textContent = t(r.label);
-            dd.textContent = fill(r.value, data);
+            var value = r.text ? fill(t(r.text), data) : fill(r.value, data);
+            dd.textContent = value || (r.empty ? t(r.empty) : "");
             rows.appendChild(dt); rows.appendChild(dd);
           });
           row.innerHTML = "";
