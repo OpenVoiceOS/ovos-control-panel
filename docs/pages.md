@@ -107,7 +107,7 @@ PAGE = {
 | `needs` | no | Packages that make the page work; any one of them is enough. If none is installed on a device that shares the assistant's environment, the page leaves the menu, and says it needs the first one if you reach it anyway. |
 | `icon` | no | An SVG file (at most 16 KB) in the page's folder. It is used as a mask, so it takes the menu's colour. |
 | `html` | yes | The page's body, as a file name next to the module the entry point is in, or as `(package, name)`. The shell wraps it in the common header and menu, inside `<main>`; a `<style>` or `<script>` element in it stays where it is. A whole document (starting with `<!doctype html>`) is served as it is, with the menu added to its head. |
-| `assets` | no | A folder of files served under `/pages/<id>/`. |
+| `assets` | no | A folder of files served under `/pages/<id>/`: a path next to the module (it may have several parts, as `gui/images`), or `(package, path)` for a folder elsewhere in the page's package. |
 | `i18n` | no | A folder of `<lang>.json` files. See [Languages](#languages). |
 | `bus` | no | The messages the page may send and listen for. See [The bus bridge](#the-bus-bridge). |
 | `routes` | no | Python only: a function that adds API routes. See [Pages with their own routes](#pages-with-their-own-routes). |
@@ -187,7 +187,11 @@ them with its own strings for the device language.
   not change what the shell or another page says. A key two pages define
   differently keeps the first, and the log says so.
 - The merged strings for a language are served at `/static/i18n/<lang>.json`,
-  where `app.js` has always fetched them.
+  where `app.js` has always fetched them. A file may be named for a language
+  (`de.json`) or a language in a country (`de-DE.json`); the browser asks for
+  the language, so a regional file counts for it.
+- The menu data lists every language there are strings for, the panel's and
+  the pages', so a page can bring a language the panel itself does not have.
 
 ## The bus bridge
 
