@@ -32,6 +32,7 @@ from fastapi import (
 )
 from fastapi.responses import (
     FileResponse,
+    HTMLResponse,
     JSONResponse,
     PlainTextResponse,
     RedirectResponse,
@@ -47,6 +48,7 @@ from ovos_webui import applauncher
 from ovos_webui import intents
 from ovos_webui import sensors as sensorlog
 from ovos_webui import wallpaper
+from ovos_webui import pages as page_registry
 from ovos_webui.auth import (
     COOKIE_NAME,
     AuthPolicy,
@@ -74,33 +76,6 @@ THROTTLE_DECAY = 30.0
 #: Pages that moved. The old address still works and lands on the new page.
 MOVED_PAGES = {
     "/abilities": "/skills",
-}
-
-PAGES = {
-    "/": "index.html",
-    "/config": "config.html",
-    "/voice": "voice.html",
-    "/voice-all": "voice.html",
-    "/skills": "skills.html",
-    "/backup": "backup.html",
-    "/about": "about.html",
-    "/plugins": "plugins.html",
-    "/personas": "personas.html",
-    "/translate": "translate.html",
-    "/sound": "sound.html",
-    "/tryit": "tryit.html",
-    "/setup": "setup.html",
-    "/controls": "controls.html",
-    "/network": "network.html",
-    "/system": "system.html",
-    "/media": "media.html",
-    "/mark1": "mark1.html",
-    "/servers": "servers.html",
-    "/transformers": "transformers.html",
-    "/intents": "intents.html",
-    "/apps": "apps.html",
-    "/wallpaper": "wallpaper.html",
-    "/sensors": "sensors.html",
 }
 
 #: The bus messages a browser may ask the device to act on. Each one is an
@@ -368,13 +343,6 @@ def body_limit_for(scope: dict[str, Any]) -> int:
     return MAX_UPLOAD_BYTES if scope.get("path") in UPLOAD_PATHS else MAX_PAYLOAD_BYTES
 
 
-def _page(name: str) -> FileResponse:
-    path = STATIC_DIR / name
-    if not path.is_file():  # pragma: no cover - packaging problem
-        raise HTTPException(status_code=500, detail=f"missing page: {name}")
-    return FileResponse(path, media_type="text/html")
-
-
 def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
                connect_bus: bool = True,
                hostnames: tuple[str, ...] = ()) -> FastAPI:
@@ -582,7 +550,9 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
 
     @public.get("/login", include_in_schema=False)
     def login_page() -> FileResponse:
-        return _page("login.html")
+        # The sign in page belongs to the shell, not to the page registry:
+        # it has no menu, because you are not signed in yet.
+        return FileResponse(STATIC_DIR / "login.html", media_type="text/html")
 
     @public.get("/static/app.css", include_in_schema=False)
     def public_stylesheet() -> FileResponse:
@@ -615,13 +585,22 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         return PlainTextResponse("ok")
 
     # ── pages and assets ─────────────────────────────────────────────────────
-    def _page_handler(name: str):
-        def handler() -> FileResponse:
-            return _page(name)
+    # Every page in the menu comes from the page registry, the panel's own
+    # included. Each is served with the menu in its head, so the menu is there
+    # as the page paints, with no request of its own.
+    registry = page_registry.load()
+    app.state.registry = registry
+    nav_json = registry.nav_json()
+
+    def _page_handler(page):
+        body = page_registry.render(page, nav_json)
+
+        def handler() -> HTMLResponse:
+            return HTMLResponse(body)
         return handler
 
-    for route, filename in PAGES.items():
-        pages.get(route)(_page_handler(filename))
+    for page in registry.pages:
+        pages.get(page.path)(_page_handler(page))
 
     def _moved_handler(target: str):
         def handler(request: Request) -> RedirectResponse:
@@ -1226,8 +1205,13 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     @api.get("/nav/needs")
     def api_nav_needs() -> dict[str, Any]:
         """Which page needs are met, so the menu can leave out what cannot work."""
-        from ovos_webui import phal
-        return phal.page_needs()
+        return page_registry.needs(registry)
+
+    @api.get("/pages")
+    def api_pages() -> dict[str, Any]:
+        """Every page in the menu, where it comes from, and the ones left out."""
+        return {"pages": [p.about() for p in registry.pages],
+                "problems": list(registry.problems)}
 
     @api.get("/device/volume")
     def api_volume_get() -> dict[str, Any]:

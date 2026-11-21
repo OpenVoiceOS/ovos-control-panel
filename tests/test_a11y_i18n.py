@@ -76,7 +76,9 @@ def test_every_i18n_key_used_on_a_page_exists_in_the_locales():
     en = json.loads((Path(STATIC_DIR) / "i18n" / "en.json").read_text(encoding="utf-8"))
     key_re = re.compile(r'([a-zA-Z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)')
     used: set[str] = set()
-    for path in sorted(Path(STATIC_DIR).glob("*.html")) + [Path(STATIC_DIR) / "app.js"]:
+    for path in (sorted(Path(STATIC_DIR).glob("*.html"))
+                 + sorted((Path(STATIC_DIR).parent / "pages").glob("*/page.html"))
+                 + [Path(STATIC_DIR) / "app.js"]):
         text = path.read_text(encoding="utf-8")
         for key in re.findall(r'data-i18n="([a-zA-Z0-9_.]+)"', text):
             used.add(key)
@@ -105,14 +107,11 @@ def test_every_page_can_be_reached_from_the_navigation():
     import re
     from pathlib import Path
 
-    from ovos_webui.service import PAGES, STATIC_DIR
+    from ovos_webui import pages
 
-    nav = set(re.findall(r'"path":\s*"(/[a-z0-9-]*)"',
-                         (Path(STATIC_DIR) / "app.js").read_text(encoding="utf-8")))
-    served = {route for route, _template in
-              ((p[0], p[1]) if isinstance(p, (list, tuple)) else (p, None) for p in PAGES)}
-    # the sign-in page is deliberately outside the rail: you are not signed in
-    unreachable = sorted(served - nav - {"/login"})
+    reg = pages.load()
+    menu = {p["path"] for p in reg.nav()["pages"]}
+    unreachable = sorted({p.path for p in reg.pages} - menu)
     assert not unreachable, (
         f"these pages are served but not in the navigation: {unreachable}"
     )

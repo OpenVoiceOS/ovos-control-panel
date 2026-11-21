@@ -34,6 +34,16 @@
   <h2 data-i18n="about.packages_heading">Installed packages</h2>
   <p class="hint" data-i18n="about.packages_hint">Give these version numbers when you report a problem.</p>
   <div class="card"><ul class="plain" id="packages"></ul></div>
+  <h2 data-i18n="about.pages_heading">Pages</h2>
+  <div class="card" id="pages-card">
+    <p id="pages-count"></p>
+    <ul class="plain" id="pages-added" hidden></ul>
+    <p class="hint" id="pages-none" data-i18n="about.pages_none">No other package has added a page.</p>
+    <div id="pages-problems" hidden>
+      <p class="msg err" data-i18n="about.pages_problems">These pages could not be loaded and are left out:</p>
+      <ul class="plain" id="pages-problem-list"></ul>
+    </div>
+  </div>
   <h2 data-i18n="about.credits_heading">Credits</h2>
   <div class="card">
     <p><span data-i18n="about.developed_by">Developed by </span><a href="https://tigregotico.pt">TigreGotico</a><span data-i18n="about.developed_for"> for</span>
@@ -66,6 +76,26 @@ OvosWebUI.ready(function () {
       ? a.packages.map(function (p) { return "<li>" + esc(p.name) + " <code>" + esc(p.version) + "</code></li>"; }).join("")
       : "<li>" + esc(OvosWebUI.t("about.no_package", "No OpenVoiceOS package was found.")) + "</li>";
   }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
+
+  // Every page in the menu comes from a package. The panel's own are counted;
+  // pages another package added are named with that package, so it is always
+  // clear what has been added to the panel.
+  OvosWebUI.api("/api/pages").then(function (r) {
+    var own = r.pages.filter(function (p) { return p.builtin; });
+    var added = r.pages.filter(function (p) { return !p.builtin; });
+    el("pages-count").textContent = OvosWebUI.t("about.pages_count", "{own} of the pages are the control panel's own, and {added} come from other packages.")
+      .replace("{own}", own.length).replace("{added}", added.length);
+    el("pages-added").hidden = !added.length;
+    el("pages-none").hidden = !!added.length;
+    el("pages-added").innerHTML = added.map(function (p) {
+      return '<li><a href="' + esc(p.path) + '">' + esc(p.title) + "</a> \u2014 "
+        + esc(p.package) + " <code>" + esc(p.version) + "</code></li>";
+    }).join("");
+    el("pages-problems").hidden = !r.problems.length;
+    el("pages-problem-list").innerHTML = r.problems.map(function (p) {
+      return "<li><strong>" + esc(p.page) + "</strong> (" + esc(p.package) + "): " + esc(p.error) + "</li>";
+    }).join("");
+  }).catch(function () { el("pages-card").hidden = true; });
 });
 </script>
 </body>

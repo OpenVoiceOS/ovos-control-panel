@@ -90,35 +90,3 @@ def capability_status() -> dict[str, Any]:
         }
     return {"capabilities": out, "phal_plugins": installed_phal_plugins(have)}
 
-
-#: What a page in the menu can say it ``needs`` (see NAV in app.js), and the
-#: packages that provide it -- any one is enough. A page whose need is not met
-#: is left out of the menu, and says what it needs if you reach it anyway.
-PAGE_NEEDS: dict[str, list[str]] = {
-    "system": CAPABILITIES["system"]["plugins"],
-    "sensors": ["ovos-PHAL-sensors"],
-    "media": ["ovos-media", "ovos-plugin-common-play", "ovos-ocp-pipeline-plugin"],
-    "app-launcher": ["ovos-PHAL-plugin-app-launcher"],
-    "wallpaper": ["ovos-PHAL-plugin-wallpaper-manager"],
-    "mark1": ["ovos-PHAL-plugin-mk1"],
-}
-
-#: Packages that only exist where the assistant itself runs. Without any of
-#: them the panel is running apart from the device (in its own container, for
-#: example), its packages say nothing about the device's, and no page is hidden.
-_ASSISTANT_PACKAGES = ("ovos-core", "ovos-audio", "ovos-dinkum-listener", "ovos-phal")
-
-
-def page_needs(have: dict[str, str] | None = None) -> dict[str, Any]:
-    """Report, per page need, whether a providing package is installed here."""
-    from ovos_webui.pypi import installed_versions
-
-    have = installed_versions() if have is None else have
-    colocated = any(p in have for p in _ASSISTANT_PACKAGES)
-    needs = {}
-    for key, plugins in PAGE_NEEDS.items():
-        needs[key] = {
-            "met": any(p.lower() in have for p in plugins),
-            "suggest": plugins[0],
-        }
-    return {"colocated": colocated, "needs": needs}

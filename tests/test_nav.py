@@ -1,64 +1,69 @@
-"""The navigation list says where every page belongs.
+"""The panel's own pages say where they belong in the menu.
 
-`NAV` in app.js is the one place the menu is defined. Each page carries its
-group, its level and what it needs, so the menu can be grouped, folded and
-trimmed to what the device can use without a second list to keep in step.
+Every page comes from the page registry. Each says its group and what it
+needs, so the menu can be grouped, folded and trimmed to what the device can
+use without a second list to keep in step.
 """
 import json
-import re
 from pathlib import Path
 
-from ovos_webui.service import PAGES, STATIC_DIR
+from ovos_webui import pages
+from ovos_webui.service import STATIC_DIR
 
-GROUPS = {"everyday", "voice", "understanding", "device", "screen", "maintenance"}
-LEVELS = {"everyday", "advanced"}
-#: What a page may say it needs. A new need is added here and taught to the
-#: code that decides whether it is met.
-NEEDS = {None, "system", "sensors", "media", "app-launcher", "wallpaper", "mark1"}
-
-
-def _nav():
-    js = (Path(STATIC_DIR) / "app.js").read_text(encoding="utf-8")
-    found = re.search(r"var NAV = (\[.*?\n  \]);", js, re.DOTALL)
-    assert found, "NAV is no longer declared as a JSON-shaped array in app.js"
-    return json.loads(found.group(1))
+REG = pages.load()
 
 
 def _en():
     return json.loads((Path(STATIC_DIR) / "i18n" / "en.json").read_text(encoding="utf-8"))
 
 
-def test_every_entry_has_the_same_fields():
-    for item in _nav():
-        assert set(item) == {"path", "key", "label", "group", "level", "needs"}, item
+def test_the_panels_own_pages_all_load():
+    assert REG.problems == []
+    assert len(REG.pages) == len(pages.BUILTIN)
+    assert all(p.builtin and p.package == pages.OWN_DIST for p in REG.pages)
 
 
-def test_groups_levels_and_needs_are_known():
-    for item in _nav():
-        assert item["group"] in GROUPS, item
-        assert item["level"] in LEVELS, item
-        assert item["needs"] in NEEDS, item
+def test_every_page_is_in_a_known_group():
+    known = {g["id"] for g in pages.GROUPS}
+    for page in REG.pages:
+        assert page.group in known, page.id
 
 
-def test_the_everyday_group_and_the_everyday_level_agree():
-    for item in _nav():
-        assert (item["group"] == "everyday") == (item["level"] == "everyday"), item
+def test_each_page_is_listed_once():
+    paths = [p.path for p in REG.pages]
+    assert len(paths) == len(set(paths))
 
 
-def test_each_page_is_listed_once_and_is_served():
-    paths = [item["path"] for item in _nav()]
-    assert len(paths) == len(set(paths)), "a page is in NAV twice"
-    served = {p[0] if isinstance(p, (list, tuple)) else p for p in PAGES}
-    assert set(paths) <= served, sorted(set(paths) - served)
-
-
-def test_labels_match_the_english_locale():
+def test_titles_and_group_names_match_the_english_locale():
     en = _en()
-    for item in _nav():
-        assert en.get(item["key"]) == item["label"], item
+    for page in REG.pages:
+        assert en.get(page.key) == page.label, page.id
+    for group in pages.GROUPS:
+        if group["level"] == "advanced":
+            assert en.get(group["key"]) == group["label"], group["id"]
+
+
+def test_every_page_has_its_own_icon():
+    icons = [p.icon for p in REG.pages]
+    assert all(icons), [p.id for p in REG.pages if not p.icon]
+    assert len(set(icons)) == len(icons), "two pages share an icon"
 
 
 def test_the_pages_a_bug_report_needs_are_everyday():
-    everyday = {item["path"] for item in _nav() if item["level"] == "everyday"}
+    everyday = {p.path for p in REG.pages if p.group == "everyday"}
     # About is where the versions are, and Setup is where a new device starts.
     assert {"/", "/setup", "/about", "/skills", "/backup"} <= everyday
+
+
+def test_the_core_pages_are_the_panels_own():
+    assert pages.CORE <= {p.id for p in REG.pages}
+
+
+def test_the_entry_points_list_every_builtin_page():
+    """pyproject.toml registers each of the panel's own pages, so an installed
+    panel finds them the same way it finds anyone else's."""
+    text = (Path(__file__).parent.parent / "pyproject.toml").read_text(encoding="utf-8")
+    section = text.split('[project.entry-points."opm.control_panel.page"]', 1)[1].split("\n\n", 1)[0]
+    registered = {line.split("=", 1)[1].strip().strip('"').split(":")[0].rsplit(".", 1)[1]
+                  for line in section.strip().splitlines() if "=" in line}
+    assert registered == set(pages.BUILTIN)

@@ -28,7 +28,7 @@ def test_the_bus_monitor_link_uses_the_port_busmon_serves_on():
 
 
 def test_the_dashboard_builds_the_same_bus_monitor_link():
-    page = (Path(STATIC_DIR) / "index.html").read_text(encoding="utf-8")
+    page = (Path(STATIC_DIR).parent / "pages" / "dashboard" / "page.html").read_text(encoding="utf-8")
     ports = re.findall(r'el\("busmon"\)\.href\s*=\s*[^;]*?:(\d+)/', page)
     assert ports, "the dashboard no longer builds a bus monitor link"
     assert all(int(p) == BUSMON_PORT for p in ports), (

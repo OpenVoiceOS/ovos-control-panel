@@ -68,6 +68,34 @@ ovos-control-panel = "ovos_webui.service:main"
 # kept so an existing `ovos-webui` command still works after the rename
 ovos-webui = "ovos_webui.service:main"
 
+# The control panel's own pages, registered the same way as any other
+# package's pages (see docs/pages.md).
+[project.entry-points."opm.control_panel.page"]
+dashboard = "ovos_webui.pages.dashboard:PAGE"
+setup = "ovos_webui.pages.setup:PAGE"
+tryit = "ovos_webui.pages.tryit:PAGE"
+controls = "ovos_webui.pages.controls:PAGE"
+network = "ovos_webui.pages.network:PAGE"
+voice = "ovos_webui.pages.voice:PAGE"
+skills = "ovos_webui.pages.skills:PAGE"
+backup = "ovos_webui.pages.backup:PAGE"
+about = "ovos_webui.pages.about:PAGE"
+voice-all = "ovos_webui.pages.voice_all:PAGE"
+servers = "ovos_webui.pages.servers:PAGE"
+translate = "ovos_webui.pages.translate:PAGE"
+intents = "ovos_webui.pages.intents:PAGE"
+transformers = "ovos_webui.pages.transformers:PAGE"
+personas = "ovos_webui.pages.personas:PAGE"
+system = "ovos_webui.pages.system:PAGE"
+sensors = "ovos_webui.pages.sensors:PAGE"
+media = "ovos_webui.pages.media:PAGE"
+apps = "ovos_webui.pages.apps:PAGE"
+wallpaper = "ovos_webui.pages.wallpaper:PAGE"
+mark1 = "ovos_webui.pages.mark1:PAGE"
+plugins = "ovos_webui.pages.plugins:PAGE"
+settings = "ovos_webui.pages.settings:PAGE"
+sound = "ovos_webui.pages.sound:PAGE"
+
 [project.urls]
 Homepage = "https://github.com/OpenVoiceOS/ovos-control-panel"
 "Bug Tracker" = "https://github.com/OpenVoiceOS/ovos-control-panel/issues"
@@ -83,7 +111,7 @@ include = ["ovos_webui*"]
 # "static/*" is one level deep and misses static/i18n/*.json, so the wheel
 # shipped the pages and none of their translations. The pages carry data-i18n
 # attributes and fetch those files at runtime.
-ovos_webui = ["static/*", "static/**/*"]
+ovos_webui = ["static/*", "static/**/*", "pages/*/*.html", "pages/*/*.svg"]
 
 [tool.pytest.ini_options]
 

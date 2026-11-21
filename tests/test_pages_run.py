@@ -51,9 +51,9 @@ except ImportError:  # pragma: no cover - depends on the environment
 
 
 def _pages():
-    from ovos_webui.service import PAGES
+    from ovos_webui import pages
 
-    return sorted(PAGES)
+    return sorted(p.path for p in pages.load().pages)
 
 
 # The four reads the /plugins page starts on load that leave this machine or
@@ -743,7 +743,7 @@ def test_every_page_in_the_nav_has_its_own_icon(signed_in_page):
     empty selector passes any per-element check, so the count is asserted
     first.
     """
-    from ovos_webui.service import PAGES
+    PAGES = _pages()
 
     page, url = signed_in_page
     page.goto(f"{url}/")
@@ -1342,7 +1342,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
     page, url = signed_in_page
     needs = {"colocated": True, "needs": {
         k: {"met": k in ("system", "media"), "suggest": "pkg-" + k}
-        for k in ("system", "sensors", "media", "app-launcher", "wallpaper", "mark1")}}
+        for k in ("system", "sensors", "media", "apps", "wallpaper", "mark1")}}
 
     def answer(route):
         route.fulfill(status=200, content_type="application/json", body=json.dumps(needs))
@@ -1350,7 +1350,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
     page.route("**/api/nav/needs", answer)
     try:
         page.goto(f"{url}/")
-        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
+        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs.v2'); "
                       "localStorage.setItem('ovos-nav-open', JSON.stringify(['voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
         page.reload()
         page.wait_for_function("() => document.querySelector('nav a[href=\"/wallpaper\"]').hidden")
@@ -1367,7 +1367,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
         assert "/wallpaper" in _visible_nav(page), "the page you are on stays in the menu"
     finally:
         page.unroute("**/api/nav/needs")
-        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
+        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs.v2'); "
                       "localStorage.removeItem('ovos-nav-open'); }")
 
 
@@ -1378,14 +1378,14 @@ def test_a_panel_apart_from_the_device_hides_no_page(signed_in_page):
         status=200, content_type="application/json", body=json.dumps(needs)))
     try:
         page.goto(f"{url}/")
-        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
+        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs.v2'); "
                       "localStorage.setItem('ovos-nav-open', JSON.stringify(['voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
         page.reload()
         page.wait_for_load_state("networkidle")
         assert "/wallpaper" in _visible_nav(page)
     finally:
         page.unroute("**/api/nav/needs")
-        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs'); "
+        page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs.v2'); "
                       "localStorage.removeItem('ovos-nav-open'); }")
 
 
@@ -1633,3 +1633,23 @@ def test_installing_says_what_it_would_downgrade_and_can_be_called_off(signed_in
         page.remove_listener("dialog", answer)
         for pattern in ("**/api/plugins/search*", "**/api/plugins/check", "**/api/plugins/install"):
             page.unroute(pattern)
+
+
+def test_the_about_page_names_pages_other_packages_added(signed_in_page):
+    page, url = signed_in_page
+    _json_route(page, "**/api/pages", {
+        "pages": [{"id": "about", "path": "/about", "title": "About", "group": "everyday",
+                   "package": "ovos-control-panel", "version": "1", "builtin": True},
+                  {"id": "guardian", "path": "/emkay/guardian", "title": "Guardian", "group": "device",
+                   "package": "ovos-skill-guardian", "version": "0.3.0", "builtin": False}],
+        "problems": [{"page": "broken", "package": "ovos-skill-x", "error": "no group called nowhere"}]})
+    try:
+        page.goto(f"{url}/about")
+        page.locator("#pages-added li").first.wait_for()
+        text = page.locator("#pages-added").inner_text()
+        assert "Guardian" in text and "ovos-skill-guardian" in text and "0.3.0" in text
+        assert page.locator("#pages-none").is_hidden()
+        assert "1 of the pages" in page.locator("#pages-count").inner_text()
+        assert "no group called nowhere" in page.locator("#pages-problem-list").inner_text()
+    finally:
+        page.unroute("**/api/pages")

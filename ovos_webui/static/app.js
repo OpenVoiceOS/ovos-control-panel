@@ -168,56 +168,33 @@
       .catch(function () { /* keep the English already on the page */ });
   }
 
-  // The one place the site navigation is defined. Every page carries an empty
-  // (or fallback) <nav aria-label="Site">; this fills it, so a new page is
-  // added here once rather than in every file.
-  //
-  // Each page says where it belongs, so the menu can be built from this list:
-  //   group  the menu group: "everyday" (always shown), "voice", "understanding",
-  //          "device", "screen" or "maintenance" (folded under "Show more")
-  //   level  "everyday" or "advanced"
-  //   needs  the capability the page depends on (a plugin or a screen), or null.
-  //          Pages whose need is not met can be left out of the menu.
-  // Kept JSON-shaped (quoted keys, no trailing comma) so the tests can read it.
-  var NAV = [
-    {"path": "/", "key": "nav.dashboard", "label": "Dashboard", "group": "everyday", "level": "everyday", "needs": null},
-    {"path": "/setup", "key": "nav.setup", "label": "Setup", "group": "everyday", "level": "everyday", "needs": null},
-    {"path": "/tryit", "key": "nav.tryit", "label": "Try it", "group": "everyday", "level": "everyday", "needs": null},
-    {"path": "/controls", "key": "nav.controls", "label": "Device", "group": "everyday", "level": "everyday", "needs": null},
-    {"path": "/network", "key": "nav.network", "label": "Network", "group": "everyday", "level": "everyday", "needs": null},
-    {"path": "/voice", "key": "nav.voice", "label": "Voice and language", "group": "everyday", "level": "everyday", "needs": null},
-    {"path": "/skills", "key": "nav.skills", "label": "Skills", "group": "everyday", "level": "everyday", "needs": null},
-    {"path": "/backup", "key": "nav.backup", "label": "Backup", "group": "everyday", "level": "everyday", "needs": null},
-    {"path": "/about", "key": "nav.about", "label": "About", "group": "everyday", "level": "everyday", "needs": null},
-    {"path": "/voice-all", "key": "nav.voiceAll", "label": "All voice settings", "group": "voice", "level": "advanced", "needs": null},
-    {"path": "/servers", "key": "nav.servers", "label": "Servers", "group": "voice", "level": "advanced", "needs": null},
-    {"path": "/translate", "key": "nav.translate", "label": "Translate", "group": "voice", "level": "advanced", "needs": null},
-    {"path": "/intents", "key": "nav.intents", "label": "Intents", "group": "understanding", "level": "advanced", "needs": null},
-    {"path": "/transformers", "key": "nav.transformers", "label": "Transformers", "group": "understanding", "level": "advanced", "needs": null},
-    {"path": "/personas", "key": "nav.personas", "label": "Personas", "group": "understanding", "level": "advanced", "needs": null},
-    {"path": "/system", "key": "nav.system", "label": "System", "group": "device", "level": "advanced", "needs": "system"},
-    {"path": "/sensors", "key": "nav.sensors", "label": "Sensors", "group": "device", "level": "advanced", "needs": "sensors"},
-    {"path": "/media", "key": "nav.media", "label": "Media", "group": "device", "level": "advanced", "needs": "media"},
-    {"path": "/apps", "key": "nav.apps", "label": "Apps", "group": "screen", "level": "advanced", "needs": "app-launcher"},
-    {"path": "/wallpaper", "key": "nav.wallpaper", "label": "Wallpaper", "group": "screen", "level": "advanced", "needs": "wallpaper"},
-    {"path": "/mark1", "key": "nav.mark1", "label": "Mark-1 faceplate", "group": "screen", "level": "advanced", "needs": "mark1"},
-    {"path": "/plugins", "key": "nav.plugins", "label": "Plugins", "group": "maintenance", "level": "advanced", "needs": null},
-    {"path": "/config", "key": "nav.settings", "label": "Settings", "group": "maintenance", "level": "advanced", "needs": null},
-    {"path": "/sound", "key": "nav.sound", "label": "Send over sound", "group": "maintenance", "level": "advanced", "needs": null}
-  ];
+  // The menu comes from the page registry on the server, which puts it in the
+  // head of every page it serves (<script type="application/json" id="ovos-nav">),
+  // so it is there as the page paints. Each page says where it belongs:
+  //   group  a group id; a group's level is "everyday" (always shown, at the
+  //          top) or "advanced" (a foldable row under "Advanced")
+  //   icon   a data: URL, used as a mask so it takes the menu's colour
+  // A page served without the data (the sign in page) has no menu. app.js
+  // runs in the head, before that element exists, so it is read when the
+  // page is ready (readMenu, from ready()).
+  var MENU = {groups: [], pages: []};
+  var NAV = [];
+  var GROUPS = [];
+  function readMenu() {
+    try {
+      var node = document.getElementById("ovos-nav");
+      var data = node ? JSON.parse(node.textContent) : null;
+      if (data && data.pages && data.groups) { MENU = data; }
+    } catch (e) { /* no menu */ }
+    NAV = MENU.pages;
+    GROUPS = MENU.groups.filter(function (g) { return g.level === "advanced"; });
+  }
   // The menu shows the everyday pages, then an "Advanced" divider and one
   // row per advanced group. Each row folds its own pages open and shut, and
   // which rows are open is remembered per browser; all start folded. Every
   // link is always in the DOM -- a folded group's links are only hidden --
   // and the group holding the page you are on opens when the page loads, so
   // a link can never strand you on a page the menu does not show.
-  var GROUPS = [
-    ["voice", "nav.group.voice", "Voice"],
-    ["understanding", "nav.group.understanding", "Understanding"],
-    ["device", "nav.group.device", "Device"],
-    ["screen", "nav.group.screen", "Screen"],
-    ["maintenance", "nav.group.maintenance", "Maintenance"]
-  ];
   var OPEN_KEY = "ovos-nav-open";
   // The old header switch stored "ovos-simple"; "0" meant someone had asked
   // for every page, so every group starts open for them.
@@ -227,7 +204,7 @@
       var v = window.localStorage.getItem(OPEN_KEY);
       if (v === null) {
         return window.localStorage.getItem(OLD_SIMPLE_KEY) === "0"
-          ? GROUPS.map(function (g) { return g[0]; }) : [];
+          ? GROUPS.map(function (g) { return g.id; }) : [];
       }
       var list = JSON.parse(v);
       return Array.isArray(list) ? list : [];
@@ -239,25 +216,36 @@
   function herePath() {
     return window.location.pathname.replace(/\/$/, "") || "/";
   }
+  // The icon is a data: URL from the registry; it is checked again here,
+  // because it goes into a style attribute.
+  var ICON_RE = /^data:image\/svg\+xml;base64,[A-Za-z0-9+\/=]+$/;
   function navLink(item) {
-    return '<a href="' + item.path + '" data-i18n="' + item.key + '">'
+    var icon = item.icon && ICON_RE.test(item.icon)
+      ? ' style="--icon: url(' + item.icon + ')"' : "";
+    return '<a href="' + esc(item.path) + '" data-page="' + esc(item.id) + '"' + icon
+      + (item.key ? ' data-i18n="' + esc(item.key) + '"' : "") + ">"
       + esc(t(item.key, item.label)) + "</a>";
   }
   function renderNav() {
     var nav = document.querySelector('nav[aria-label], nav#sitenav');
-    if (!nav) { return; }
-    var html = '<div class="nav-group nav-everyday">'
-      + NAV.filter(function (x) { return x.group === "everyday"; }).map(navLink).join("")
-      + "</div>";
-    html += '<span class="nav-divider" data-i18n="nav.advanced">'
-      + esc(t("nav.advanced", "Advanced")) + "</span>";
+    if (!nav || !NAV.length) { return; }
+    var html = MENU.groups.filter(function (g) { return g.level === "everyday"; }).map(function (g) {
+      return '<div class="nav-group nav-everyday" data-level-group="' + esc(g.id) + '">'
+        + NAV.filter(function (x) { return x.group === g.id; }).map(navLink).join("") + "</div>";
+    }).join("");
+    if (GROUPS.length) {
+      html += '<span class="nav-divider" data-i18n="nav.advanced">'
+        + esc(t("nav.advanced", "Advanced")) + "</span>";
+    }
     html += GROUPS.map(function (g) {
-      var items = NAV.filter(function (x) { return x.group === g[0]; });
+      var items = NAV.filter(function (x) { return x.group === g.id; });
       if (!items.length) { return ""; }
-      return '<div class="nav-group" data-group="' + g[0] + '">'
-        + '<button type="button" class="nav-fold" aria-expanded="false" aria-controls="navl-' + g[0] + '">'
-        + '<span data-i18n="' + g[1] + '">' + esc(t(g[1], g[2])) + "</span></button>"
-        + '<div class="nav-links" id="navl-' + g[0] + '">' + items.map(navLink).join("") + "</div></div>";
+      var id = esc(g.id);
+      return '<div class="nav-group" data-group="' + id + '">'
+        + '<button type="button" class="nav-fold" aria-expanded="false" aria-controls="navl-' + id + '">'
+        + '<span' + (g.key ? ' data-i18n="' + esc(g.key) + '"' : "") + ">" + esc(t(g.key, g.label))
+        + "</span></button>"
+        + '<div class="nav-links" id="navl-' + id + '">' + items.map(navLink).join("") + "</div></div>";
     }).join("");
     nav.innerHTML = html;
     var here = herePath();
@@ -284,7 +272,8 @@
   // is kept for a few minutes per tab so the menu does not jump on every page.
   // Until it is known, and when the panel runs apart from the assistant (its
   // own packages then say nothing about the device's), every page shows.
-  var NEEDS_KEY = "ovos-nav-needs";
+  // Keyed by page id since the page registry; the old key held need names.
+  var NEEDS_KEY = "ovos-nav-needs.v2";
   var NEEDS_TTL = 5 * 60 * 1000;
   function cachedNeeds() {
     try {
@@ -293,8 +282,8 @@
     } catch (e) { return null; }
   }
   function unmet(data, item) {
-    return !!(data && data.colocated && item.needs && data.needs
-      && data.needs[item.needs] && data.needs[item.needs].met === false);
+    return !!(data && data.colocated && data.needs
+      && data.needs[item.id] && data.needs[item.id].met === false);
   }
   function applyNeeds(data) {
     var nav = document.querySelector('nav[aria-label], nav#sitenav');
@@ -321,7 +310,7 @@
         note.setAttribute("role", "note");
         main.insertBefore(note, main.firstChild);
       }
-      var pkg = data.needs[current.needs].suggest;
+      var pkg = data.needs[current.id].suggest;
       var parts = t("nav.needs.missing", "This page needs {pkg}, which is not installed on this device.")
         .split("{pkg}");
       note.innerHTML = esc(parts[0]) + "<code>" + esc(pkg) + "</code>" + esc(parts.slice(1).join(""))
@@ -554,6 +543,7 @@
     fmtDateTime: fmtDateTime,
     ready: function (fn) {
       document.addEventListener("DOMContentLoaded", function () {
+        readMenu();
         renderNav();
         markNav();
         mountMenuToggle();
