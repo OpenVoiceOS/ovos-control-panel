@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a66](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a66) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a65...0.0.1a66)
+
+**Merged pull requests:**
+
+- feat: turn added pages on and off from the About page [\#140](https://github.com/OpenVoiceOS/ovos-control-panel/pull/140) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a65](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a65) (2026-11-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a64...0.0.1a65)
@@ -397,10 +405,6 @@
 ## [0.0.1a21](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a21) (2026-08-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a20...0.0.1a21)
-
-**Merged pull requests:**
-
-- fix: audit wave-3 \(health essential set, translate size cap, per-source login throttle\) [\#22](https://github.com/OpenVoiceOS/ovos-control-panel/pull/22) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a20](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a20) (2026-08-13)
 
