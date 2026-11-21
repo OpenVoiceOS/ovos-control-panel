@@ -19,5 +19,7 @@
  "about.no_package": "Der blev ikke fundet nogen OpenVoiceOS-pakke.",
  "hdr.about": "Om denne enhed",
  "about.intro": "Denne side viser, hvad der er installeret, som hjælp, når du rapporterer et problem.",
- "about.ai_assisted": "Lavet med hjælp fra AI."
+ "about.ai_assisted": "Lavet med hjælp fra AI.",
+ "about.pages_off": "Slået fra på denne enhed:",
+ "about.pages_settings": "Disse indstillinger kunne ikke bruges:"
 }

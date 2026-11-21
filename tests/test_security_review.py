@@ -323,13 +323,20 @@ UNAUTHENTICATED_ALLOWED = {"/api/status", "/api/login", "/api/logout",
                            # icons without cookies; they ship in the package,
                            # so serving them tells a stranger nothing
                            "/static/manifest.webmanifest",
-                           "/static/icon-192.png", "/static/icon-512.png"}
+                           "/static/icon-192.png", "/static/icon-512.png",
+                           # the distribution's colours and logo
+                           # (webui.branding): the sign in page wears them,
+                           # and they are what the device shows anyway
+                           "/static/branding.css", "/static/branding/logo"}
 
 
 def test_s8_every_route_needs_a_sign_in_except_the_known_few(bus):
     app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
     routes = []
-    for router in app.state.routers.values():
+    # the shell's routers, and every router a page brought
+    routers = list(app.state.routers.values()) + [
+        router for r in app.state.page_routers for router in (r.api, r.privileged)]
+    for router in routers:
         for route in router.routes:
             routes.append((getattr(route, "path", ""),
                            getattr(route, "methods", set()) or set()))
@@ -353,7 +360,7 @@ def test_s8_every_route_needs_a_sign_in_except_the_known_few(bus):
                 assert r.headers["location"] == "/login", probe
             else:
                 assert r.status_code == 401, f"{probe} answered {r.status_code} with no token"
-    assert checked >= 8
+    assert checked >= 30, "the pages' own routes are checked too"
 
 
 def test_s8_pages_need_a_sign_in(token_client):

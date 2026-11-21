@@ -171,6 +171,9 @@ header { flex-wrap: wrap; row-gap: 0.5rem; }
 /* The signature: a red equalizer that reads as sound made visible. It is
  * decorative for a screen reader, and on the dashboard it goes flat and dim
  * when the message bus cannot be reached — the header shows the real state. */
+/* A distribution's logo (webui.branding.logo) takes the waveform's place. */
+.brand-logo { height: 2rem; width: auto; max-width: 10rem; object-fit: contain; }
+
 .wave {
   display: flex;
   align-items: center;

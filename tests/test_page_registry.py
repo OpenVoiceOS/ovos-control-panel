@@ -227,7 +227,7 @@ def test_a_page_whose_routes_clash_is_left_out(guardian_pkg):
     reg = pages.load(_own() + [_guardian(guardian_pkg, routes=routes)])
     taken = {("GET", "/api/health")}
     included = []
-    pages.mount_routes(reg, lambda: pages.Routes(
+    pages.mount_routes(reg, lambda page: pages.Routes(
         api=__import__("fastapi").APIRouter(prefix="/api"),
         privileged=__import__("fastapi").APIRouter(prefix="/api"),
         need_bus=lambda: None, config=None), taken, included.append)
@@ -241,7 +241,7 @@ def test_a_page_whose_routes_fail_is_left_out(guardian_pkg):
         raise RuntimeError("no database")
 
     reg = pages.load(_own() + [_guardian(guardian_pkg, routes=routes)])
-    pages.mount_routes(reg, lambda: pages.Routes(
+    pages.mount_routes(reg, lambda page: pages.Routes(
         api=__import__("fastapi").APIRouter(prefix="/api"),
         privileged=__import__("fastapi").APIRouter(prefix="/api"),
         need_bus=lambda: None, config=None), set(), lambda r: None)
@@ -279,7 +279,7 @@ def test_a_page_cannot_take_a_shell_address_through_a_parameter(guardian_pkg):
             return {}
 
     reg = pages.load(_own() + [_guardian(guardian_pkg, routes=routes)])
-    pages.mount_routes(reg, lambda: pages.Routes(
+    pages.mount_routes(reg, lambda page: pages.Routes(
         api=APIRouter(prefix="/api"), privileged=APIRouter(prefix="/api"),
         need_bus=lambda: None, config=None), {("GET", "/api/health")}, lambda r: None)
     assert "/emkay/guardian" not in reg.by_path()
