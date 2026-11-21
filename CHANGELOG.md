@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a72](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a72) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a71...0.0.1a72)
+
+**Merged pull requests:**
+
+- fix: a newly installed page shows in the device's language [\#147](https://github.com/OpenVoiceOS/ovos-control-panel/pull/147) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a71](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a71) (2026-11-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a70...0.0.1a71)
@@ -404,7 +412,6 @@
 - feat: intent inspector — dry-run, active skills, and the intent manifest [\#31](https://github.com/OpenVoiceOS/ovos-control-panel/pull/31) ([JarbasAl](https://github.com/JarbasAl))
 - feat: transformers panel — manage all six transformer chains [\#30](https://github.com/OpenVoiceOS/ovos-control-panel/pull/30) ([JarbasAl](https://github.com/JarbasAl))
 - feat: Voice settings — pickers for wake word, VAD, STT, TTS, pipeline, transformers, language [\#29](https://github.com/OpenVoiceOS/ovos-control-panel/pull/29) ([JarbasAl](https://github.com/JarbasAl))
-- feat: System panel — SSH, factory reset, language, connectivity, detect-location [\#28](https://github.com/OpenVoiceOS/ovos-control-panel/pull/28) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
