@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a67](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a67) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a66...0.0.1a67)
+
+**Merged pull requests:**
+
+- fix: a skill's author comes from its skill.json [\#141](https://github.com/OpenVoiceOS/ovos-control-panel/pull/141) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a66](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a66) (2026-11-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a65...0.0.1a66)
@@ -397,10 +405,6 @@
 ## [0.0.1a22](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a22) (2026-08-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a21...0.0.1a22)
-
-**Merged pull requests:**
-
-- fix: audit wave-4 backend \(restore off the loop + serialized, idempotent deletes, atomic caches\) [\#23](https://github.com/OpenVoiceOS/ovos-control-panel/pull/23) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a21](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a21) (2026-08-13)
 
