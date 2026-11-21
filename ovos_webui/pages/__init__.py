@@ -142,15 +142,95 @@ class Registry:
                     LOG.info("page %s: key %s is already defined by another page", page.id, key)
         return merged
 
-    def nav(self) -> dict[str, Any]:
-        """The menu, in order: groups that have pages, and the pages."""
-        used = {p.group for p in self.pages}
-        return {"groups": [dict(g) for g in self.groups if g["id"] in used],
-                "pages": [p.nav() for p in self.pages]}
+    def nav(self, prefs: Prefs | None = None) -> dict[str, Any]:
+        """The menu, in order: groups that have pages, and the pages.
 
-    def nav_json(self) -> str:
+        ``prefs`` (from :func:`prefs`) turns pages off, moves them and orders
+        and renames the groups, as ``webui.pages`` and ``webui.groups`` say.
+        """
+        prefs = prefs or Prefs()
+        groups = {g["id"]: dict(g) for g in self.groups}
+        for gid, change in prefs.rename.items():
+            if gid in groups:
+                groups[gid].update(change)
+        rank = {g["id"]: i for i, g in enumerate(self.groups)}
+        for i, gid in enumerate(prefs.group_order):
+            if gid in rank and groups[gid]["level"] == "advanced":
+                rank[gid] = -1000 + i
+        seq = {p.id: i for i, p in enumerate(self.pages)}
+        shown = []
+        for page in self.pages:
+            if page.id in prefs.disabled:
+                continue
+            item = page.nav()
+            move = prefs.move.get(page.id) or {}
+            if move.get("group") in groups:
+                item["group"] = move["group"]
+            order = move.get("order", page.order)
+            shown.append((rank[item["group"]], order, seq[page.id], item))
+        shown.sort(key=lambda x: x[:3])
+        used = {x[3]["group"] for x in shown}
+        ordered = sorted((g for g in groups.values() if g["id"] in used),
+                         key=lambda g: (rank[g["id"]], g["id"]))
+        return {"groups": ordered, "pages": [x[3] for x in shown]}
+
+    def nav_json(self, prefs: Prefs | None = None) -> str:
         """The menu as JSON that is safe inside a ``<script>`` element."""
-        return json.dumps(self.nav(), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+        return json.dumps(self.nav(prefs), ensure_ascii=False,
+                          separators=(",", ":")).replace("</", "<\\/")
+
+
+# ── what the configuration says about the menu ───────────────────────────────
+@dataclass
+class Prefs:
+    """``webui.pages`` and ``webui.groups``, checked."""
+
+    disabled: frozenset = frozenset()
+    move: dict[str, dict[str, Any]] = field(default_factory=dict)
+    group_order: list[str] = field(default_factory=list)
+    rename: dict[str, dict[str, str]] = field(default_factory=dict)
+    problems: list[str] = field(default_factory=list)
+
+
+def prefs(webui: dict[str, Any] | None) -> Prefs:
+    """Read ``webui.pages`` and ``webui.groups`` from the ``webui`` section.
+
+    Anything malformed is skipped and named in ``problems``. The core pages
+    cannot be turned off.
+    """
+    out = Prefs()
+    webui = webui if isinstance(webui, dict) else {}
+    pages_cfg = webui.get("pages") if isinstance(webui.get("pages"), dict) else {}
+    groups_cfg = webui.get("groups") if isinstance(webui.get("groups"), dict) else {}
+    disabled = set()
+    for pid in pages_cfg.get("disabled") or ():
+        if not isinstance(pid, str):
+            out.problems.append(f"webui.pages.disabled: {pid!r} is not a page id")
+        elif pid in CORE:
+            out.problems.append(f"webui.pages.disabled: {pid} is a core page and stays on")
+        else:
+            disabled.add(pid)
+    out.disabled = frozenset(disabled)
+    for pid, change in (pages_cfg.get("move") or {}).items():
+        if not isinstance(change, dict):
+            out.problems.append(f"webui.pages.move.{pid}: not a mapping")
+            continue
+        move = {}
+        if isinstance(change.get("group"), str):
+            move["group"] = change["group"]
+        if isinstance(change.get("order"), int) and not isinstance(change.get("order"), bool):
+            move["order"] = change["order"]
+        out.move[pid] = move
+    order = groups_cfg.get("order") or []
+    out.group_order = [g for g in order if isinstance(g, str)] if isinstance(order, list) else []
+    for gid, change in (groups_cfg.get("rename") or {}).items():
+        if isinstance(change, dict) and isinstance(change.get("label"), str) and change["label"].strip():
+            # A renamed group shows the new label as written, in every language.
+            out.rename[gid] = {"label": change["label"].strip()[:40],
+                               "key": change["key"] if isinstance(change.get("key"), str) else ""}
+        else:
+            out.problems.append(f"webui.groups.rename.{gid}: needs a label")
+    return out
 
 
 # ── reading a description ────────────────────────────────────────────────────
@@ -410,14 +490,27 @@ def _esc(text: str) -> str:
             .replace('"', "&quot;"))
 
 
-def render(page: Page, nav_json: str) -> str:
+def render(page: Page, nav_json: str, brand: dict[str, Any] | None = None) -> str:
     """The page as served: with the menu data in its head, and a page body
-    wrapped in the shell's header, menu and main."""
+    wrapped in the shell's header, menu and main, in the distribution's name.
+
+    A heading with no key that is just the default name (the Dashboard's)
+    shows the distribution's name instead.
+    """
+    from ovos_webui import branding
+
+    brand = brand or branding.read({})
     tag = f'<script type="application/json" id="ovos-nav">{nav_json}</script>\n'
     if page.fragment:
-        parts = {"title": _esc(page.label), "heading": _esc(page.heading),
+        heading = page.heading
+        if not page.heading_key and heading == branding.DEFAULT_NAME:
+            heading = brand["name"]
+        mark = ('<img class="brand-logo" src="/static/branding/logo" alt="">'
+                if branding.logo_file(brand) else
+                '<div class="wave" id="wave" aria-hidden="true">' + "<i></i>" * 28 + "</div>")
+        parts = {"title": _esc(page.label), "heading": _esc(heading),
                  "heading_key": f' data-i18n="{_esc(page.heading_key)}"' if page.heading_key else "",
-                 "id": _esc(page.id), "nav": tag}
+                 "id": _esc(page.id), "nav": tag, "brand": _esc(brand["name"]), "mark": mark}
         out = _shell()
         for name, value in parts.items():
             out = out.replace("{{" + name + "}}", value)
@@ -461,7 +554,7 @@ def _sample(path: str) -> str:
     return _PARAM_RE.sub("x", path)
 
 
-def mount_routes(reg: Registry, make: Callable[[], Routes], taken: set[tuple[str, str]],
+def mount_routes(reg: Registry, make: Callable[[Page], Routes], taken: set[tuple[str, str]],
                  include: Callable[[Routes], None]) -> None:
     """Let each page with ``routes`` add its API routes.
 
@@ -476,7 +569,7 @@ def mount_routes(reg: Registry, make: Callable[[], Routes], taken: set[tuple[str
     for page in list(reg.pages):
         if page.routes is None:
             continue
-        r = make()
+        r = make(page)
         try:
             page.routes(r)
         except Exception as e:  # noqa: BLE001 - a broken page is left out, not fatal

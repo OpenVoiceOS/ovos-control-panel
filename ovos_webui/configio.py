@@ -67,6 +67,34 @@ def read_merged_config() -> dict[str, Any]:
     return read_mycroft_config()
 
 
+def _deep_merge(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:
+    out = dict(base)
+    for key, value in over.items():
+        if isinstance(value, dict) and isinstance(out.get(key), dict):
+            out[key] = _deep_merge(out[key], value)
+        else:
+            out[key] = value
+    return out
+
+
+def section(name: str) -> dict[str, Any]:
+    """One top-level section, merged across the layers, with the user's layer
+    read fresh from disk.
+
+    The merged configuration is cached in this process and only refreshed when
+    the file watcher notices a change, so a change the user just saved could be
+    missing from it. The user's layer is read again and laid on top, so it
+    shows at once, while what a distribution set in the system layer stays.
+    """
+    try:
+        merged = read_merged_config().get(name)
+    except Exception:  # noqa: BLE001 - a broken layer must not hide the rest
+        merged = None
+    user = read_user_config().get(name)
+    merged = merged if isinstance(merged, dict) else {}
+    return _deep_merge(merged, user) if isinstance(user, dict) else merged
+
+
 def parse_text(text: str, fmt: str) -> dict[str, Any]:
     """Parse ``text`` as JSON or YAML and check it is a mapping."""
     if fmt not in ("json", "yaml"):

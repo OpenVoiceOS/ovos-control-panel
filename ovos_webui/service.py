@@ -42,7 +42,7 @@ from fastapi.responses import (
 from ovos_utils.log import LOG
 from pydantic import BaseModel, Field
 
-from ovos_webui import configio, health, installer, pypi, recommends, voicecfg
+from ovos_webui import branding, configio, health, installer, pypi, recommends, voicecfg
 from ovos_webui import pages as page_registry
 from ovos_webui.auth import (
     COOKIE_NAME,
@@ -339,10 +339,39 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         return {"ok": True}
 
     @public.get("/login", include_in_schema=False)
-    def login_page() -> FileResponse:
+    def login_page() -> HTMLResponse:
         # The sign in page belongs to the shell, not to the page registry:
-        # it has no menu, because you are not signed in yet.
-        return FileResponse(STATIC_DIR / "login.html", media_type="text/html")
+        # it has no menu, because you are not signed in yet. It does carry
+        # the distribution's name.
+        html = (STATIC_DIR / "login.html").read_text(encoding="utf-8")
+        brand = branding.read()
+        name = brand["name"]
+        if branding.logo_file(brand):
+            html = re.sub(r'<div class="wave" id="wave" aria-hidden="true">(?:<i></i>)+</div></header>',
+                          '<img class="brand-logo" src="/static/branding/logo" alt=""></header>',
+                          html, count=1)
+        if name != branding.DEFAULT_NAME:
+            safe = name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            html = (html.replace("— OpenVoiceOS</title>", f"— {safe}</title>")
+                    .replace("<h1>OpenVoiceOS</h1>", f"<h1>{safe}</h1>")
+                    .replace('<p class="brand-name">OpenVoiceOS</p>', f'<p class="brand-name">{safe}</p>'))
+        return HTMLResponse(html)
+
+    @public.get("/static/branding.css", include_in_schema=False)
+    def branding_css() -> Response:
+        """The distribution's colours (webui.branding), after app.css. Public,
+        like app.css: the sign in page wears them too."""
+        return Response(branding.css(branding.read()), media_type="text/css",
+                        headers={"Cache-Control": "no-cache"})
+
+    @public.get("/static/branding/logo", include_in_schema=False)
+    def branding_logo() -> FileResponse:
+        found = branding.logo_file(branding.read())
+        if found is None:
+            raise HTTPException(404, "no logo")
+        return FileResponse(found[0], media_type=found[1], headers={
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"})
 
     @public.get("/static/app.css", include_in_schema=False)
     def public_stylesheet() -> FileResponse:
@@ -381,6 +410,14 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     # clash is left out.
     registry = page_registry.load()
     app.state.registry = registry
+
+    def _prefs() -> page_registry.Prefs:
+        """webui.pages and webui.groups, as the configuration says now."""
+        try:
+            webui = configio.section("webui")
+        except Exception:  # noqa: BLE001 - a broken config must not stop a page
+            webui = {}
+        return page_registry.prefs(webui)
 
     def _moved_handler(target: str):
         def handler(request: Request) -> RedirectResponse:
@@ -652,8 +689,13 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     @api.get("/pages")
     def api_pages() -> dict[str, Any]:
         """Every page in the menu, where it comes from, and the ones left out."""
-        return {"pages": [p.about() for p in registry.pages],
-                "problems": list(registry.problems)}
+        prefs = _prefs()
+        brand = branding.read()
+        return {"pages": [dict(p.about(), disabled=p.id in prefs.disabled)
+                          for p in registry.pages],
+                "problems": list(registry.problems),
+                "settings": prefs.problems,
+                "branding": {"name": brand["name"], "warnings": branding.warnings(brand)}}
 
 
     @api.get("/capabilities")
@@ -697,27 +739,40 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     # ── pages from the registry ──────────────────────────────────────────────
     # A page may add its own API routes. It gets routers with the same checks
     # as the panel's own, and is left out if it adds a route that exists.
-    def _make_page_routes() -> page_registry.Routes:
+    def _page_on(page_id: str):
+        """A page turned off in webui.pages.disabled answers nothing at all."""
+        def check() -> None:
+            if page_id in _prefs().disabled:
+                raise HTTPException(404, "this page is turned off on this device")
+        return check
+
+    def _make_page_routes(page) -> page_registry.Routes:
+        on = Depends(_page_on(page.id))
         return page_registry.Routes(
-            api=APIRouter(prefix="/api", dependencies=[Depends(guard)]),
+            api=APIRouter(prefix="/api", dependencies=[Depends(guard), on]),
             privileged=APIRouter(prefix="/api",
-                                 dependencies=[Depends(guard), Depends(guard_privileged)]),
+                                 dependencies=[Depends(guard), Depends(guard_privileged), on]),
             need_bus=_need_bus, config=configio, bus=lambda: state["bus"])
 
     page_routers: list[page_registry.Routes] = []
     taken = {(m, r.path) for router in (public, pages, api, privileged)
              for r in router.routes for m in (getattr(r, "methods", None) or ())}
     page_registry.mount_routes(registry, _make_page_routes, taken, page_routers.append)
+    app.state.page_routers = page_routers
 
     # Each page is served with the menu in its head, so the menu is there as
     # the page paints, with no request of its own.
-    nav_json = registry.nav_json()
 
     def _page_handler(page):
-        body = page_registry.render(page, nav_json)
-
         def handler() -> HTMLResponse:
-            return HTMLResponse(body)
+            # The menu and the name follow the configuration as it is now, so
+            # a change to webui.pages, webui.groups or webui.branding shows on
+            # the next page load.
+            prefs = _prefs()
+            if page.id in prefs.disabled:
+                raise HTTPException(404, "this page is turned off on this device")
+            return HTMLResponse(page_registry.render(
+                page, registry.nav_json(prefs), branding.read()))
         return handler
 
     for page in registry.pages:

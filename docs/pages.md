@@ -10,8 +10,9 @@
 >   its own folder, with its own routes and strings where it has any. What
 >   several pages share (configuration, plugins and installs, voice, events,
 >   system actions, sign in) stays with the shell.
-> - **Not yet:** the bus bridge, `webui.pages`, `webui.groups` and
->   `webui.branding`.
+>   `webui.pages`, `webui.groups` and `webui.branding` (name, logo, colours)
+>   are built too.
+> - **Not yet:** the bus bridge, and `manual` in `webui.branding`.
 
 The control panel is a small shell. The shell does the sign in, the menu,
 the languages, the look and the safety checks. Everything you see in the menu
@@ -144,6 +145,32 @@ the menu.
 The configuration can move, reorder and hide pages. See
 [Configuration](#configuration).
 
+### Where a page belongs
+
+Pick the group by what the page is about, and an `order` between the panel's
+own pages, which are numbered in tens so there is always room. Lowest first.
+
+| Group | `order` | For | The panel's own pages |
+| --- | --- | --- | --- |
+| `everyday` | 0 | What most people use: always shown, at the top | Dashboard 10, Setup 20, Try it 30, Device 40, Network 50, Voice and language 60, Skills 70, Backup 80, About 90 |
+| `voice` | 10 | How the device listens, speaks and translates | All voice settings 10, Servers 20, Translate 30 |
+| `understanding` | 20 | How it understands and who answers | Intents 10, Transformers 20, Personas 30 |
+| `device` | 30 | The hardware and what runs on it | System 10, Sensors 20, Media 30 |
+| `screen` | 40 | A device with a screen: what it shows | Apps 10, Wallpaper 20, Mark-1 faceplate 30 |
+| `maintenance` | 50 | Keeping the panel and the device in shape | Plugins 10, Settings 20, Send over sound 30 |
+
+Some examples:
+
+- A page with facts about a device ("About Emkay") goes in `everyday` after
+  About, `order` 95, or in `device`.
+- A page that shows what is on the screen, or what the player is playing,
+  goes in `screen`, or in `device` next to Media.
+- A distribution's own group sits between the panel's: `order` 15 puts it
+  between Voice and Understanding.
+
+A distribution can still move any page with `webui.pages.move`, so the place a
+page picks is a sensible default, not a lock.
+
 ## Languages
 
 Each page brings its own `i18n/<lang>.json` with its own keys. The shell merges
@@ -265,12 +292,19 @@ the user can change them in their own layer, as with the rest of OVOS.
 }
 ```
 
-- `pages.disabled` takes pages out entirely: no menu entry, no route, no bus
-  access.
-- `pages.move` puts a page in another group, or at another place in its group.
-- `groups.order` and `groups.rename` arrange the advanced groups.
+- `pages.disabled` takes pages out entirely: no menu entry, and the page and
+  its routes answer 404.
+- `pages.move` puts a page in another group, or at another place in its group
+  (`group`, `order`, or both).
+- `groups.order` lists advanced groups to show first, in that order; the rest
+  follow in their usual order. `groups.rename` gives a group another `label`,
+  shown as written in every language (add a `key` to translate it).
 
-The core pages cannot be disabled. See [The core pages](#the-core-pages).
+The core pages cannot be disabled. A setting the panel cannot use is skipped
+and named on the About page, which also lists the pages that are turned off.
+A change shows on the next page load: the panel reads the user's layer again
+for every page, so nothing needs a restart. See
+[The core pages](#the-core-pages).
 
 ## Branding
 
@@ -282,22 +316,28 @@ A distribution can give the panel its own name and look, with configuration only
     "branding": {
       "name": "Emkay",
       "logo": "/usr/share/emkay/logo.svg",
-      "colors": {"accent": "#1f6feb", "accent-strong": "#1158c7"},
-      "manual": "https://emkay.ai/docs/"
+      "colors": {"accent": "#1f6feb", "accent-strong": "#1158c7"}
     }
   }
 }
 ```
 
-- `name` replaces "OpenVoiceOS" in the header and the window title.
-- `logo` replaces the waveform in the header. It is an SVG or PNG on the
-  device, served by the panel.
-- `colors` set the CSS variables the theme already uses, for light mode, with
-  an optional `colors_dark` for dark mode. The panel checks the contrast and
-  says on the About page if a colour makes text hard to read.
-- `manual` is the base for the manual links when a page has none of its own.
+- `name` replaces "OpenVoiceOS" in the window title, on the Dashboard's
+  heading and on the sign in page. At most 40 characters, no markup.
+- `logo` replaces the waveform in the header. It is an SVG, PNG, JPEG or WebP
+  file on the device, at most 512 KB, served by the panel at
+  `/static/branding/logo`.
+- `colors` set the theme's CSS variables for light mode, and `colors_dark`
+  for dark mode: `bg`, `bg-soft`, `card`, `card-soft`, `ink`, `muted`, `line`,
+  `accent`, `accent-strong`, `accent-hover`, `accent-ink`, `accent-wash`, `ok`,
+  `warn`, `bad`. Only plain colour values (`#rrggbb`, `rgb()`, `hsl()`) are
+  taken. The About page says when a light colour leaves text below a 4.5:1
+  contrast.
+- Not yet: `manual`, a base for the manual links.
 
 The panel turns this into a small `branding.css` and loads it after `app.css`.
+The name, the logo and the colours are public, like `app.css`, because the
+sign in page wears them too.
 A theme plugin can come later if a distribution needs more than this.
 
 ## Trust and safety

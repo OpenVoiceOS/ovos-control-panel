@@ -19,5 +19,7 @@
  "about.no_package": "Não foi encontrado nenhum pacote OpenVoiceOS.",
  "hdr.about": "Sobre este dispositivo",
  "about.intro": "Esta página lista o que está instalado, para ajudar quando reportar um problema.",
- "about.ai_assisted": "Feito com a ajuda de IA."
+ "about.ai_assisted": "Feito com a ajuda de IA.",
+ "about.pages_off": "Desligadas neste dispositivo:",
+ "about.pages_settings": "Estas definições não puderam ser usadas:"
 }

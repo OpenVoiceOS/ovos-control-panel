@@ -10,6 +10,14 @@
     <p id="pages-count"></p>
     <ul class="plain" id="pages-added" hidden></ul>
     <p class="hint" id="pages-none" data-i18n="about.pages_none">No other package has added a page.</p>
+    <div id="pages-off" hidden>
+      <p data-i18n="about.pages_off">Turned off on this device:</p>
+      <ul class="plain" id="pages-off-list"></ul>
+    </div>
+    <div id="pages-settings" hidden>
+      <p class="msg err" data-i18n="about.pages_settings">These settings could not be used:</p>
+      <ul class="plain" id="pages-settings-list"></ul>
+    </div>
     <div id="pages-problems" hidden>
       <p class="msg err" data-i18n="about.pages_problems">These pages could not be loaded and are left out:</p>
       <ul class="plain" id="pages-problem-list"></ul>
@@ -53,6 +61,14 @@ OvosWebUI.ready(function () {
   OvosWebUI.api("/api/pages").then(function (r) {
     var own = r.pages.filter(function (p) { return p.builtin; });
     var added = r.pages.filter(function (p) { return !p.builtin; });
+    var off = r.pages.filter(function (p) { return p.disabled; });
+    el("pages-off").hidden = !off.length;
+    el("pages-off-list").innerHTML = off.map(function (p) {
+      return "<li>" + esc(p.title) + " <code>" + esc(p.id) + "</code></li>";
+    }).join("");
+    var notes = (r.settings || []).concat((r.branding && r.branding.warnings) || []);
+    el("pages-settings").hidden = !notes.length;
+    el("pages-settings-list").innerHTML = notes.map(function (n) { return "<li>" + esc(n) + "</li>"; }).join("");
     el("pages-count").textContent = OvosWebUI.t("about.pages_count", "{own} of the pages are the control panel's own, and {added} come from other packages.")
       .replace("{own}", own.length).replace("{added}", added.length);
     el("pages-added").hidden = !added.length;
