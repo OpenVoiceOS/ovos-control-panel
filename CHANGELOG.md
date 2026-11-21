@@ -1,8 +1,8 @@
 # Changelog
 
-## [0.0.1a68](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a68) (2026-11-21)
+## [0.0.1a69](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a69) (2026-11-21)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a67...0.0.1a68)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a67...0.0.1a69)
 
 **Merged pull requests:**
 
