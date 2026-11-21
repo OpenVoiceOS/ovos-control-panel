@@ -82,7 +82,9 @@ OvosWebUI.ready(function () {
     var button = r.installed
       ? '<button class="secondary" data-remove="' + esc(r.name) + '" aria-label="' + esc(OvosWebUI.t("plugins.button.remove", "Remove") + " " + r.name) + '">' + OvosWebUI.t("plugins.button.remove", "Remove") + '</button>'
       : '<button class="secondary" data-add="' + esc(r.name) + '" aria-label="' + esc(OvosWebUI.t("plugins.button.install", "Install") + " " + r.name) + '">' + OvosWebUI.t("plugins.button.install", "Install") + '</button>';
-    return '<div class="card result" data-pkg="' + esc(r.name) + '"><strong>' + esc(prettyName(r.name)) + "</strong> " + state
+    var icon = "/static/icons/" + (r.kind === "phal" ? "phal" : "plugin") + ".svg";
+    return '<div class="card result" data-pkg="' + esc(r.name) + '"><div class="result-head">'
+      + '<img class="skill-icon" alt="" src="' + icon + '"><strong>' + esc(prettyName(r.name)) + "</strong> " + state + "</div>"
       + '<p class="hint">' + esc(plainLabel(r.kind, kindLabels))
       + '<code class="slug">' + esc(r.name) + "</code></p>"
       + '<p class="hint result-by" hidden></p><p class="result-desc" hidden></p>'

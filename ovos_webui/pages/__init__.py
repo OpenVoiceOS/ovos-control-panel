@@ -567,8 +567,18 @@ def origin(page: Page, lang: str | None = None) -> dict[str, Any] | None:
             LOG.debug("page %s: no skill.json read from %s: %s", page.id, page.package, err)
         if not found["name"]:
             found["name"] = _skill_json_name(page, lang)
+        if not found["icon"]:
+            found["icon"] = generic_icon(page.package)
         _ORIGINS[key] = found
     return _ORIGINS[key]
+
+
+def generic_icon(package: str) -> str:
+    """The panel's own icon for a package that brings none: a skill, a PHAL
+    plugin, or any other plugin."""
+    from ovos_webui.pypi import classify
+    kind = classify(package)
+    return "/static/icons/" + ("skill" if kind == "skill" else "phal" if kind == "phal" else "plugin") + ".svg"
 
 
 def _skill_json_name(page: Page, lang: str) -> str | None:
@@ -590,16 +600,15 @@ def _skill_json_name(page: Page, lang: str) -> str | None:
 
 
 def _origin_html(page: Page) -> str:
-    """The line at the top of an added page that says where it comes from."""
+    """The line at the foot of an added page that says where it comes from:
+    the skill's own name, its package and version."""
     found = origin(page)
     if not found:
         return ""
-    icon = (f'<img class="page-origin-icon" src="{_esc(found["icon"])}" alt="">' if found["icon"] else
-            f'<img class="page-origin-icon" src="{_esc(page.icon)}" alt="">' if page.icon else "")
-    name = f'<span class="page-origin-name">{_esc(found["name"])}</span>' if found["name"] else ""
+    name = f'<span class="page-origin-name">{_esc(found["name"])}</span> · ' if found["name"] else ""
     pkg = _esc(found["package"] + (" " + found["version"] if found["version"] else ""))
-    return (f'<p class="page-origin" data-package="{_esc(found["package"])}">{icon}{name}'
-            f'<span class="page-origin-pkg"><span data-i18n="page.from">From</span> {pkg}</span></p>\n')
+    return (f'\n<p class="page-origin" data-package="{_esc(found["package"])}">'
+            f'<span data-i18n="page.from">From</span> {name}<span class="page-origin-pkg">{pkg}</span></p>')
 
 
 def render(page: Page, nav_json: str, brand: dict[str, Any] | None = None) -> str:

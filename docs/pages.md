@@ -134,21 +134,26 @@ PAGE = {
 }
 ```
 
-`level` is `everyday` (always shown, at the top; a group other than `everyday`
-itself gets a small heading, as Library and Music do) or `advanced` (a foldable
-row under Advanced, as today). A group with no pages left shows nothing. If two
+`level` is `everyday` (at the top: the `everyday` group's pages always show,
+and any other everyday group, as Library and Music, is a row that folds its
+pages open) or `advanced` (a foldable row inside Advanced, which itself folds
+all the advanced groups away at once). A group with no pages left shows nothing. If two
 packages define the same group id, the first one wins and the other is named in
 the log; the panel's own groups always win, so a page may define one of them
 too, for panels older than the group.
 
 ### Where a page comes from
 
-The shell puts a line at the top of every page that is not the panel's own:
-the page's icon, the skill's name from its `skill.json` in the device's
-language (with the skill's own icon, when it has one), and the package and
-version. A page cannot leave it out. When two pages in the menu have the same
-title, as two music services might, each also shows where it comes from under
-its name in the menu.
+The shell puts a quiet line at the foot of every page that is not the panel's
+own: the skill's name from its `skill.json` in the device's language, and the
+package and version. A page cannot leave it out. When two pages in the menu
+have the same title, as two music services might, each also shows where it
+comes from under its name in the menu.
+
+Where the panel shows an icon for a skill or plugin (the Skills page, the
+search results, the About page's list of pages) and the package brings none,
+it shows its own: one for a skill, one for a PHAL plugin and one for any other
+plugin, in `static/icons/`.
 
 How the menu behaves does not change: groups fold, the open ones are remembered,
 the group of the page you are on opens, and pages the device cannot use leave
@@ -165,7 +170,7 @@ own pages, which are numbered in tens so there is always room. Lowest first.
 | Group | `order` | For | The panel's own pages |
 | --- | --- | --- | --- |
 | `everyday` | 0 | What most people use: always shown, at the top | Dashboard 10, Setup 20, Try it 30, Device 40, Network 50, Voice and language 60, Skills 70, Backup 80, About 90 |
-| `library` | 5 | What the device reads and plays for you: documents, books, podcasts, news, radio. Shown under the everyday pages, with a heading | Media 5 |
+| `library` | 5 | What the device reads and plays for you: documents, books, podcasts, news, radio. A foldable row under the everyday pages | Media 5 |
 | `music` | 6 | Music you make with the device: playing along, lessons, karaoke, instruments. Shown like Library | |
 | `voice` | 10 | How the device listens, speaks and translates | All voice settings 10, Servers 20, Translate 30 |
 | `understanding` | 20 | How it understands and who answers | Intents 10, Transformers 20, Personas 30 |

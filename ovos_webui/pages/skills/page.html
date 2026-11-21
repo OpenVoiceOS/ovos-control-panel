@@ -15,7 +15,7 @@
   <section id="detail" tabindex="-1" aria-labelledby="detail-title" hidden>
     <div class="row"><button class="secondary" id="back" data-i18n="skills.back">All skills</button></div>
     <div class="skill-head">
-      <img class="skill-icon large" id="detail-icon" alt="" hidden>
+      <img class="skill-icon large" id="detail-icon" alt="" src="/static/icons/skill.svg">
       <h2 id="detail-title"></h2>
     </div>
     <p id="detail-desc"></p>
@@ -223,7 +223,8 @@ OvosWebUI.ready(function () {
     var badges = (s.package && outdated[s.package])
       ? ' <span class="badge starting">' + esc(t("skills.badge.update", "update available")) + "</span>" : "";
     var desc = s.description || t("skills.noDesc", "This skill does not describe itself.");
-    var icon = s.package ? '<img class="skill-icon" alt="" hidden data-icon="' + esc(s.package) + '">' : "";
+    var icon = '<img class="skill-icon" alt="" src="' + GENERIC_ICON + '"'
+      + (s.package ? ' data-icon="' + esc(s.package) + '"' : "") + ">";
     return '<li><button class="pick" data-id="' + esc(s.id) + '" aria-controls="detail">'
       + '<span class="pick-name">' + icon + esc(s.name) + badges + "</span></button>"
       + '<p class="hint">' + esc(desc) + "</p>"
@@ -273,13 +274,14 @@ OvosWebUI.ready(function () {
     return all.filter(function (s) { return s.id === id; })[0] || null;
   }
 
-  // An icon is fetched through the panel. One that does not load stays hidden.
+  // An icon is fetched through the panel. Until it loads, and for a skill
+  // that has none, the panel's own skill icon stands in.
+  var GENERIC_ICON = "/static/icons/skill.svg";
   function loadIcon(img) {
     var pkg = img.getAttribute("data-icon");
-    img.addEventListener("load", function () { img.hidden = false; });
-    img.addEventListener("error", function () { img.remove(); });
-    img.loading = "lazy";
-    img.src = "/api/skillinfo/" + encodeURIComponent(pkg) + "/icon";
+    var probe = new Image();
+    probe.onload = function () { if (img.getAttribute("data-icon") === pkg) { img.src = probe.src; } };
+    probe.src = "/api/skillinfo/" + encodeURIComponent(pkg) + "/icon";
   }
 
   function fmtDay(iso) {
@@ -292,8 +294,8 @@ OvosWebUI.ready(function () {
   var infoFor = null;
   function showInfo(pkg, fallbackTitle) {
     infoFor = pkg;
-    el("detail-icon").hidden = true;
-    el("detail-icon").removeAttribute("src");
+    el("detail-icon").hidden = false;
+    el("detail-icon").src = GENERIC_ICON;
     el("detail-meta").textContent = t("skills.info.loading", "Looking up the details…");
     el("detail-links").hidden = true;
     el("detail-examples").hidden = true;
@@ -319,9 +321,8 @@ OvosWebUI.ready(function () {
       el("detail-examples").hidden = !(i.examples || []).length;
       el("detail-notovos").hidden = i.is_ovos_skill !== false;
       if (i.has_icon) {
-        el("detail-icon").onload = function () { el("detail-icon").hidden = false; };
-        el("detail-icon").onerror = function () { el("detail-icon").hidden = true; };
-        el("detail-icon").src = "/api/skillinfo/" + encodeURIComponent(pkg) + "/icon";
+        el("detail-icon").setAttribute("data-icon", pkg);
+        loadIcon(el("detail-icon"));
       }
     }).catch(function () {
       if (infoFor === pkg) {
@@ -568,7 +569,7 @@ OvosWebUI.ready(function () {
           title = '<button class="linklike" data-preview="' + esc(p.name) + '">' + title + "</button>";
         }
         return '<div class="card result" data-pkg="' + esc(p.name) + '">'
-          + '<div class="result-head"><img class="skill-icon" alt="" hidden><strong>' + title + "</strong> " + state + "</div>"
+          + '<div class="result-head"><img class="skill-icon" alt="" src="' + GENERIC_ICON + '"><strong>' + title + "</strong> " + state + "</div>"
           + '<p class="hint result-by" hidden></p><p class="result-desc" hidden></p>'
           + '<code class="slug">' + esc(p.name) + "</code>"
           + '<div class="row">' + action + "</div></div>";

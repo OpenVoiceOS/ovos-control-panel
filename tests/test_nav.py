@@ -78,7 +78,7 @@ def test_what_it_plays_for_you_is_in_the_library():
     assert REG.by_id()["media"].group == "library"
 
 
-def test_a_later_everyday_group_gets_a_heading():
+def test_every_group_but_the_everyday_pages_folds():
     js = (Path(STATIC_DIR) / "app.js").read_text(encoding="utf-8")
-    assert 'g.id === "everyday" ? ""' in js and "nav-heading" in js
-    assert "nav .nav-heading" in (Path(STATIC_DIR) / "app.css").read_text(encoding="utf-8")
+    assert 'groupRow(g, "nav-everyday")' in js, "the Library and Music fold like any group"
+    assert 'foldRow(ADVANCED, "nav.advanced"' in js, "Advanced folds all its groups at once"
