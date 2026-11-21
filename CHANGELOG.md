@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a62](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a62) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a61...0.0.1a62)
+
+**Merged pull requests:**
+
+- feat: let a page bring languages the panel lacks, and deeper asset folders [\#136](https://github.com/OpenVoiceOS/ovos-control-panel/pull/136) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a61](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a61) (2026-11-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a60...0.0.1a61)
@@ -397,10 +405,6 @@
 ## [0.0.1a17](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a17) (2026-08-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a16...0.0.1a17)
-
-**Merged pull requests:**
-
-- feat: Mark-1 faceplate panel — eyes, mouth, image editor and simulator [\#18](https://github.com/OpenVoiceOS/ovos-control-panel/pull/18) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a16](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a16) (2026-08-12)
 
