@@ -28,7 +28,7 @@ def test_a_panel_running_apart_from_the_assistant_hides_nothing():
 
 def test_only_pages_with_needs_are_reported():
     out = pages.needs(REG, ON_DEVICE)
-    assert set(out["needs"]) == {"system", "sensors", "media", "apps", "wallpaper", "mark1"}
+    assert set(out["needs"]) == {"network", "system", "sensors", "media", "apps", "wallpaper", "mark1"}
 
 
 def test_the_route_answers(client):
