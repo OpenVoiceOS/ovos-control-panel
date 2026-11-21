@@ -105,20 +105,29 @@ prefix every message of the page starts with.
 | Block | Fields |
 |---|---|
 | `text` | `text`: a label. |
-| `status` | `query`, `text` (a label with `{field}` from the answer), `show` (a field that must be true), `actions`, `refresh` (seconds). |
+| `status` | `query`, `text` (a label with `{field}` from the answer) and/or `rows` (`label`, `value` with `{field}`, `when`), `show` (a field that must be true), `actions`, `refresh` (seconds). |
 | `list` | `query`, `items` (the answer's list), `key` (a row's id), `title` (`{field}`), `meta` (a label with `{field}`), `empty`, `split` (`by` a true/false field into two lists, each with a heading), `rename` (`field`, `send`, `when`, `max_length`), `actions` (one per row), `refresh`, `heading`. |
 | `actions` | `actions`: buttons. |
 | `form` | `fields` and `save`: `{"config": "PHAL.<package>", "reload": "<message>"}` writes in the plugin's own place in `mycroft.conf` and asks it to read it again; `{"send": "<message>"}` with a `query` sends the values to the skill. |
 | `choice` | `param` and `options`: tabs whose value goes with every query on the page. |
 
-An action is `{"label", "send"}` or a download, `{"label", "download", "file":
+An action is `{"label", "send"}`, with `data` it always sends (a test sound),
+or a download, `{"label", "download", "file":
 {"data": <answer field, base64>, "name": "{name}.mid", "type": <media type>}}`,
 with `when` (`"field"` or `"!field"` on the row) and `confirm` (a label).
 A field is `{"name", "label", "type"}`, the type one of `text`, `password`,
 `number`, `slider`, `checkbox`, `select` (`options`, or `options_from` a
 query) and `lines`, with `hint`, `min`, `max`, `step` and `max_length`.
+A field can have a `default` (a value equal to it is left out of
+`mycroft.conf`, so the file says only what was changed), `show_when`
+(`{"synth": "port"}`: shown only for that value of another field), and a
+checkbox `on` and `off` values for a setting that is not true or false
+(`"on": ["*"], "off": []`). A form saved in `mycroft.conf` sends its
+`reload` message with the section as saved (`{"config": {...}}`).
 
-In `{field}` a value can be shown as a date: `{saved:date}`.
+In `{field}` a field can be nested (`{ports.outputs}`), a list is joined with
+commas, a value can be shown as a date (`{saved:date}`), or as a label
+(`{engine@midi.engine}` shows the label `midi.engine.fluidsynth`).
 
 A block this panel does not know is shown as "this part needs a newer control
 panel"; the rest of the page still works.

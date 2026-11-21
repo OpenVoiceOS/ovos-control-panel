@@ -163,3 +163,26 @@ def test_a_form_saves_in_the_plugins_own_place_and_reloads_it(app):
     values = c.get("/api/cp/demo/form", params={"ref": "b3.form"}).json()["values"]
     assert values["colour"] == "blue" and values["secret"] == {"set": True}, "a password never comes back"
     assert c.post("/api/cp/demo/form", json={"ref": "b3.form", "values": {"colour": "green"}}).status_code == 400
+
+
+def test_buttons_with_fixed_data_and_settings_that_are_not_yes_or_no():
+    page = {"controlpanel": 1, "id": "midi", "bus": "ovos.midi.", "blocks": [
+        {"type": "status", "query": "ovos.midi.status",
+         "rows": [{"label": "midi.plays", "value": "{engine@midi.engine}"}],
+         "actions": [{"label": "midi.test", "send": "ovos.midi.events", "privileged": False,
+                      "data": {"events": [["note", 0, 0, 60, 90, 1]]}}]},
+        {"type": "form", "save": {"config": "PHAL.ovos-phal-plugin-midi"},
+         "fields": [{"name": "inputs", "label": "midi.listen", "type": "checkbox", "on": ["*"], "off": []},
+                    {"name": "duck", "label": "midi.duck", "type": "checkbox", "default": True},
+                    {"name": "output_port", "label": "midi.port", "type": "select",
+                     "options_from": {"query": "ovos.midi.status", "items": "ports.outputs"},
+                     "show_when": {"synth": "port"}}]}]}
+    _, refs = checked(page, "ovos-phal-plugin-midi")
+    msg, data, _ = described.message_for(refs, "b0.a0", {"key": "ignored"})
+    assert msg == "ovos.midi.events" and data["events"][0][3] == 60
+    assert described.form_values(refs["b1.form"], {"inputs": True, "duck": True}) == {"inputs": ["*"], "duck": True}
+    assert described.form_values(refs["b1.form"], {"inputs": False})["inputs"] == []
+    bad = json.loads(json.dumps(page))
+    bad["blocks"][0]["actions"][0]["data"] = {"x": "y" * 5000}
+    with pytest.raises(described.DescribedError, match="small"):
+        checked(bad, "ovos-phal-plugin-midi")

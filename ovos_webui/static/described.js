@@ -36,19 +36,29 @@ OvosWebUI.ready(function () {
         {day: "numeric", month: "short", year: "numeric"});
     } catch (e) { return ""; }
   }
-  // "{name}" and "{saved:date}" from a row or an answer
+  // a field of an answer, maybe nested ("ports.outputs")
+  function get(data, path) {
+    return String(path).split(".").reduce(function (d, k) { return d == null ? undefined : d[k]; }, data);
+  }
+  function truthy(v) { return Array.isArray(v) ? v.length > 0 : !!v; }
+  // "{name}", "{saved:date}", and "{engine@midi.engine}": the value as a
+  // label (midi.engine.fluidsynth); a list is joined with commas
   function fill(text, data) {
-    return String(text).replace(/\{([a-z_][a-z0-9_]*)(?::(date))?\}/g, function (all, name, fmt) {
-      var v = data ? data[name] : undefined;
-      if (v === undefined || v === null) { return ""; }
-      return fmt === "date" ? day(v) : String(v);
-    });
+    return String(text).replace(/\{([a-z_][a-z0-9_.]*)(?::(date))?(?:@([A-Za-z0-9_.-]+))?\}/g,
+      function (all, name, fmt, prefix) {
+        var v = get(data, name);
+        if (v === undefined || v === null) { return ""; }
+        if (fmt === "date") { return day(v); }
+        if (prefix) { return t(prefix + "." + v); }
+        return Array.isArray(v) ? v.join(", ") : String(v);
+      });
   }
   function holds(when, data) {
     if (!when) { return true; }
-    var not = when.charAt(0) === "!", name = not ? when.slice(1) : when;
-    return not ? !(data && data[name]) : !!(data && data[name]);
+    var not = when.charAt(0) === "!", v = truthy(get(data, not ? when.slice(1) : when));
+    return not ? !v : v;
   }
+  function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
   function post(path, body) {
     return OvosWebUI.api(base + path, {method: "POST", headers: {"Content-Type": "application/json"},
                                        body: JSON.stringify(body || {})});
@@ -129,6 +139,9 @@ OvosWebUI.ready(function () {
       var card = section(block);
       var line = document.createElement("p");
       card.appendChild(line);
+      var rows = document.createElement("dl");
+      rows.className = "cp-rows";
+      card.appendChild(rows);
       var row = document.createElement("div");
       row.className = "row";
       card.appendChild(row);
@@ -137,7 +150,16 @@ OvosWebUI.ready(function () {
       function load() {
         return post("/query", {ref: block.ref, params: params}).then(function (data) {
           card.hidden = !holds(block.show, data);
-          line.textContent = fill(t(block.text), data);
+          line.hidden = !block.text;
+          line.textContent = block.text ? fill(t(block.text), data) : "";
+          rows.innerHTML = "";
+          (block.rows || []).forEach(function (r) {
+            if (!holds(r.when, data)) { return; }
+            var dt = document.createElement("dt"), dd = document.createElement("dd");
+            dt.textContent = t(r.label);
+            dd.textContent = fill(r.value, data);
+            rows.appendChild(dt); rows.appendChild(dd);
+          });
           row.innerHTML = "";
           (block.actions || []).forEach(function (a) {
             if (holds(a.when, data)) { row.appendChild(button(a, function () { run(a, null, msg, function () { load(); reloadAll(); }); })); }
@@ -218,7 +240,7 @@ OvosWebUI.ready(function () {
       var msgId;
       function load() {
         return post("/query", {ref: block.ref, params: params}).then(function (data) {
-          var items = (data && data[block.items]) || [];
+          var items = get(data, block.items) || [];
           holder.innerHTML = "";
           if (block.split) {
             var no = items.filter(function (i) { return !i[block.split.by]; });
@@ -268,9 +290,11 @@ OvosWebUI.ready(function () {
             if (f.options_from) {
               post("/options", {ref: block.ref + ".form", field: f.name}).then(function (data) {
                 var src = f.options_from;
-                ((data && data[src.items]) || []).forEach(function (o) {
+                (get(data, src.items) || []).forEach(function (o) {
                   var opt = document.createElement("option");
-                  opt.value = String(o[src.value]); opt.textContent = String(o[src.label]);
+                  var plain = typeof o !== "object" || o === null;
+                  opt.value = String(plain ? o : o[src.value]);
+                  opt.textContent = String(plain ? o : o[src.label]);
                   input.appendChild(opt);
                 });
                 if (input.dataset.want) { input.value = input.dataset.want; }
@@ -295,7 +319,20 @@ OvosWebUI.ready(function () {
           hint.textContent = t(f.hint);
           card.appendChild(hint);
         }
-        inputs[f.name] = {field: f, input: input};
+        inputs[f.name] = {field: f, input: input, label: label};
+      });
+      // a field shown only for one value of another (the port, for "a MIDI port")
+      function showFields() {
+        Object.keys(inputs).forEach(function (name) {
+          var f = inputs[name].field;
+          if (!f.show_when || !inputs[f.show_when.field]) { return; }
+          var other = inputs[f.show_when.field].input;
+          var v = other.type === "checkbox" ? other.checked : other.value;
+          inputs[name].label.hidden = String(v) !== String(f.show_when.value);
+        });
+      }
+      Object.keys(inputs).forEach(function (name) {
+        inputs[name].input.addEventListener("change", showFields);
       });
       var row = document.createElement("div");
       row.className = "row";
@@ -309,11 +346,12 @@ OvosWebUI.ready(function () {
         Object.keys(inputs).forEach(function (name) {
           var f = inputs[name].field, input = inputs[name].input, v = values[name];
           if (v === undefined) { return; }
-          if (f.type === "checkbox") { input.checked = !!v; }
+          if (f.type === "checkbox") { input.checked = "on" in f ? !same(v, f.off) : !!v; }
           else if (f.type === "password") { input.placeholder = v.set ? t("common.password_set") : ""; }
           else if (f.type === "lines") { input.value = (v || []).join("\n"); }
           else { input.value = v; input.dataset.want = v; }
         });
+        showFields();
       }).catch(function (e) { say(msg, e.message, true); });
       save.addEventListener("click", function () {
         var values = {};

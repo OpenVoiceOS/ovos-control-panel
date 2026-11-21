@@ -42,6 +42,9 @@ _BUS_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*(\.[a-z0-9_-]+)*\.$")
 _MSG_RE = re.compile(r"^[a-z0-9][a-z0-9_.:-]{0,127}$")
 _KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 _FIELD_RE = re.compile(r"^[a-z_][a-z0-9_]{0,63}$")
+#: a field in an answer, maybe nested: "ports.outputs"
+_PATH_RE = re.compile(r"^[a-z_][a-z0-9_]{0,63}(\.[a-z_][a-z0-9_]{0,63}){0,3}$")
+MAX_DATA = 4096
 _LANG_DIR = re.compile(r"^[a-zA-Z]{2,3}([-_][a-zA-Z0-9]{2,8})?$")
 _CONFIG_RE = re.compile(r"^[A-Za-z0-9_-]+(\.[A-Za-z0-9_.-]+)*$")
 #: What a download may be.
@@ -161,11 +164,17 @@ def _field_name(raw: Any, where: str) -> str:
     return raw
 
 
+def _path(raw: Any, where: str) -> str:
+    if not isinstance(raw, str) or not _PATH_RE.match(raw):
+        raise DescribedError(f"{where}: not a field: {raw!r}")
+    return raw
+
+
 def _when(raw: Any, where: str) -> str | None:
-    """A condition on a row: a field that is true, or "!field" for false."""
+    """A condition: a field that is true, or "!field" for false."""
     if raw is None:
         return None
-    if isinstance(raw, str) and _FIELD_RE.match(raw.lstrip("!")):
+    if isinstance(raw, str) and _PATH_RE.match(raw.lstrip("!")):
         return raw
     raise DescribedError(f"{where}: not a condition: {raw!r}")
 
@@ -203,6 +212,11 @@ class _Checker:
         else:
             out["send"] = self.message(raw.get("send"), where)
             out["privileged"] = bool(raw.get("privileged", True))
+            if raw.get("data") is not None:
+                # what the button always sends (a test sound, a choice)
+                if not isinstance(raw["data"], dict) or len(json.dumps(raw["data"])) > MAX_DATA:
+                    raise DescribedError(f"{where}: data must be a small object")
+                out["data"] = raw["data"]
         out["when"] = _when(raw.get("when"), where)
         confirm = raw.get("confirm")
         if confirm is not None:
@@ -227,11 +241,23 @@ class _Checker:
                     raise DescribedError(f"{where}: {num} must be a number")
                 out[num] = raw[num]
         out["max_length"] = min(int(raw.get("max_length", 300)), MAX_VALUE)
+        if "default" in raw:
+            # a value equal to it leaves the setting out of the file
+            out["default"] = raw["default"]
+        if raw.get("show_when") is not None:
+            cond = raw["show_when"]
+            if not isinstance(cond, dict) or len(cond) != 1:
+                raise DescribedError(f"{where}: show_when is one field and its value")
+            name, value = next(iter(cond.items()))
+            out["show_when"] = {"field": _field_name(name, where), "value": value}
+        if kind == "checkbox" and ("on" in raw or "off" in raw):
+            # a setting that is not true/false: ["*"] when ticked, [] when not
+            out["on"], out["off"] = raw.get("on", True), raw.get("off", False)
         if kind == "select":
             if raw.get("options_from"):
                 src = raw["options_from"]
                 out["options_from"] = {"query": self.message(src.get("query"), where),
-                                       "items": _field_name(src.get("items", "options"), where),
+                                       "items": _path(src.get("items", "options"), where),
                                        "value": _field_name(src.get("value", "value"), where),
                                        "label": _field_name(src.get("label", "label"), where)}
             options = raw.get("options") or []
@@ -262,10 +288,18 @@ class _Checker:
             if raw.get("refresh") is not None:
                 out["refresh"] = max(2, min(int(raw["refresh"]), 3600))
         if kind == "status":
-            out["text"] = _label(raw.get("text"), where)
+            if raw.get("text") is not None:
+                out["text"] = _label(raw["text"], where)
             out["show"] = _when(raw.get("show"), where)
+            rows = raw.get("rows") or []
+            if not isinstance(rows, list):
+                raise DescribedError(f"{where}: rows must be a list")
+            out["rows"] = [{"label": _label(r.get("label"), where), "value": str(r.get("value", ""))[:300],
+                            "when": _when(r.get("when"), where)} for r in rows if isinstance(r, dict)]
+            if "text" not in out and not out["rows"]:
+                raise DescribedError(f"{where}: a status has a text or rows")
         if kind == "list":
-            out["items"] = _field_name(raw.get("items", "items"), where)
+            out["items"] = _path(raw.get("items", "items"), where)
             out["key"] = _field_name(raw.get("key", "id"), where)
             out["title"] = str(raw.get("title") or "{" + out["key"] + "}")[:200]
             if raw.get("meta") is not None:
@@ -455,6 +489,8 @@ def message_for(refs: dict[str, dict], ref: str, body: dict) -> tuple[str, dict,
         if decl["row"]:
             data[block["key"]] = _text(body.get("key"), 300)
         msg = decl.get("send") or decl.get("download")
+        if decl.get("data"):
+            data = {**decl["data"], **data}
         return msg, data, decl
     if kind == "rename":
         data[block["key"]] = _text(body.get("key"), 300)
@@ -477,6 +513,8 @@ def form_values(decl: dict, given: Any) -> dict[str, Any]:
         if kind == "checkbox":
             if not isinstance(value, bool):
                 raise DescribedError(f"{name} is yes or no")
+            if "on" in f:
+                value = f["on"] if value else f["off"]
         elif kind in ("number", "slider"):
             if not isinstance(value, (int, float)) or isinstance(value, bool):
                 raise DescribedError(f"{name} is a number")
@@ -633,6 +671,8 @@ def routes_for(pid: str, refs: dict[str, dict]):
                     out[f["name"]] = {"set": bool(value)}   # never sent back
                 elif value is not None:
                     out[f["name"]] = value
+                elif "default" in f:
+                    out[f["name"]] = f["default"]
             return {"values": out}
 
         @r.privileged.post(base + "/form")
@@ -648,17 +688,26 @@ def routes_for(pid: str, refs: dict[str, dict]):
             if "config" in block:
                 path = block["config"].split(".")
 
+                defaults = {f["name"]: f["default"] for f in block["fields"] if "default" in f}
+
                 def change(user: dict) -> None:
                     node = user
                     for key in path:
                         node = node.setdefault(key, {})
-                    node.update(values)
+                    for name, value in values.items():
+                        # a default leaves the file, so it says only what was changed
+                        if name in defaults and value == defaults[name]:
+                            node.pop(name, None)
+                        else:
+                            node[name] = value
 
                 r.config.mutate(change, bus=r.bus())
                 if block.get("reload"):
                     try:
                         from ovos_bus_client.message import Message
-                        r.need_bus().emit(Message(block["reload"], {}))
+                        section = r.config.user_or_merged(path) or {}
+                        # the plugin starts again with its section as saved
+                        r.need_bus().emit(Message(block["reload"], {"config": section}))
                     except HTTPException:
                         pass    # saved; the plugin reads it when it starts
                 return {"ok": True}
