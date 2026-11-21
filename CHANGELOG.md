@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a65](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a65) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a64...0.0.1a65)
+
+**Merged pull requests:**
+
+- feat: a page added by a skill or plugin says where it comes from [\#139](https://github.com/OpenVoiceOS/ovos-control-panel/pull/139) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a64](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a64) (2026-11-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a63...0.0.1a64)
@@ -397,10 +405,6 @@
 ## [0.0.1a20](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a20) (2026-08-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a19...0.0.1a20)
-
-**Merged pull requests:**
-
-- fix: broadcast plugin installs by default \(targeted topic answered by nobody\) [\#21](https://github.com/OpenVoiceOS/ovos-control-panel/pull/21) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a19](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a19) (2026-08-13)
 
