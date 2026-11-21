@@ -159,5 +159,22 @@
  "nav.group.music": "الموسيقى",
  "page.from": "من",
  "nav.panel": "لوحة التحكم",
- "hdr.panel": "إعدادات لوحة التحكم نفسها"
+ "hdr.panel": "إعدادات لوحة التحكم نفسها",
+ "common.save": "حفظ",
+ "common.delete": "حذف",
+ "common.play": "تشغيل",
+ "common.stop": "إيقاف",
+ "common.download": "تنزيل",
+ "common.upload": "رفع",
+ "common.refresh": "تحديث",
+ "common.cancel": "إلغاء",
+ "common.rename": "حفظ الاسم",
+ "common.sure": "هل أنت متأكد؟",
+ "common.saved": "تم الحفظ.",
+ "common.done": "تم.",
+ "common.loading": "جارٍ التحميل …",
+ "common.newer": "يحتاج هذا الجزء من الصفحة إلى لوحة تحكم أحدث.",
+ "common.name": "الاسم",
+ "common.none": "لا شيء هنا بعد.",
+ "common.password_set": "توجد كلمة مرور؛ اترك الحقل فارغًا للاحتفاظ بها."
 }

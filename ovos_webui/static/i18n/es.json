@@ -159,5 +159,22 @@
  "nav.group.music": "Música",
  "page.from": "De",
  "nav.panel": "Panel de control",
- "hdr.panel": "Los ajustes del propio panel de control"
+ "hdr.panel": "Los ajustes del propio panel de control",
+ "common.save": "Guardar",
+ "common.delete": "Borrar",
+ "common.play": "Reproducir",
+ "common.stop": "Parar",
+ "common.download": "Descargar",
+ "common.upload": "Subir",
+ "common.refresh": "Actualizar",
+ "common.cancel": "Cancelar",
+ "common.rename": "Guardar nombre",
+ "common.sure": "¿Seguro?",
+ "common.saved": "Guardado.",
+ "common.done": "Hecho.",
+ "common.loading": "Cargando …",
+ "common.newer": "Esta parte de la página necesita un panel de control más nuevo.",
+ "common.name": "Nombre",
+ "common.none": "Aún no hay nada.",
+ "common.password_set": "Hay una contraseña; déjalo vacío para conservarla."
 }

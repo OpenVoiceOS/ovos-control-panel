@@ -159,5 +159,22 @@
  "nav.group.music": "Musik",
  "page.from": "Fra",
  "nav.panel": "Kontrolpanel",
- "hdr.panel": "Kontrolpanelets egne indstillinger"
+ "hdr.panel": "Kontrolpanelets egne indstillinger",
+ "common.save": "Gem",
+ "common.delete": "Slet",
+ "common.play": "Afspil",
+ "common.stop": "Stop",
+ "common.download": "Hent",
+ "common.upload": "Upload",
+ "common.refresh": "Opdatér",
+ "common.cancel": "Annullér",
+ "common.rename": "Gem navn",
+ "common.sure": "Er du sikker?",
+ "common.saved": "Gemt.",
+ "common.done": "Færdig.",
+ "common.loading": "Henter …",
+ "common.newer": "Denne del af siden kræver et nyere kontrolpanel.",
+ "common.name": "Navn",
+ "common.none": "Intet her endnu.",
+ "common.password_set": "Der er sat en adgangskode; lad feltet stå tomt for at beholde den."
 }
