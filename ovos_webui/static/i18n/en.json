@@ -156,5 +156,6 @@
  "install.anyway": "That can stop parts of OpenVoiceOS from working. Install anyway?",
  "install.wouldFail": "pip could not work out this install, so it would most likely fail. Try anyway?",
  "nav.group.library": "Library",
- "nav.group.music": "Music"
+ "nav.group.music": "Music",
+ "page.from": "From"
 }

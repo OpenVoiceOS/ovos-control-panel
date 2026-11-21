@@ -156,5 +156,6 @@
  "install.anyway": "قد يؤدي ذلك إلى توقف أجزاء من OpenVoiceOS عن العمل. هل تريد التثبيت رغم ذلك؟",
  "install.wouldFail": "لم يتمكن pip من حل هذا التثبيت، لذا فمن المرجح أن يفشل. هل تريد المحاولة رغم ذلك؟",
  "nav.group.library": "المكتبة",
- "nav.group.music": "الموسيقى"
+ "nav.group.music": "الموسيقى",
+ "page.from": "من"
 }
