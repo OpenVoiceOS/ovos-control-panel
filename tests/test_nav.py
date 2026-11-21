@@ -69,3 +69,16 @@ def test_the_entry_points_list_every_builtin_page():
     registered = {line.split("=", 1)[1].strip().strip('"').split(":")[0].rsplit(".", 1)[1]
                   for line in section.strip().splitlines() if "=" in line}
     assert registered == set(pages.BUILTIN)
+
+
+def test_what_it_plays_for_you_is_in_the_library():
+    groups = {g["id"]: g for g in pages.GROUPS}
+    assert groups["library"]["level"] == groups["music"]["level"] == "everyday"
+    assert groups["everyday"]["order"] < groups["library"]["order"] < groups["music"]["order"]
+    assert REG.by_id()["media"].group == "library"
+
+
+def test_a_later_everyday_group_gets_a_heading():
+    js = (Path(STATIC_DIR) / "app.js").read_text(encoding="utf-8")
+    assert 'g.id === "everyday" ? ""' in js and "nav-heading" in js
+    assert "nav .nav-heading" in (Path(STATIC_DIR) / "app.css").read_text(encoding="utf-8")

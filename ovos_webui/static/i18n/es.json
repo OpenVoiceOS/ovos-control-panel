@@ -154,5 +154,7 @@
  "install.checking": "Comprobando qué cambiaría instalar {name}…",
  "install.downgrades": "Esto cambiaría estos paquetes instalados a versiones anteriores:",
  "install.anyway": "Eso puede hacer que partes de OpenVoiceOS dejen de funcionar. ¿Instalar de todos modos?",
- "install.wouldFail": "pip no pudo resolver esta instalación, así que lo más probable es que falle. ¿Intentarlo de todos modos?"
+ "install.wouldFail": "pip no pudo resolver esta instalación, así que lo más probable es que falle. ¿Intentarlo de todos modos?",
+ "nav.group.library": "Biblioteca",
+ "nav.group.music": "Música"
 }

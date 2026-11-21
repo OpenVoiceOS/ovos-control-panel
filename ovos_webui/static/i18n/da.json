@@ -154,5 +154,7 @@
  "install.checking": "Tjekker, hvad installation af {name} vil ændre…",
  "install.downgrades": "Dette vil skifte disse installerede pakker til ældre versioner:",
  "install.anyway": "Det kan få dele af OpenVoiceOS til at holde op med at virke. Installér alligevel?",
- "install.wouldFail": "pip kunne ikke finde ud af denne installation, så den vil sandsynligvis mislykkes. Prøv alligevel?"
+ "install.wouldFail": "pip kunne ikke finde ud af denne installation, så den vil sandsynligvis mislykkes. Prøv alligevel?",
+ "nav.group.library": "Bibliotek",
+ "nav.group.music": "Musik"
 }

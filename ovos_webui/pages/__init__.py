@@ -29,6 +29,9 @@ API_VERSIONS = frozenset({1})
 #: The panel's own groups. Pages may add groups of their own.
 GROUPS: tuple[dict[str, Any], ...] = (
     {"id": "everyday", "key": "nav.group.everyday", "label": "Everyday", "order": 0, "level": "everyday"},
+    # what the device reads and plays for you, and the music you make with it
+    {"id": "library", "key": "nav.group.library", "label": "Library", "order": 5, "level": "everyday"},
+    {"id": "music", "key": "nav.group.music", "label": "Music", "order": 6, "level": "everyday"},
     {"id": "voice", "key": "nav.group.voice", "label": "Voice", "order": 10, "level": "advanced"},
     {"id": "understanding", "key": "nav.group.understanding", "label": "Understanding", "order": 20,
      "level": "advanced"},
