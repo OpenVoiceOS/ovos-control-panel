@@ -9,6 +9,7 @@
   <div class="card" id="pages-card">
     <p id="pages-count"></p>
     <ul class="plain" id="pages-added" hidden></ul>
+    <p class="hint"><a href="/panel" data-i18n="about.pages_switch">Turn pages on and off on the Control panel page</a></p>
     <p class="hint" id="pages-none" data-i18n="about.pages_none">No other package has added a page.</p>
     <div id="pages-off" hidden>
       <p data-i18n="about.pages_off">Turned off on this device:</p>
@@ -23,17 +24,18 @@
       <ul class="plain" id="pages-problem-list"></ul>
     </div>
   </div>
-  <h2 data-i18n="about.credits_heading">Credits</h2>
-  <div class="card">
+  <section class="credits" aria-labelledby="credits-heading">
+    <h2 id="credits-heading" data-i18n="about.credits_heading">Credits</h2>
     <p><span data-i18n="about.developed_by">Developed by </span><a href="https://tigregotico.pt">TigreGotico</a><span data-i18n="about.developed_for"> for</span>
       <a href="https://openvoiceos.org">OpenVoiceOS</a>.</p>
+    <p><span data-i18n="about.developed_further">Developed further by </span><a href="https://github.com/andlo">Andreas Lorensen (andlo)</a><span data-i18n="about.and"> and </span><a href="https://github.com/emkay-voice">Emkay-Voice</a><span data-i18n="about.developed_further_what">: the page registry, pages brought by skills and plugins, the grouped menu and branding.</span></p>
     <p><span data-i18n="about.ai_assisted">Made with the help of AI.</span></p>
-    <p><img src="/static/ngi.png" alt="NGI0 / NLnet" style="max-width:320px;width:100%;height:auto" width="517" height="91"></p>
     <p><span data-i18n="about.funded_by">Funded by the </span><a href="https://nlnet.nl/project/OpenVoiceOS">NGI0 Commons Fund</a><span data-i18n="about.funded_sep"> /
       </span><a href="https://nlnet.nl">NLnet</a><span data-i18n="about.funded_grant"> under grant agreement No
       </span><a href="https://cordis.europa.eu/project/id/101135429">101135429</a><span data-i18n="about.funded_programme">, through the
       European Commission's </span><a href="https://ngi.eu">Next Generation Internet</a><span data-i18n="about.funded_end"> programme.</span></p>
-  </div>
+    <p><img src="/static/ngi.png" alt="NGI0 / NLnet" width="517" height="91"></p>
+  </section>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
   <p class="hint foot"><a data-i18n="foot.manual"
     href="https://openvoiceos.github.io/beta-technical-manual/troubleshooting/">Learn more in the technical manual</a></p>
@@ -64,8 +66,7 @@ OvosWebUI.ready(function () {
     var off = r.pages.filter(function (p) { return p.disabled; });
     el("pages-off").hidden = !off.length;
     el("pages-off-list").innerHTML = off.map(function (p) {
-      return "<li>" + esc(p.title) + " <code>" + esc(p.id) + '</code> <button class="secondary" data-on="'
-        + esc(p.id) + '">' + esc(OvosWebUI.t("about.pages_turn_on", "Turn on")) + "</button></li>";
+      return "<li>" + esc(p.title) + " <code>" + esc(p.id) + "</code></li>";
     }).join("");
     var notes = (r.settings || []).concat((r.branding && r.branding.warnings) || []);
     el("pages-settings").hidden = !notes.length;
@@ -74,7 +75,8 @@ OvosWebUI.ready(function () {
       .replace("{own}", own.length).replace("{added}", added.length);
     el("pages-added").hidden = !added.length;
     el("pages-none").hidden = !!added.length;
-    // each added page: where it comes from, and a switch to show it or not
+    // each added page and where it comes from; the switches are on the
+    // Control panel page
     // the menu already has each page's title in the device's language
     function titleOf(p) {
       var a = document.querySelector('nav a[data-page="' + p.id + '"]');
@@ -82,12 +84,10 @@ OvosWebUI.ready(function () {
       return text || p.title;
     }
     el("pages-added").innerHTML = added.map(function (p) {
-      var o = p.origin || {};
-      p = Object.assign({}, p, {title: titleOf(p)});
+      var o = p.origin || {}, title = titleOf(p);
       var icon = o.icon ? '<img class="page-origin-icon" src="' + esc(o.icon) + '" alt="">' : "";
-      return '<li class="page-switch"><label class="check"><input type="checkbox" data-page="' + esc(p.id) + '"'
-        + (p.disabled ? "" : " checked") + ' aria-label="' + esc(OvosWebUI.t("about.pages_show", "Shown") + ": " + p.title) + '">'
-        + icon + (p.disabled ? esc(p.title) : '<a href="' + esc(p.path) + '">' + esc(p.title) + "</a>") + "</label> "
+      return '<li class="page-switch">' + icon
+        + (p.disabled ? esc(title) : '<a href="' + esc(p.path) + '">' + esc(title) + "</a>") + " "
         + '<small class="hint">' + (o.name ? esc(o.name) + " \u00b7 " : "") + esc(p.package)
         + " <code>" + esc(p.version) + "</code></small></li>";
     }).join("");
@@ -97,20 +97,5 @@ OvosWebUI.ready(function () {
     }).join("");
   }).catch(function () { el("pages-card").hidden = true; });
 
-  function switchPage(id, enabled) {
-    return OvosWebUI.api("/api/pages/" + encodeURIComponent(id) + "/enabled", {
-      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({enabled: enabled})
-    }).then(function () {
-      OvosWebUI.say("msg", OvosWebUI.t("about.pages_saved", "Saved. The menu changes on the next page you open."));
-    }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
-  }
-  el("pages-added").addEventListener("change", function (ev) {
-    var box = ev.target.closest("input[data-page]");
-    if (box) { switchPage(box.getAttribute("data-page"), box.checked); }
-  });
-  el("pages-off-list").addEventListener("click", function (ev) {
-    var btn = ev.target.closest("button[data-on]");
-    if (btn) { switchPage(btn.getAttribute("data-on"), true).then(function () { btn.closest("li").remove(); }); }
-  });
 });
 </script>

@@ -94,6 +94,7 @@ wallpaper = "ovos_webui.pages.wallpaper:PAGE"
 mark1 = "ovos_webui.pages.mark1:PAGE"
 plugins = "ovos_webui.pages.plugins:PAGE"
 settings = "ovos_webui.pages.settings:PAGE"
+panel = "ovos_webui.pages.panel:PAGE"
 sound = "ovos_webui.pages.sound:PAGE"
 
 [project.urls]

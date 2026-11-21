@@ -157,5 +157,7 @@
  "install.wouldFail": "pip kunne ikke finde ud af denne installation, så den vil sandsynligvis mislykkes. Prøv alligevel?",
  "nav.group.library": "Bibliotek",
  "nav.group.music": "Musik",
- "page.from": "Fra"
+ "page.from": "Fra",
+ "nav.panel": "Kontrolpanel",
+ "hdr.panel": "Kontrolpanelets egne indstillinger"
 }

@@ -157,5 +157,7 @@
  "install.wouldFail": "O pip não conseguiu resolver esta instalação, por isso o mais provável é que falhe. Tentar mesmo assim?",
  "nav.group.library": "Biblioteca",
  "nav.group.music": "Música",
- "page.from": "De"
+ "page.from": "De",
+ "nav.panel": "Painel de controlo",
+ "hdr.panel": "As definições do próprio painel de controlo"
 }

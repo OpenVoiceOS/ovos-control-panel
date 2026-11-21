@@ -44,7 +44,7 @@ GROUPS: tuple[dict[str, Any], ...] = (
 #: Paths a page may not take: the shell's own.
 RESERVED = ("/api", "/static", "/pages", "/login", "/logout", "/healthz")
 #: The pages that always ship with the panel and cannot be turned off.
-CORE = frozenset({"dashboard", "settings", "plugins", "skills", "backup", "about"})
+CORE = frozenset({"dashboard", "settings", "plugins", "skills", "backup", "about", "panel"})
 #: The panel's own distribution, to tell its pages from added ones.
 OWN_DIST = "ovos-control-panel"
 
@@ -64,7 +64,7 @@ MAX_STRINGS = 256 * 1024
 BUILTIN = (
     "dashboard", "setup", "tryit", "controls", "network", "voice", "skills", "backup",
     "about", "voice_all", "servers", "translate", "intents", "transformers", "personas",
-    "system", "sensors", "media", "apps", "wallpaper", "mark1", "plugins", "settings",
+    "system", "sensors", "media", "apps", "wallpaper", "mark1", "plugins", "settings", "panel",
     "sound",
 )
 

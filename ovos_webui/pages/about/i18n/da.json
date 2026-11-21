@@ -22,7 +22,8 @@
  "about.ai_assisted": "Lavet med hjælp fra AI.",
  "about.pages_off": "Slået fra på denne enhed:",
  "about.pages_settings": "Disse indstillinger kunne ikke bruges:",
- "about.pages_show": "Vist",
- "about.pages_turn_on": "Slå til",
- "about.pages_saved": "Gemt. Menuen ændrer sig på den næste side, du åbner."
+ "about.pages_switch": "Slå sider til og fra på siden Kontrolpanel",
+ "about.developed_further": "Videreudviklet af ",
+ "about.and": " og ",
+ "about.developed_further_what": ": sideregistret, sider fra skills og plugins, den grupperede menu og branding."
 }

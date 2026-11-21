@@ -22,7 +22,8 @@
  "about.ai_assisted": "Made with the help of AI.",
  "about.pages_off": "Turned off on this device:",
  "about.pages_settings": "These settings could not be used:",
- "about.pages_show": "Shown",
- "about.pages_turn_on": "Turn on",
- "about.pages_saved": "Saved. The menu changes on the next page you open."
+ "about.pages_switch": "Turn pages on and off on the Control panel page",
+ "about.developed_further": "Developed further by ",
+ "about.and": " and ",
+ "about.developed_further_what": ": the page registry, pages brought by skills and plugins, the grouped menu and branding."
 }

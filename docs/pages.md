@@ -397,6 +397,7 @@ you cannot get the panel back into shape:
 - Skills
 - Backup
 - About
+- Control panel (the panel's own settings: its name and colour, the added pages, the token)
 
 Everything else, the panel's own pages included, can be disabled.
 

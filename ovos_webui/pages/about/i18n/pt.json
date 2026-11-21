@@ -22,7 +22,8 @@
  "about.ai_assisted": "Feito com a ajuda de IA.",
  "about.pages_off": "Desligadas neste dispositivo:",
  "about.pages_settings": "Estas definições não puderam ser usadas:",
- "about.pages_show": "Visível",
- "about.pages_turn_on": "Ligar",
- "about.pages_saved": "Guardado. O menu muda na próxima página que abrir."
+ "about.pages_switch": "Ligue e desligue páginas na página Painel de controlo",
+ "about.developed_further": "Desenvolvido também por ",
+ "about.and": " e ",
+ "about.developed_further_what": ": o registo de páginas, as páginas trazidas por skills e plugins, o menu agrupado e a marca."
 }

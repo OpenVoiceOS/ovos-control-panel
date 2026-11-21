@@ -22,7 +22,8 @@
  "about.ai_assisted": "صُنع بمساعدة الذكاء الاصطناعي.",
  "about.pages_off": "معطّلة على هذا الجهاز:",
  "about.pages_settings": "تعذّر استخدام هذه الإعدادات:",
- "about.pages_show": "ظاهرة",
- "about.pages_turn_on": "تشغيل",
- "about.pages_saved": "تم الحفظ. تتغير القائمة في الصفحة التالية التي تفتحها."
+ "about.pages_switch": "شغّل الصفحات وأوقفها من صفحة لوحة التحكم",
+ "about.developed_further": "طوّرها لاحقًا ",
+ "about.and": " و",
+ "about.developed_further_what": ": سجل الصفحات، والصفحات التي تجلبها المهارات والإضافات، والقائمة المجمّعة، والهوية."
 }
