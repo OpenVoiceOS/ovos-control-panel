@@ -415,6 +415,9 @@ def test_a_skill_page_is_named_from_its_skill_json(guardian_pkg, tmp_path):
     locale = tmp_path / guardian_pkg / "locale" / "da-dk"
     locale.mkdir(parents=True)
     (locale / "skill.json").write_text('{"name": "Vogteren"}', encoding="utf-8")
+    # another language that sorts first must not be taken instead
+    (locale.parent / "ca-ES").mkdir()
+    (locale.parent / "ca-ES" / "skill.json").write_text('{"name": "El guardià"}', encoding="utf-8")
     reg = pages.load(_own() + [_guardian(guardian_pkg)])
     found = pages.origin(reg.by_id()["guardian"], "da-dk")
     assert found["name"] == "Vogteren"

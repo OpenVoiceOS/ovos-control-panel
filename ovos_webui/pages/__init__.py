@@ -617,10 +617,14 @@ def _skill_json_name(page: Page, lang: str) -> str | None:
         return None
     try:
         locale = resources.files(top).joinpath("locale")
-        paths = [f"{d.name}/skill.json" for d in locale.iterdir() if d.joinpath("skill.json").is_file()]
+        # named as pick_skill_json knows them: locale/<lang>/skill.json
+        paths = [f"locale/{d.name}/skill.json" for d in locale.iterdir()
+                 if d.joinpath("skill.json").is_file()]
         chosen = skillinfo.pick_skill_json(paths, lang)
         if chosen:
-            return skillinfo._from_skill_json(locale.joinpath(chosen).read_bytes()).get("title")  # noqa: SLF001
+            folder = chosen.split("/")[1]
+            raw = locale.joinpath(folder).joinpath("skill.json").read_bytes()
+            return skillinfo._from_skill_json(raw).get("title")  # noqa: SLF001
     except Exception:  # noqa: BLE001 - no name, then
         return None
     return None
