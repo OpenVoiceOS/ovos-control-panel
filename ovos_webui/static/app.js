@@ -188,22 +188,26 @@
     NAV = MENU.pages;
     GROUPS = MENU.groups.filter(function (g) { return g.level === "advanced"; });
   }
-  // The menu shows the everyday pages, then an "Advanced" divider and one
-  // row per advanced group. Each row folds its own pages open and shut, and
-  // which rows are open is remembered per browser; all start folded. Every
-  // link is always in the DOM -- a folded group's links are only hidden --
-  // and the group holding the page you are on opens when the page loads, so
-  // a link can never strand you on a page the menu does not show.
+  // The menu shows the everyday pages first, always open. Every other group
+  // is a row that folds its pages open and shut: the Library and Music under
+  // them, and "Advanced", which folds away all the advanced groups at once and
+  // holds one such row per group. Which rows are open is remembered per
+  // browser; all start folded. Every link is always in the DOM -- a folded
+  // group's links are only hidden -- and the rows holding the page you are on
+  // open when the page loads, so a link can never strand you on a page the
+  // menu does not show.
   var OPEN_KEY = "ovos-nav-open";
   // The old header switch stored "ovos-simple"; "0" meant someone had asked
   // for every page, so every group starts open for them.
   var OLD_SIMPLE_KEY = "ovos-simple";
+  //: The row that holds every advanced group. No group is called this.
+  var ADVANCED = "advanced";
   function openGroups() {
     try {
       var v = window.localStorage.getItem(OPEN_KEY);
       if (v === null) {
         return window.localStorage.getItem(OLD_SIMPLE_KEY) === "0"
-          ? GROUPS.map(function (g) { return g.id; }) : [];
+          ? MENU.groups.map(function (g) { return g.id; }).concat([ADVANCED]) : [];
       }
       var list = JSON.parse(v);
       return Array.isArray(list) ? list : [];
@@ -231,42 +235,40 @@
       + (item.key ? ' data-i18n="' + esc(item.key) + '"' : "") + ">"
       + esc(t(item.key, item.label)) + "</a>";
   }
+  function foldRow(id, key, label, inner, cls) {
+    var gid = esc(id);
+    return '<div class="nav-group' + (cls ? " " + cls : "") + '" data-group="' + gid + '">'
+      + '<button type="button" class="nav-fold" aria-expanded="false" aria-controls="navl-' + gid + '">'
+      + "<span" + (key ? ' data-i18n="' + esc(key) + '"' : "") + ">" + esc(t(key, label))
+      + "</span></button>"
+      + '<div class="nav-links" id="navl-' + gid + '">' + inner + "</div></div>";
+  }
+  function groupRow(g, cls) {
+    var items = NAV.filter(function (x) { return x.group === g.id; });
+    return items.length ? foldRow(g.id, g.key, g.label, items.map(navLink).join(""), cls) : "";
+  }
   function renderNav() {
     var nav = document.querySelector('nav[aria-label], nav#sitenav');
     if (!nav || !NAV.length) { return; }
     var html = MENU.groups.filter(function (g) { return g.level === "everyday"; }).map(function (g) {
+      if (g.id !== "everyday") { return groupRow(g, "nav-everyday"); }
       var items = NAV.filter(function (x) { return x.group === g.id; });
-      if (!items.length) { return ""; }
-      // the everyday pages need no name; another everyday group, such as the
-      // Library, gets a small heading so its pages read as belonging together
-      var head = g.id === "everyday" ? "" : '<span class="nav-heading"'
-        + (g.key ? ' data-i18n="' + esc(g.key) + '"' : "") + ">" + esc(t(g.key, g.label)) + "</span>";
-      return '<div class="nav-group nav-everyday" data-level-group="' + esc(g.id) + '">'
-        + head + items.map(navLink).join("") + "</div>";
+      return '<div class="nav-group nav-everyday">' + items.map(navLink).join("") + "</div>";
     }).join("");
-    if (GROUPS.length) {
-      html += '<span class="nav-divider" data-i18n="nav.advanced">'
-        + esc(t("nav.advanced", "Advanced")) + "</span>";
-    }
-    html += GROUPS.map(function (g) {
-      var items = NAV.filter(function (x) { return x.group === g.id; });
-      if (!items.length) { return ""; }
-      var id = esc(g.id);
-      return '<div class="nav-group" data-group="' + id + '">'
-        + '<button type="button" class="nav-fold" aria-expanded="false" aria-controls="navl-' + id + '">'
-        + '<span' + (g.key ? ' data-i18n="' + esc(g.key) + '"' : "") + ">" + esc(t(g.key, g.label))
-        + "</span></button>"
-        + '<div class="nav-links" id="navl-' + id + '">' + items.map(navLink).join("") + "</div></div>";
-    }).join("");
+    var advanced = GROUPS.map(function (g) { return groupRow(g, "nav-sub"); }).join("");
+    if (advanced) { html += foldRow(ADVANCED, "nav.advanced", "Advanced", advanced, "nav-advanced"); }
     nav.innerHTML = html;
     var here = herePath();
     var current = NAV.filter(function (x) { return x.path === here; })[0];
+    var currentLevel = current && (MENU.groups.filter(function (g) { return g.id === current.group; })[0] || {}).level;
     var open = openGroups();
     nav.querySelectorAll(".nav-group[data-group]").forEach(function (g) {
       var name = g.getAttribute("data-group");
-      foldGroup(g, open.indexOf(name) >= 0 || !!(current && current.group === name));
-      g.querySelector(".nav-fold").addEventListener("click", function () {
-        var now = g.querySelector(".nav-fold").getAttribute("aria-expanded") !== "true";
+      var holdsHere = !!current && (current.group === name
+        || (name === ADVANCED && currentLevel === "advanced"));
+      foldGroup(g, open.indexOf(name) >= 0 || holdsHere);
+      g.querySelector(":scope > .nav-fold").addEventListener("click", function () {
+        var now = g.querySelector(":scope > .nav-fold").getAttribute("aria-expanded") !== "true";
         foldGroup(g, now);
         var list = openGroups().filter(function (x) { return x !== name; });
         if (now) { list.push(name); }
@@ -275,8 +277,8 @@
     });
   }
   function foldGroup(g, open) {
-    g.querySelector(".nav-fold").setAttribute("aria-expanded", open ? "true" : "false");
-    g.querySelector(".nav-links").hidden = !open;
+    g.querySelector(":scope > .nav-fold").setAttribute("aria-expanded", open ? "true" : "false");
+    g.querySelector(":scope > .nav-links").hidden = !open;
   }
   // Pages whose need is not met (a plugin or a screen the device lacks) are
   // left out of the menu, and a group left empty goes with them. The answer

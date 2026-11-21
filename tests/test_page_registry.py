@@ -376,6 +376,7 @@ def test_an_added_page_says_where_it_comes_from(guardian_pkg, monkeypatch):
     html = pages.render(guardian, reg.nav_json())
     assert 'class="page-origin"' in html and guardian.package in html
     assert guardian.version in html and 'data-i18n="page.from"' in html
+    assert html.index('class="page-origin"') > html.index('data-page="guardian"'), "at the foot of the page"
     own = pages.render(reg.by_id()["about"], reg.nav_json())
     assert 'class="page-origin"' not in own, "the panel's own pages need no origin"
 
@@ -387,7 +388,14 @@ def test_a_skill_page_is_named_from_its_skill_json(guardian_pkg, tmp_path):
     (locale / "skill.json").write_text('{"name": "Vogteren"}', encoding="utf-8")
     reg = pages.load(_own() + [_guardian(guardian_pkg)])
     found = pages.origin(reg.by_id()["guardian"], "da-dk")
-    assert found["name"] == "Vogteren" and found["icon"] is None
+    assert found["name"] == "Vogteren"
+    assert found["icon"].startswith("/static/icons/"), "a page with no icon of its own gets the panel's"
+
+
+def test_the_generic_icon_follows_the_kind_of_package():
+    assert pages.generic_icon("ovos-skill-jamband") == "/static/icons/skill.svg"
+    assert pages.generic_icon("ovos-phal-plugin-midi") == "/static/icons/phal.svg"
+    assert pages.generic_icon("ovos-tts-plugin-piper") == "/static/icons/plugin.svg"
 
 
 def test_two_pages_with_the_same_title_say_where_they_come_from(guardian_pkg):

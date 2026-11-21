@@ -1274,7 +1274,7 @@ def _visible_nav(page):
 
 
 def _fold(page, group):
-    return page.locator(f'nav .nav-group[data-group="{group}"] button.nav-fold')
+    return page.locator(f'nav .nav-group[data-group="{group}"] > button.nav-fold')
 
 
 def test_the_menu_groups_start_folded_and_open_one_at_a_time(signed_in_page):
@@ -1288,13 +1288,21 @@ def test_the_menu_groups_start_folded_and_open_one_at_a_time(signed_in_page):
     page.wait_for_load_state("networkidle")
 
     assert page.locator("#simple-toggle").count() == 0, "the header switch is gone"
-    assert page.locator("nav .nav-divider").is_visible()
-    assert page.locator("nav button.nav-fold").count() == 5
+    advanced = _fold(page, "advanced")
+    assert advanced.is_visible() and advanced.get_attribute("aria-expanded") == "false"
+    assert page.locator("nav .nav-advanced .nav-sub button.nav-fold").count() == 5
+    assert not _fold(page, "understanding").is_visible(), "Advanced folds its groups away"
     folded = _visible_nav(page)
     assert "/about" in folded and "/skills" in folded
     assert "/intents" not in folded and "/plugins" not in folded
+    assert "/media" not in folded, "the Library folds too"
+    _fold(page, "library").click()
+    assert "/media" in _visible_nav(page)
+    _fold(page, "library").click()
 
+    advanced.click()
     understanding = _fold(page, "understanding")
+    assert understanding.is_visible()
     assert understanding.get_attribute("aria-expanded") == "false"
     understanding.click()
     assert understanding.get_attribute("aria-expanded") == "true"
@@ -1304,10 +1312,11 @@ def test_the_menu_groups_start_folded_and_open_one_at_a_time(signed_in_page):
 
     page.reload()
     page.wait_for_load_state("networkidle")
+    assert _fold(page, "advanced").get_attribute("aria-expanded") == "true"
     assert _fold(page, "understanding").get_attribute("aria-expanded") == "true"
     assert _fold(page, "maintenance").get_attribute("aria-expanded") == "false"
-    _fold(page, "understanding").click()
-    assert "/intents" not in _visible_nav(page)
+    _fold(page, "advanced").click()
+    assert "/intents" not in _visible_nav(page), "folding Advanced hides its open groups too"
     page.evaluate("() => localStorage.removeItem('ovos-nav-open')")
 
 
@@ -1321,6 +1330,7 @@ def test_the_group_of_the_page_you_are_on_opens(signed_in_page):
     assert {"/intents", "/transformers", "/personas"} <= set(shown)
     assert "/plugins" not in shown
     assert _fold(page, "understanding").get_attribute("aria-expanded") == "true"
+    assert _fold(page, "advanced").get_attribute("aria-expanded") == "true"
     assert page.locator('nav a[aria-current="page"]').get_attribute("href") == "/intents"
 
 
@@ -1351,7 +1361,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
     try:
         page.goto(f"{url}/")
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs.v2'); "
-                      "localStorage.setItem('ovos-nav-open', JSON.stringify(['voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
+                      "localStorage.setItem('ovos-nav-open', JSON.stringify(['advanced', 'library', 'voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
         page.reload()
         page.wait_for_function("() => document.querySelector('nav a[href=\"/wallpaper\"]').hidden")
         shown = _visible_nav(page)
@@ -1379,7 +1389,7 @@ def test_a_panel_apart_from_the_device_hides_no_page(signed_in_page):
     try:
         page.goto(f"{url}/")
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs.v2'); "
-                      "localStorage.setItem('ovos-nav-open', JSON.stringify(['voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
+                      "localStorage.setItem('ovos-nav-open', JSON.stringify(['advanced', 'library', 'voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
         page.reload()
         page.wait_for_load_state("networkidle")
         assert "/wallpaper" in _visible_nav(page)

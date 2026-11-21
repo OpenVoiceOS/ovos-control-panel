@@ -122,3 +122,13 @@ def test_platform_files_are_not_language_files(tmp_path, monkeypatch):
     _registry(tmp_path, monkeypatch, {"base": ["en-US"], "platform": ["mac", "linux"]})
     for lang in ("mk", "mk-mk", "mkd"):
         assert "platform" not in recommends.for_language(lang)["profiles"], lang
+
+
+def test_installed_is_not_in_use_unless_the_config_names_it():
+    config = {"stt": {"module": "ovos-stt-plugin-vosk", "fallback_module": "ovos-stt-plugin-server"},
+              "listener": {"VAD": {"module": "ovos-vad-plugin-silero"}}}
+    assert recommends.in_use(config, "stt", "ovos-stt-plugin-vosk")
+    assert recommends.in_use(config, "stt", "ovos-stt-plugin-server"), "a fallback is in use too"
+    assert not recommends.in_use(config, "tts", "ovos-tts-plugin-server")
+    assert recommends.in_use(config, "listener.VAD", "ovos-vad-plugin-silero")
+    assert not recommends.in_use({"stt": "odd"}, "stt", "ovos-stt-plugin-vosk")

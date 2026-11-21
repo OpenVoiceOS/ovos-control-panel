@@ -75,8 +75,15 @@ OvosWebUI.ready(function () {
     el("pages-added").hidden = !added.length;
     el("pages-none").hidden = !!added.length;
     // each added page: where it comes from, and a switch to show it or not
+    // the menu already has each page's title in the device's language
+    function titleOf(p) {
+      var a = document.querySelector('nav a[data-page="' + p.id + '"]');
+      var text = a ? ((a.querySelector("span") || a).textContent || "").trim() : "";
+      return text || p.title;
+    }
     el("pages-added").innerHTML = added.map(function (p) {
       var o = p.origin || {};
+      p = Object.assign({}, p, {title: titleOf(p)});
       var icon = o.icon ? '<img class="page-origin-icon" src="' + esc(o.icon) + '" alt="">' : "";
       return '<li class="page-switch"><label class="check"><input type="checkbox" data-page="' + esc(p.id) + '"'
         + (p.disabled ? "" : " checked") + ' aria-label="' + esc(OvosWebUI.t("about.pages_show", "Shown") + ": " + p.title) + '">'

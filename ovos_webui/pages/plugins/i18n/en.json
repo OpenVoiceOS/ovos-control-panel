@@ -60,5 +60,8 @@
  "plugins.job.finished.settings.post": " to make it active for its section.",
  "plugins.conflicts.envCaveat": "This checks the packages installed next to the control panel. If the control panel runs apart from the assistant (for example in its own container), the device's own packages can differ.",
  "plugins.skillsMoved": "Looking for skills? They are on the",
- "plugins.skillsMoved.link": "Skills page"
+ "plugins.skillsMoved.link": "Skills page",
+ "plugins.by": "By",
+ "plugins.badge.inUse": "in use",
+ "plugins.badge.installedIdle": "installed, not in use"
 }
