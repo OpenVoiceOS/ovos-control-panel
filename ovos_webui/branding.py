@@ -12,6 +12,11 @@ system layer of ``mycroft.conf``, and the user can change it in their own.
   light and dark mode. Only the variables in :data:`COLOR_VARS` are taken, and
   only plain colour values, so nothing else can reach the stylesheet.
 
+Next to it, ``webui.theme`` and ``webui.text_size`` say whether the viewer
+chooses (``"choose"``, the default: the header has a button) or the device
+decides (``"dark"``/``"light"``, ``"normal"``/``"large"``/``"xlarge"``: no
+button). See :func:`appearance`.
+
 :func:`css` turns the colours into the small stylesheet every page loads after
 ``app.css``; :func:`warnings` says when a chosen colour makes text hard to read.
 """
@@ -32,6 +37,39 @@ COLOR_VARS = ("bg", "bg-soft", "card", "card-soft", "ink", "muted", "line", "acc
 _COLOR_RE = re.compile(
     r"^(#[0-9a-fA-F]{3,8}|(rgb|rgba|hsl|hsla)\(\s*[0-9.%\s,/]+\))$")
 _CONTROL_RE = re.compile(r"[\x00-\x1f\x7f<>]")
+
+
+#: webui.theme: the viewer chooses, or the device always shows one.
+THEMES = ("choose", "dark", "light")
+#: webui.text_size: the viewer chooses, or the device always uses one.
+TEXT_SIZES = ("choose", "normal", "large", "xlarge")
+
+
+def appearance() -> dict[str, str]:
+    """``webui.theme`` and ``webui.text_size``, read fresh; anything else is
+    "choose"."""
+    from ovos_webui import configio
+    try:
+        theme = configio.user_or_merged(["webui", "theme"])
+        text = configio.user_or_merged(["webui", "text_size"])
+    except Exception:  # noqa: BLE001 - a broken config must not stop a page
+        theme = text = None
+    return {"theme": theme if theme in THEMES else "choose",
+            "text_size": text if text in TEXT_SIZES else "choose"}
+
+
+def html_attrs(look: dict[str, str]) -> str:
+    """Attributes for the page's <html>: a theme or text size the device
+    decides is set by the server, so the page paints that way at once and the
+    header has no button for it (app.js)."""
+    out = ""
+    if look["theme"] != "choose":
+        out += f' data-theme="{look["theme"]}" data-theme-locked'
+    if look["text_size"] not in ("choose", "normal"):
+        out += f' data-text="{look["text_size"]}"'
+    if look["text_size"] != "choose":
+        out += " data-text-locked"
+    return out
 
 
 def _config() -> dict[str, Any]:

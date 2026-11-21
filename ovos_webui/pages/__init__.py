@@ -663,7 +663,8 @@ def render(page: Page, nav_json: str, brand: dict[str, Any] | None = None) -> st
                  # the version in the asset links, so a browser fetches the
                  # new stylesheet and script after an update instead of
                  # running an old script against new pages
-                 "v": _esc(_own_version())}
+                 "v": _esc(_own_version()),
+                 "html_attrs": branding.html_attrs(branding.appearance())}
         out = _shell()
         for name, value in parts.items():
             out = out.replace("{{" + name + "}}", value)

@@ -1,18 +1,48 @@
-  <p class="hint" data-i18n="panel.intro">How the control panel itself looks and behaves: its name and colour, which added pages it shows, and the token that guards it.</p>
+  <p class="hint" data-i18n="panel.intro">How the control panel itself looks and behaves: its name, colour and theme, where its recommendations come from, which added pages it shows, and the token that guards it.</p>
 
-  <h2 data-i18n="panel.look.title">Name and colour</h2>
+  <h2 data-i18n="panel.look.title">Appearance</h2>
   <div class="card">
     <label><span data-i18n="panel.look.name">Name</span>
       <input type="text" id="look-name" maxlength="40" autocomplete="off"></label>
     <label class="color-pick"><span data-i18n="panel.look.accent">Colour</span>
       <input type="color" id="look-accent"></label>
     <p class="hint" data-i18n="panel.look.hint">The name is shown in the header, the window title and on the sign in page. The colour is used for buttons, links and the chosen page in the menu.</p>
+    <label><span data-i18n="panel.look.theme">Light or dark</span>
+      <select id="look-theme">
+        <option value="choose" data-i18n="panel.look.choose">Each viewer chooses (a button in the header)</option>
+        <option value="dark" data-i18n="panel.look.dark">Always dark</option>
+        <option value="light" data-i18n="panel.look.light">Always light</option>
+      </select></label>
+    <label><span data-i18n="panel.look.text">Text size</span>
+      <select id="look-text">
+        <option value="choose" data-i18n="panel.look.choose">Each viewer chooses (a button in the header)</option>
+        <option value="normal" data-i18n="panel.look.normal">Always normal</option>
+        <option value="large" data-i18n="panel.look.large">Always large</option>
+        <option value="xlarge" data-i18n="panel.look.xlarge">Always largest</option>
+      </select></label>
+    <p class="hint" data-i18n="panel.look.text_hint">A larger text helps people who see less well, so think twice before taking the button away.</p>
     <ul class="plain msg err" id="look-warnings" hidden></ul>
     <div class="row">
       <button id="look-save" data-i18n="panel.look.save">Save</button>
       <button class="secondary" id="look-reset" data-i18n="panel.look.reset">Back to the default</button>
     </div>
     <div class="msg" id="msg-look" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <h2 data-i18n="panel.rec.title">Recommendations</h2>
+  <div class="card">
+    <p class="hint" data-i18n="panel.rec.hint">Where the plugins recommended for a language come from, on Setup and on the Plugins page. A distribution can ship its own; where it has none for a language, OpenVoiceOS's own are used.</p>
+    <p id="rec-now"></p>
+    <label><span data-i18n="panel.rec.use">Use</span>
+      <select id="rec-use">
+        <option value="" data-i18n="panel.rec.device">What the device came with</option>
+        <option value="openvoiceos" data-i18n="panel.rec.ovos">OpenVoiceOS's own</option>
+        <option value="folder" data-i18n="panel.rec.folder">A folder on the device</option>
+      </select></label>
+    <label id="rec-path-wrap" hidden><span data-i18n="panel.rec.path">Folder (laid out as profile/language.conf)</span>
+      <input type="text" id="rec-path" autocomplete="off" spellcheck="false"></label>
+    <div class="row"><button id="rec-save" data-i18n="panel.look.save">Save</button></div>
+    <div class="msg" id="msg-rec" role="status" aria-live="polite" hidden></div>
   </div>
 
   <h2 data-i18n="panel.pages.title">Added pages</h2>
@@ -64,6 +94,8 @@ OvosWebUI.ready(function () {
     el("look-name").value = r.name || "";
     el("look-name").placeholder = r.default_name || "";
     el("look-accent").value = r.accent && /^#[0-9a-f]{6}$/i.test(r.accent) ? r.accent : DEFAULT_ACCENT;
+    el("look-theme").value = r.theme || "choose";
+    el("look-text").value = r.text_size || "choose";
     showWarnings(r.warnings || []);
   }
   function showWarnings(list) {
@@ -80,13 +112,36 @@ OvosWebUI.ready(function () {
   }
   el("look-save").addEventListener("click", function () {
     var accent = el("look-accent").value.toLowerCase();
-    saveLook({name: el("look-name").value.trim(), accent: accent === DEFAULT_ACCENT ? "" : accent},
+    saveLook({name: el("look-name").value.trim(), accent: accent === DEFAULT_ACCENT ? "" : accent,
+              theme: el("look-theme").value, text_size: el("look-text").value},
       t("panel.look.saved", "Saved. It shows on the next page you open."));
   });
   el("look-reset").addEventListener("click", function () {
     saveLook({name: "", accent: ""}, t("panel.look.wasReset", "Back to the default. It shows on the next page you open."));
   });
   loadLook();
+
+  // ── where the recommendations come from ──────────────────────────────────
+  function showRec(r) {
+    el("rec-now").textContent = r.distribution
+      ? t("panel.rec.nowFolder", "In use: the recommendations in") + " " + r.path
+      : t("panel.rec.nowOvos", "In use: OpenVoiceOS's own recommendations.");
+    var yours = r.yours || "";
+    el("rec-use").value = !yours ? "" : yours === "openvoiceos" ? "openvoiceos" : "folder";
+    el("rec-path").value = yours && yours !== "openvoiceos" ? yours : "";
+    el("rec-path-wrap").hidden = el("rec-use").value !== "folder";
+  }
+  el("rec-use").addEventListener("change", function () {
+    el("rec-path-wrap").hidden = el("rec-use").value !== "folder";
+  });
+  el("rec-save").addEventListener("click", function () {
+    var use = el("rec-use").value;
+    var path = use === "folder" ? el("rec-path").value.trim() : use;
+    api("/api/panel/recommends", {method: "POST", headers: json, body: JSON.stringify({path: path})})
+      .then(function (r) { showRec(r); OvosWebUI.say("msg-rec", t("panel.rec.saved", "Saved.")); })
+      .catch(function (e) { OvosWebUI.say("msg-rec", e.message, true); });
+  });
+  api("/api/panel/recommends").then(showRec).catch(function (e) { OvosWebUI.say("msg-rec", e.message, true); });
 
   // ── added pages: a switch each ───────────────────────────────────────────
   // the menu already has each page's title in the device's language

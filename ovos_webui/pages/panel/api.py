@@ -1,4 +1,5 @@
-"""The control panel page's API: the panel's own name and colour."""
+"""The control panel page's API: the panel's own look, and where its
+recommendations come from."""
 from __future__ import annotations
 
 from typing import Any
@@ -13,6 +14,22 @@ class LookBody(BaseModel):
     """An empty value takes the setting out of your layer again."""
     name: str = Field("", max_length=branding.MAX_NAME)
     accent: str = Field("", max_length=7)
+    theme: str = Field("", max_length=10)
+    text_size: str = Field("", max_length=10)
+
+
+class RecommendsBody(BaseModel):
+    """A directory laid out like ovos-config's recommendations, "openvoiceos"
+    for OpenVoiceOS's own, or empty for what the device came with."""
+    path: str = Field("", max_length=300)
+
+
+def _put(user: dict, key: str, value: str) -> None:
+    webui = user.setdefault("webui", {})
+    if value:
+        webui[key] = value
+    else:
+        webui.pop(key, None)
 
 
 def _darker(color: str, by: float = 0.18) -> str:
@@ -37,9 +54,10 @@ def routes(r) -> None:
     def api_look() -> dict[str, Any]:
         mine = configio.get_in(configio.read_user_config(), ["webui", "branding"]) or {}
         brand = _in_force(mine)
-        return {"name": brand["name"], "accent": brand["colors"].get("accent"),
-                "default_name": branding.DEFAULT_NAME,
-                "warnings": branding.warnings(brand), "yours": bool(mine)}
+        return dict(branding.appearance(),
+                    name=brand["name"], accent=brand["colors"].get("accent"),
+                    default_name=branding.DEFAULT_NAME,
+                    warnings=branding.warnings(brand), yours=bool(mine))
 
     @r.privileged.post("/panel/look")
     def api_look_set(body: LookBody) -> dict[str, Any]:
@@ -49,6 +67,10 @@ def routes(r) -> None:
             raise HTTPException(400, "the name cannot hold markup or control characters")
         if accent and not (len(accent) == 7 and branding._COLOR_RE.match(accent)):  # noqa: SLF001
             raise HTTPException(400, "the colour must be written as #rrggbb")
+        if body.theme and body.theme not in branding.THEMES:
+            raise HTTPException(400, "the theme is choose, dark or light")
+        if body.text_size and body.text_size not in branding.TEXT_SIZES:
+            raise HTTPException(400, "the text size is choose, normal, large or xlarge")
 
         def change(user: dict) -> None:
             look = user.setdefault("webui", {}).setdefault("branding", {})
@@ -67,8 +89,33 @@ def routes(r) -> None:
                 look.pop("colors", None)
             if not look:
                 user["webui"].pop("branding", None)
+            # written as chosen, "choose" too, so it can undo a distribution's
+            # choice; empty takes yours out again
+            _put(user, "theme", body.theme)
+            _put(user, "text_size", body.text_size)
 
         result = configio.mutate(change, bus=r.bus())
         mine = configio.get_in(configio.read_user_config(), ["webui", "branding"]) or {}
         result["warnings"] = branding.warnings(_in_force(mine))
         return result
+
+    @r.api.get("/panel/recommends")
+    def api_recommends() -> dict[str, Any]:
+        from ovos_webui import recommends
+        return recommends.source()
+
+    @r.privileged.post("/panel/recommends")
+    def api_recommends_set(body: RecommendsBody) -> dict[str, Any]:
+        from pathlib import Path
+
+        from ovos_webui import recommends
+        path = body.path.strip()
+        if path and path != recommends.OPENVOICEOS:
+            folder = Path(path).expanduser()
+            if not folder.is_dir():
+                raise HTTPException(400, "there is no such folder on the device")
+            if not any(d.is_dir() and any(d.glob("*.conf")) for d in folder.iterdir()):
+                raise HTTPException(400, "the folder holds no recommendations "
+                                         "(<profile>/<language>.conf)")
+        configio.mutate(lambda user: _put(user, "recommends", path), bus=r.bus())
+        return recommends.source()

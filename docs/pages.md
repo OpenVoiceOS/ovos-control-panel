@@ -362,6 +362,38 @@ A distribution can give the panel its own name and look, with configuration only
   contrast.
 - Not yet: `manual`, a base for the manual links.
 
+Two more settings sit next to `branding` and say whether each viewer chooses
+or the device decides:
+
+```json
+{"webui": {"theme": "dark", "text_size": "choose"}}
+```
+
+- `theme`: `choose` (the default: a button in the header), `dark` or `light`.
+  A fixed theme is set on the page by the server, so it paints that way at
+  once, and the header has no theme button.
+- `text_size`: `choose` (the default), `normal`, `large` or `xlarge`, the same
+  way. Larger text helps people who see less well, so a distribution should
+  think twice before taking the button away.
+
+### A distribution's own recommendations
+
+Setup and the Plugins page recommend plugins for the device's language from
+the recommendations that ovos-config ships (`ovos_config/recommends/<profile>/<lang>.conf`).
+A distribution can ship its own, laid out the same way, and name the folder:
+
+```json
+{"webui": {"recommends": "/usr/share/emkay/recommends"}}
+```
+
+For a language the folder has a file for, its recommendations are used; for
+any other language, OpenVoiceOS's own. `"openvoiceos"` uses OpenVoiceOS's own
+even where the device came with others.
+
+All of these can be changed on the Control panel page. What you choose there
+goes in your own layer, so it wins over what the distribution set, and
+"Back to the default" takes it out again.
+
 The panel turns this into a small `branding.css` and loads it after `app.css`.
 The name, the logo and the colours are public, like `app.css`, because the
 sign in page wears them too.

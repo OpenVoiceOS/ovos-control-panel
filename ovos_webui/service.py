@@ -348,6 +348,8 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         # it has no menu, because you are not signed in yet. It does carry
         # the distribution's name.
         html = (STATIC_DIR / "login.html").read_text(encoding="utf-8")
+        html = html.replace('<html lang="en">', '<html lang="en"'
+                            + branding.html_attrs(branding.appearance()) + ">", 1)
         brand = branding.read()
         name = brand["name"]
         if branding.logo_file(brand):

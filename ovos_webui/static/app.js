@@ -16,7 +16,12 @@
     if (theme === "system") { root.removeAttribute("data-theme"); }
     else { root.setAttribute("data-theme", theme); }
   }
-  applyTheme(storedTheme());
+  // A device that decides the theme or the text size (webui.theme,
+  // webui.text_size) has it set on <html> by the server, and no button.
+  var ROOT = document.documentElement;
+  var THEME_LOCKED = ROOT.hasAttribute("data-theme-locked");
+  var TEXT_LOCKED = ROOT.hasAttribute("data-text-locked");
+  if (!THEME_LOCKED) { applyTheme(storedTheme()); }
 
   // The page is served in English and translated in the browser. To keep a
   // page from showing English and then switching, the strings of the last
@@ -58,7 +63,7 @@
     if (size === "normal") { root.removeAttribute("data-text"); }
     else { root.setAttribute("data-text", size); }
   }
-  applyText(storedText());
+  if (!TEXT_LOCKED) { applyText(storedText()); }
 
   // The token is never put in a URL. A sign in exchanges it for a cookie that
   // only this site can send, so nothing ends up in an access log or in the
@@ -481,7 +486,7 @@
   }
   function mountThemeToggle() {
     var header = document.querySelector("header");
-    if (!header || document.getElementById("theme-toggle")) { return; }
+    if (THEME_LOCKED || !header || document.getElementById("theme-toggle")) { return; }
     var button = document.createElement("button");
     button.id = "theme-toggle";
     button.type = "button";
@@ -517,7 +522,7 @@
   }
   function mountTextToggle() {
     var header = document.querySelector("header");
-    if (!header || document.getElementById("text-toggle")) { return; }
+    if (TEXT_LOCKED || !header || document.getElementById("text-toggle")) { return; }
     var button = document.createElement("button");
     button.id = "text-toggle";
     button.type = "button";
