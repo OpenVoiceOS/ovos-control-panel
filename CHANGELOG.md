@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a71](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a71) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a70...0.0.1a71)
+
+**Merged pull requests:**
+
+- feat: a distribution can decide the theme, the text size and the recommendations [\#146](https://github.com/OpenVoiceOS/ovos-control-panel/pull/146) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a70](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a70) (2026-11-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a69...0.0.1a70)
@@ -397,7 +405,6 @@
 - feat: transformers panel — manage all six transformer chains [\#30](https://github.com/OpenVoiceOS/ovos-control-panel/pull/30) ([JarbasAl](https://github.com/JarbasAl))
 - feat: Voice settings — pickers for wake word, VAD, STT, TTS, pipeline, transformers, language [\#29](https://github.com/OpenVoiceOS/ovos-control-panel/pull/29) ([JarbasAl](https://github.com/JarbasAl))
 - feat: System panel — SSH, factory reset, language, connectivity, detect-location [\#28](https://github.com/OpenVoiceOS/ovos-control-panel/pull/28) ([JarbasAl](https://github.com/JarbasAl))
-- feat: Servers panel — self-hosted STT/TTS/translate URLs with failover [\#27](https://github.com/OpenVoiceOS/ovos-control-panel/pull/27) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
