@@ -165,7 +165,12 @@ OvosWebUI.ready(function () {
           (block.actions || []).forEach(function (a) {
             if (holds(a.when, data)) { row.appendChild(button(a, function () { run(a, null, msg, function () { load(); reloadAll(); }); })); }
           });
-        }).catch(function () { card.hidden = true; });
+        }).catch(function (e) {
+          // a status that is always there says why it is empty; one shown
+          // only for a state (playing now) just stays away
+          card.hidden = !!block.show;
+          if (!block.show) { say(msg, e.message, true); }
+        });
       }
       refreshers.push(load);
       load();
@@ -311,7 +316,21 @@ OvosWebUI.ready(function () {
             ["min", "max", "step"].forEach(function (k) { if (f[k] !== undefined) { input[k] = f[k]; } });
             if (f.type === "text" || f.type === "password") { input.maxLength = f.max_length; }
           }
-          label.appendChild(input);
+          if (f.type === "slider") {
+            // the value beside it: a percent for 0..1
+            var wrap = document.createElement("span"), out = document.createElement("output");
+            wrap.className = "cp-range";
+            var show = function () {
+              out.textContent = f.max === 1 && (f.min || 0) === 0 ? Math.round(input.value * 100) + " %" : input.value;
+            };
+            input.addEventListener("input", show);
+            input.addEventListener("change", show);
+            wrap.appendChild(input); wrap.appendChild(out);
+            label.appendChild(wrap);
+            input.cpShow = show;
+          } else {
+            label.appendChild(input);
+          }
         }
         card.appendChild(label);
         if (f.hint) {
@@ -351,6 +370,7 @@ OvosWebUI.ready(function () {
           else if (f.type === "password") { input.placeholder = v.set ? t("common.password_set") : ""; }
           else if (f.type === "lines") { input.value = (v || []).join("\n"); }
           else { input.value = v; input.dataset.want = v; }
+          if (input.cpShow) { input.cpShow(); }
         });
         showFields();
       }).catch(function (e) { say(msg, e.message, true); });

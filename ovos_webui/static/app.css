@@ -920,3 +920,8 @@ html.i18n-wait body { visibility: hidden; }
 .cp-rows { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 1rem; margin: 0.5rem 0; }
 .cp-rows dt { color: var(--muted); }
 .cp-rows dd { margin: 0; overflow-wrap: anywhere; }
+.cp-range { display: flex; align-items: center; gap: 0.8rem; }
+.cp-range input { flex: 1 1 auto; }
+.cp-range output { min-width: 3.5rem; text-align: end; font-variant-numeric: tabular-nums; }
+#cp-page label > span:first-child { display: block; margin-bottom: 0.3rem; }
+#cp-page label.check > span:first-child { display: inline; margin: 0; }
