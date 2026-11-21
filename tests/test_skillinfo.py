@@ -190,3 +190,22 @@ def test_both_skill_entry_point_groups_count(text, registers):
     """opm.skill is the group ovos-plugin-manager uses now, ovos.plugin.skill
     the older one; a name that only mentions one is not a registration."""
     assert bool(skillinfo._GROUP_RE.search(text)) is registers
+
+
+def test_the_author_in_skill_json_comes_before_the_package_metadata(fake_pypi, monkeypatch):
+    served, _ = fake_pypi
+    wheel = _wheel({
+        "ovos_skill_tales/locale/en-us/skill.json": json.dumps({
+            "name": "Tales", "author": "emkay-voice"}).encode(),
+    })
+    served["ovos_skill_tales-1.0-py3-none-any.whl"] = wheel
+    project = json.loads(served["/pypi/ovos-skill-tales/json"])
+    project["urls"][0]["size"] = len(wheel)
+    served["/pypi/ovos-skill-tales/json"] = json.dumps(project).encode()
+    assert skillinfo.info("ovos-skill-tales")["author"] == "emkay-voice"
+
+
+def test_a_skill_json_without_an_author_keeps_the_package_author():
+    assert skillinfo._from_skill_json(b'{"name": "Tales"}')["skill_author"] is None
+    assert skillinfo._from_skill_json(b'{"author": "  "}')["skill_author"] is None
+    assert skillinfo._from_skill_json(b'{"author": "Emkay-Voice"}')["skill_author"] == "Emkay-Voice"

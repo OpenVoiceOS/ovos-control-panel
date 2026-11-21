@@ -129,7 +129,11 @@ def _from_skill_json(raw: bytes) -> dict[str, Any]:
     examples = [str(e) for e in examples if isinstance(e, (str, int, float))][:12] \
         if isinstance(examples, list) else []
     icon = data.get("icon")
+    author = data.get("author")
     return {
+        # who the skill says made it: an organisation, where the package
+        # metadata often names only the person who uploaded it
+        "skill_author": author.strip()[:80] or None if isinstance(author, str) else None,
         "title": str(data.get("name") or "").strip() or None,
         "description": str(data.get("description") or "").strip() or None,
         "examples": examples,
@@ -305,6 +309,10 @@ def _gather(package: str) -> dict[str, Any]:
             _REMOTE[key] = (time.time(), found)
             out.update(found)
     out["pypi"] = "https://pypi.org/project/" + urllib.parse.quote(package) + "/"
+    # the skill's own skill.json says who made it, before the package metadata
+    skill_author = out.pop("skill_author", None)
+    if skill_author:
+        out["author"] = skill_author
     return out
 
 
