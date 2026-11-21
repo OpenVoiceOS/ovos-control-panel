@@ -284,7 +284,13 @@ class _Checker:
             out["was"] = str(kind)[:40]
             return out
         if kind == "text":
-            out["text"] = _label(raw.get("text"), where)
+            if raw.get("steps") is not None:
+                steps = raw["steps"]
+                if not isinstance(steps, list) or not steps or len(steps) > 20:
+                    raise DescribedError(f"{where}: steps must be a list of up to 20 labels")
+                out["steps"] = [_label(x, f"{where}.steps") for x in steps]
+            if raw.get("text") is not None or "steps" not in out:
+                out["text"] = _label(raw.get("text"), where)
         if kind in ("status", "list"):
             out["query"] = self.message(raw.get("query"), where)
             if raw.get("refresh") is not None:

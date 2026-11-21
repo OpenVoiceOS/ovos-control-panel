@@ -176,5 +176,8 @@
  "common.newer": "Esta parte da página precisa de um painel de controlo mais recente.",
  "common.name": "Nome",
  "common.none": "Ainda não há nada.",
- "common.password_set": "Há uma palavra-passe; deixe vazio para a manter."
+ "common.password_set": "Há uma palavra-passe; deixe vazio para a manter.",
+ "common.noanswer": "A skill ou o plugin não respondeu. Está a correr?",
+ "common.needed": "Preencha: {fields}",
+ "common.nofile": "A resposta não trazia nenhum ficheiro."
 }

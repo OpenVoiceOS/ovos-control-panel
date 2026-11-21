@@ -104,7 +104,7 @@ prefix every message of the page starts with.
 
 | Block | Fields |
 |---|---|
-| `text` | `text`: a label. |
+| `text` | `text`: a label, and/or `steps`: labels shown as numbered steps. |
 | `status` | `query`, `text` (a label with `{field}` from the answer) and/or `rows` (`label`, `value` with `{field}` or `text` a label, `when`, and `empty`, the label shown when the value is empty), `show` (a field that must be true), `actions`, `refresh` (seconds). |
 | `list` | `query`, `items` (the answer's list), `key` (a row's id), `title` (`{field}`), `meta` (a label with `{field}`), `empty`, `split` (`by` a true/false field into two lists, each with a heading), `rename` (`field`, `send`, `when`, `max_length`), `actions` (one per row), `refresh`, `heading`. |
 | `actions` | `actions`: buttons. |
@@ -129,6 +129,10 @@ In `{field}` a field can be nested (`{ports.outputs}`), a list is joined with
 commas, a value can be shown as a date (`{saved:date}`), or as a label
 (`{engine@midi.engine}` shows the label `midi.engine.fluidsynth`, or nothing
 when there is no such label; the label can hold the answer's values too).
+
+A skill that answers with `{"error": ...}` can give a label of its page
+(`"jamband.err.gone"`), shown in the reader's language; other text is shown
+as it is.
 
 A block this panel does not know is shown as "this part needs a newer control
 panel"; the rest of the page still works.

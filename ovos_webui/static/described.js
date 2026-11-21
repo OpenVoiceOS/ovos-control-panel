@@ -20,8 +20,23 @@ OvosWebUI.ready(function () {
     "common.cancel": "Cancel", "common.rename": "Save name", "common.sure": "Are you sure?",
     "common.saved": "Saved.", "common.done": "Done.", "common.loading": "Loading …",
     "common.newer": "This part of the page needs a newer control panel.",
-    "common.name": "Name", "common.none": "Nothing here yet.", "common.password_set": "A password is set; leave empty to keep it."
+    "common.name": "Name", "common.none": "Nothing here yet.", "common.password_set": "A password is set; leave empty to keep it.",
+    "common.noanswer": "The skill or plugin did not answer. Is it running?",
+    "common.needed": "Fill in: {fields}",
+    "common.nofile": "The answer carried no file."
   };
+  // What the server says, in the words of the page: its known answers have
+  // keys here, and a skill may answer with a key of its own page.
+  var SERVER = {
+    "the skill or plugin did not answer; is it running?": "common.noanswer",
+    "the answer carried no file": "common.nofile"
+  };
+  function why(e) {
+    var m = e && e.message ? e.message : String(e);
+    if (SERVER[m]) { return t(SERVER[m]); }
+    if (EN[m]) { return t(m); }
+    return m;
+  }
   var params = {};
 
   function t(label) {
@@ -93,7 +108,7 @@ OvosWebUI.ready(function () {
     }
     post(action.privileged ? "/act" : "/act-open", {ref: action.ref, key: key, params: params})
       .then(function (r) { say(msg, t("common.done")); if (after) { after(r); } })
-      .catch(function (e) { say(msg, e.message, true); });
+      .catch(function (e) { say(msg, why(e), true); });
   }
 
   var refreshers = [];
@@ -113,8 +128,19 @@ OvosWebUI.ready(function () {
     text: function (block) {
       var p = document.createElement("p");
       p.className = "hint";
-      p.textContent = t(block.text);
-      return p;
+      if (block.text) { p.textContent = t(block.text); }
+      if (!block.steps) { return p; }
+      var wrap = document.createElement("div");
+      if (block.text) { wrap.appendChild(p); }
+      var ol = document.createElement("ol");
+      ol.className = "cp-steps";
+      block.steps.forEach(function (s) {
+        var li = document.createElement("li");
+        li.textContent = t(s);
+        ol.appendChild(li);
+      });
+      wrap.appendChild(ol);
+      return wrap;
     },
     unknown: function () {
       var p = document.createElement("p");
@@ -174,7 +200,7 @@ OvosWebUI.ready(function () {
           // a status that is always there says why it is empty; one shown
           // only for a state (playing now) just stays away
           card.hidden = !!block.show;
-          if (!block.show) { say(msg, e.message, true); }
+          if (!block.show) { say(msg, why(e), true); }
         });
       }
       refreshers.push(load);
@@ -211,7 +237,7 @@ OvosWebUI.ready(function () {
             post(block.rename.privileged ? "/act" : "/act-open",
                  {ref: block.ref + ".rename", key: key, value: input.value.trim(), params: params})
               .then(function () { say(msgId, t("common.saved")); load(); })
-              .catch(function (e) { say(msgId, e.message, true); });
+              .catch(function (e) { say(msgId, why(e), true); });
           }));
           li.appendChild(r);
         } else {
@@ -265,7 +291,7 @@ OvosWebUI.ready(function () {
         }).catch(function (e) {
           holder.innerHTML = "";
           holder.appendChild(msgCard);
-          say(msgId, e.message, true);
+          say(msgId, why(e), true);
         });
       }
       msgId = msgEl(msgCard);
@@ -374,13 +400,13 @@ OvosWebUI.ready(function () {
           var f = inputs[name].field, input = inputs[name].input, v = values[name];
           if (v === undefined) { return; }
           if (f.type === "checkbox") { input.checked = "on" in f ? !same(v, f.off) : !!v; }
-          else if (f.type === "password") { input.placeholder = v.set ? t("common.password_set") : ""; }
+          else if (f.type === "password") { input.placeholder = v.set ? t("common.password_set") : ""; inputs[name].set = !!v.set; }
           else if (f.type === "lines") { input.value = (v || []).join("\n"); }
           else { input.value = v; input.dataset.want = v; }
           if (input.cpShow) { input.cpShow(); }
         });
         showFields();
-      }).catch(function (e) { say(msg, e.message, true); });
+      }).catch(function (e) { say(msg, why(e), true); });
       save.addEventListener("click", function () {
         var values = {};
         Object.keys(inputs).forEach(function (name) {
@@ -391,9 +417,16 @@ OvosWebUI.ready(function () {
           else if (f.type === "password") { if (input.value) { values[name] = input.value; } }
           else { values[name] = input.value; }
         });
+        var lacking = Object.keys(inputs).filter(function (name) {
+          var i = inputs[name];
+          var v = values[name];
+          var empty = v === undefined || v === "" || v === null || (Array.isArray(v) && !v.length);
+          return i.field.required && !i.set && !i.label.hidden && empty;
+        }).map(function (name) { return t(inputs[name].field.label); });
+        if (lacking.length) { say(msg, t("common.needed").replace("{fields}", lacking.join(", ")), true); return; }
         post("/form", {ref: block.ref + ".form", values: values})
           .then(function () { say(msg, t("common.saved")); reloadAll(); })
-          .catch(function (e) { say(msg, e.message, true); });
+          .catch(function (e) { say(msg, why(e), true); });
       });
       return card;
     }

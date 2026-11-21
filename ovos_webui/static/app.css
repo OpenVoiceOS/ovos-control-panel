@@ -914,6 +914,8 @@ html.i18n-wait body { visibility: hidden; }
 .cp-list li { display: grid; gap: 0.35rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--line); }
 .cp-list li:last-child { border-bottom: 0; padding-bottom: 0; }
 .cp-list .row input { flex: 1 1 14rem; min-width: 0; }
+.cp-steps { margin: 0 0 0.25rem; padding-left: 1.4rem; color: var(--muted); line-height: 1.6; }
+.cp-steps li + li { margin-top: 0.25rem; }
 .cp-title { font-weight: 650; }
 .cp-meta { color: var(--muted); font-size: 0.9em; overflow-wrap: anywhere; }
 #cp-page textarea { width: 100%; font-family: inherit; }

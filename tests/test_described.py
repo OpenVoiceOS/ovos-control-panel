@@ -202,3 +202,16 @@ def test_addresses_and_required_fields():
         described.form_values(form, {"url": ""})
     assert described.missing(form, {"url": "http://x"}, {}) == ["token"], "a token the first time"
     assert described.missing(form, {"url": "http://x"}, {"token": "t"}) == [], "then it is kept"
+
+
+def test_a_text_can_be_numbered_steps():
+    page = {"controlpanel": 1, "id": "s", "bus": "ovos.s.", "blocks": [
+        {"type": "text", "steps": ["s.one", {"key": "s.two", "en": "Two"}]},
+        {"type": "text", "text": "s.intro", "steps": ["s.one"]}]}
+    out, _ = checked(page, "ovos-skill-s")
+    assert out["blocks"][0]["steps"] == [{"key": "s.one"}, {"key": "s.two", "en": "Two"}]
+    assert "text" not in out["blocks"][0]
+    assert out["blocks"][1]["text"] == {"key": "s.intro"}
+    page["blocks"][0]["steps"] = []
+    with pytest.raises(described.DescribedError, match="steps"):
+        checked(page, "ovos-skill-s")

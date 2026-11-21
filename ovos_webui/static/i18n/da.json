@@ -176,5 +176,8 @@
  "common.newer": "Denne del af siden kræver et nyere kontrolpanel.",
  "common.name": "Navn",
  "common.none": "Intet her endnu.",
- "common.password_set": "Der er sat en adgangskode; lad feltet stå tomt for at beholde den."
+ "common.password_set": "Der er sat en adgangskode; lad feltet stå tomt for at beholde den.",
+ "common.noanswer": "Skill'en eller pluginnet svarede ikke. Kører det?",
+ "common.needed": "Udfyld: {fields}",
+ "common.nofile": "Svaret havde ingen fil med."
 }
