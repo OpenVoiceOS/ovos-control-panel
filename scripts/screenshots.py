@@ -14,7 +14,7 @@ Usage::
 
 Every page is shot at a desktop and a phone width, and the pages whose layout
 depends on writing direction are shot again in Arabic. Nothing here decides
-*which* pages exist: the list comes from ``service.PAGES``, so a new page is
+*which* pages exist: the list comes from the page registry, so a new page is
 photographed the first time this runs after it is added.
 """
 from __future__ import annotations
@@ -85,9 +85,9 @@ def _free_port() -> int:
 
 def _pages() -> dict[str, str]:
     sys.path.insert(0, str(ROOT))
-    from ovos_webui.service import PAGES
+    from ovos_webui import pages
 
-    return dict(PAGES)
+    return {p.path: p.id for p in pages.load().pages}
 
 
 def _shown(path: Path) -> str:

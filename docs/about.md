@@ -19,6 +19,10 @@ The About page shows what is installed on this device and where to get help.
   found.
 - The address the page is served on.
 - Links to the OpenVoiceOS documentation, the chat, and the source code.
+- **Pages**: how many of the pages in the menu are the control panel's own,
+  and every page another package has added, with that package and its
+  version. A page that could not be loaded is named here with the reason, and
+  left out of the menu. See [pages.md](pages.md).
 
 ## When to use it
 

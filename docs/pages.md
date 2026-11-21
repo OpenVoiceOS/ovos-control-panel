@@ -1,7 +1,14 @@
 # Pages: how the control panel is put together
 
-> **Status: draft.** This describes how pages are meant to work. It is not
-> built yet. Comments go in #115.
+> **Status: partly built.** Comments go in #115.
+>
+> - **Built:** the registry and the `opm.control_panel.page` entry point, the
+>   checks on a page description, groups a page brings, the menu built from
+>   the registry, `needs`, icons, and the list of pages on the About page.
+>   All of the panel's own pages are registered this way.
+> - **Not yet:** the bus bridge, `routes`, `assets`, per-page `i18n`, wrapping
+>   a page's HTML in the shell (the panel's own pages are still whole
+>   documents), `webui.pages`, `webui.groups` and `webui.branding`.
 
 The control panel is a small shell. The shell does the sign in, the menu,
 the languages, the look and the safety checks. Everything you see in the menu
@@ -92,9 +99,9 @@ PAGE = {
 | `title` | yes | An i18n key and the English text. |
 | `group` | yes | An existing group (`everyday`, `voice`, `understanding`, `device`, `screen`, `maintenance`) or a group the page defines. See [The menu](#the-menu). |
 | `order` | no | Position within the group, lowest first. Default 100. |
-| `needs` | no | Packages the page needs. If one is missing on a device that shares the assistant's environment, the page leaves the menu and says what it needs, the same as today. |
-| `icon` | no | An SVG file in the page's folder. It is used as a mask, so it takes the menu's colour. |
-| `html` | yes | The page's body, relative to the module the entry point is in. The shell wraps it in the common header, menu and footer. |
+| `needs` | no | Packages that make the page work; any one of them is enough. If none is installed on a device that shares the assistant's environment, the page leaves the menu, and says it needs the first one if you reach it anyway. |
+| `icon` | no | An SVG file (at most 16 KB) in the page's folder. It is used as a mask, so it takes the menu's colour. |
+| `html` | yes | The page's body, as a file name next to the module the entry point is in, or as `(package, name)`. The shell wraps it in the common header, menu and footer. |
 | `assets` | no | A folder of files served under `/pages/<id>/`. |
 | `i18n` | no | A folder of `<lang>.json` files. See [Languages](#languages). |
 | `bus` | no | The messages the page may send and listen for. See [The bus bridge](#the-bus-bridge). |

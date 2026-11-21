@@ -3,7 +3,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ovos_webui.auth import AuthPolicy
-from ovos_webui.service import PAGES, create_app
+from ovos_webui import pages as _registry
+from ovos_webui.service import create_app
+
+ROUTES = sorted(p.path for p in _registry.load().pages)
 
 PROTECTED = [
     ("get", "/api/health"),
@@ -70,16 +73,17 @@ def test_unauthorised_answers_carry_the_scheme(token_client):
     assert r.headers.get("www-authenticate") == "Bearer"
 
 
-@pytest.mark.parametrize("route", sorted(PAGES))
+@pytest.mark.parametrize("route", ROUTES)
 def test_every_page_renders(client, route):
     r = client.get(route)
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/html")
     body = r.text
     assert "<nav" in body and "app.js" in body
+    assert 'id="ovos-nav"' in body, "the page is served without the menu"
 
 
-@pytest.mark.parametrize("route", sorted(PAGES))
+@pytest.mark.parametrize("route", ROUTES)
 def test_pages_load_no_external_assets(client, route):
     body = client.get(route).text
     for marker in ["cdn.", "unpkg.com", "jsdelivr", "googleapis", "//ajax."]:

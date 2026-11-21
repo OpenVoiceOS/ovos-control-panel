@@ -7,13 +7,14 @@ server-side code for it.
 """
 from pathlib import Path
 
-from ovos_webui.service import PAGES, STATIC_DIR
+from ovos_webui.service import STATIC_DIR
 
 VENDOR_DIR = STATIC_DIR / "vendor" / "ggwave"
 
 
 def test_sound_is_a_registered_page():
-    assert PAGES["/sound"] == "sound.html"
+    from ovos_webui import pages
+    assert pages.load().by_path()["/sound"].id == "sound"
 
 
 def test_sound_page_requires_auth(token_client):
@@ -62,7 +63,7 @@ def test_sound_page_references_the_vendored_script_only(client):
 
 
 def test_sound_page_never_loads_a_remote_script_tag():
-    body = Path(STATIC_DIR / "sound.html").read_text(encoding="utf-8")
+    body = (STATIC_DIR.parent / "pages" / "sound" / "page.html").read_text(encoding="utf-8")
     import re
     for src in re.findall(r'<script[^>]+src="([^"]+)"', body):
         assert src.startswith("/static/"), f"remote script source: {src}"

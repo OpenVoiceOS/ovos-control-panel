@@ -12,7 +12,7 @@ it goes ahead.
 The installer itself runs on the device, in the environment of the service
 that loads the plugin. The panel can only answer for its own environment, so
 the check runs only when that is the assistant's environment too (the same
-test the menu uses, :func:`ovos_webui.phal.page_needs`). Otherwise it says it
+test the menu uses, :func:`ovos_webui.pages.colocated`). Otherwise it says it
 could not check, and the install is asked for as before.
 
 The argument vector holds only the validated package name and values read
@@ -128,11 +128,11 @@ def _run(package: str) -> dict[str, Any]:
 
 def check(package: str) -> dict[str, Any]:
     """Return what installing ``package`` would change here, or why it can't say."""
-    from ovos_webui import phal
+    from ovos_webui import pages
     from ovos_webui.installer import validate_package_name
 
     package = validate_package_name(package)
-    if not phal.page_needs()["colocated"]:
+    if not pages.colocated():
         return {"package": package, "checked": False, "reason": "apart"}
     now = time.time()
     cached = _CACHE.get(package.lower())

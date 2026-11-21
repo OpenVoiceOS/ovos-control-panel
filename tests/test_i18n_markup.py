@@ -24,7 +24,9 @@ CONTROLS = {"input", "select", "textarea", "button"}
 
 
 def _pages():
-    return sorted(Path(STATIC_DIR).glob("*.html"))
+    """The sign in page, and every page in the page registry's folders."""
+    return sorted(Path(STATIC_DIR).glob("*.html")) + sorted(
+        (Path(STATIC_DIR).parent / "pages").glob("*/page.html"))
 
 
 def _en():
@@ -74,7 +76,7 @@ def _marked(path):
     return parser.found
 
 
-@pytest.mark.parametrize("path", _pages(), ids=lambda p: p.name)
+@pytest.mark.parametrize("path", _pages(), ids=lambda p: f"{p.parent.name}/{p.name}")
 def test_no_translated_element_strands_an_english_tail(path):
     stranded = []
     for frame in _marked(path):
@@ -100,7 +102,7 @@ def test_no_translated_element_strands_an_english_tail(path):
     )
 
 
-@pytest.mark.parametrize("path", _pages(), ids=lambda p: p.name)
+@pytest.mark.parametrize("path", _pages(), ids=lambda p: f"{p.parent.name}/{p.name}")
 def test_page_english_matches_the_english_locale(path):
     en = _en()
     drifted = []

@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from ovos_webui import installcheck, phal, pypi
+from ovos_webui import installcheck, pages, pypi
 
 REPORT = {"install": [
     {"metadata": {"name": "neon-homeassistant-skill", "version": "1.0.0"}, "requested": True},
@@ -47,7 +47,7 @@ def test_downgrades_upgrades_and_new_packages_are_told_apart():
 
 
 def _colocated(monkeypatch, yes=True):
-    monkeypatch.setattr(phal, "page_needs", lambda: {"colocated": yes, "needs": {}})
+    monkeypatch.setattr(pages, "colocated", lambda have=None: yes)
 
 
 def test_a_panel_apart_from_the_assistant_cannot_check(monkeypatch):
