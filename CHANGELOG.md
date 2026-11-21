@@ -1,8 +1,20 @@
 # Changelog
 
+## [0.0.1a70](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a70) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a69...0.0.1a70)
+
+**Merged pull requests:**
+
+- feat: a Control panel page for the panel's own settings [\#145](https://github.com/OpenVoiceOS/ovos-control-panel/pull/145) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a69](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a69) (2026-11-21)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a67...0.0.1a69)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a68...0.0.1a69)
+
+## [0.0.1a68](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a68) (2026-11-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a67...0.0.1a68)
 
 **Merged pull requests:**
 
@@ -390,10 +402,6 @@
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a24...0.0.1a25)
-
-**Merged pull requests:**
-
-- fix: audit wave-6 \(reconcile the buswait abandoned-permit count\) [\#26](https://github.com/OpenVoiceOS/ovos-control-panel/pull/26) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a24](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a24) (2026-08-13)
 
