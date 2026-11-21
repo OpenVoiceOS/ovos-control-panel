@@ -1,0 +1,23 @@
+{
+ "about.loading": "Loading…",
+ "about.links_heading": "Links",
+ "about.packages_heading": "Installed packages",
+ "about.packages_hint": "Give these version numbers when you report a problem.",
+ "about.pages_heading": "Pages",
+ "about.pages_none": "No other package has added a page.",
+ "about.pages_problems": "These pages could not be loaded and are left out:",
+ "about.pages_count": "{own} of the pages are the control panel's own, and {added} come from other packages.",
+ "about.credits_heading": "Credits",
+ "about.developed_by": "Developed by ",
+ "about.developed_for": " for",
+ "about.funded_by": "Funded by the ",
+ "about.funded_sep": " / ",
+ "about.funded_grant": " under grant agreement No ",
+ "about.funded_programme": ", through the European Commission's ",
+ "about.funded_end": " programme.",
+ "about.version_prefix": "version ",
+ "about.no_package": "No OpenVoiceOS package was found.",
+ "hdr.about": "About this device",
+ "about.intro": "This page lists what is installed, to help when you report a problem.",
+ "about.ai_assisted": "Made with the help of AI."
+}

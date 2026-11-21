@@ -1,5 +1,5 @@
 """Sensors: one of the control panel's own pages."""
-from ovos_webui.pages.sensors.routes import routes
+from ovos_webui.pages.sensors.api import routes
 
 PAGE = {
     "api_version": 1,

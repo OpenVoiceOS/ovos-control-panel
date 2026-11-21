@@ -1,0 +1,23 @@
+{
+ "about.loading": "جارٍ التحميل…",
+ "about.links_heading": "روابط",
+ "about.packages_heading": "الحزم المثبَّتة",
+ "about.packages_hint": "أعطِ أرقام الإصدارات هذه عند الإبلاغ عن مشكلة.",
+ "about.pages_heading": "الصفحات",
+ "about.pages_none": "لم تُضف أي حزمة أخرى صفحة.",
+ "about.pages_problems": "تعذّر تحميل هذه الصفحات فتم استبعادها:",
+ "about.pages_count": "{own} من الصفحات خاصة بلوحة التحكم، و{added} تأتي من حزم أخرى.",
+ "about.credits_heading": "شكر وتقدير",
+ "about.developed_by": "طُوِّر بواسطة ",
+ "about.developed_for": " لأجل",
+ "about.funded_by": "بتمويل من ",
+ "about.funded_sep": " / ",
+ "about.funded_grant": " بموجب اتفاقية المنحة رقم ",
+ "about.funded_programme": "، من خلال برنامج المفوضية الأوروبية ",
+ "about.funded_end": ".",
+ "about.version_prefix": "الإصدار ",
+ "about.no_package": "لم يُعثر على حزمة OpenVoiceOS.",
+ "hdr.about": "حول هذا الجهاز",
+ "about.intro": "تسرد هذه الصفحة ما هو مثبَّت، لمساعدتك عند الإبلاغ عن مشكلة.",
+ "about.ai_assisted": "صُنع بمساعدة الذكاء الاصطناعي."
+}

@@ -312,7 +312,7 @@ def test_display_body_rejects_oversized_grid():
     rejected during validation, not materialized first."""
     import pytest
     from pydantic import ValidationError
-    from ovos_webui.service import Mark1DisplayBody
+    from ovos_webui.pages.mark1.api import Mark1DisplayBody
 
     with pytest.raises(ValidationError):
         Mark1DisplayBody(grid=[[0] * 32] * 9)          # too many rows

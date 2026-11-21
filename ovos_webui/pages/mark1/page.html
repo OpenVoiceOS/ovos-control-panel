@@ -1,13 +1,3 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="same-origin">
-<title>Mark-1 faceplate — OpenVoiceOS</title>
-<link rel="stylesheet" href="/static/app.css">
-<link rel="manifest" href="/static/manifest.webmanifest">
-<script src="/static/app.js"></script>
 <style>
   #mark1-canvas { display: block; margin: 0.75rem 0; background: #0b0b0d; border-radius: 10px;
     cursor: crosshair; touch-action: none; max-width: 100%; height: auto; }
@@ -22,16 +12,6 @@
   .mark1-controls label { display: flex; align-items: center; gap: 0.35rem; }
   .mark1-controls input[type="range"] { width: 10rem; }
 </style>
-</head>
-<body>
-<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
-<div class="banner" id="banner" role="alert" hidden></div>
-<header><h1 data-i18n="hdr.mark1">Mark-1 faceplate</h1>
-  <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></header>
-<nav aria-label="Site" data-i18n-attr="aria-label:nav.aria" id="sitenav">
-  <a href="/" data-i18n="nav.dashboard">Dashboard</a>
-</nav>
-<main id="main" tabindex="-1">
   <p class="hint" data-i18n="mark1.intro">Design the Mark-1's eyes and mouth, preview them right here in the
     browser, and send the result to a real device.</p>
 
@@ -179,7 +159,6 @@
 
   <p class="hint foot"><a data-i18n="foot.manual"
     href="https://openvoiceos.github.io/beta-technical-manual/mark1/">Learn more in the technical manual</a></p>
-</main>
 <script>
 OvosWebUI.ready(function () {
   var api = OvosWebUI.api, el = OvosWebUI.el, esc = OvosWebUI.esc, t = OvosWebUI.t;
@@ -1131,5 +1110,3 @@ OvosWebUI.ready(function () {
   }
 });
 </script>
-</body>
-</html>

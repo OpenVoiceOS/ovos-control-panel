@@ -1,4 +1,6 @@
 """Media: one of the control panel's own pages."""
+from ovos_webui.pages.media.api import routes
+
 PAGE = {
     "api_version": 1,
     "id": "media",
@@ -9,4 +11,7 @@ PAGE = {
     "needs": ["ovos-media", "ovos-plugin-common-play", "ovos-ocp-pipeline-plugin"],
     "html": "page.html",
     "icon": "icon.svg",
+    "heading": {"key": "hdr.media", "label": "Media"},
+    "i18n": "i18n",
+    "routes": routes,
 }

@@ -1,0 +1,20 @@
+{
+ "hdr.servers": "Servidores",
+ "servers.intro": "Aponte a fala para texto, o texto para fala e a tradução para servidores que você próprio gere, em vez dos públicos predefinidos. Se indicar mais do que um servidor, o dispositivo tenta-os por ordem e passa ao seguinte quando um não responde.",
+ "servers.needsPlugin": "Cada lista só entra em vigor quando o dispositivo estiver configurado para usar o plugin de servidor desse motor (por exemplo ovos-stt-plugin-server). Defina primeiro o plugin na página de Definições.",
+ "servers.publicNote": "Deixar uma lista vazia não é problema: o plugin de servidor correspondente volta então aos seus próprios servidores públicos incorporados.",
+ "servers.stt.title": "Fala para texto",
+ "servers.tts.title": "Texto para fala",
+ "servers.translate.title": "Tradução",
+ "servers.moduleLine": "Aplica-se ao plugin {kind}: {module}",
+ "servers.translate.modules": "Aplica-se ao plugin de deteção ({d}) e ao plugin de tradução ({m}).",
+ "servers.addPlaceholder": "https://o-seu-servidor.exemplo.com",
+ "servers.add": "Adicionar",
+ "servers.save": "Guardar",
+ "servers.saving": "A guardar…",
+ "servers.saved": "Guardado.",
+ "servers.remove": "Remover",
+ "servers.up": "Subir",
+ "servers.down": "Descer",
+ "servers.empty": "Nenhum servidor definido. Aplicam-se os padrões públicos do próprio plugin."
+}

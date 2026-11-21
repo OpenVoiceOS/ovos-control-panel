@@ -8,4 +8,6 @@ PAGE = {
     "order": 20,
     "html": "page.html",
     "icon": "icon.svg",
+    "heading": {"key": "hdr.setup", "label": "Set up this device"},
+    "i18n": "i18n",
 }

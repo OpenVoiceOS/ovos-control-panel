@@ -435,23 +435,44 @@ class Routes:
     ``api`` and ``privileged`` are routers under ``/api`` with the panel's sign
     in and cross-site checks already on them; ``privileged`` also always needs
     the token. ``need_bus()`` returns the message bus, or answers 503 when it
-    is not reachable. ``config`` is the panel's configuration module.
+    is not reachable; ``bus()`` returns it or ``None``, for a change that
+    should tell the device if it can. ``config`` is the panel's configuration
+    module.
     """
 
     api: Any
     privileged: Any
     need_bus: Callable[[], Any]
     config: Any
+    bus: Callable[[], Any] = lambda: None
+
+
+_PARAM_RE = re.compile(r"\{[^}]*\}")
+
+
+def _matcher(path: str):
+    """A regex for a route path: each {param} matches one path segment."""
+    parts = _PARAM_RE.split(path)
+    return re.compile("^" + "[^/]+".join(re.escape(p) for p in parts) + "$")
+
+
+def _sample(path: str) -> str:
+    """A concrete path a route template answers, with every {param} filled in."""
+    return _PARAM_RE.sub("x", path)
 
 
 def mount_routes(reg: Registry, make: Callable[[], Routes], taken: set[tuple[str, str]],
                  include: Callable[[Routes], None]) -> None:
     """Let each page with ``routes`` add its API routes.
 
-    A page whose function fails, or that adds a route the panel or an earlier
-    page already has, is left out entirely: its HTML would not work without
-    its routes.
+    Pages' routes are matched before the shell's, so a page must not take an
+    address the shell answers, not even through a ``{param}``; and a page must
+    not add a route an earlier page would answer first. A page that does, or
+    whose function fails, is left out entirely: its HTML would not work
+    without its routes.
     """
+    shell = set(taken)
+    earlier: set[tuple[str, str]] = set()
     for page in list(reg.pages):
         if page.routes is None:
             continue
@@ -466,10 +487,14 @@ def mount_routes(reg: Registry, make: Callable[[], Routes], taken: set[tuple[str
             for route in router.routes:
                 for method in getattr(route, "methods", None) or ():
                     mine.add((method, route.path))
-        clash = sorted(mine & taken)
+        clash = sorted(
+            {(m, p) for m, p in mine for sm, sp in shell
+             if m == sm and _matcher(p).match(_sample(sp))}
+            | {(m, p) for m, p in mine for em, ep in earlier
+               if m == em and (_matcher(ep).match(_sample(p)) or _matcher(p).match(_sample(ep)))})
         if clash:
             reg.drop(page, "it adds routes that already exist: "
                      + ", ".join(f"{m} {p}" for m, p in clash))
             continue
-        taken |= mine
+        earlier |= mine
         include(r)

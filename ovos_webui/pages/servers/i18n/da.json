@@ -1,0 +1,20 @@
+{
+ "hdr.servers": "Servere",
+ "servers.intro": "Peg tale til tekst, tekst til tale og oversættelse på servere, du selv kører, i stedet for de offentlige standardservere. Angiver du mere end én server, prøver enheden dem i rækkefølge og går videre til den næste, når en ikke svarer.",
+ "servers.needsPlugin": "Hver liste virker kun, når enheden er sat op til at bruge den pågældende motors server-plugin (for eksempel ovos-stt-plugin-server). Sæt pluginnet på siden Indstillinger først.",
+ "servers.publicNote": "Det er fint at lade en liste stå tom: det tilhørende server-plugin bruger så sine egne indbyggede offentlige servere.",
+ "servers.stt.title": "Tale til tekst",
+ "servers.tts.title": "Tekst til tale",
+ "servers.translate.title": "Oversættelse",
+ "servers.moduleLine": "Gælder {kind}-pluginnet: {module}",
+ "servers.translate.modules": "Gælder genkendelses-pluginnet ({d}) og oversættelses-pluginnet ({m}).",
+ "servers.addPlaceholder": "https://din-server.example.com",
+ "servers.add": "Tilføj",
+ "servers.save": "Gem",
+ "servers.saving": "Gemmer…",
+ "servers.saved": "Gemt.",
+ "servers.remove": "Fjern",
+ "servers.up": "Flyt op",
+ "servers.down": "Flyt ned",
+ "servers.empty": "Ingen servere sat. Pluginnets egne offentlige standardservere bruges."
+}
