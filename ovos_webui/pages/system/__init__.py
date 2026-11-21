@@ -10,7 +10,9 @@ PAGE = {
     "title": {"key": "nav.system", "label": "System"},
     "group": "device",
     "order": 10,
-    "needs": CAPABILITIES["system"]["plugins"],
+    # SSH and factory reset are the system plugin's, the location the IP
+    # geolocation plugin's
+    "needs": CAPABILITIES["system"]["plugins"] + ["ovos-PHAL-plugin-ipgeo"],
     "html": "page.html",
     "icon": "icon.svg",
     "heading": {"key": "hdr.system", "label": "System"},

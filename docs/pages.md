@@ -398,8 +398,20 @@ you cannot get the panel back into shape:
 - Backup
 - About
 
-Everything else, the panel's own pages included, can be disabled. In time, a
-page that belongs with a plugin can move there.
+Everything else, the panel's own pages included, can be disabled.
+
+### Moving a page into its plugin
+
+Several of the panel's own pages only talk to one PHAL plugin: Network to the
+network-manager plugin, System to the system plugin, Mark 1, Sensors, Apps and
+Wallpaper to theirs. They belong with that plugin, the way the MIDI page ships
+with the MIDI plugin.
+
+A plugin takes such a page over by bringing a page with the same `id` (and
+usually the same `path`). The panel's own copy then steps aside, whichever is
+loaded first, so a plugin can ship the page before the panel drops its copy.
+The core pages above cannot be taken over. Until a page has moved, its
+`needs` keeps it out of the menu on a device without the plugin.
 
 ## Versions
 

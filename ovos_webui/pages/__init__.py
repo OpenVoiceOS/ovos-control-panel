@@ -457,6 +457,15 @@ def _sources(eps: list | None) -> list[tuple[str, Callable[[], Any], str, str, s
     return found
 
 
+def _takes_over(new: Page, old: Page) -> bool:
+    """Whether ``new`` replaces ``old``: a page from another package with the
+    id of one of the panel's own pages that are not core. That is how a page
+    moves out of the panel into the plugin that does the work (the Network
+    page into the network-manager plugin): the plugin brings it, and the
+    panel's copy steps aside until it is removed. The core pages stay."""
+    return old.builtin and not new.builtin and old.id not in CORE
+
+
 def load(eps: list | None = None) -> Registry:
     """Load every registered page. ``eps`` replaces the entry points (tests)."""
     reg = Registry(groups=[dict(g) for g in GROUPS])
@@ -468,6 +477,18 @@ def load(eps: list | None = None) -> Registry:
         builtin = package.lower() == OWN_DIST
         try:
             page, groups = parse(loader(), module, package, version, builtin)
+            other = next((p for p, _ in loaded if p.id == page.id), None)
+            if other is not None and _takes_over(page, other):
+                # the plugin that owns the hardware brings its own page:
+                # the panel's built-in one steps aside
+                LOG.info("page %s from %s takes the place of the panel's own", page.id, package)
+                loaded = [(p, g) for p, g in loaded if p is not other]
+                ids.discard(other.id)
+                paths.pop(other.path, None)
+            elif other is not None and _takes_over(other, page):
+                LOG.info("page %s: %s brings its own, so the panel's is left out",
+                         page.id, other.package)
+                continue
             if page.id in ids:
                 raise PageError(f"another page already has the id {page.id}")
             if page.path in paths:
