@@ -135,3 +135,134 @@ def test_the_pages_route_lists_where_each_page_comes_from(client):
     assert body["problems"] == []
     about = [p for p in body["pages"] if p["id"] == "about"][0]
     assert about["package"] == pages.OWN_DIST and about["builtin"] is True
+
+
+# ── what a page brings: its body, strings, files and routes ─────────────────
+@pytest.fixture
+def guardian_pkg(tmp_path, monkeypatch):
+    """A package outside the panel with a page: body, strings, assets, routes."""
+    # A name of its own per test: the import system keeps a module it has seen.
+    name = f"guardian_page_{tmp_path.name.replace('-', '_')}"
+    pkg = tmp_path / name
+    (pkg / "i18n").mkdir(parents=True)
+    (pkg / "static").mkdir()
+    (pkg / "__init__.py").write_text("")
+    (pkg / "page.html").write_text(
+        '<section class="card"><h2 data-i18n="guardian.mode">Mode</h2>'
+        '<p>{{heading}} stays text</p></section>\n'
+        '<script src="/pages/guardian/guardian.js"></script>')
+    (pkg / "icon.svg").write_text("<svg xmlns='http://www.w3.org/2000/svg'/>")
+    (pkg / "i18n" / "en.json").write_text('{"guardian.mode": "Mode", "nav.dashboard": "Hijacked"}')
+    (pkg / "i18n" / "da.json").write_text('{"guardian.mode": "Tilstand"}')
+    (pkg / "static" / "guardian.js").write_text("console.log('guardian');")
+    (pkg / "static" / ".secret").write_text("no")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    return name
+
+
+def _guardian(module, **over):
+    def routes(r):
+        @r.api.get("/guardian/state")
+        def state():
+            return {"mode": "day"}
+
+    desc = {"api_version": 1, "id": "guardian", "path": "/emkay/guardian",
+            "title": {"key": "guardian.title", "label": "Guardian"}, "group": "device",
+            "html": (module, "page.html"), "icon": (module, "icon.svg"),
+            "i18n": "i18n", "assets": "static", "routes": routes}
+    desc.update(over)
+    ep = _EP("guardian", desc)
+    ep.value = f"{module}:PAGE"
+    return ep
+
+
+@pytest.fixture
+def guardian_app(guardian_pkg, monkeypatch, bus):
+    from fastapi.testclient import TestClient
+
+    from ovos_webui.service import create_app
+    eps = _own() + [_guardian(guardian_pkg)]
+    monkeypatch.setattr(pages, "_entry_points", lambda: eps)
+    app = create_app(bus=bus, host="127.0.0.1", token=None, connect_bus=False)
+    with TestClient(app, base_url="http://127.0.0.1:8500") as c:
+        yield c
+
+
+def test_a_page_body_is_wrapped_in_the_shell(guardian_app):
+    body = guardian_app.get("/emkay/guardian").text
+    assert body.startswith("<!doctype html>")
+    assert "<title>Guardian — OpenVoiceOS</title>" in body
+    assert '<h1 data-i18n="guardian.title">Guardian</h1>' in body
+    assert 'id="ovos-nav"' in body and 'class="skip"' in body
+    assert 'data-page="guardian"' in body
+    assert "{{heading}} stays text" in body, "text in the body is not a slot"
+
+
+def test_a_page_gets_its_own_routes_with_the_panels_checks(guardian_app):
+    assert guardian_app.get("/api/guardian/state").json() == {"mode": "day"}
+
+
+def test_a_page_serves_its_own_files_and_nothing_else(guardian_app):
+    r = guardian_app.get("/pages/guardian/guardian.js")
+    assert r.status_code == 200 and "guardian" in r.text
+    assert r.headers["x-content-type-options"] == "nosniff"
+    for bad in ("/pages/guardian/.secret", "/pages/guardian/missing.js",
+                "/pages/guardian/..%2F__init__.py", "/pages/nobody/guardian.js"):
+        assert guardian_app.get(bad).status_code == 404, bad
+
+
+def test_a_pages_strings_join_the_panels_but_cannot_change_them(guardian_app):
+    da = guardian_app.get("/static/i18n/da.json").json()
+    assert da["guardian.mode"] == "Tilstand"
+    en = guardian_app.get("/static/i18n/en.json").json()
+    assert en["nav.dashboard"] == "Dashboard"
+
+
+def test_a_page_whose_routes_clash_is_left_out(guardian_pkg):
+    def routes(r):
+        @r.api.get("/health")
+        def mine():
+            return {}
+
+    reg = pages.load(_own() + [_guardian(guardian_pkg, routes=routes)])
+    taken = {("GET", "/api/health")}
+    included = []
+    pages.mount_routes(reg, lambda: pages.Routes(
+        api=__import__("fastapi").APIRouter(prefix="/api"),
+        privileged=__import__("fastapi").APIRouter(prefix="/api"),
+        need_bus=lambda: None, config=None), taken, included.append)
+    assert "/emkay/guardian" not in reg.by_path()
+    assert "GET /api/health" in reg.problems[-1]["error"]
+    assert len(included) == 3, "the panel's own pages with routes are still mounted"
+
+
+def test_a_page_whose_routes_fail_is_left_out(guardian_pkg):
+    def routes(r):
+        raise RuntimeError("no database")
+
+    reg = pages.load(_own() + [_guardian(guardian_pkg, routes=routes)])
+    pages.mount_routes(reg, lambda: pages.Routes(
+        api=__import__("fastapi").APIRouter(prefix="/api"),
+        privileged=__import__("fastapi").APIRouter(prefix="/api"),
+        need_bus=lambda: None, config=None), set(), lambda r: None)
+    assert "/emkay/guardian" not in reg.by_path()
+    assert "no database" in reg.problems[-1]["error"]
+
+
+def test_a_broken_language_file_leaves_the_page_out(guardian_pkg, tmp_path):
+    (tmp_path / guardian_pkg / "i18n" / "de.json").write_text('["not", "a", "map"]')
+    reg = pages.load(_own() + [_guardian(guardian_pkg)])
+    assert "/emkay/guardian" not in reg.by_path()
+    assert "de.json" in reg.problems[-1]["error"]
+
+
+def test_the_panels_own_page_strings_cover_every_language():
+    """The panel's own pages must ship every language the panel does."""
+    from pathlib import Path
+    shipped = {p.stem for p in (Path(pages.__file__).parent.parent / "static" / "i18n").glob("*.json")}
+    for page in pages.load().pages:
+        if page.strings:
+            assert set(page.strings) == shipped, page.id
+            keys = set(page.strings["en"])
+            for lang, table in page.strings.items():
+                assert set(table) == keys, (page.id, lang)

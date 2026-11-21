@@ -47,8 +47,12 @@ OWN_DIST = "ovos-control-panel"
 
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 _PATH_RE = re.compile(r"^/[a-z0-9/_-]*$")
-_KNOWN = {"api_version", "id", "path", "title", "group", "groups", "order", "needs",
-          "icon", "html", "assets", "i18n", "bus", "routes", "manual"}
+_KNOWN = {"api_version", "id", "path", "title", "heading", "group", "groups", "order",
+          "needs", "icon", "html", "assets", "i18n", "bus", "routes", "manual"}
+_LANG_RE = re.compile(r"^[a-z]{2,3}(-[a-z0-9]{2,8})?$")
+#: Limits on what a page brings, so one broken page cannot fill the memory.
+MAX_HTML = 512 * 1024
+MAX_STRINGS = 256 * 1024
 
 #: The panel's own pages, in menu order. Used when the panel runs from a
 #: source tree that was never installed, so its entry points are not known.
@@ -82,6 +86,15 @@ class Page:
     builtin: bool
     routes: Callable | None = None
     manual: str | None = None
+    heading_key: str = ""
+    heading: str = ""
+    #: A whole document (the panel's pages that have not moved yet) is served
+    #: as it is; anything else is the page's body, wrapped in the shell.
+    fragment: bool = False
+    #: The page's own strings, per language code.
+    strings: dict[str, dict[str, str]] = field(default_factory=dict)
+    #: The folder served under /pages/<id>/, if the page has one.
+    assets: Any = None
 
     def nav(self) -> dict[str, Any]:
         """What the browser's menu needs to know about the page."""
@@ -104,6 +117,30 @@ class Registry:
 
     def by_path(self) -> dict[str, Page]:
         return {p.path: p for p in self.pages}
+
+    def by_id(self) -> dict[str, Page]:
+        return {p.id: p for p in self.pages}
+
+    def drop(self, page: Page, error: str) -> None:
+        """Leave a page out after it loaded, with the reason."""
+        self.pages = [p for p in self.pages if p is not page]
+        self.problems.append({"page": page.id, "package": page.package, "error": error})
+        LOG.warning("page %s from %s left out: %s", page.id, page.package, error)
+
+    def strings(self, lang: str, base: dict[str, str]) -> dict[str, str]:
+        """The panel's strings for ``lang`` with every page's own merged in.
+
+        The panel's own strings win: a page cannot change what another page,
+        or the shell, says. A key two pages define differently keeps the first.
+        """
+        merged = dict(base)
+        for page in self.pages:
+            for key, value in (page.strings.get(lang) or {}).items():
+                if key not in merged:
+                    merged[key] = value
+                elif merged[key] != value and key not in base:
+                    LOG.info("page %s: key %s is already defined by another page", page.id, key)
+        return merged
 
     def nav(self) -> dict[str, Any]:
         """The menu, in order: groups that have pages, and the pages."""
@@ -134,6 +171,44 @@ def _resource(module: str, spec: Any):
     if not target.is_file():
         raise PageError(f"{name!r} is missing from {package}")
     return target
+
+
+def _folder(module: str, name: Any):
+    """A folder next to the module, or None."""
+    if not name:
+        return None
+    if not isinstance(name, str) or "/" in name or "\\" in name or name.startswith("."):
+        raise PageError(f"not a plain folder name: {name!r}")
+    target = resources.files(module).joinpath(name)
+    if not target.is_dir():
+        raise PageError(f"the folder {name!r} is missing from {module}")
+    return target
+
+
+def _strings(folder) -> dict[str, dict[str, str]]:
+    """Read ``<lang>.json`` files: flat objects of text."""
+    out: dict[str, dict[str, str]] = {}
+    if folder is None:
+        return out
+    for item in folder.iterdir():
+        name = item.name
+        if not name.endswith(".json") or not item.is_file():
+            continue
+        lang = name[:-5].lower()
+        if not _LANG_RE.match(lang):
+            raise PageError(f"not a language file: {name}")
+        raw = item.read_bytes()
+        if len(raw) > MAX_STRINGS:
+            raise PageError(f"{name} is too large")
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as e:
+            raise PageError(f"{name} is not JSON: {e}") from e
+        if not isinstance(data, dict) or not all(
+                isinstance(k, str) and isinstance(v, str) for k, v in data.items()):
+            raise PageError(f"{name} must map keys to text")
+        out[lang] = data
+    return out
 
 
 def _icon(module: str, spec: Any) -> str | None:
@@ -201,11 +276,18 @@ def parse(desc: Any, module: str, package: str, version: str, builtin: bool) -> 
             raise PageError(f"a group level is everyday or advanced, not {level!r}")
         groups.append({"id": raw["id"], "key": gkey, "label": glabel,
                        "order": int(raw.get("order", 100)), "level": level})
-    html = _resource(module, desc.get("html")).read_text(encoding="utf-8")
+    heading_key, heading = (key, label) if desc.get("heading") is None else _title(desc["heading"])
+    raw_html = _resource(module, desc.get("html")).read_bytes()
+    if len(raw_html) > MAX_HTML:
+        raise PageError("the page's HTML is too large")
+    html = raw_html.decode("utf-8")
     page = Page(id=pid, path=path, key=key, label=label, group=group, order=order,
                 needs=tuple(needs), html=html, icon=_icon(module, desc.get("icon")),
                 package=package, version=version, builtin=builtin, routes=routes,
-                manual=desc.get("manual"))
+                manual=desc.get("manual"), heading_key=heading_key, heading=heading,
+                fragment=not html.lstrip()[:15].lower().startswith("<!doctype"),
+                strings=_strings(_folder(module, desc.get("i18n"))),
+                assets=_folder(module, desc.get("assets")))
     return page, groups
 
 
@@ -319,8 +401,75 @@ def needs(reg: Registry, have: dict[str, str] | None = None) -> dict[str, Any]:
 _NAV_SLOT = re.compile(r"</head>", re.I)
 
 
+def _shell() -> str:
+    return resources.files("ovos_webui").joinpath("static", "shell.html").read_text(encoding="utf-8")
+
+
+def _esc(text: str) -> str:
+    return (text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            .replace('"', "&quot;"))
+
+
 def render(page: Page, nav_json: str) -> str:
-    """The page's HTML with the menu data in its head."""
+    """The page as served: with the menu data in its head, and a page body
+    wrapped in the shell's header, menu and main."""
     tag = f'<script type="application/json" id="ovos-nav">{nav_json}</script>\n'
+    if page.fragment:
+        parts = {"title": _esc(page.label), "heading": _esc(page.heading),
+                 "heading_key": f' data-i18n="{_esc(page.heading_key)}"' if page.heading_key else "",
+                 "id": _esc(page.id), "nav": tag}
+        out = _shell()
+        for name, value in parts.items():
+            out = out.replace("{{" + name + "}}", value)
+        # The body goes in last, so text in it that looks like a slot stays text.
+        return out.replace("{{body}}", page.html)
     html, n = _NAV_SLOT.subn(tag + "</head>", page.html, count=1)
     return html if n else tag + page.html
+
+
+# ── a page's own routes ──────────────────────────────────────────────────────
+@dataclass
+class Routes:
+    """What a page's ``routes`` function is given.
+
+    ``api`` and ``privileged`` are routers under ``/api`` with the panel's sign
+    in and cross-site checks already on them; ``privileged`` also always needs
+    the token. ``need_bus()`` returns the message bus, or answers 503 when it
+    is not reachable. ``config`` is the panel's configuration module.
+    """
+
+    api: Any
+    privileged: Any
+    need_bus: Callable[[], Any]
+    config: Any
+
+
+def mount_routes(reg: Registry, make: Callable[[], Routes], taken: set[tuple[str, str]],
+                 include: Callable[[Routes], None]) -> None:
+    """Let each page with ``routes`` add its API routes.
+
+    A page whose function fails, or that adds a route the panel or an earlier
+    page already has, is left out entirely: its HTML would not work without
+    its routes.
+    """
+    for page in list(reg.pages):
+        if page.routes is None:
+            continue
+        r = make()
+        try:
+            page.routes(r)
+        except Exception as e:  # noqa: BLE001 - a broken page is left out, not fatal
+            reg.drop(page, f"its routes failed: {e}")
+            continue
+        mine = set()
+        for router in (r.api, r.privileged):
+            for route in router.routes:
+                for method in getattr(route, "methods", None) or ():
+                    mine.add((method, route.path))
+        clash = sorted(mine & taken)
+        if clash:
+            reg.drop(page, "it adds routes that already exist: "
+                     + ", ".join(f"{m} {p}" for m, p in clash))
+            continue
+        taken |= mine
+        include(r)

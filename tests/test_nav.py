@@ -14,7 +14,9 @@ REG = pages.load()
 
 
 def _en():
-    return json.loads((Path(STATIC_DIR) / "i18n" / "en.json").read_text(encoding="utf-8"))
+    """The panel's English strings with every page's own, as served."""
+    return REG.strings(
+        "en", json.loads((Path(STATIC_DIR) / "i18n" / "en.json").read_text(encoding="utf-8")))
 
 
 def test_the_panels_own_pages_all_load():

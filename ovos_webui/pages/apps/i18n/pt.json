@@ -1,0 +1,16 @@
+{
+ "hdr.apps": "Aplicações",
+ "apps.intro": "Inicie e feche as aplicações de ambiente de trabalho que um dispositivo com ecrã conhece. Isto precisa do plugin app-launcher no dispositivo; sem ele, a lista fica vazia.",
+ "apps.filter": "filtrar",
+ "apps.reload": "Recarregar",
+ "apps.launch": "Iniciar",
+ "apps.close": "Fechar",
+ "apps.none": "Nenhuma aplicação. O plugin app-launcher está instalado no dispositivo?",
+ "apps.noneMatch": "Nenhuma aplicação corresponde a esse filtro.",
+ "apps.loading": "A carregar…",
+ "apps.unavailable": "O app-launcher não respondeu. Está instalado no dispositivo?",
+ "apps.launching": "A iniciar {n}…",
+ "apps.closing": "A fechar {n}…",
+ "apps.launched": "{n} iniciada.",
+ "apps.closed": "{n} fechada."
+}
