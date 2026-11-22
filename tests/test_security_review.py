@@ -391,7 +391,7 @@ def test_n3_a_form_post_signs_in_without_javascript(token_client):
                           follow_redirects=False)
     assert r.status_code == 303
     assert r.headers["location"] == "/"
-    assert "ovos_webui_token" in r.headers.get_list("set-cookie")[0]
+    assert "ovos_webui_session" in r.headers.get_list("set-cookie")[0]
 
 
 def test_n3_a_bad_form_post_goes_back_to_the_form(token_client):
@@ -425,8 +425,8 @@ def test_s8_static_route_refuses_traversal(client):
 def test_s9_signing_in_uses_a_post_and_sets_a_cookie(token_client):
     r = token_client.post("/api/login", json={"token": "s3cret-token"})
     assert r.status_code == 200
-    assert "ovos_webui_token" in r.cookies or any(
-        "ovos_webui_token" in v for v in r.headers.get_list("set-cookie"))
+    assert "ovos_webui_session" in r.cookies or any(
+        "ovos_webui_session" in v for v in r.headers.get_list("set-cookie"))
     cookie = r.headers.get_list("set-cookie")[0].lower()
     assert "httponly" in cookie
     assert "samesite=strict" in cookie

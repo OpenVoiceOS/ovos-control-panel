@@ -45,8 +45,17 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 Open the page and it asks you to sign in. The token is sent in the body of a
 POST, never in the address, so it is not written to an access log and not kept
 in the browser history. The reply sets a cookie marked `HttpOnly` and
-`SameSite=Strict`, which only this site can send. A program can send the token
-in an `Authorization: Bearer` header instead.
+`SameSite=Strict`, which only this site can send. The cookie does not hold the
+token: it holds a random session id, and the device keeps only a hash of it
+(in `.ovos-webui-sessions.json` beside `mycroft.conf`, readable by its owner
+only). So:
+
+- **Log out** ends the session on the device: a copied cookie stops working.
+- **Changing the token** ends every session made under the old one.
+- A session ends after 30 days in any case, and it survives a restart of the
+  panel.
+
+A program can send the token in an `Authorization: Bearer` header instead.
 
 Without a token on a network address the page shows a red banner on every
 screen.
@@ -217,8 +226,9 @@ rebinding" above). For anything else, see
 - **Access-token rotation** `POST /api/auth/token` sits on the signed-in router.
   Changing an existing token needs a signed-in session *and* the current token
   re-supplied in the body. The value is compared in constant time, never logged
-  or reflected, stored via the normal config write, and the session cookie is
-  re-issued so the operator is not locked out.
+  or reflected, stored via the normal config write. Every session made under
+  the old token ends, and the operator's own gets a new one, so they are not
+  locked out.
 - **Device-control writes** (volume, mic mute) are on the privileged
   token-always router. The reads that expose no secrets are on the signed-in
   router. Volume is clamped 0–100 and the message types are constants.

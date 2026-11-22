@@ -243,7 +243,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         Before a caller signs in this says only that a token is needed. The
         bind address and the version are not told to a stranger.
         """
-        signed_in = not policy.token or policy.matches(policy.supplied_token(request))
+        signed_in = policy.signed_in(request)
         if not signed_in:
             # A stranger is told only whether a token is needed — not the
             # version, the bind address, or the device language.
@@ -314,8 +314,9 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
                                 detail="that token is not right")
         login_throttle["fails"] = 0
         answer = _login_answer(request, from_form, {"ok": True, "auth": True})
-        answer.set_cookie(COOKIE_NAME, supplied, httponly=True,
-                          samesite="strict", path="/", max_age=30 * 24 * 3600)
+        from ovos_webui import sessions
+        answer.set_cookie(COOKIE_NAME, sessions.start(policy.token), httponly=True,
+                          samesite="strict", path="/", max_age=sessions.MAX_AGE)
         return answer
 
     async def _read_login(request: Request) -> tuple[str, bool]:
@@ -338,7 +339,10 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         return JSONResponse(payload)
 
     @public.post("/api/logout")
-    def api_logout(response: Response) -> dict[str, Any]:
+    def api_logout(request: Request, response: Response) -> dict[str, Any]:
+        # the session ends on the device, so a copied cookie stops working too
+        from ovos_webui import sessions
+        sessions.end(request.cookies.get(COOKIE_NAME, ""))
         response.delete_cookie(COOKIE_NAME, path="/")
         return {"ok": True}
 
@@ -797,9 +801,11 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             lambda user: configio.set_in(user, ["webui", "access_token"], new),
             bus=state["bus"])
         policy.token = new  # take effect at once for the rest of this process
-        # Keep this session signed in under the new token.
-        response.set_cookie(COOKIE_NAME, new, httponly=True, samesite="strict",
-                            path="/", max_age=30 * 24 * 3600)
+        # Every session made under the old token ends with it; this one goes
+        # on under the new token.
+        from ovos_webui import sessions
+        response.set_cookie(COOKIE_NAME, sessions.start(new), httponly=True, samesite="strict",
+                            path="/", max_age=sessions.MAX_AGE)
         return {"ok": True, "had_token": had_token}
 
 

@@ -45,8 +45,9 @@ def is_ip_literal(name: str) -> bool:
     except ValueError:
         return False
 
-#: The name of the cookie that carries the token after a sign in.
-COOKIE_NAME = "ovos_webui_token"
+#: The name of the cookie that carries the session after a sign in: a random
+#: session id (ovos_webui.sessions), never the token itself.
+COOKIE_NAME = "ovos_webui_session"
 
 #: Methods that cannot change anything.
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -106,24 +107,23 @@ class AuthPolicy:
             return False
         return secrets.compare_digest(supplied, self.token)
 
-    def supplied_token(self, request: Request) -> str:
-        """Return the token the request carries.
-
-        Only two places are read: the ``Authorization`` header, for programs,
-        and the cookie, for browsers. The query string is deliberately not one
-        of them, because it is written to the access log of every proxy and to
-        the browser history on every click.
-        """
+    def signed_in(self, request: Request) -> bool:
+        """Whether the request may act: no token is set, or it carries the
+        token in the ``Authorization`` header (programs), or the cookie of a
+        live session made under the current token (browsers). The query string
+        is deliberately never read, because it is written to the access log of
+        every proxy and to the browser history on every click."""
+        if not self.token:
+            return True
         header = request.headers.get("authorization", "")
         if header.lower().startswith("bearer "):
-            return header[7:].strip()
-        return request.cookies.get(COOKIE_NAME, "")
+            return self.matches(header[7:].strip())
+        from ovos_webui import sessions
+        return sessions.valid(request.cookies.get(COOKIE_NAME, ""), self.token)
 
     def check(self, request: Request) -> None:
-        """Raise 401 when a token is set and the request does not carry it."""
-        if not self.token:
-            return
-        if not self.matches(self.supplied_token(request)):
+        """Raise 401 when a token is set and the request is not signed in."""
+        if not self.signed_in(request):
             LOG.warning("ovos-webui: refused a request with a wrong or missing "
                         f"token from {request.client.host if request.client else '?'} "
                         f"to {request.method} {request.url.path}")
