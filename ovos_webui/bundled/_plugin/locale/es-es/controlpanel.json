@@ -1,5 +1,6 @@
 {
  "plugin.tts.intro": "Esta voz no trae página propia, así que el panel muestra lo que tienen todas las voces. Sus otros ajustes, si los tiene, van en su propia sección de mycroft.conf, en la página Ajustes.",
  "plugin.stt.intro": "Este reconocedor no trae página propia, así que el panel muestra lo que tienen todos. Sus otros ajustes, si los tiene, van en su propia sección de mycroft.conf, en la página Ajustes.",
- "plugin.provider.intro": "Un proveedor de medios: un lugar donde busca el asistente cuando le pides que reproduzca algo. No trae página propia, así que el panel muestra si está activado. Sus ajustes, si los tiene, van en media_providers de mycroft.conf, en la página Ajustes."
+ "plugin.provider.intro": "Un proveedor de medios: un lugar donde busca el asistente cuando le pides que reproduzca algo. No trae página propia, así que el panel muestra si está activado. Sus ajustes, si los tiene, van en media_providers de mycroft.conf, en la página Ajustes.",
+ "plugin.ww.intro": "Este complemento de palabra de activación no trae página propia, así que el panel muestra las palabras que lo usan y cuál está en uso."
 }

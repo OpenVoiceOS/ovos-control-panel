@@ -33,6 +33,10 @@
       "common.all": "All",
       "module.tts.title": "The voice",
       "module.stt.title": "Speech recognition",
+      "module.ww.title": "The wake word",
+      "module.ww.none": "No wake word uses this plugin yet. A wake word is added under hotwords in the configuration, on the Settings page.",
+      "module.ww.inUse": "in use",
+      "module.ww.use": "Use as the wake word",
       "module.active": "This is the one in use.",
       "module.fallback": "This is the fallback, used when the one in use fails.",
       "module.unused": "This is not in use.",
@@ -496,6 +500,7 @@
         var msg = msgEl(card);
         var ref = block.ref + ".module";
         function show(state) {
+          if (block.kind === "ww") { return showWords(state); }
           line.textContent = t(state.active ? "module.active" : state.fallback ? "module.fallback" : "module.unused");
           row.innerHTML = "";
           if (!state.active) {
@@ -511,6 +516,36 @@
                 .catch(function (e) { say(msg, why(e), true); });
             }));
           }
+        }
+        // a wake word plugin: the words it hears, which is in use, and a
+        // button to make one of them the wake word
+        function showWords(state) {
+          row.innerHTML = "";
+          if (!state.words.length) { line.textContent = t("module.ww.none"); return; }
+          line.textContent = t(state.active ? "module.active" : "module.unused");
+          var list = document.createElement("ul");
+          list.className = "plain";
+          state.words.forEach(function (w) {
+            var li = document.createElement("li");
+            var name = document.createElement("strong");
+            name.textContent = w.name;
+            li.appendChild(name);
+            li.appendChild(document.createTextNode(" "));
+            if (w.active) {
+              var badge = document.createElement("span");
+              badge.className = "badge ready";
+              badge.textContent = t("module.ww.inUse");
+              li.appendChild(badge);
+            } else {
+              li.appendChild(button({label: "module.ww.use", secondary: true}, function () {
+                post("/module", {ref: ref, as: "wake_word", word: w.name})
+                  .then(function (next) { show(next); say(msg, t("common.done")); })
+                  .catch(function (e) { say(msg, why(e), true); });
+              }));
+            }
+            list.appendChild(li);
+          });
+          row.appendChild(list);
         }
         function use(role) {
           post("/module", {ref: ref, as: role})

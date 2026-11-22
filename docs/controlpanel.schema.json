@@ -819,7 +819,8 @@
     "kind": {
      "enum": [
       "tts",
-      "stt"
+      "stt",
+      "ww"
      ]
     }
    },

@@ -476,7 +476,7 @@ def test_a_module_block_is_only_for_a_plugin_of_that_kind():
     with pytest.raises(described.DescribedError, match="no tts plugin"):
         described.check(VOICE, "ovos-skill-x")
     with pytest.raises(described.DescribedError, match="kind"):
-        described.check(dict(VOICE, blocks=[{"type": "module", "kind": "ww"}]), "x", modules={"tts": ["x"]})
+        described.check(dict(VOICE, blocks=[{"type": "module", "kind": "music"}]), "x", modules={"tts": ["x"]})
     page, refs = described.check(VOICE, "ovos-tts-plugin-x", modules={"tts": ["ovos-tts-plugin-x"]})
     assert refs["b0.module"]["block"]["module"] == "ovos-tts-plugin-x"
 
@@ -829,7 +829,7 @@ def test_discover_makes_that_page_only_when_nobody_describes_the_plugin(tmp_path
 def test_the_plugin_page_strings_are_the_same_in_every_language():
     found = described.strings(described.PLUGIN_PAGE)
     keys = set(found["en"])
-    assert keys == {"plugin.tts.intro", "plugin.stt.intro", "plugin.provider.intro"}
+    assert keys == {"plugin.tts.intro", "plugin.stt.intro", "plugin.ww.intro", "plugin.provider.intro"}
     assert all(set(t) == keys for t in found.values()) and len(found) >= 5
 
 
@@ -912,3 +912,66 @@ def test_a_provider_is_turned_off_and_on_where_the_pipeline_reads_it(tmp_path, b
         if pipeline_has_its_own:
             configio.mutate(lambda u: u["intents"]["ovos-ocp-pipeline-plugin"]["media_providers"].update(enabled=False))
             assert c.get("/api/cp/media-local/provider", params=ref).json()["all_off"] is True
+
+
+# ── wake word plugins ────────────────────────────────────────────────────────
+def test_a_wake_word_plugin_with_no_page_gets_one(monkeypatch):
+    monkeypatch.setattr(described, "plugin_modules", lambda package: {"ww": ["ovos-ww-plugin-precise-lite"]})
+    found = described.plugin_page("ovos-ww-plugin-precise-lite", "1.0", ["top"])
+    assert found.data["id"] == "precise-lite-ww" and found.data["title"]["en"] == "Precise Lite"
+    page, _ = pages.parse_described(found, "ovos-ww-plugin-precise-lite", "1.0")
+    block = page.described["blocks"][1]
+    assert page.group == "voice" and block["kind"] == "ww" and block["module"] == "ovos-ww-plugin-precise-lite"
+    assert page.strings["da"]["plugin.ww.intro"]
+
+
+def test_the_wake_words_a_plugin_hears_and_the_one_in_use(tmp_path, bus, monkeypatch):
+    from ovos_webui import configio
+    from ovos_webui.fsutils import atomic_write
+    atomic_write(configio.user_config_path(), json.dumps({
+        "listener": {"wake_word": "hey_mycroft"},
+        "hotwords": {"hey_mycroft": {"module": "ovos-ww-plugin-precise-lite", "model": "x"},
+                     "hey_emkay": {"module": "ovos-ww-plugin-precise-lite"},
+                     "off_one": {"module": "ovos-ww-plugin-precise-lite", "active": False},
+                     "other": {"module": "ovos-ww-plugin-vosk"}}}))
+    monkeypatch.setattr(configio, "read_merged_config", configio.read_user_config)
+    page = {"controlpanel": 1, "id": "ww-x", "title": {"key": "x.t", "en": "X"}, "bus": "ovos.ww-x.",
+            "blocks": [{"type": "module", "kind": "ww"}]}
+    root = tmp_path / "pkg"
+    root.mkdir()
+    found = described.Found("ovos-ww-plugin-precise-lite", "1.0", "pkg", root, page)
+    monkeypatch.setattr(described, "discover", lambda: [found])
+    monkeypatch.setattr(described, "plugin_modules", lambda package: {"ww": ["ovos-ww-plugin-precise-lite"]})
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
+    with TestClient(app, base_url="http://127.0.0.1:8500",
+                    headers={"sec-fetch-site": "same-origin", "Authorization": "Bearer s3cret-token"}) as c:
+        got = c.get("/api/cp/ww-x/module", params={"ref": "b0.module"}).json()
+        assert got == {"module": "ovos-ww-plugin-precise-lite", "active": True,
+                       "words": [{"name": "hey_emkay", "active": False}, {"name": "hey_mycroft", "active": True}]}
+        bad = {"ref": "b0.module", "as": "wake_word"}
+        for word in ("other", "off_one", "nope"):
+            assert c.post("/api/cp/ww-x/module", json=dict(bad, word=word)).status_code == 400, word
+        assert c.post("/api/cp/ww-x/module", json={"ref": "b0.module", "as": "module"}).status_code == 400
+        got = c.post("/api/cp/ww-x/module", json=dict(bad, word="hey_emkay")).json()
+        assert [w for w in got["words"] if w["active"]] == [{"name": "hey_emkay", "active": True}]
+        assert configio.read_user_config()["listener"]["wake_word"] == "hey_emkay"
+        assert c.post("/api/cp/ww-x/module/test", json={"ref": "b0.module", "text": "hi"}).status_code == 400
+
+
+def test_a_plugin_under_two_names_is_one_plugin(monkeypatch):
+    """ovos-ww-plugin-precise-lite registers itself as ovos-precise-lite too:
+    both load the same class, so it is one plugin, called by its package's
+    name, and mycroft.conf may use either name."""
+    from types import SimpleNamespace as NS
+    value = "ovos_ww_plugin_precise_lite:PreciseLiteHotwordPlugin"
+    eps = [NS(group="mycroft.plugin.wake_word", name="ovos-precise-lite", value=value),
+           NS(group="mycroft.plugin.wake_word", name="ovos-ww-plugin-precise-lite", value=value),
+           NS(group="opm.tts", name="a", value="x:A"), NS(group="opm.tts", name="b", value="x:B")]
+    monkeypatch.setattr(described.metadata, "distribution", lambda n: NS(entry_points=eps))
+    got = described.plugin_modules("ovos-ww-plugin-precise-lite")
+    assert got == {"ww": ["ovos-ww-plugin-precise-lite"], "tts": ["a", "b"]}, "two TTS classes stay two"
+    assert described.plugin_aliases("ovos-ww-plugin-precise-lite", "ww", "ovos-ww-plugin-precise-lite") == \
+        ["ovos-ww-plugin-precise-lite", "ovos-precise-lite"]
+    page = {"controlpanel": 1, "id": "p", "bus": "ovos.p.", "blocks": [{"type": "module", "kind": "ww"}]}
+    _, refs = described.check(page, "ovos-ww-plugin-precise-lite", modules={"ww": got["ww"]})
+    assert refs["b0.module"]["block"]["aliases"] == ["ovos-ww-plugin-precise-lite", "ovos-precise-lite"]
