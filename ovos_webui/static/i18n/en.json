@@ -132,7 +132,6 @@
  "transformers.sox.treble": "Treble (dB)",
  "transformers.sox.gain": "Volume (dB)",
  "nav.intents": "Intents",
- "nav.wallpaper": "Wallpaper",
  "menu.button": "Menu",
  "text.label": "Text size:",
  "text.normal": "normal",

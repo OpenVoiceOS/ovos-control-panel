@@ -10,8 +10,8 @@ def test_a_page_is_usable_with_any_of_its_packages():
     assert out["colocated"] is True
     assert out["needs"]["system"]["met"] is True
     assert out["needs"]["media"]["met"] is True
-    assert out["needs"]["wallpaper"]["met"] is False
-    assert out["needs"]["wallpaper"]["suggest"] == "ovos-PHAL-plugin-wallpaper-manager"
+    assert out["needs"]["mark1"]["met"] is False
+    assert out["needs"]["mark1"]["suggest"] == "ovos-PHAL-plugin-mk1"
 
 
 def test_package_names_are_matched_case_insensitively():
@@ -28,7 +28,7 @@ def test_a_panel_running_apart_from_the_assistant_hides_nothing():
 
 def test_only_pages_with_needs_are_reported():
     out = pages.needs(REG, ON_DEVICE)
-    assert set(out["needs"]) == {"network", "system", "sensors", "media", "wallpaper", "mark1"}
+    assert set(out["needs"]) == {"network", "system", "sensors", "media", "mark1"}
 
 
 def test_the_route_answers(client):

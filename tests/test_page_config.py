@@ -158,11 +158,11 @@ def test_a_page_is_turned_off_and_on_from_the_panel(token_client):
     c = token_client
     c.headers["Authorization"] = "Bearer s3cret-token"
     conf = configio.user_config_path()
-    assert c.post("/api/pages/wallpaper/enabled", json={"enabled": False}).json()["enabled"] is False
-    assert _json.loads(conf.read_text())["webui"]["pages"]["disabled"] == ["wallpaper"]
-    assert c.get("/wallpaper").status_code == 404
-    assert next(p for p in c.get("/api/pages").json()["pages"] if p["id"] == "wallpaper")["disabled"]
-    c.post("/api/pages/wallpaper/enabled", json={"enabled": True})
+    assert c.post("/api/pages/mark1/enabled", json={"enabled": False}).json()["enabled"] is False
+    assert _json.loads(conf.read_text())["webui"]["pages"]["disabled"] == ["mark1"]
+    assert c.get("/mark1").status_code == 404
+    assert next(p for p in c.get("/api/pages").json()["pages"] if p["id"] == "mark1")["disabled"]
+    c.post("/api/pages/mark1/enabled", json={"enabled": True})
     assert "disabled" not in _json.loads(conf.read_text())["webui"]["pages"]
     assert c.post("/api/pages/about/enabled", json={"enabled": False}).status_code == 400
     assert c.post("/api/pages/nope/enabled", json={"enabled": False}).status_code == 404

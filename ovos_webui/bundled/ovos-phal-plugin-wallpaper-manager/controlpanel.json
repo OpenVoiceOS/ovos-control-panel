@@ -1,0 +1,110 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-phal-plugin-wallpaper-manager>=0.1.0,<1",
+ "id": "wallpaper",
+ "path": "/wallpaper",
+ "title": "wallpaper.title",
+ "group": "screen",
+ "order": 20,
+ "icon": "controlpanel.svg",
+ "bus": "ovos.wallpaper.manager.",
+ "blocks": [
+  {
+   "type": "text",
+   "text": "wallpaper.intro"
+  },
+  {
+   "type": "status",
+   "heading": "wallpaper.current.title",
+   "query": "ovos.wallpaper.manager.get.wallpaper",
+   "rows": [
+    {
+     "value": "{url}",
+     "empty": "wallpaper.current.none"
+    }
+   ],
+   "actions": [
+    {
+     "label": "wallpaper.next",
+     "send": "ovos.wallpaper.manager.change.wallpaper",
+     "answer": false
+    }
+   ]
+  },
+  {
+   "type": "status",
+   "heading": "wallpaper.rotate.title",
+   "query": "ovos.wallpaper.manager.get.auto.rotation",
+   "rows": [
+    {
+     "text": "wallpaper.rotate.on",
+     "when": "auto_rotation"
+    },
+    {
+     "text": "wallpaper.rotate.off",
+     "when": "!auto_rotation"
+    }
+   ],
+   "actions": [
+    {
+     "label": "wallpaper.rotate.start",
+     "send": "ovos.wallpaper.manager.enable.auto.rotation",
+     "answer": false,
+     "when": "!auto_rotation"
+    },
+    {
+     "label": "wallpaper.rotate.stop",
+     "send": "ovos.wallpaper.manager.disable.auto.rotation",
+     "answer": false,
+     "when": "auto_rotation"
+    }
+   ]
+  },
+  {
+   "type": "list",
+   "heading": "wallpaper.provider",
+   "query": "ovos.wallpaper.manager.get.registered.providers",
+   "items": "registered_providers",
+   "key": "provider_name",
+   "title": "{provider_display_name}",
+   "actions": [
+    {
+     "label": "wallpaper.use",
+     "send": "ovos.wallpaper.manager.set.active.provider",
+     "answer": false
+    }
+   ]
+  },
+  {
+   "type": "list",
+   "heading": "wallpaper.choose.title",
+   "query": "ovos.wallpaper.manager.get.collection",
+   "items": "wallpaper_collection",
+   "key": "url",
+   "title": "{url}",
+   "empty": "wallpaper.choose.none",
+   "actions": [
+    {
+     "label": "wallpaper.set",
+     "send": "ovos.wallpaper.manager.set.wallpaper"
+    }
+   ]
+  },
+  {
+   "type": "form",
+   "heading": "wallpaper.byUrl",
+   "query": "ovos.wallpaper.manager.get.wallpaper",
+   "save": {
+    "send": "ovos.wallpaper.manager.set.wallpaper"
+   },
+   "fields": [
+    {
+     "name": "url",
+     "label": "wallpaper.address",
+     "type": "url",
+     "required": true
+    }
+   ]
+  }
+ ]
+}
