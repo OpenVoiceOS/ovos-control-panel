@@ -26,6 +26,9 @@ dependencies = [
     "uvicorn[standard]>=0.29.0",
     "python-multipart>=0.0.18",
     "PyYAML>=5.4",
+    # package names and versions (described.py, pypi.py, release.py, ...);
+    # pip has its own copy, but that one can't be imported
+    "packaging>=23.0",
     "ovos-bus-client>=1.0.0",
     "ovos-config>=3.5.0a1",
     "ovos-utils>=0.3.0",
