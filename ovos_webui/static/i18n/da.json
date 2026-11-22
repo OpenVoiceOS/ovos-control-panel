@@ -188,5 +188,12 @@
  "module.use": "Brug denne",
  "module.useFallback": "Brug som reserve",
  "module.test": "Hør den",
- "module.test.sentence": "Hej, sådan lyder jeg."
+ "module.test.sentence": "Hej, sådan lyder jeg.",
+ "provider.title": "Udbyderen",
+ "provider.on": "Den er slået til: assistenten søger i den, når du beder om noget at afspille.",
+ "provider.off": "Den er slået fra: assistenten søger ikke i den.",
+ "provider.allOff": "Alle medieudbydere er slået fra i OCP-pipelinens konfiguration, så der søges ikke i nogen.",
+ "provider.turnOn": "Slå til",
+ "provider.turnOff": "Slå fra",
+ "provider.restart": "Assistenten opdager ændringen, når den starter igen."
 }

@@ -1,4 +1,5 @@
 {
  "plugin.tts.intro": "Esta voz não traz página própria, por isso o painel mostra o que todas as vozes têm. As outras definições, se as tiver, ficam na sua própria secção do mycroft.conf, na página Definições.",
- "plugin.stt.intro": "Este reconhecedor não traz página própria, por isso o painel mostra o que todos têm. As outras definições, se as tiver, ficam na sua própria secção do mycroft.conf, na página Definições."
+ "plugin.stt.intro": "Este reconhecedor não traz página própria, por isso o painel mostra o que todos têm. As outras definições, se as tiver, ficam na sua própria secção do mycroft.conf, na página Definições.",
+ "plugin.provider.intro": "Um fornecedor de conteúdos: um sítio onde o assistente procura quando lhe pede para reproduzir algo. Não traz página própria, por isso o painel mostra se está ligado. As definições, se as tiver, ficam em media_providers no mycroft.conf, na página Definições."
 }
