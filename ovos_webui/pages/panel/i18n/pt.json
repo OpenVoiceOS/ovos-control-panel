@@ -44,5 +44,10 @@
  "panel.rec.path": "Pasta (organizada como perfil/língua.conf)",
  "panel.rec.nowFolder": "Em uso: as recomendações em",
  "panel.rec.nowOvos": "Em uso: as recomendações do OpenVoiceOS.",
- "panel.rec.saved": "Guardado."
+ "panel.rec.saved": "Guardado.",
+ "panel.uploads.title": "Carregamentos",
+ "panel.uploads.hint": "O maior ficheiro que uma página pode guardar no dispositivo, como um filme ou uma canção na página Multimédia. Um dispositivo que nunca vai guardar filmes pode aceitar menos.",
+ "panel.uploads.max": "Maior ficheiro (MB)",
+ "panel.uploads.default": "É o valor predefinido.",
+ "panel.uploads.bad": "Indique um número inteiro de MB, pelo menos 1."
 }

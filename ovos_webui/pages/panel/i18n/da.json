@@ -44,5 +44,10 @@
  "panel.rec.path": "Mappe (opbygget som profil/sprog.conf)",
  "panel.rec.nowFolder": "I brug: anbefalingerne i",
  "panel.rec.nowOvos": "I brug: OpenVoiceOS' egne anbefalinger.",
- "panel.rec.saved": "Gemt."
+ "panel.rec.saved": "Gemt.",
+ "panel.uploads.title": "Upload",
+ "panel.uploads.hint": "Den største fil, en side må lægge på enheden, fx en film eller en sang på siden Medier. En enhed, der aldrig skal rumme film, kan nøjes med mindre.",
+ "panel.uploads.max": "Største fil (MB)",
+ "panel.uploads.default": "Det er standarden.",
+ "panel.uploads.bad": "Skriv et helt antal MB, mindst 1."
 }

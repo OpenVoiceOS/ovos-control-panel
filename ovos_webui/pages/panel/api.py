@@ -24,6 +24,18 @@ class RecommendsBody(BaseModel):
     path: str = Field("", max_length=300)
 
 
+class UploadsBody(BaseModel):
+    """The largest file a page may keep on the device, in MB; 0 takes the
+    setting out of your layer again."""
+    max_mb: int = Field(ge=0, le=configio.MAX_UPLOAD_MB_LIMIT, strict=True)
+
+
+def _uploads() -> dict[str, Any]:
+    mine = configio.get_in(configio.read_user_config(), ["webui", "max_upload_mb"])
+    return {"max_mb": configio.max_upload_mb(), "default": configio.MAX_UPLOAD_MB_DEFAULT,
+            "yours": mine if isinstance(mine, int) and not isinstance(mine, bool) else None}
+
+
 def _put(user: dict, key: str, value: str) -> None:
     webui = user.setdefault("webui", {})
     if value:
@@ -119,3 +131,18 @@ def routes(r) -> None:
                                          "(<profile>/<language>.conf)")
         configio.mutate(lambda user: _put(user, "recommends", path), bus=r.bus())
         return recommends.source()
+
+    @r.api.get("/panel/uploads")
+    def api_uploads() -> dict[str, Any]:
+        return _uploads()
+
+    @r.privileged.post("/panel/uploads")
+    def api_uploads_set(body: UploadsBody) -> dict[str, Any]:
+        def change(user: dict) -> None:
+            webui = user.setdefault("webui", {})
+            if body.max_mb:
+                webui["max_upload_mb"] = body.max_mb
+            else:
+                webui.pop("max_upload_mb", None)
+        configio.mutate(change, bus=r.bus())
+        return _uploads()
