@@ -1,0 +1,4 @@
+{
+ "plugin.tts.intro": "Esta voz no trae página propia, así que el panel muestra lo que tienen todas las voces. Sus otros ajustes, si los tiene, van en su propia sección de mycroft.conf, en la página Ajustes.",
+ "plugin.stt.intro": "Este reconocedor no trae página propia, así que el panel muestra lo que tienen todos. Sus otros ajustes, si los tiene, van en su propia sección de mycroft.conf, en la página Ajustes."
+}

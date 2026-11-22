@@ -11,3 +11,6 @@ and the same checks as the package's own file (see docs/pages.md), and:
   the package already answers.
 - The package's own file always wins.
 - Each one should also go to the package as a pull request, so it can leave here.
+
+`_plugin/` is not a package: it holds the strings of the page the panel makes
+for a TTS or STT plugin that nobody describes (`described.plugin_page`).

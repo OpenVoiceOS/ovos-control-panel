@@ -294,9 +294,19 @@ checks, and it says which versions it was written for:
 {"controlpanel": 1, "for": "ovos-phal-plugin-mk1>=0.1.0,<1", "id": "mark1", ...}
 ```
 
-The package's own file wins; then the panel's for that version; then nothing.
-A version the file was not written for gets no page rather than one that
-writes the wrong keys. The page says at its foot that the panel described it.
+The package's own file wins; then the panel's for that version; then, for a
+voice or listener plugin, the page every plugin of its kind has (below); then
+nothing. A version the file was not written for gets no page rather than one
+that writes the wrong keys. The page says at its foot that the panel described
+it.
+
+A TTS or STT plugin that nobody describes still gets a page, in the Voice
+group: a line saying what it is, and the [module](#module) block for its kind.
+Nothing on it needs to know the plugin's settings, so it is right for every
+version. The page's id and title come from the package's name
+(`ovos-tts-plugin-edge-tts` is "Edge TTS" at `/edge-tts`). A package that
+brings more than one voice or more than one listener gets none, since the
+block is for one.
 
 A plugin that has answered bus messages for years did not pick them under a
 prefix of the page's own, and many are under the reserved ones. So such a
