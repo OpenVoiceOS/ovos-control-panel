@@ -183,5 +183,6 @@
  "common.upload.pick": "Vælg en fil først.",
  "common.upload.kind": "Den kan tage: {accept}",
  "common.upload.big": "Filen er større end {mb} MB.",
- "common.upload.busy": "Sender …"
+ "common.upload.busy": "Sender …",
+ "common.all": "Alle"
 }

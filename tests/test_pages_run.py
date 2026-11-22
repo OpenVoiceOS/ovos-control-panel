@@ -1680,12 +1680,13 @@ def test_a_described_page_draws_from_its_file(signed_in_page):
              "actions": [{"label": "common.stop", "send": "ovos.demo.stop"}]},
             {"type": "list", "query": "ovos.demo.list", "items": "things", "key": "id", "title": "{name}",
              "split": {"by": "fixed", "false": "demo.mine", "true": "demo.theirs"},
+             "filter": {"by": "who", "label": "demo.who"},
              "rename": {"field": "name", "send": "ovos.demo.rename", "when": "!fixed"},
              "actions": [{"label": "common.delete", "send": "ovos.demo.delete", "when": "!fixed"}]},
             {"type": "sparkles"}]}, "ovos-skill-demo")
     desc["en"] = {"demo.playing": "Playing {playing}"}
-    answer = {"playing": "Tune", "things": [{"id": "a", "name": "Mine", "fixed": False},
-                                            {"id": "b", "name": "<b>Theirs</b>", "fixed": True}]}
+    answer = {"playing": "Tune", "things": [{"id": "a", "name": "Mine", "fixed": False, "who": "me"},
+                                            {"id": "b", "name": "<b>Theirs</b>", "fixed": True, "who": "you"}]}
     page.route("**/api/cp/demo/query", lambda r: r.fulfill(
         status=200, content_type="application/json", body=json.dumps(answer)))
     try:
@@ -1707,6 +1708,11 @@ def test_a_described_page_draws_from_its_file(signed_in_page):
         assert page.locator("#cp-page input[type=text]").count() == 1, "only my row can be renamed"
         assert page.locator("#cp-page button.danger").count() == 1, "only my row can be deleted"
         assert "newer control panel" in text
+        page.select_option("#cp-page .cp-filter select", "you")
+        assert page.locator("#cp-page .cp-list li").count() == 2, "their row, and an empty 'mine'"
+        assert page.locator("#cp-page input[type=text]").count() == 0, "my row is filtered away"
+        page.select_option("#cp-page .cp-filter select", "")
+        assert page.locator("#cp-page input[type=text]").count() == 1
         assert not thrown, thrown
     finally:
         page.unroute("**/api/cp/demo/query")

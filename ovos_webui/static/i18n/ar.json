@@ -183,5 +183,6 @@
  "common.upload.pick": "اختر ملفًا أولًا.",
  "common.upload.kind": "يقبل: {accept}",
  "common.upload.big": "الملف أكبر من {mb} ميغابايت.",
- "common.upload.busy": "جارٍ الإرسال …"
+ "common.upload.busy": "جارٍ الإرسال …",
+ "common.all": "الكل"
 }

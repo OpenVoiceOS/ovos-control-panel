@@ -276,3 +276,14 @@ def test_an_upload_goes_to_the_skill_in_parts(app, monkeypatch):
     big = {"file": ("big.pdf", b"x" * (1024 * 1024 + 1), "application/pdf")}
     assert c.post("/api/cp/demo/upload", data={"ref": "b5.upload"}, files=big).status_code == 413
     assert c.post("/api/cp/demo/upload", data={"ref": "b2"}, files=files).status_code == 400
+
+
+def test_a_list_can_have_a_filter():
+    page = {"controlpanel": 1, "id": "f", "bus": "ovos.f.", "blocks": [
+        {"type": "list", "query": "ovos.f.list", "items": "rows", "key": "id",
+         "filter": {"by": "who", "label": "f.who"}}]}
+    out, _ = checked(page, "ovos-skill-f")
+    assert out["blocks"][0]["filter"] == {"by": "who", "label": {"key": "f.who"}, "all": {"key": "common.all"}}
+    page["blocks"][0]["filter"] = {"by": "Who!", "label": "f.who"}
+    with pytest.raises(described.DescribedError):
+        checked(page, "ovos-skill-f")

@@ -27,7 +27,8 @@ OvosWebUI.ready(function () {
     "common.upload.pick": "Choose a file first.",
     "common.upload.kind": "It can take: {accept}",
     "common.upload.big": "The file is larger than {mb} MB.",
-    "common.upload.busy": "Sending …"
+    "common.upload.busy": "Sending …",
+    "common.all": "All"
   };
   // What the server says, in the words of the page: its known answers have
   // keys here, and a skill may answer with a key of its own page.
@@ -286,19 +287,54 @@ OvosWebUI.ready(function () {
         return card;
       }
       var msgId;
+      // a filter: the rows with one value of a field, chosen here (the
+      // choice is kept while the list is read again)
+      var chosen = "", choose = null, chooser = null;
+      if (block.filter) {
+        chooser = document.createElement("label");
+        chooser.className = "cp-filter";
+        chooser.textContent = t(block.filter.label) + " ";
+        choose = document.createElement("select");
+        chooser.appendChild(choose);
+        choose.addEventListener("change", function () { chosen = choose.value; draw(lastItems); });
+      }
+      function fillChooser(items) {
+        var seen = {};
+        items.forEach(function (i) {
+          var v = i[block.filter.by];
+          if (v !== undefined && v !== null && v !== "") { seen[String(v)] = true; }
+        });
+        var values = Object.keys(seen).sort();
+        if (chosen && !seen[chosen]) { chosen = ""; }
+        choose.innerHTML = "";
+        [""].concat(values).forEach(function (v) {
+          var o = document.createElement("option");
+          o.value = v;
+          o.textContent = v || t(block.filter.all);
+          if (v === chosen) { o.selected = true; }
+          choose.appendChild(o);
+        });
+      }
+      var lastItems = [];
+      function draw(all) {
+        var items = chosen ? all.filter(function (i) { return String(i[block.filter.by]) === chosen; }) : all;
+        holder.innerHTML = "";
+        if (chooser) { holder.appendChild(chooser); }
+        if (block.split) {
+          var no = items.filter(function (i) { return !i[block.split.by]; });
+          var yes = items.filter(function (i) { return !!i[block.split.by]; });
+          holder.appendChild(listCard(block.split["false"], no));
+          if (yes.length) { holder.appendChild(listCard(block.split["true"], yes)); }
+        } else {
+          holder.appendChild(listCard(block.heading, items));
+        }
+        holder.appendChild(msgCard);
+      }
       function load() {
         return post("/query", {ref: block.ref, params: params}).then(function (data) {
-          var items = get(data, block.items) || [];
-          holder.innerHTML = "";
-          if (block.split) {
-            var no = items.filter(function (i) { return !i[block.split.by]; });
-            var yes = items.filter(function (i) { return !!i[block.split.by]; });
-            holder.appendChild(listCard(block.split["false"], no));
-            if (yes.length) { holder.appendChild(listCard(block.split["true"], yes)); }
-          } else {
-            holder.appendChild(listCard(block.heading, items));
-          }
-          holder.appendChild(msgCard);
+          lastItems = get(data, block.items) || [];
+          if (choose) { fillChooser(lastItems); }
+          draw(lastItems);
         }).catch(function (e) {
           // the list's own heading over what went wrong
           holder.innerHTML = "";
