@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a73](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a73) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a72...0.0.1a73)
+
+**Merged pull requests:**
+
+- feat: pages described in controlpanel.json, drawn by the panel [\#149](https://github.com/OpenVoiceOS/ovos-control-panel/pull/149) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a72](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a72) (2026-11-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a71...0.0.1a72)
@@ -411,7 +419,6 @@
 - feat: app launcher — list, launch and close desktop applications [\#32](https://github.com/OpenVoiceOS/ovos-control-panel/pull/32) ([JarbasAl](https://github.com/JarbasAl))
 - feat: intent inspector — dry-run, active skills, and the intent manifest [\#31](https://github.com/OpenVoiceOS/ovos-control-panel/pull/31) ([JarbasAl](https://github.com/JarbasAl))
 - feat: transformers panel — manage all six transformer chains [\#30](https://github.com/OpenVoiceOS/ovos-control-panel/pull/30) ([JarbasAl](https://github.com/JarbasAl))
-- feat: Voice settings — pickers for wake word, VAD, STT, TTS, pipeline, transformers, language [\#29](https://github.com/OpenVoiceOS/ovos-control-panel/pull/29) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
