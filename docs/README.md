@@ -88,3 +88,12 @@ panel runs apart from the assistant, it cannot tell, so every page shows.
 - **Use the device in another language** → [Accessibility and languages](accessibility.md)
 - **Something behaves differently from the last stable release** → [Pre-release quirks](prerelease-quirks.md)
 - **Reproduce a dependency set exactly** → [Constraints](constraints.md)
+
+## For developers
+
+| | Docs |
+| --- | --- |
+| Give your skill or plugin a page, from its settings up | [guide-pages.md](guide-pages.md) |
+| Every block, field and rule of `controlpanel.json` | [controlpanel-json.md](controlpanel-json.md), [controlpanel.schema.json](controlpanel.schema.json) |
+| Draw the same pages in Home Assistant, an app or another user interface | [for-other-uis.md](for-other-uis.md) |
+| The panel's own Python pages, panel extensions, the menu, configuration and branding | [pages.md](pages.md) |

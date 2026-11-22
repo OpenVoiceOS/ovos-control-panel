@@ -1,0 +1,931 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://raw.githubusercontent.com/OpenVoiceOS/ovos-control-panel/dev/docs/controlpanel.schema.json",
+ "title": "controlpanel.json, version 1",
+ "description": "A page for ovos-control-panel, described as data. See docs/controlpanel-json.md. The panel checks more than this (messages under the page's own prefix, the package's own config places); a file that passes here can still be left out, and the About page says why.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "controlpanel",
+  "id",
+  "title",
+  "blocks"
+ ],
+ "properties": {
+  "$schema": {
+   "type": "string"
+  },
+  "controlpanel": {
+   "const": 1
+  },
+  "id": {
+   "type": "string",
+   "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+  },
+  "title": {
+   "$ref": "#/$defs/label"
+  },
+  "heading": {
+   "$ref": "#/$defs/label"
+  },
+  "path": {
+   "type": "string",
+   "pattern": "^/[a-z0-9/_-]*$"
+  },
+  "group": {
+   "type": "string",
+   "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+  },
+  "groups": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+     },
+     "title": {
+      "description": "A key, or {\"key\", \"label\"} with the English text.",
+      "oneOf": [
+       {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
+       },
+       {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "label"
+        ],
+        "properties": {
+         "key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
+         },
+         "label": {
+          "type": "string",
+          "minLength": 1
+         }
+        }
+       }
+      ]
+     },
+     "order": {
+      "type": "integer"
+     },
+     "level": {
+      "enum": [
+       "everyday",
+       "advanced"
+      ]
+     }
+    },
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "title"
+    ]
+   }
+  },
+  "order": {
+   "type": "integer"
+  },
+  "needs": {
+   "type": "array",
+   "items": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "icon": {
+   "type": "string"
+  },
+  "pictures": {
+   "type": "string"
+  },
+  "bus": {
+   "type": "string",
+   "pattern": "^[a-z0-9][a-z0-9_-]*(\\.[a-z0-9_-]+)*\\.$"
+  },
+  "messages": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/message"
+   },
+   "minItems": 1,
+   "maxItems": 30,
+   "description": "Only in a page the panel brings."
+  },
+  "for": {
+   "type": "string",
+   "description": "Only in a page the panel brings: the package and its versions."
+  },
+  "blocks": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/block"
+   },
+   "minItems": 1,
+   "maxItems": 50
+  }
+ },
+ "anyOf": [
+  {
+   "required": [
+    "bus"
+   ]
+  },
+  {
+   "required": [
+    "messages"
+   ]
+  }
+ ],
+ "$defs": {
+  "label": {
+   "description": "A key in locale/<lang>/controlpanel.json, or the key with its English text.",
+   "oneOf": [
+    {
+     "type": "string",
+     "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
+    },
+    {
+     "type": "object",
+     "properties": {
+      "key": {
+       "type": "string",
+       "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
+      },
+      "en": {
+       "type": "string",
+       "maxLength": 500
+      }
+     },
+     "additionalProperties": false,
+     "required": [
+      "key"
+     ]
+    }
+   ]
+  },
+  "message": {
+   "type": "string",
+   "pattern": "^[a-z0-9][a-z0-9_.:-]{0,127}$",
+   "description": "A bus message: under the page's bus prefix, or one of its messages."
+  },
+  "field_name": {
+   "type": "string",
+   "pattern": "^[a-z_][a-z0-9_-]{0,63}$"
+  },
+  "path": {
+   "type": "string",
+   "pattern": "^[a-z_][a-z0-9_]{0,63}(\\.[a-z_][a-z0-9_]{0,63}){0,3}$",
+   "description": "A field of the answer, maybe nested: ports.outputs."
+  },
+  "condition": {
+   "type": "string",
+   "pattern": "^!?[a-z_][a-z0-9_.-]{0,127}$",
+   "description": "\"field\": true when it is; \"!field\": when it is not."
+  },
+  "template": {
+   "type": "string",
+   "maxLength": 200,
+   "description": "Text with {field} from the answer."
+  },
+  "refresh": {
+   "type": "integer",
+   "minimum": 2,
+   "maximum": 3600
+  },
+  "action": {
+   "type": "object",
+   "properties": {
+    "label": {
+     "$ref": "#/$defs/label"
+    },
+    "send": {
+     "$ref": "#/$defs/message"
+    },
+    "download": {
+     "$ref": "#/$defs/message"
+    },
+    "file": {
+     "type": "object",
+     "properties": {
+      "data": {
+       "$ref": "#/$defs/field_name"
+      },
+      "name": {
+       "type": "string",
+       "maxLength": 200
+      },
+      "type": {
+       "enum": [
+        "audio/midi",
+        "audio/mpeg",
+        "audio/ogg",
+        "audio/wav",
+        "audio/flac",
+        "application/pdf",
+        "text/plain",
+        "application/json",
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "application/epub+zip",
+        "text/csv"
+       ]
+      }
+     },
+     "additionalProperties": false,
+     "required": [
+      "type"
+     ]
+    },
+    "data": {
+     "type": "object"
+    },
+    "answer": {
+     "const": false
+    },
+    "when": {
+     "$ref": "#/$defs/condition"
+    },
+    "confirm": {
+     "$ref": "#/$defs/label"
+    },
+    "privileged": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": false,
+   "required": [
+    "label"
+   ],
+   "oneOf": [
+    {
+     "required": [
+      "send"
+     ]
+    },
+    {
+     "required": [
+      "download",
+      "file"
+     ]
+    }
+   ]
+  },
+  "actions": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/action"
+   }
+  },
+  "option": {
+   "type": "object",
+   "properties": {
+    "value": {
+     "type": [
+      "string",
+      "number",
+      "boolean"
+     ]
+    },
+    "label": {
+     "$ref": "#/$defs/label"
+    }
+   },
+   "additionalProperties": false,
+   "required": [
+    "value",
+    "label"
+   ]
+  },
+  "field": {
+   "type": "object",
+   "properties": {
+    "name": {
+     "$ref": "#/$defs/field_name"
+    },
+    "label": {
+     "$ref": "#/$defs/label"
+    },
+    "type": {
+     "enum": [
+      "text",
+      "password",
+      "url",
+      "number",
+      "slider",
+      "checkbox",
+      "select",
+      "lines"
+     ]
+    },
+    "hint": {
+     "$ref": "#/$defs/label"
+    },
+    "required": {
+     "type": "boolean"
+    },
+    "min": {
+     "type": "number"
+    },
+    "max": {
+     "type": "number"
+    },
+    "step": {
+     "type": "number"
+    },
+    "max_length": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 2000
+    },
+    "default": {},
+    "show_when": {
+     "type": "object",
+     "minProperties": 1,
+     "maxProperties": 1
+    },
+    "on": {},
+    "off": {},
+    "options": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/option"
+     }
+    },
+    "options_from": {
+     "type": "object",
+     "properties": {
+      "query": {
+       "$ref": "#/$defs/message"
+      },
+      "items": {
+       "$ref": "#/$defs/path"
+      },
+      "value": {
+       "$ref": "#/$defs/field_name"
+      },
+      "label": {
+       "$ref": "#/$defs/field_name"
+      }
+     },
+     "additionalProperties": false,
+     "required": [
+      "query"
+     ]
+    },
+    "voices": {
+     "const": true
+    }
+   },
+   "additionalProperties": false,
+   "required": [
+    "name",
+    "label"
+   ]
+  },
+  "block_text": {
+   "type": "object",
+   "properties": {
+    "type": {
+     "type": "string"
+    },
+    "heading": {
+     "$ref": "#/$defs/label"
+    },
+    "text": {
+     "$ref": "#/$defs/label"
+    },
+    "steps": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/label"
+     },
+     "minItems": 1,
+     "maxItems": 20
+    }
+   },
+   "additionalProperties": false,
+   "required": [
+    "type"
+   ],
+   "anyOf": [
+    {
+     "required": [
+      "text"
+     ]
+    },
+    {
+     "required": [
+      "steps"
+     ]
+    }
+   ]
+  },
+  "block_status": {
+   "type": "object",
+   "properties": {
+    "type": {
+     "type": "string"
+    },
+    "heading": {
+     "$ref": "#/$defs/label"
+    },
+    "query": {
+     "$ref": "#/$defs/message"
+    },
+    "text": {
+     "$ref": "#/$defs/label"
+    },
+    "show": {
+     "$ref": "#/$defs/condition"
+    },
+    "refresh": {
+     "$ref": "#/$defs/refresh"
+    },
+    "rows": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "label": {
+        "$ref": "#/$defs/label"
+       },
+       "value": {
+        "type": "string",
+        "maxLength": 300
+       },
+       "text": {
+        "$ref": "#/$defs/label"
+       },
+       "empty": {
+        "$ref": "#/$defs/label"
+       },
+       "when": {
+        "$ref": "#/$defs/condition"
+       }
+      },
+      "additionalProperties": false
+     }
+    },
+    "actions": {
+     "$ref": "#/$defs/actions"
+    }
+   },
+   "additionalProperties": false,
+   "required": [
+    "type",
+    "query"
+   ],
+   "anyOf": [
+    {
+     "required": [
+      "text"
+     ]
+    },
+    {
+     "required": [
+      "rows"
+     ]
+    }
+   ]
+  },
+  "block_list": {
+   "type": "object",
+   "properties": {
+    "type": {
+     "type": "string"
+    },
+    "heading": {
+     "$ref": "#/$defs/label"
+    },
+    "query": {
+     "$ref": "#/$defs/message"
+    },
+    "listen": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/message"
+     },
+     "minItems": 1,
+     "maxItems": 5
+    },
+    "items": {
+     "$ref": "#/$defs/path"
+    },
+    "key": {
+     "$ref": "#/$defs/field_name"
+    },
+    "title": {
+     "$ref": "#/$defs/template"
+    },
+    "text": {
+     "$ref": "#/$defs/template"
+    },
+    "meta": {
+     "$ref": "#/$defs/label"
+    },
+    "picture": {
+     "$ref": "#/$defs/field_name"
+    },
+    "empty": {
+     "$ref": "#/$defs/label"
+    },
+    "refresh": {
+     "$ref": "#/$defs/refresh"
+    },
+    "split": {
+     "type": "object",
+     "properties": {
+      "by": {
+       "$ref": "#/$defs/field_name"
+      },
+      "true": {
+       "$ref": "#/$defs/label"
+      },
+      "false": {
+       "$ref": "#/$defs/label"
+      }
+     },
+     "additionalProperties": false,
+     "required": [
+      "by",
+      "true",
+      "false"
+     ]
+    },
+    "filter": {
+     "type": "object",
+     "properties": {
+      "by": {
+       "$ref": "#/$defs/field_name"
+      },
+      "label": {
+       "$ref": "#/$defs/label"
+      },
+      "all": {
+       "$ref": "#/$defs/label"
+      }
+     },
+     "additionalProperties": false,
+     "required": [
+      "by",
+      "label"
+     ]
+    },
+    "rename": {
+     "type": "object",
+     "properties": {
+      "field": {
+       "$ref": "#/$defs/field_name"
+      },
+      "send": {
+       "$ref": "#/$defs/message"
+      },
+      "when": {
+       "$ref": "#/$defs/condition"
+      },
+      "max_length": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 300
+      },
+      "label": {
+       "$ref": "#/$defs/label"
+      },
+      "privileged": {
+       "type": "boolean"
+      }
+     },
+     "additionalProperties": false,
+     "required": [
+      "field",
+      "send"
+     ]
+    },
+    "actions": {
+     "$ref": "#/$defs/actions"
+    }
+   },
+   "additionalProperties": false,
+   "required": [
+    "type"
+   ],
+   "oneOf": [
+    {
+     "required": [
+      "query"
+     ]
+    },
+    {
+     "required": [
+      "listen"
+     ]
+    }
+   ]
+  },
+  "block_actions": {
+   "type": "object",
+   "properties": {
+    "type": {
+     "type": "string"
+    },
+    "heading": {
+     "$ref": "#/$defs/label"
+    },
+    "actions": {
+     "$ref": "#/$defs/actions"
+    }
+   },
+   "additionalProperties": false,
+   "required": [
+    "type",
+    "actions"
+   ]
+  },
+  "block_form": {
+   "type": "object",
+   "properties": {
+    "type": {
+     "type": "string"
+    },
+    "heading": {
+     "$ref": "#/$defs/label"
+    },
+    "query": {
+     "$ref": "#/$defs/message"
+    },
+    "fields": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/field"
+     },
+     "minItems": 1
+    },
+    "save": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "config": {
+       "type": "string"
+      },
+      "reload": {
+       "$ref": "#/$defs/message"
+      },
+      "settings": {
+       "const": true
+      },
+      "send": {
+       "$ref": "#/$defs/message"
+      },
+      "answer": {
+       "const": false
+      },
+      "label": {
+       "$ref": "#/$defs/label"
+      }
+     },
+     "oneOf": [
+      {
+       "required": [
+        "config"
+       ]
+      },
+      {
+       "required": [
+        "settings"
+       ]
+      },
+      {
+       "required": [
+        "send"
+       ]
+      }
+     ]
+    }
+   },
+   "additionalProperties": false,
+   "required": [
+    "type",
+    "fields",
+    "save"
+   ]
+  },
+  "block_choice": {
+   "type": "object",
+   "properties": {
+    "type": {
+     "type": "string"
+    },
+    "heading": {
+     "$ref": "#/$defs/label"
+    },
+    "param": {
+     "$ref": "#/$defs/field_name"
+    },
+    "options": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/option"
+     },
+     "minItems": 1
+    }
+   },
+   "additionalProperties": false,
+   "required": [
+    "type",
+    "param",
+    "options"
+   ]
+  },
+  "block_upload": {
+   "type": "object",
+   "properties": {
+    "type": {
+     "type": "string"
+    },
+    "heading": {
+     "$ref": "#/$defs/label"
+    },
+    "send": {
+     "$ref": "#/$defs/message"
+    },
+    "accept": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "pattern": "^\\.[A-Za-z0-9]{1,10}$"
+     },
+     "minItems": 1
+    },
+    "max_mb": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 64
+    },
+    "field": {
+     "type": "object",
+     "properties": {
+      "name": {
+       "$ref": "#/$defs/field_name"
+      },
+      "label": {
+       "$ref": "#/$defs/label"
+      },
+      "max_length": {
+       "type": "integer"
+      }
+     },
+     "additionalProperties": false,
+     "required": [
+      "name",
+      "label"
+     ]
+    }
+   },
+   "additionalProperties": false,
+   "required": [
+    "type",
+    "send",
+    "accept"
+   ]
+  },
+  "block_module": {
+   "type": "object",
+   "properties": {
+    "type": {
+     "type": "string"
+    },
+    "heading": {
+     "$ref": "#/$defs/label"
+    },
+    "kind": {
+     "enum": [
+      "tts",
+      "stt"
+     ]
+    }
+   },
+   "additionalProperties": false,
+   "required": [
+    "type",
+    "kind"
+   ]
+  },
+  "block": {
+   "description": "A block. A type this version does not know is allowed: an older panel draws it as \"needs a newer control panel\".",
+   "type": "object",
+   "required": [
+    "type"
+   ],
+   "properties": {
+    "type": {
+     "type": "string"
+    }
+   },
+   "allOf": [
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "text"
+       }
+      }
+     },
+     "then": {
+      "$ref": "#/$defs/block_text"
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "status"
+       }
+      }
+     },
+     "then": {
+      "$ref": "#/$defs/block_status"
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "list"
+       }
+      }
+     },
+     "then": {
+      "$ref": "#/$defs/block_list"
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "actions"
+       }
+      }
+     },
+     "then": {
+      "$ref": "#/$defs/block_actions"
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "form"
+       }
+      }
+     },
+     "then": {
+      "$ref": "#/$defs/block_form"
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "choice"
+       }
+      }
+     },
+     "then": {
+      "$ref": "#/$defs/block_choice"
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "upload"
+       }
+      }
+     },
+     "then": {
+      "$ref": "#/$defs/block_upload"
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "module"
+       }
+      }
+     },
+     "then": {
+      "$ref": "#/$defs/block_module"
+     }
+    }
+   ]
+  }
+ }
+}

@@ -8,7 +8,7 @@ is installed, the panel shows a **Mark-1 faceplate** page for it.
 
 The panel brings a plain page for the plugin, described in
 `ovos_webui/bundled/ovos-phal-plugin-mk1/` (see
-[Pages](pages.md#pages-the-panel-describes)):
+[Pages the panel brings](controlpanel-json.md#pages-the-panel-brings)):
 
 - **Eyes**: on, off, blink, narrow, spin and reset.
 - **Colour**: blue, green, red or white.
@@ -25,10 +25,11 @@ The drawing editors for the mouth and the eye rings, the animations, the
 live preview and the firmware updates are a panel extension of their own:
 
 ```
-pip install ovos-control-panel-mark1
+pip install --pre ovos-control-panel-mark1
 ```
 
-Install it where the panel runs and restart the panel. Its page takes the
+(`--pre`, as for the panel itself.) Install it where the panel runs and
+restart the panel. Its page takes the
 plain page's place. See its README for what it does.
 
 ---

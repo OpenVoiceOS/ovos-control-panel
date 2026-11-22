@@ -35,7 +35,7 @@ pages. Set one on the [Settings](configuration.md) page first.
 
 The panel brings this page, described in
 `ovos_webui/bundled/ovos-phal-plugin-wallpaper-manager/`, until the plugin
-brings its own (see [Pages](pages.md#pages-the-panel-describes)). It shows the
+brings its own (see [Pages the panel brings](controlpanel-json.md#pages-the-panel-brings)). It shows the
 addresses rather than pictures: the panel shows no pictures from other sites.
 
 ---

@@ -683,3 +683,20 @@ def test_a_list_listens_only_to_the_pages_own_messages():
     page["blocks"][0]["listen"] = ["ovos.s.reading"]
     out, refs = checked(page, "ovos-phal-plugin-s")
     assert out["blocks"][0]["items"] == "items" and refs["b0"]["kind"] == "query"
+
+
+def test_another_ui_reads_the_page_as_checked_with_its_strings(app):
+    c, _ = app
+    c.headers["Authorization"] = "Bearer s3cret-token"
+    got = c.get("/api/cp/demo/page", params={"lang": "da-DK"}).json()
+    assert got["lang"] == "da" and got["strings"]["demo.title"] == "Prøve"
+    blocks = got["page"]["blocks"]
+    assert blocks[2]["type"] == "list" and blocks[2]["ref"] == "b2"
+    assert got["page"]["en"]["demo.intro"] == "Hello", "the English texts come along"
+
+
+def test_the_list_of_pages_says_which_are_described(app):
+    c, _ = app
+    c.headers["Authorization"] = "Bearer s3cret-token"
+    listed = {p["id"]: p["described"] for p in c.get("/api/pages").json()["pages"]}
+    assert listed["demo"] is True and listed["about"] is False

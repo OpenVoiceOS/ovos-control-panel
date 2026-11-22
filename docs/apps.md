@@ -25,7 +25,7 @@ same as the other device pages. Set one on the
 
 The page shows only where the app-launcher plugin is installed. The panel
 brings it, described in `ovos_webui/bundled/ovos-phal-plugin-app-launcher/`,
-until the plugin brings its own (see [Pages](pages.md#pages-the-panel-describes)).
+until the plugin brings its own (see [Pages the panel brings](controlpanel-json.md#pages-the-panel-brings)).
 
 ---
 [← Media](media.md) · [Home](README.md) · [Network →](network.md)

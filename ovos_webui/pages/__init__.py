@@ -131,7 +131,9 @@ class Page:
     def about(self) -> dict[str, Any]:
         """What the About page lists about the page."""
         return {"id": self.id, "path": self.path, "title": self.label, "group": self.group,
-                "package": self.package, "version": self.version, "builtin": self.builtin}
+                "package": self.package, "version": self.version, "builtin": self.builtin,
+                # drawn from a controlpanel.json: /api/cp/<id>/page has it
+                "described": self.described is not None}
 
 
 @dataclass
@@ -616,7 +618,7 @@ def parse_described(found: Any, package: str, version: str) -> tuple[Page, list]
                 heading=english.get(heading["key"]) or heading.get("en") or label,
                 fragment=True, strings=strings, module=found.module, assets=pictures,
                 described=page_data, refs=refs, by_panel=bool(getattr(found, "by_panel", False)),
-                routes=described.routes_for(pid, refs),
+                routes=described.routes_for(pid, refs, page_data, strings),
                 # an upload's body may be as large as its block says
                 uploads={f"/api/cp/{pid}/upload": max(b["max_mb"] for b in page_data["blocks"]
                                                       if b["type"] == "upload") * 1024 * 1024 + 64 * 1024}

@@ -928,7 +928,8 @@ def _get_in(data: Any, path: list[str]) -> Any:
     return data
 
 
-def routes_for(pid: str, refs: dict[str, dict]):
+def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
+               strings: dict[str, dict[str, str]] | None = None):
     """The routes of a described page: its bus bridge. Every request names a
     part of the page (``ref``); the message and the data it may carry come
     from the file, never from the request."""
@@ -956,6 +957,15 @@ def routes_for(pid: str, refs: dict[str, dict]):
 
     def add(r) -> None:
         base = f"/cp/{pid}"
+
+        if page is not None:
+            @r.api.get(base + "/page")
+            def page_read(lang: str = "") -> dict[str, Any]:
+                # the page as checked, for another user interface: the same
+                # the panel draws, with the package's strings in that language
+                code = (lang or "en").replace("_", "-").lower().split("-")[0]
+                table = dict((strings or {}).get("en") or {}, **((strings or {}).get(code) or {}))
+                return {"page": page, "lang": code, "strings": table}
 
         @r.api.post(base + "/query")
         def query(body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:

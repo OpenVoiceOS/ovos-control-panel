@@ -24,7 +24,7 @@ sensor shows once it has reported after that.
 ## Where the page comes from
 
 The panel brings this page, described in `ovos_webui/bundled/ovos-phal-sensors/`,
-until the plugin brings its own (see [Pages](pages.md#pages-the-panel-describes)).
+until the plugin brings its own (see [Pages the panel brings](controlpanel-json.md#pages-the-panel-brings)).
 
 ## Signing in
 
