@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a96](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a96) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a95...0.0.1a96)
+
+**Merged pull requests:**
+
+- Backup: an earlier save of a skill's settings says which skill [\#187](https://github.com/OpenVoiceOS/ovos-control-panel/pull/187) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a95](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a95) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a94...0.0.1a95)
@@ -537,10 +545,6 @@
 ## [0.0.1a30](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a30) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a29...0.0.1a30)
-
-**Merged pull requests:**
-
-- fix: stop reaching for names the libraries have deprecated [\#61](https://github.com/OpenVoiceOS/ovos-control-panel/pull/61) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a29](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a29) (2026-08-26)
 
