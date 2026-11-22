@@ -559,11 +559,11 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     # a burst of concurrent requests neither amplifies outward nor parks the
     # worker pool — it just reads the cache.
     @api.get("/plugins/search")
-    def api_plugin_search(q: str = "", kind: str = "",
-                          refresh: bool = False) -> dict[str, Any]:
+    def api_plugin_search(q: str = "", kind: str = "", refresh: bool = False,
+                          release: bool = False) -> dict[str, Any]:
         if len(q) > 100 or len(kind) > 50:
             raise HTTPException(400, "the search is too long")
-        return pypi.search(query=q, kind=kind, refresh=refresh)
+        return pypi.search(query=q, kind=kind, refresh=refresh, only_release=release)
 
     @api.get("/plugins/details/{package}")
     def api_plugin_details(package: str) -> dict[str, Any]:

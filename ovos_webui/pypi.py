@@ -383,12 +383,20 @@ def _installed_skill(name: str) -> bool:
 
 
 def search(query: str = "", kind: str = "", refresh: bool = False,
-           limit: int = 200) -> dict[str, Any]:
+           limit: int = 200, only_release: bool = False) -> dict[str, Any]:
     """Return the packages that match ``query`` and ``kind``.
 
     Installed packages are listed first, so a user sees what they already have
-    before what they could add.
+    before what they could add, then those in the OVOS release the device
+    follows (:mod:`ovos_webui.release`). Each says ``in_release``: true, false,
+    or None when the release could not be read. ``only_release`` leaves out
+    what is not in it; installed packages are always listed.
     """
+    from packaging.utils import canonicalize_name
+
+    from ovos_webui import release
+    rel = release.packages(refresh=refresh)
+    held = rel["packages"]
     data = index(refresh=refresh)
     packages: dict[str, str] = data.get("packages") or {}
     have = installed_versions()
@@ -410,13 +418,18 @@ def search(query: str = "", kind: str = "", refresh: bool = False,
             continue
         if query and query not in name.lower():
             continue
+        installed = name.lower() in have
+        in_release = None if held is None else canonicalize_name(name) in held
+        if only_release and in_release is False and not installed:
+            continue
         results.append({
             "name": name,
             "kind": found,
-            "installed": name.lower() in have,
+            "installed": installed,
             "version": have.get(name.lower()),
+            "in_release": in_release,
         })
-    results.sort(key=lambda r: (not r["installed"], r["name"]))
+    results.sort(key=lambda r: (not r["installed"], r["in_release"] is not True, r["name"]))
     return {
         "results": results[:limit],
         "total": len(results),
@@ -425,6 +438,7 @@ def search(query: str = "", kind: str = "", refresh: bool = False,
         "stale": bool(data.get("stale")),
         "offline": bool(data.get("offline")),
         "error": data.get("error"),
+        "release": {"name": rel["name"], "source": rel["source"], "known": held is not None},
     }
 
 

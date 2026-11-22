@@ -195,5 +195,14 @@
  "provider.allOff": "All media providers are turned off in the OCP pipeline's configuration, so none is searched.",
  "provider.turnOn": "Turn on",
  "provider.turnOff": "Turn off",
- "provider.restart": "The assistant picks a change up when it starts again."
+ "provider.restart": "The assistant picks a change up when it starts again.",
+ "release.show": "Show",
+ "release.only": "What is in the OVOS release",
+ "release.all": "Everything on PyPI",
+ "release.in": "in the OVOS release",
+ "release.not": "not checked",
+ "release.unknown": "The OVOS release could not be read, so everything on PyPI is shown.",
+ "release.allWarn": "Everything on PyPI is shown, and none of it is checked: not whether it works with this device's versions, nor whether anyone still looks after it. The installer still checks the versions before it installs.",
+ "release.onlyNote": "Only what belongs to the OVOS release this device follows",
+ "release.onlyNoteEnd": ", and what is installed."
 }

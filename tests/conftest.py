@@ -59,6 +59,20 @@ def clean_sandbox():
 
 
 @pytest.fixture(autouse=True)
+def no_release_file(monkeypatch):
+    """The OVOS release file is never fetched in a test: it reads as offline
+    unless a test gives it a file of its own."""
+    from ovos_webui import release
+
+    def offline(src):
+        raise OSError("not fetched in tests")
+    release.clear()
+    monkeypatch.setattr(release, "_read", offline)
+    yield
+    release.clear()
+
+
+@pytest.fixture(autouse=True)
 def reset_bus_gate():
     """The bus gate is process wide, so a tripped breaker must not leak."""
     from ovos_webui import buswait

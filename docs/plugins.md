@@ -33,6 +33,10 @@ PyPI** fetches it again.
 
 Only names that start with `ovos-` are shown, and only those can be installed.
 
+As on the Skills page, **Show** chooses between what is in the OVOS release the
+device follows and everything on PyPI, and each result says which; see
+[skills.md](skills.md#what-is-in-the-ovos-release).
+
 The list and the package details come from the public PyPI by default. If you
 run your own package mirror, set `webui.pypi_index` in the configuration to its
 base address (for example a devpi or a private PyPI), and the device reads from

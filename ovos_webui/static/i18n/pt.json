@@ -195,5 +195,14 @@
  "provider.allOff": "Todos os fornecedores de conteúdos estão desligados na configuração do pipeline OCP, por isso não se procura em nenhum.",
  "provider.turnOn": "Ligar",
  "provider.turnOff": "Desligar",
- "provider.restart": "O assistente aplica a alteração quando voltar a arrancar."
+ "provider.restart": "O assistente aplica a alteração quando voltar a arrancar.",
+ "release.show": "Mostrar",
+ "release.only": "O que está na versão do OVOS",
+ "release.all": "Tudo o que há no PyPI",
+ "release.in": "na versão do OVOS",
+ "release.not": "não verificado",
+ "release.unknown": "Não foi possível ler a versão do OVOS, por isso é mostrado tudo o que há no PyPI.",
+ "release.allWarn": "É mostrado tudo o que há no PyPI e nada está verificado: nem se funciona com as versões deste dispositivo, nem se alguém ainda o mantém. O instalador continua a verificar as versões antes de instalar.",
+ "release.onlyNote": "Só o que faz parte da versão do OVOS que este dispositivo segue",
+ "release.onlyNoteEnd": ", e o que está instalado."
 }
