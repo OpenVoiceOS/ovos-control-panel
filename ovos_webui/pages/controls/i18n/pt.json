@@ -35,5 +35,15 @@
  "controls.volume.unmutedMsg": "O som está ligado.",
  "controls.installed.pre": "Instalado. ",
  "controls.installed.link": "Reinicie os serviços do OVOS",
- "controls.installed.post": ", depois recarregue esta página."
+ "controls.installed.post": ", depois recarregue esta página.",
+ "controls.cap.volume.label": "Volume",
+ "controls.cap.volume.hint": "Defina o volume com que o dispositivo fala e reproduz conteúdos.",
+ "controls.cap.power.label": "Energia",
+ "controls.cap.power.hint": "Reinicie os serviços ou o dispositivo.",
+ "controls.cap.system.label": "Sistema",
+ "controls.cap.system.hint": "SSH e reposição de fábrica, a partir da página Sistema.",
+ "controls.cap.network.label": "Configuração de Wi-Fi",
+ "controls.cap.network.hint": "Procure e ligue-se a redes Wi-Fi com a extensão ovos-control-panel-network. Precisa deste plugin, que corre com o serviço de administração.",
+ "controls.cap.ggwave.label": "Escuta de Enviar por som",
+ "controls.cap.ggwave.hint": "Permite que o dispositivo ouça dados enviados por som a partir da página Enviar por som."
 }

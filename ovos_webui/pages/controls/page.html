@@ -212,9 +212,10 @@ OvosWebUI.ready(function () {
             + esc(t("controls.button.install", "Install") + " " + prettyName(c.suggest)) + "</button>"
             + ' <code class="slug">' + esc(c.suggest) + "</code>";
         }
-        return "<li><strong>" + esc(c.label) + "</strong>"
+        // the plugin's label and what it is for, in the reader's language
+        return "<li><strong>" + esc(t("controls.cap." + k + ".label", c.label)) + "</strong>"
           + (c.needs_admin ? ' <small>' + esc(t("controls.admin", "(runs with the admin service)")) + "</small>" : "")
-          + " " + status + '<p class="hint">' + esc(c.hint) + "</p></li>";
+          + " " + status + '<p class="hint">' + esc(t("controls.cap." + k + ".hint", c.hint)) + "</p></li>";
       }).join("");
       el("capabilities").innerHTML = "<ul class='plain rowlist'>" + list + "</ul>";
       el("capabilities").querySelectorAll("[data-inst]").forEach(function (b) {

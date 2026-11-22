@@ -35,5 +35,15 @@
  "controls.volume.unmutedMsg": "El sonido está activado.",
  "controls.installed.pre": "Instalado. ",
  "controls.installed.link": "Reinicie los servicios de OVOS",
- "controls.installed.post": " y luego recargue esta página."
+ "controls.installed.post": " y luego recargue esta página.",
+ "controls.cap.volume.label": "Volumen",
+ "controls.cap.volume.hint": "Ajusta lo alto que habla el dispositivo y reproduce medios.",
+ "controls.cap.power.label": "Encendido",
+ "controls.cap.power.hint": "Reinicia los servicios o el dispositivo.",
+ "controls.cap.system.label": "Sistema",
+ "controls.cap.system.hint": "SSH y restablecimiento de fábrica, desde la página Sistema.",
+ "controls.cap.network.label": "Configuración Wi-Fi",
+ "controls.cap.network.hint": "Busca redes Wi-Fi y conéctate a ellas con la extensión ovos-control-panel-network. Necesita este complemento, que funciona con el servicio de administración.",
+ "controls.cap.ggwave.label": "Escucha de Enviar por sonido",
+ "controls.cap.ggwave.hint": "Permite que el dispositivo oiga datos enviados por sonido desde la página Enviar por sonido."
 }

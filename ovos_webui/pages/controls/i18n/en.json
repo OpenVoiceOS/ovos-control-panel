@@ -35,5 +35,15 @@
  "controls.volume.unmutedMsg": "Sound is on.",
  "controls.installed.pre": "Installed. ",
  "controls.installed.link": "Restart the OVOS services",
- "controls.installed.post": ", then reload this page."
+ "controls.installed.post": ", then reload this page.",
+ "controls.cap.volume.label": "Volume",
+ "controls.cap.volume.hint": "Set how loud the device speaks and plays media.",
+ "controls.cap.power.label": "Power",
+ "controls.cap.power.hint": "Restart the services or reboot the device.",
+ "controls.cap.system.label": "System",
+ "controls.cap.system.hint": "SSH and a factory reset, from the System page.",
+ "controls.cap.network.label": "Wi-Fi setup",
+ "controls.cap.network.hint": "Scan for and join Wi-Fi networks, with the ovos-control-panel-network extension. Needs this plugin, which runs with the admin service.",
+ "controls.cap.ggwave.label": "Send over sound listener",
+ "controls.cap.ggwave.hint": "Lets this device hear data sent over sound from the Send over sound page."
 }

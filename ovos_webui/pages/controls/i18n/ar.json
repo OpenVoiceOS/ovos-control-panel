@@ -35,5 +35,15 @@
  "controls.volume.unmutedMsg": "الصوت يعمل.",
  "controls.installed.pre": "ثُبِّتت. ",
  "controls.installed.link": "أعد تشغيل خدمات OVOS",
- "controls.installed.post": "، ثم أعد تحميل هذه الصفحة."
+ "controls.installed.post": "، ثم أعد تحميل هذه الصفحة.",
+ "controls.cap.volume.label": "مستوى الصوت",
+ "controls.cap.volume.hint": "اضبط ارتفاع صوت الجهاز عند الكلام وتشغيل الوسائط.",
+ "controls.cap.power.label": "الطاقة",
+ "controls.cap.power.hint": "أعد تشغيل الخدمات أو الجهاز.",
+ "controls.cap.system.label": "النظام",
+ "controls.cap.system.hint": "SSH وإعادة ضبط المصنع، من صفحة النظام.",
+ "controls.cap.network.label": "إعداد Wi-Fi",
+ "controls.cap.network.hint": "ابحث عن شبكات Wi-Fi واتصل بها عبر الامتداد ovos-control-panel-network. يحتاج هذه الإضافة التي تعمل مع خدمة الإدارة.",
+ "controls.cap.ggwave.label": "مستمع الإرسال عبر الصوت",
+ "controls.cap.ggwave.hint": "يتيح للجهاز سماع البيانات المرسلة صوتيًا من صفحة الإرسال عبر الصوت."
 }
