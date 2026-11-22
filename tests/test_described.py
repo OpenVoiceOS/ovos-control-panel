@@ -975,3 +975,10 @@ def test_a_plugin_under_two_names_is_one_plugin(monkeypatch):
     page = {"controlpanel": 1, "id": "p", "bus": "ovos.p.", "blocks": [{"type": "module", "kind": "ww"}]}
     _, refs = described.check(page, "ovos-ww-plugin-precise-lite", modules={"ww": got["ww"]})
     assert refs["b0.module"]["block"]["aliases"] == ["ovos-ww-plugin-precise-lite", "ovos-precise-lite"]
+
+
+@pytest.mark.parametrize("folder", sorted(p.name for p in described.BUNDLED.iterdir() if p.is_dir()))
+def test_every_page_the_panel_brings_speaks_the_panels_languages(folder):
+    """The panel speaks five languages, and so does every page it brings."""
+    found = described.strings(described.BUNDLED / folder)
+    assert {"en", "da", "es", "pt", "ar"} <= set(found), sorted(found)
