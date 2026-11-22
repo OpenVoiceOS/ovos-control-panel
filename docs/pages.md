@@ -126,7 +126,8 @@ checkbox `on` and `off` values for a setting that is not true or false
 `reload` message with the section as saved (`{"config": {...}}`).
 
 In `{field}` a field can be nested (`{ports.outputs}`), a list is joined with
-commas, a value can be shown as a date (`{saved:date}`), or as a label
+commas, a value can be shown as a date (`{saved:date}`) or a date and time
+(`{last:time}`), both in seconds since 1970, or as a label
 (`{engine@midi.engine}` shows the label `midi.engine.fluidsynth`, or nothing
 when there is no such label; the label can hold the answer's values too).
 

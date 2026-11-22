@@ -45,10 +45,11 @@ OvosWebUI.ready(function () {
     var en = EN[key] || COMMON[key] || (typeof label === "object" && label.en) || key;
     return OvosWebUI.t(key, en);
   }
-  function day(value) {
+  function day(value, withTime) {
     try {
-      return new Date(value * 1000).toLocaleDateString(document.documentElement.lang || undefined,
-        {day: "numeric", month: "short", year: "numeric"});
+      var opts = {day: "numeric", month: "short", year: "numeric"};
+      if (withTime) { opts.hour = "2-digit"; opts.minute = "2-digit"; }
+      return new Date(value * 1000).toLocaleString(document.documentElement.lang || undefined, opts);
     } catch (e) { return ""; }
   }
   // a field of an answer, maybe nested ("ports.outputs")
@@ -59,11 +60,11 @@ OvosWebUI.ready(function () {
   // "{name}", "{saved:date}", and "{engine@midi.engine}": the value as a
   // label (midi.engine.fluidsynth); a list is joined with commas
   function fill(text, data) {
-    return String(text).replace(/\{([a-z_][a-z0-9_.]*)(?::(date))?(?:@([A-Za-z0-9_.-]+))?\}/g,
+    return String(text).replace(/\{([a-z_][a-z0-9_.]*)(?::(date|time))?(?:@([A-Za-z0-9_.-]+))?\}/g,
       function (all, name, fmt, prefix) {
         var v = get(data, name);
         if (v === undefined || v === null) { return ""; }
-        if (fmt === "date") { return day(v); }
+        if (fmt) { return day(v, fmt === "time"); }
         if (prefix) {
           // a label per value; one that is not there shows nothing, and the
           // label may carry the answer's values ({ha_version})
