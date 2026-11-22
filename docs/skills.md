@@ -102,7 +102,7 @@ shown: an empty field keeps the one there is.
 
 settingsmeta has one text per field, usually in English. A skill can give the
 texts in other languages in `locale/<lang>/controlpanel.json`, the same file a
-[described page](pages.md) uses, by the field's name:
+[described page](controlpanel-json.md) uses, by the field's name:
 
 ```json
 {
@@ -118,7 +118,7 @@ settingsmeta, so settingsmeta stays the plain OVOS standard. The form, with the
 texts chosen, is also in `GET /api/skills/<skill_id>?lang=<lang>` as `form`, so
 another user interface can draw the same.
 
-A skill with a [page of its own](pages.md) can describe its settings there
+A skill with a [page of its own](guide-pages.md) can describe its settings there
 instead, with a `form` that saves `{"settings": true}`: the same
 `settings.json`, with what that format adds (web addresses, required fields,
 limits, fields shown only when another is set).

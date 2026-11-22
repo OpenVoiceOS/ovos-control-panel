@@ -9,6 +9,10 @@ anyio==4.14.2
     #   httpx
     #   starlette
     #   watchfiles
+attrs==26.1.0
+    # via
+    #   jsonschema
+    #   referencing
 certifi==2026.7.22
     # via
     #   httpcore
@@ -74,6 +78,10 @@ iniconfig==2.3.0
     # via pytest
 json-database==1.0.4a1
     # via ovos-utils
+jsonschema==4.26.0
+    # via ovos-control-panel
+jsonschema-specifications==2025.9.1
+    # via jsonschema
 kthread==0.2.3
     # via ovos-utils
 langcodes==3.5.1
@@ -115,8 +123,6 @@ ovos-date-parser==0.30.1a1
     # via ovos-skill-date-time
 ovos-gui-api-client==0.1.0
     # via ovos-workshop
-ovos-mark1-utils==0.0.1
-    # via ovos-control-panel (pyproject.toml)
 ovos-messagebus==0.2.1a4
     # via ovos-control-panel (pyproject.toml)
 ovos-number-parser==0.19.13
@@ -251,6 +257,10 @@ rapidfuzz==3.14.5
     #   ovos-workshop
 ratelim==0.1.6
     # via geocoder
+referencing==0.37.0
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
 regex==2026.7.19
     # via
     #   dateparser
@@ -268,6 +278,10 @@ rich-click==1.9.8
     # via
     #   ovos-config
     #   ovos-utils
+rpds-py==2026.9.1
+    # via
+    #   jsonschema
+    #   referencing
 setuptools==84.0.0
     # via ovos-plugin-manager
 simplematch==1.4

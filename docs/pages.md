@@ -1,19 +1,5 @@
 # Pages: how the control panel is put together
 
-> **Status: partly built.** Comments go in #115.
->
-> - **Built:** the registry, `controlpanel.json` for every other package's
->   page, the checks on a page description, groups a page brings, the menu built from
->   the registry, `needs`, icons, `heading`, `routes`, `assets`, per-page
->   `i18n`, wrapping a page's body in the shell, and the list of pages on the
->   About page. Every one of the panel's own pages uses it: each is a body in
->   its own folder, with its own routes and strings where it has any. What
->   several pages share (configuration, plugins and installs, voice, events,
->   system actions, sign in) stays with the shell.
->   `webui.pages`, `webui.groups` and `webui.branding` (name, logo, colours)
->   are built too.
-> - **Not yet:** the bus bridge, and `manual` in `webui.branding`.
-
 The control panel is a small shell. The shell does the sign in, the menu,
 the languages, the look and the safety checks. Everything you see in the menu
 is a **page**.
@@ -21,28 +7,32 @@ is a **page**.
 There are two ways to give the panel a page:
 
 - **`controlpanel.json`, the normal way.** A skill or plugin describes its
-  settings, status, lists and buttons in a file, and the panel draws it: see
-  [Pages described in a file](#pages-described-in-a-file). It is data, no
-  code, so another user interface (Home Assistant, a phone app) can draw the
-  same file. Until a plugin brings one, the panel may bring one for it, in
-  its `bundled/` folder.
+  settings, status, lists and buttons in a file, and the panel draws it. It is
+  data, no code, so another user interface (Home Assistant, a phone app) can
+  draw the same file. Until a plugin brings one, the panel may bring one for
+  it, in its `bundled/` folder.
 - **A panel extension, for what a file cannot say.** A package written only
   to add a richer page to this panel (the Mark-1 drawing editors and firmware
-  updates, in `ovos-control-panel-mark1`) registers a Python page: see
-  [Panel extensions](#panel-extensions). It runs code in the panel and shows
-  only here, so it is the exception.
+  updates, in `ovos-control-panel-mark1`) registers a Python page. It runs
+  code in the panel and shows only here, so it is the exception.
 
-The panel's own pages are Python, in `ovos_webui/pages/`.
+| To | Read |
+| --- | --- |
+| give a skill or plugin a page | [the guide](guide-pages.md) |
+| look up a block, a field or a rule | [the controlpanel.json reference](controlpanel-json.md) |
+| draw the same pages in another user interface | [For other user interfaces](for-other-uis.md) |
+| check a file in an editor or CI | [the JSON Schema](controlpanel.schema.json) |
+| write a Python page: the panel's own, or an extension | this page |
+
+This page is about the Python pages, and about what every page shares: the
+menu, the languages, the configuration, the branding and the trust.
 
 ## Contents
 
-- [Two kinds of page](#two-kinds-of-page)
-- [Pages described in a file](#pages-described-in-a-file)
 - [Panel extensions](#panel-extensions)
 - [The page description](#the-page-description)
 - [The menu](#the-menu)
 - [Languages](#languages)
-- [The bus bridge](#the-bus-bridge)
 - [Pages with their own routes](#pages-with-their-own-routes)
 - [What the shell gives a page](#what-the-shell-gives-a-page)
 - [Configuration](#configuration)
@@ -50,147 +40,6 @@ The panel's own pages are Python, in `ovos_webui/pages/`.
 - [Trust and safety](#trust-and-safety)
 - [The core pages](#the-core-pages)
 - [Versions](#versions)
-- [Open questions](#open-questions)
-
-## Two kinds of page
-
-| | Data page | Page with routes |
-| --- | --- | --- |
-| Made of | HTML, JS, CSS, images, language files | the same, plus Python |
-| Talks to the device | over the [bus bridge](#the-bus-bridge) | over its own API routes, and the bus bridge |
-| Needs | nothing extra | FastAPI, in the panel's environment |
-| Meant for | skills, PHAL plugins, hardware, distributions | the panel's own heavy pages (Plugins, Backup, Settings) |
-
-A data page is the normal case. A skill or a PHAL plugin can ship one without
-adding a single dependency, because the page is only files, and everything it
-does goes over the message bus that the plugin already listens to.
-
-## Pages described in a file
-
-A skill or plugin can describe its page in `controlpanel.json` instead of
-bringing HTML and Python. The panel draws it and talks to the skill over the
-bus, sending only what the file declares. This is the way new pages should
-be made; HTML pages (below) stay for what does not fit.
-
-The file sits at the root of the package, next to `skill.json`. The panel
-finds it in the installed OVOS packages without importing them, so no code
-from the package runs in the panel. Its strings go in
-`locale/<lang>/controlpanel.json` (`da-DK` or `da`), next to the skill's
-other locale files; a label can also carry its English text in the file
-(`{"key": "midi.title", "en": "MIDI"}`). The panel has the common words
-itself: `common.save`, `common.delete`, `common.play`, `common.stop`,
-`common.download`, `common.rename`, `common.sure` and more.
-
-```json
-{
-  "controlpanel": 1,
-  "id": "jamband",
-  "title": "jamband.title",
-  "group": "music",
-  "order": 10,
-  "icon": "controlpanel.svg",
-  "bus": "ovos.jamband.",
-  "blocks": [
-    {"type": "text", "text": "jamband.intro"},
-    {"type": "status", "query": "ovos.jamband.jams.list", "show": "playing",
-     "text": "jamband.playing", "actions": [{"label": "common.stop", "send": "ovos.jamband.stop"}]},
-    {"type": "list", "query": "ovos.jamband.jams.list", "items": "jams", "key": "id",
-     "title": "{name}", "meta": "jamband.meta", "empty": "jamband.none",
-     "split": {"by": "bundled", "false": "jamband.mine.title", "true": "jamband.skill.title"},
-     "rename": {"field": "name", "send": "ovos.jamband.jams.rename", "when": "!bundled"},
-     "actions": [
-       {"label": "common.play", "send": "ovos.jamband.jams.play"},
-       {"label": "jamband.midi", "download": "ovos.jamband.jams.midi",
-        "file": {"data": "midi", "name": "{name}.mid", "type": "audio/midi"}},
-       {"label": "common.delete", "send": "ovos.jamband.jams.delete", "when": "!bundled"}]}
-  ]
-}
-```
-
-The page around the blocks: `id`, `title`, `group` (default `everyday`),
-`groups` (each with a `title` that may be a label), `order`, `icon` (an SVG in the package), `path` (default
-`/<id>`), `heading`, `needs` (default: the package itself), `pictures` (a
-folder in the package, as `gui/images`, whose pictures are served under
-`/pages/<id>/`: PNG, JPEG, GIF, WebP and SVG, nothing else) and `bus`, the
-prefix every message of the page starts with.
-
-| Block | Fields |
-|---|---|
-| `text` | `text`: a label, and/or `steps`: labels shown as numbered steps. |
-| `status` | `query`, `text` (a label with `{field}` from the answer) and/or `rows` (`label`, `value` with `{field}` or `text` a label, `when`, and `empty`, the label shown when the value is empty; a row without a `label` is a note across the card), `show` (a field that must be true), `actions`, `refresh` (seconds). |
-| `list` | `query`, `items` (the answer's list), `key` (a row's id), `title` (`{field}`), `text` (`{field}`, under the title), `meta` (a label with `{field}`), `picture` (a field holding a file name in the page's `pictures`, shown beside the row), `empty`, `split` (`by` a true/false field into two lists, each with a heading), `filter` (`by` a field, `label`, and `all`, the label for no filter: a choice of that field's values above the list, made in the browser), `rename` (`field`, `send`, `when`, `max_length`, `label` for its button), `actions` (one per row), `refresh`, `heading`. |
-| `actions` | `actions`: buttons. |
-| `form` | `fields` and `save`: `{"config": "PHAL.<package>", "reload": "<message>"}` writes in the plugin's own place in `mycroft.conf` and asks it to read it again (a plugin's own places are `PHAL.<package>` and the section its entry points name: `tts.<module>`, `stt.<module>`, `PHAL.<name>`; never the choice of module itself); `{"send": "<message>"}` with a `query` sends the values to the skill; `{"settings": true}` reads and writes the skill's own `settings.json` (only the page of a package that registers one skill), merged over what is there so keys the form has not are kept, and the skill reads them as `self.settings`. |
-| `choice` | `param` and `options`: tabs whose value goes with every query on the page. |
-| `module` | `kind`: `tts` or `stt`, for a page of a package that brings one such plugin. The panel's own part: whether this plugin is the one in use or the fallback, buttons to make it so (`tts.module`, `tts.fallback_module`; needs the token), and for a voice in use, a sentence to hear it. Nothing of it comes from the file. |
-| `upload` | `send`, `accept` (the file endings it takes: `[".pdf", ".txt"]`), `max_mb` (1 to 64, default 10) and a `field` (`name`, `label`, `max_length`) sent along, such as a title. The file goes to the skill in parts of 512 KB, each a message with `upload` (one id for all the parts), `name`, `part` (from 0), `parts`, `data` (base64) and the field; the answer to the last part is the answer. An upload always needs the token. |
-
-An action is `{"label", "send"}`, with `data` it always sends (a test sound),
-or a download, `{"label", "download", "file":
-{"data": <answer field, base64>, "name": "{name}.mid", "type": <media type>}}`,
-with `when` (`"field"` or `"!field"` on the row) and `confirm` (a label).
-A message that gets no answer (the plugin acts and says nothing) is marked
-`"answer": false`: the panel sends it and is done. A list whose answer is a
-list of text (addresses, names) has rows with that text as their `key`.
-A plugin that only broadcasts (a sensor's readings) is not asked: a list with
-`listen` (up to five of the page's messages) instead of `query` has the
-latest message the panel heard of each `key`, with `heard`, when it came. The
-panel starts listening when the page is first read, keeps up to 200 rows and
-reads them again every five seconds.
-A field is `{"name", "label", "type"}`, the type one of `text`, `password`,
-`url` (http:// or https://), `number`, `slider`, `checkbox`, `select`
-(`options`, or `options_from` a query, or on a TTS plugin's page `"voices": true`: the voices the plugin itself lists for the reader's language, read in a process of their own so its code never runs in the panel) and `lines`, with `required`, `hint`, `min`, `max`, `step` and `max_length`.
-A field can have a `default` (a value equal to it is left out of
-`mycroft.conf`, so the file says only what was changed), `show_when`
-(`{"synth": "port"}`: shown only for that value of another field), and a
-checkbox `on` and `off` values for a setting that is not true or false
-(`"on": ["*"], "off": []`). A form saved in `mycroft.conf` sends its
-`reload` message with the section as saved (`{"config": {...}}`).
-
-In `{field}` a field can be nested (`{ports.outputs}`), a list is joined with
-commas, a value can be shown as a date (`{saved:date}`) or a date and time
-(`{last:time}`), both in seconds since 1970, or as a label
-(`{engine@midi.engine}` shows the label `midi.engine.fluidsynth`, or nothing
-when there is no such label; the label can hold the answer's values too).
-
-A skill that answers with `{"error": ...}` can give a label of its page
-(`"jamband.err.gone"`), shown in the reader's language; other text is shown
-as it is.
-
-A block this panel does not know is shown as "this part needs a newer control
-panel"; the rest of the page still works.
-
-### What a described page can and cannot do
-
-- **No code.** The file is data; a file that does not follow the format is
-  left out and named on the About page.
-- **Only its own messages.** Every message starts with the page's `bus`
-  prefix, and a prefix of OVOS's own (`mycroft.`, `ovos.skills.`,
-  `ovos.phal.`, `system.`, `recognizer_loop:` and more) is refused. Only a
-  page the panel brings may name other messages, one by one (see
-  [Pages the panel describes](#pages-the-panel-describes)).
-- **Only the data it declared.** A request names a part of the page; the
-  panel takes the message from the file and sends only a row's key, a
-  rename's text, a choice from its options, or a form's fields, each checked
-  against its type and length.
-- **Changes need the token.** An action or a rename is privileged unless it
-  says `"privileged": false`; a form always is. A download is a read unless
-  it says otherwise.
-- **Destructive actions ask.** A message with delete, remove, forget, reset,
-  wipe or erase in it gets a confirmation if the file gives none.
-- **A form writes only in the plugin's own place** in `mycroft.conf`
-  (`PHAL.<package>`). A password is never sent back to the browser; an empty
-  one keeps what is there.
-- **Uploads** take only the file endings and the size the file says, need the
-  token, and reach the skill as a bare file name (no folders) in parts the bus
-  can carry; where the file is kept is the skill's to decide.
-- **Downloads** are only of a short list of types (MIDI, audio, PDF, plain
-  text, JSON, CSV, images, EPUB), always as attachments.
-- **Values are text.** What the skill answers is put on the page as text,
-  never as HTML.
-
-A package that has both a described page and an HTML page with the same id
-keeps the described one.
 
 ## Panel extensions
 
@@ -235,11 +84,7 @@ PAGE = {
     "html": "page.html",
     "assets": "static",
     "i18n": "i18n",
-    "bus": {
-        "emit": ["guardian.set_mode"],
-        "listen": ["guardian.status", "guardian.mode_changed"],
-        "privileged": ["guardian.set_mode"],
-    },
+    "routes": routes,
     "manual": "https://openvoiceos.github.io/beta-technical-manual/guardian/",
 }
 ```
@@ -258,7 +103,6 @@ PAGE = {
 | `html` | yes | The page's body, as a file name next to the page's module, or as `(package, name)`. The shell wraps it in the common header and menu, inside `<main>`; a `<style>` or `<script>` element in it stays where it is. A whole document (starting with `<!doctype html>`) is served as it is, with the menu added to its head. |
 | `assets` | no | A folder of files served under `/pages/<id>/`: a path next to the module (it may have several parts, as `gui/images`), or `(package, path)` for a folder elsewhere in the page's package. |
 | `i18n` | no | A folder of `<lang>.json` files. See [Languages](#languages). |
-| `bus` | no | The messages the page may send and listen for. See [The bus bridge](#the-bus-bridge). |
 | `routes` | no | Python only: a function that adds API routes. See [Pages with their own routes](#pages-with-their-own-routes). |
 | `uploads` | no | Routes of the page's own that take an upload, with the largest body each may take: `{"/api/documents/upload": 50 * 1024 * 1024}`. Every other request is held to 1 MB. The panel caps a page's upload at 64 MB. |
 | `manual` | no | Link for the "Learn more in the technical manual" line. |
@@ -365,34 +209,6 @@ them with its own strings for the device language.
 - The menu data lists every language there are strings for, the panel's and
   the pages', so a page can bring a language the panel itself does not have.
 
-## The bus bridge
-
-The bus bridge lets a page talk to the device without Python of its own.
-
-```js
-const bus = OvosWebUI.bus("emkay-guardian");
-bus.on("guardian.status", (data) => show(data));
-await bus.emit("guardian.set_mode", {mode: "night"});
-const reply = await bus.ask("guardian.get_status", {}, "guardian.status");
-```
-
-- A page can only send the message types it lists in `bus.emit`, and only hear
-  the ones in `bus.listen`. The shell checks this on the server, not in the
-  browser.
-- A message type in `bus.privileged` needs the access token, as installing and
-  device controls do today. Everything else follows the same rules as the rest
-  of the panel's API.
-- `ask` sends a message and waits for one reply, with a timeout, so a page can
-  do request and answer without its own route.
-- Message types are exact names. `*` is not allowed. A page that wants
-  everything has to say so, message by message.
-- Messages reach the page through one connection per browser tab, which the
-  shell shares between all pages in that tab.
-
-This is the part that makes data pages possible, and it is where most of the
-care goes: the list in the page description is what stands between a page and
-the whole bus.
-
 ## Pages with their own routes
 
 A page in Python can add API routes:
@@ -435,7 +251,6 @@ internal and can change.
 | `app.css` | The look: cards, buttons, tabs, lists, messages, light and dark. A page uses the classes and the CSS variables, so it follows the theme and the [branding](#branding). |
 | `OvosWebUI.ready(fn)` | Runs the page once the menu, the language and the sign in are ready. |
 | `OvosWebUI.api(path, options)` | Calls the panel's API with the cross-site header and the sign in. |
-| `OvosWebUI.bus(pageId)` | The [bus bridge](#the-bus-bridge). |
 | `OvosWebUI.t(key, fallback)` | A translated string. |
 | `OvosWebUI.say(id, text, isError)` | Shows a message in an element on the page. |
 | `OvosWebUI.confirmed(question)` | Asks before something that changes the device. |
@@ -550,9 +365,9 @@ A theme plugin can come later if a distribution needs more than this.
 
 ## Trust and safety
 
-A page from another package runs with the panel's full trust. Its Python runs
-in the panel's process, and its JavaScript runs on the panel's origin with your
-sign in. That is acceptable because a page can only come from a package already
+A panel extension runs with the panel's full trust. Its Python runs in the
+panel's process, and its JavaScript runs on the panel's origin with your sign
+in. That is acceptable because a page can only come from a package already
 installed on the device, and installing a package already trusts it with
 everything.
 
@@ -561,9 +376,9 @@ What the panel does about it:
 - The About page lists every page, the package it comes from, and its version,
   so you can always see what has been added.
 - A page from another package is marked as such in that list.
-- The [bus bridge](#the-bus-bridge) only passes the messages a page has listed.
-  That does not stop a hostile page, but it keeps an honest page from doing
-  more than it says.
+- A page described in a `controlpanel.json` runs no code at all, and the panel
+  sends only the messages and the data its file declares: see
+  [What the panel checks](controlpanel-json.md#what-the-panel-checks).
 - `webui.pages.disabled` turns off any page that is not a core page.
 - A page that fails to load is left out, and named on the About page, without
   taking the panel down.
@@ -586,20 +401,21 @@ Everything else, the panel's own pages included, can be disabled.
 
 ### Moving a page into its plugin
 
-Several of the panel's own pages only talk to one PHAL plugin: Network to the
-network-manager plugin, System to the system plugin, Mark 1, Sensors, Apps and
-Wallpaper to theirs. They belong with that plugin, the way the MIDI page ships
-with the MIDI plugin.
+A page of the panel's own that only talks to one plugin belongs with that
+plugin. Apps, Wallpaper, Sensors and Mark 1 have moved: the panel now brings a
+`controlpanel.json` for each, and the plugin can take it over by shipping its
+own. Network and System stay for now; they should follow.
 
 A plugin takes such a page over by bringing a page with the same `id` (and
 usually the same `path`). The panel's own copy then steps aside, whichever is
-loaded first, so a plugin can ship the page before the panel drops its copy.
-The core pages above cannot be taken over. Until a page has moved, its
-`needs` keeps it out of the menu on a device without the plugin.
+loaded first. The core pages above cannot be taken over. An extension's page
+also takes the place of a page the panel brings for a plugin.
 
 ## Versions
 
-`api_version` is the version of this contract.
+`api_version` is the version of the Python page contract. The version of
+`controlpanel.json` is its own: see
+[Versions and older panels](controlpanel-json.md#versions-and-older-panels).
 
 - The panel says which versions it supports, for example `1`.
 - A page asking for a version the panel does not support is left out and named
@@ -608,65 +424,3 @@ The core pages above cannot be taken over. Until a page has moved, its
   previous version for at least one release with the new one.
 - New optional fields do not raise the version. A page that sets a field the
   panel does not know yet still loads, and the panel names the field in the log.
-
-## Open questions
-
-1. **The bus connection.** A WebSocket, or Server-Sent Events plus a POST for
-   sending? Server-Sent Events are simpler behind proxies and fit the CSP as it
-   is. A WebSocket is one connection both ways.
-2. **Per-page settings.** Should a page be able to declare settings that the
-   shell shows as a form, as `settingsmeta.json` does for skills? That would
-   make simple pages need no HTML at all.
-3. **Where a skill's page lives.** Data pages in a skill would be installed
-   with the skill, in the skills service's environment. The panel can only find
-   entry points in its own environment. On a device where the two differ, the
-   skill would have to tell the panel about its page over the bus instead. Is
-   that worth doing in version 1, or later?
-4. **A page for one skill.** A skill's own page could also appear inside that
-   skill's detail on the Skills page, instead of in the menu. One place, or
-   both?
-
-## What it means for the panel
-
-1. This contract, and comments on it.
-2. The registry and the bus bridge, with two or three of the panel's own pages
-   moved over as proof. At least one of them is a data page.
-3. The rest of the pages, then `webui.pages`, `webui.groups` and
-   `webui.branding`.
-4. The first page from outside the panel, as a data page in an Emkay skill.
-
-
-## Pages the panel describes
-
-For a skill or plugin with no `controlpanel.json` of its own, the panel can
-bring one: `ovos_webui/bundled/<package>/controlpanel.json`, with its
-`locale/` and icon. It is the same format with the same checks, and it says
-which versions it was written for:
-
-```json
-{"controlpanel": 1, "for": "ovos-skill-weather>=1.0,<2", "id": "weather", ...}
-```
-
-The order is: the package's own file, then the panel's for that version, then
-nothing (a skill's settingsmeta is still on the Skills page). A version the
-file was not written for gets no page rather than one that writes the wrong
-keys. The page says at its foot that the panel described it, so it is clear
-who to tell about a mistake. Such a page only does what the package already
-does: a form to the skill's `settings.json` or the plugin's own place in
-`mycroft.conf`, and bus messages the package already answers. Each one should
-also go to the package as a pull request, so it can leave the panel.
-
-A plugin that has answered bus messages for years did not pick them under a
-prefix of the page's own; many are under OVOS' reserved ones (`ovos.phal.`,
-`enclosure.`). So a page the panel brings, and only such a page, may name the
-exact messages it uses, under any prefix:
-
-```json
-{"controlpanel": 1, "for": "ovos-phal-plugin-app-launcher>=0.0.1a1,<1", "id": "apps",
- "messages": ["ovos.phal.app_launcher.list", "ovos.phal.app_launcher.launch",
-              "ovos.phal.app_launcher.close"], ...}
-```
-
-It is safe because the file is the panel's own, read in the panel's review: a
-package cannot name them for itself. `bus` is then not needed; with both, the
-page may use either.
