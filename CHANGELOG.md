@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a83](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a83) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a82...0.0.1a83)
+
+**Merged pull requests:**
+
+- Drop the Python page's unused bus field; name the icon on every page [\#166](https://github.com/OpenVoiceOS/ovos-control-panel/pull/166) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a82](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a82) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a81...0.0.1a82)
@@ -477,7 +485,6 @@
 - feat: undo the last settings change [\#48](https://github.com/OpenVoiceOS/ovos-control-panel/pull/48) ([JarbasAl](https://github.com/JarbasAl))
 - test: catch pages that use an undefined i18n key [\#47](https://github.com/OpenVoiceOS/ovos-control-panel/pull/47) ([JarbasAl](https://github.com/JarbasAl))
 - feat: add a real wake-word test to setup [\#46](https://github.com/OpenVoiceOS/ovos-control-panel/pull/46) ([JarbasAl](https://github.com/JarbasAl))
-- feat: save and share your own Mark-1 faceplate drawings [\#45](https://github.com/OpenVoiceOS/ovos-control-panel/pull/45) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
