@@ -32,6 +32,7 @@ def test_the_token_itself_as_a_cookie_no_longer_signs_in(token_client):
 def test_logging_out_ends_the_session_for_a_copy_too(token_client):
     sid = _signed_in(token_client)
     token_client.post("/api/logout")
+    token_client.cookies.clear()
     token_client.cookies.set(COOKIE_NAME, sid)       # the copied cookie
     assert token_client.get("/api/health").status_code == 401
 
@@ -43,6 +44,7 @@ def test_a_changed_token_ends_the_other_sessions(token_client):
     mine = token_client.cookies.get(COOKIE_NAME)
     assert mine and mine != other
     assert token_client.get("/api/health").status_code == 200, "this one goes on"
+    token_client.cookies.clear()      # an older httpx keeps both otherwise
     token_client.cookies.set(COOKIE_NAME, other)
     assert token_client.get("/api/health").status_code == 401, "the old one ended"
 
