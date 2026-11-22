@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a88](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a88) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a87...0.0.1a88)
+
+**Merged pull requests:**
+
+- A page for every voice and listener plugin, also those nobody describes [\#174](https://github.com/OpenVoiceOS/ovos-control-panel/pull/174) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a87](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a87) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a86...0.0.1a87)
@@ -512,7 +520,6 @@
 - fix: correct the config-union comment \(caching, not schema filtering\) [\#53](https://github.com/OpenVoiceOS/ovos-control-panel/pull/53) ([JarbasAl](https://github.com/JarbasAl))
 - feat: hear the current voice from the Voice page [\#52](https://github.com/OpenVoiceOS/ovos-control-panel/pull/52) ([JarbasAl](https://github.com/JarbasAl))
 - feat: cross-link the Voice and Transformers pages [\#51](https://github.com/OpenVoiceOS/ovos-control-panel/pull/51) ([JarbasAl](https://github.com/JarbasAl))
-- fix: re-subscribe the live feeds after a bus reconnect [\#50](https://github.com/OpenVoiceOS/ovos-control-panel/pull/50) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
