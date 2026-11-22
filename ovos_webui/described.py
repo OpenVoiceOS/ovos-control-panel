@@ -242,13 +242,20 @@ _VOICES: dict[tuple[str, str], dict[str, list]] = {}
 VOICES_TIMEOUT = 30
 _VOICES_CODE = (
     "import json, sys\n"
-    "from ovos_plugin_manager.tts import get_tts_module_configs\n"
-    "print(json.dumps(get_tts_module_configs(sys.argv[1]), default=str))\n")
+    "from importlib import metadata\n"
+    "name = sys.argv[1] + '.config'\n"
+    "found = None\n"
+    "for group in ('opm.tts.config', 'mycroft.plugin.tts.config'):\n"
+    "    for ep in metadata.entry_points(group=group):\n"
+    "        if found is None and ep.name == name:\n"
+    "            found = ep.load()\n"
+    "print(json.dumps(found if isinstance(found, dict) else {}, default=str))\n")
 
 
 def plugin_voices(module: str, version: str, lang: str) -> list[dict[str, str]]:
     """The voices a TTS plugin offers for ``lang`` (the language, any
-    country): its own list through the plugin manager, read in a separate
+    country): its own list (the ``<module>.config`` entry point, under the
+    plugin manager's group or the older Mycroft one), read in a separate
     process with a time limit, so the plugin's code never runs in the panel.
     Nothing when it says nothing or takes too long."""
     import subprocess

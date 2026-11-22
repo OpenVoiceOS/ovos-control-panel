@@ -498,3 +498,11 @@ def test_a_plugin_that_says_nothing_has_no_voices(monkeypatch):
     monkeypatch.setattr(subprocess, "run", slow)
     monkeypatch.setattr(described, "_VOICES", {})
     assert described.plugin_voices("ovos-tts-plugin-slow", "1.0", "da") == []
+
+
+def test_the_voices_code_runs_and_finds_nothing_for_an_unknown_plugin():
+    import subprocess
+    import sys
+    done = subprocess.run([sys.executable, "-c", described._VOICES_CODE, "ovos-tts-plugin-none"],
+                          capture_output=True, text=True, timeout=60)
+    assert done.returncode == 0 and json.loads(done.stdout) == {}
