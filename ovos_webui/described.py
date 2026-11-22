@@ -141,7 +141,9 @@ def discover() -> list[Found]:
     for dist in dists:
         # a wheel may name itself ovos_tts_plugin_server: the same package
         name = canonicalize_name((dist.metadata.get("Name") or "").strip())
-        if not name or name in seen or classify(name) is None:
+        # an OVOS package by its name, or one the panel brings a page for
+        # (ovos-PHAL-sensors is named like neither a skill nor a plugin)
+        if not name or name in seen or (classify(name) is None and not (BUNDLED / name).is_dir()):
             continue
         seen.add(name)
         for top in _tops(dist):

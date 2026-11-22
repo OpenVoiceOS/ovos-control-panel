@@ -497,6 +497,20 @@ def test_a_package_that_names_itself_with_underscores_is_found(tmp_path, monkeyp
     assert found.package == "ovos-skill-weather" and found.by_panel
 
 
+def test_a_package_the_panel_has_a_page_for_is_found_whatever_its_name(tmp_path, monkeypatch):
+    """ovos-PHAL-sensors is named like neither a skill nor a plugin."""
+    from types import SimpleNamespace as NS
+    root = tmp_path / "bundled" / "ovos-phal-sensors"
+    root.mkdir(parents=True)
+    (root / "controlpanel.json").write_text(json.dumps(dict(SHELF, **{"for": "ovos-phal-sensors"})),
+                                            encoding="utf-8")
+    monkeypatch.setattr(described, "BUNDLED", tmp_path / "bundled")
+    dists = [NS(metadata={"Name": name}, version="1.0", files=[], entry_points=[], read_text=lambda n: "")
+             for name in ("ovos-PHAL-sensors", "requests")]
+    monkeypatch.setattr(described.metadata, "distributions", lambda: dists)
+    assert [f.package for f in described.discover()] == ["ovos-phal-sensors"]
+
+
 def test_a_voice_field_is_only_for_a_tts_plugin():
     page = {"controlpanel": 1, "id": "v", "bus": "ovos.v.", "blocks": [{"type": "form", "save": {"settings": True},
             "fields": [{"name": "voice", "label": "v.voice", "type": "select", "voices": True}]}]}
