@@ -147,3 +147,60 @@ def test_concurrent_settings_writes_keep_valid_json(client, make_skill):
     for t in threads:
         t.join()
     assert isinstance(skillsio.read_settings("skill-a")["n"], int)
+
+
+FORM_META = {"skillMetadata": {"sections": [
+    {"name": "Radio", "fields": [
+        {"type": "label", "label": "Pick a station"},
+        {"name": "station", "type": "text", "label": "Station", "value": "P3"},
+        {"name": "quality", "type": "select", "label": "Quality", "options": "Low|64;High|320", "value": "64"},
+        {"name": "token", "type": "password", "label": "Token"},
+        {"name": "loud", "type": "checkbox", "label": "Loud"},
+        {"name": "odd", "type": "sparkles", "label": "Odd"},
+    ]}]}}
+
+
+def test_settingsmeta_is_a_form_in_the_readers_language(client, make_skill, tmp_path, monkeypatch):
+    """The labels come from the skill's own controlpanel.json by the field's
+    name: the reader's language, then English, then settingsmeta."""
+    make_skill("skill-radio", {"station": "P1", "token": "s3cret"}, meta=FORM_META)
+    src = tmp_path / "radio"
+    (src / "locale" / "da-dk").mkdir(parents=True)
+    (src / "locale" / "en-us").mkdir(parents=True)
+    (src / "locale" / "da-dk" / "controlpanel.json").write_text(json.dumps({
+        "settings.station": "Radiostation", "settings.section.Radio": "Radio",
+        "settings.quality.option.320": "Høj"}), encoding="utf-8")
+    (src / "locale" / "en-us" / "controlpanel.json").write_text(json.dumps({
+        "settings.station.hint": "As the station calls itself"}), encoding="utf-8")
+    monkeypatch.setattr(skillsio, "_skill_source_dir", lambda skill_id, plugins=None: src)
+    form = client.get("/api/skills/skill-radio?lang=da-DK").json()["form"]
+    assert form["translated"] is True
+    [section] = form["sections"]
+    assert section["heading"] == "Radio"
+    note, station, quality, token, loud, odd = section["fields"]
+    assert note == {"type": "note", "label": "Pick a station"}
+    assert (station["label"], station["hint"], station["default"]) == \
+        ("Radiostation", "As the station calls itself", "P3")
+    assert quality["options"] == [{"value": "64", "label": "Low"}, {"value": "320", "label": "Høj"}]
+    assert token["type"] == "password" and loud["type"] == "checkbox"
+    assert odd["type"] == "text", "an unknown type is a text field"
+    english = client.get("/api/skills/skill-radio?lang=en").json()["form"]["sections"][0]["fields"]
+    assert english[1]["label"] == "Station"
+
+
+def test_a_skill_without_strings_keeps_the_settingsmeta_texts(client, make_skill, monkeypatch):
+    make_skill("skill-plain", {}, meta=FORM_META)
+    monkeypatch.setattr(skillsio, "_skill_source_dir", lambda skill_id, plugins=None: None)
+    form = client.get("/api/skills/skill-plain?lang=da").json()["form"]
+    assert form["translated"] is False
+    assert [f.get("label") for f in form["sections"][0]["fields"]][:3] == ["Pick a station", "Station", "Quality"]
+
+
+@pytest.mark.parametrize("raw, pairs", [
+    ("Low|64;High|320", [("Low", "64"), ("High", "320")]),
+    ("one;two", [("one", "one"), ("two", "two")]),
+    ([{"label": "A", "value": 1}, ["B", "b"]], [("A", "1"), ("B", "b")]),
+    (None, []),
+])
+def test_settingsmeta_options(raw, pairs):
+    assert skillsio._options(raw) == pairs

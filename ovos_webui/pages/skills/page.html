@@ -85,31 +85,54 @@ OvosWebUI.ready(function () {
 
   function fill(text, name) { return text.split("{name}").join(name); }
 
-  function fieldsOf(meta) {
-    var out = [];
-    var sections = ((meta || {}).skillMetadata || {}).sections || [];
-    sections.forEach(function (s) { (s.fields || []).forEach(function (f) { if (f.name) { out.push(f); } }); });
-    return out;
-  }
-
+  // the settingsmeta as a form: the server gives its sections, labels and
+  // options in the reader's language (from the skill's controlpanel.json)
   function render(data) {
     current = data;
-    var fields = fieldsOf(data.meta);
     var known = {};
-    var html = fields.map(function (f) {
-      known[f.name] = true;
-      var value = data.settings[f.name];
-      if (value === undefined) { value = f.value; }
-      var label = esc(f.label || f.name);
-      if (f.type === "checkbox") {
-        var on = value === true || value === "true";
-        return "<label>" + label + '<select name="' + esc(f.name) + '" data-type="bool">'
-          + '<option value="true"' + (on ? " selected" : "") + ">" + esc(OvosWebUI.t("skills.yes", "Yes")) + "</option>"
-          + '<option value="false"' + (on ? "" : " selected") + ">" + esc(OvosWebUI.t("skills.no", "No")) + "</option></select></label>";
-      }
-      var type = f.type === "number" ? "number" : (f.type === "password" ? "password" : "text");
-      return "<label>" + label + '<input type="' + type + '" name="' + esc(f.name)
-        + '" data-type="' + esc(f.type || "text") + '" value="' + esc(value === undefined || value === null ? "" : value) + '"></label>';
+    var html = [];
+    var form = data.form || {sections: []};
+    var count = 0;
+    form.sections.forEach(function (sec) {
+      if (sec.heading) { html.push("<h4>" + esc(sec.heading) + "</h4>"); }
+      sec.fields.forEach(function (f) {
+        if (f.type === "note") {
+          if (f.label) { html.push('<p class="hint">' + esc(f.label) + "</p>"); }
+          return;
+        }
+        count += 1;
+        known[f.name] = true;
+        var value = data.settings[f.name];
+        if (value === undefined) { value = f["default"]; }
+        var label = esc(f.label || f.name);
+        var hint = f.hint ? '<span class="hint">' + esc(f.hint) + "</span>" : "";
+        if (f.type === "checkbox") {
+          var on = value === true || value === "true";
+          html.push("<label>" + label + '<select name="' + esc(f.name) + '" data-type="bool">'
+            + '<option value="true"' + (on ? " selected" : "") + ">" + esc(OvosWebUI.t("skills.yes", "Yes")) + "</option>"
+            + '<option value="false"' + (on ? "" : " selected") + ">" + esc(OvosWebUI.t("skills.no", "No")) + "</option></select>" + hint + "</label>");
+          return;
+        }
+        if (f.type === "select") {
+          var opts = (f.options || []).map(function (o) {
+            return '<option value="' + esc(o.value) + '"' + (String(value) === o.value ? " selected" : "") + ">"
+              + esc(o.label || o.value) + "</option>";
+          }).join("");
+          html.push("<label>" + label + '<select name="' + esc(f.name) + '" data-type="select">' + opts + "</select>" + hint + "</label>");
+          return;
+        }
+        if (f.type === "password") {
+          // never shown: an empty field keeps the one there is
+          var set = value !== undefined && value !== null && value !== "";
+          html.push("<label>" + label + '<input type="password" autocomplete="new-password" name="' + esc(f.name)
+            + '" data-type="password" value="" placeholder="'
+            + esc(set ? OvosWebUI.t("common.password_set", "A password is set; leave empty to keep it.") : "") + '">' + hint + "</label>");
+          return;
+        }
+        var type = f.type === "number" ? "number" : "text";
+        html.push("<label>" + label + '<input type="' + type + '" name="' + esc(f.name)
+          + '" data-type="' + esc(f.type) + '" value="' + esc(value === undefined || value === null ? "" : value) + '">' + hint + "</label>");
+      });
     });
     var extra = Object.keys(data.settings).filter(function (k) {
       return !known[k] && k.indexOf("_") !== 0;
@@ -118,7 +141,7 @@ OvosWebUI.ready(function () {
       html.push('<p class="hint">' + esc(OvosWebUI.t("skills.extraKeys", "Other keys are only editable as JSON:")) + ' <code>'
         + esc(extra.join(", ")) + "</code></p>");
     }
-    if (!fields.length) {
+    if (!count) {
       html.push('<p class="hint">' + esc(OvosWebUI.t("skills.noMeta", "This skill does not describe its settings, so edit it as JSON.")) + '</p>');
     }
     if (data.generated_meta) {
@@ -130,7 +153,7 @@ OvosWebUI.ready(function () {
   }
 
   function load(skillId) {
-    api("/api/skills/" + encodeURIComponent(skillId))
+    api("/api/skills/" + encodeURIComponent(skillId) + "?lang=" + encodeURIComponent(document.documentElement.lang || "en"))
       .then(function (data) { render(data); })
       .catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   }
@@ -159,6 +182,7 @@ OvosWebUI.ready(function () {
         var coerced;
         if (t === "bool" || t === "checkbox") { coerced = i.value === "true"; }
         else if (t === "number") { coerced = i.value === "" ? null : Number(i.value); }
+        else if (t === "select" && typeof original === "number") { coerced = Number(i.value); }
         else { coerced = i.value; }
         // Only write back the coerced value for a field the user actually
         // changed. An untouched field keeps its original value and type, so
@@ -167,6 +191,8 @@ OvosWebUI.ready(function () {
         var unchanged = original === undefined
           ? (coerced === "" || coerced === null)
           : String(original) === i.value;
+        // an empty password field keeps the password there is
+        if (t === "password" && i.value === "") { unchanged = true; }
         settings[i.name] = unchanged ? original : coerced;
       });
     }
