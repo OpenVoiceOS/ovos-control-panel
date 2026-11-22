@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a74](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a74) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a73...0.0.1a74)
+
+**Merged pull requests:**
+
+- feat: a described list can have a filter [\#150](https://github.com/OpenVoiceOS/ovos-control-panel/pull/150) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a73](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a73) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a72...0.0.1a73)
@@ -418,7 +426,6 @@
 - feat: wallpaper — set the background, browse the collection, auto-rotate [\#33](https://github.com/OpenVoiceOS/ovos-control-panel/pull/33) ([JarbasAl](https://github.com/JarbasAl))
 - feat: app launcher — list, launch and close desktop applications [\#32](https://github.com/OpenVoiceOS/ovos-control-panel/pull/32) ([JarbasAl](https://github.com/JarbasAl))
 - feat: intent inspector — dry-run, active skills, and the intent manifest [\#31](https://github.com/OpenVoiceOS/ovos-control-panel/pull/31) ([JarbasAl](https://github.com/JarbasAl))
-- feat: transformers panel — manage all six transformer chains [\#30](https://github.com/OpenVoiceOS/ovos-control-panel/pull/30) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
