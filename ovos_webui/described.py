@@ -352,10 +352,47 @@ def plugin_modules(package: str) -> dict[str, list[str]]:
     except Exception:  # noqa: BLE001 - none then
         return out
     for kind, groups in dict(MODULE_KINDS, provider=(PROVIDER_GROUP,)).items():
-        names = sorted({ep.name for ep in eps if ep.group in groups and _CONFIG_RE.match(ep.name)})
+        names = sorted(_plugin_names(package, eps, groups))
         if names:
             out[kind] = names
     return out
+
+
+def _by_plugin(eps, groups) -> dict[str, list[str]]:
+    """Entry point names by the class they load: a plugin registered under
+    two names (ovos-precise-lite and ovos-ww-plugin-precise-lite) is one."""
+    found: dict[str, list[str]] = {}
+    for ep in eps:
+        if ep.group in groups and _CONFIG_RE.match(ep.name):
+            # what it loads; an entry point that says nothing is its own plugin
+            key = (getattr(ep, "value", "") or "").strip() or "name:" + ep.name
+            found.setdefault(key, [])
+            if ep.name not in found[key]:
+                found[key].append(ep.name)
+    return found
+
+
+def _plugin_names(package: str, eps, groups) -> set[str]:
+    """One name per plugin: its package's own name when it is one of them,
+    else the first in order."""
+    out = set()
+    for names in _by_plugin(eps, groups).values():
+        out.add(package if package in names else sorted(names)[0])
+    return out
+
+
+def plugin_aliases(package: str, kind: str, name: str) -> list[str]:
+    """Every name ``name`` is also registered under, itself first: what
+    mycroft.conf may call the same plugin."""
+    groups = dict(MODULE_KINDS, provider=(PROVIDER_GROUP,)).get(kind, ())
+    try:
+        eps = metadata.distribution(package).entry_points
+    except Exception:  # noqa: BLE001
+        return [name]
+    for names in _by_plugin(eps, groups).values():
+        if name in names:
+            return [name] + sorted(n for n in names if n != name)
+    return [name]
 
 
 #: What a TTS plugin says about its voices, per (module, version): read in a
@@ -758,6 +795,8 @@ class _Checker:
                 raise DescribedError(f"{where}: the package brings no {mkind} plugin, or more than one")
             out["kind"] = mkind
             out["module"] = names[0]
+            # the other names the same plugin is registered under count as it
+            out["aliases"] = plugin_aliases(self.package, mkind, names[0])
             self.refs[ref + ".module"] = {"kind": "module", "block": out}
         if kind == "provider":
             # the panel's own part: whether the assistant searches this media
@@ -1305,13 +1344,14 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
                 raise HTTPException(400, "that part is not a plugin to use")
             return decl["block"]
 
-        def wake_words(module: str) -> dict[str, Any]:
+        def wake_words(module: str, aliases: list[str]) -> dict[str, Any]:
             """The wake words (named entries in hotwords) that this plugin
             hears, and which of them is the one in use."""
             hotwords = r.config.user_or_merged(["hotwords"]) or {}
             current = r.config.user_or_merged(["listener", "wake_word"]) or ""
+            names = set(aliases)
             words = sorted(name for name, spec in (hotwords.items() if isinstance(hotwords, dict) else [])
-                           if isinstance(spec, dict) and spec.get("module") == module
+                           if isinstance(spec, dict) and spec.get("module") in names
                            and spec.get("active", True) is not False)
             return {"module": module, "words": [{"name": w, "active": w == current} for w in words],
                     "active": current in words}
@@ -1319,12 +1359,13 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
         @r.api.get(base + "/module")
         def module_read(ref: str) -> dict[str, Any]:
             block = module_decl(ref)
+            names = block.get("aliases") or [block["module"]]
             if block["kind"] == "ww":
-                return wake_words(block["module"])
+                return wake_words(block["module"], names)
             section = r.config.user_or_merged([block["kind"]]) or {}
             return {"module": block["module"],
-                    "active": section.get("module") == block["module"],
-                    "fallback": section.get("fallback_module") == block["module"]}
+                    "active": section.get("module") in names,
+                    "fallback": section.get("fallback_module") in names}
 
         @r.privileged.post(base + "/module")
         def module_use(body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
@@ -1334,7 +1375,8 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
                 # the wake word is chosen among the words that use this plugin,
                 # as on the Voice page; nothing else is written
                 word = body.get("word")
-                if role != "wake_word" or word not in {w["name"] for w in wake_words(block["module"])["words"]}:
+                heard = wake_words(block["module"], block.get("aliases") or [block["module"]])["words"]
+                if role != "wake_word" or word not in {w["name"] for w in heard}:
                     raise HTTPException(400, "as is wake_word, with one of the words this plugin hears")
 
                 def use_word(user: dict) -> None:
@@ -1356,7 +1398,7 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
             block = module_decl(str(body.get("ref", "")))
             if block["kind"] != "tts":
                 raise HTTPException(400, "only a voice can be heard")
-            if (r.config.user_or_merged([block["kind"], "module"]) or "") != block["module"]:
+            if (r.config.user_or_merged([block["kind"], "module"]) or "") not in (block.get("aliases") or [block["module"]]):
                 # what is said is said with the voice in use
                 raise HTTPException(409, "it is not the voice in use")
             try:

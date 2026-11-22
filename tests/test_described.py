@@ -956,3 +956,22 @@ def test_the_wake_words_a_plugin_hears_and_the_one_in_use(tmp_path, bus, monkeyp
         assert [w for w in got["words"] if w["active"]] == [{"name": "hey_emkay", "active": True}]
         assert configio.read_user_config()["listener"]["wake_word"] == "hey_emkay"
         assert c.post("/api/cp/ww-x/module/test", json={"ref": "b0.module", "text": "hi"}).status_code == 400
+
+
+def test_a_plugin_under_two_names_is_one_plugin(monkeypatch):
+    """ovos-ww-plugin-precise-lite registers itself as ovos-precise-lite too:
+    both load the same class, so it is one plugin, called by its package's
+    name, and mycroft.conf may use either name."""
+    from types import SimpleNamespace as NS
+    value = "ovos_ww_plugin_precise_lite:PreciseLiteHotwordPlugin"
+    eps = [NS(group="mycroft.plugin.wake_word", name="ovos-precise-lite", value=value),
+           NS(group="mycroft.plugin.wake_word", name="ovos-ww-plugin-precise-lite", value=value),
+           NS(group="opm.tts", name="a", value="x:A"), NS(group="opm.tts", name="b", value="x:B")]
+    monkeypatch.setattr(described.metadata, "distribution", lambda n: NS(entry_points=eps))
+    got = described.plugin_modules("ovos-ww-plugin-precise-lite")
+    assert got == {"ww": ["ovos-ww-plugin-precise-lite"], "tts": ["a", "b"]}, "two TTS classes stay two"
+    assert described.plugin_aliases("ovos-ww-plugin-precise-lite", "ww", "ovos-ww-plugin-precise-lite") == \
+        ["ovos-ww-plugin-precise-lite", "ovos-precise-lite"]
+    page = {"controlpanel": 1, "id": "p", "bus": "ovos.p.", "blocks": [{"type": "module", "kind": "ww"}]}
+    _, refs = described.check(page, "ovos-ww-plugin-precise-lite", modules={"ww": got["ww"]})
+    assert refs["b0.module"]["block"]["aliases"] == ["ovos-ww-plugin-precise-lite", "ovos-precise-lite"]
