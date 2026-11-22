@@ -290,6 +290,42 @@ def test_a_list_can_have_a_filter():
         checked(page, "ovos-skill-f")
 
 
+STORY = {"controlpanel": 1, "id": "story", "title": {"key": "story.title", "en": "Story"},
+         "bus": "ovos.story.", "pictures": "gui/images", "blocks": [
+             {"type": "list", "query": "ovos.story.parts", "items": "parts", "key": "id",
+              "title": "{title}", "text": "{text}", "picture": "image"}]}
+
+
+def test_a_list_row_has_a_text_and_a_picture_from_the_pages_own_folder(bus, monkeypatch, tmp_path):
+    out, _ = checked(STORY, "ovos-skill-story")
+    assert out["blocks"][0]["text"] == "{text}" and out["blocks"][0]["picture"] == "image"
+    root = tmp_path / "ovos_skill_story"
+    (root / "gui" / "images").mkdir(parents=True)
+    (root / "gui" / "images" / "me.png").write_bytes(b"\x89PNG")
+    (root / "gui" / "images" / "notes.txt").write_text("not a picture", encoding="utf-8")
+    found = described.Found("ovos-skill-story", "1.0", "ovos_skill_story", root, STORY)
+    monkeypatch.setattr(described, "discover", lambda: [found])
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
+    with TestClient(app, base_url="http://127.0.0.1:8500", headers={"sec-fetch-site": "same-origin",
+                                                                    "Authorization": "Bearer s3cret-token"}) as c:
+        got = c.get("/pages/story/me.png")
+        assert got.status_code == 200 and got.content == b"\x89PNG"
+        # the folder serves pictures, nothing else
+        assert c.get("/pages/story/notes.txt").status_code == 404
+        assert c.get("/pages/story/..%2Fcontrolpanel.json").status_code == 404
+
+
+@pytest.mark.parametrize("change", [lambda p: p.pop("pictures"), lambda p: p.update(pictures="../up")])
+def test_a_picture_needs_a_folder_in_the_package(change, tmp_path):
+    page = json.loads(json.dumps(STORY))
+    change(page)
+    root = tmp_path / "ovos_skill_story"
+    root.mkdir()
+    found = described.Found("ovos-skill-story", "1.0", "ovos_skill_story", root, page)
+    with pytest.raises(pages.PageError):
+        pages.parse_described(found, "ovos-skill-story", "1.0")
+
+
 SHELF = {"controlpanel": 1, "id": "shelf", "title": {"key": "shelf.title", "en": "Shelf"}, "bus": "ovos.shelf.",
          "blocks": [{"type": "form", "save": {"settings": True}, "fields": [
              {"name": "url", "label": "shelf.url", "type": "url", "required": True},

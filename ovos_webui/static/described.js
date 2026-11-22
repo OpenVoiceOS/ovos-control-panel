@@ -267,6 +267,12 @@ OvosWebUI.ready(function () {
           name.textContent = title;
           li.appendChild(name);
         }
+        if (block.text) {
+          var text = document.createElement("span");
+          text.className = "cp-text";
+          text.textContent = fill(block.text, item);
+          li.appendChild(text);
+        }
         if (block.meta) {
           var meta = document.createElement("span");
           meta.className = "cp-meta";
@@ -279,6 +285,20 @@ OvosWebUI.ready(function () {
           if (holds(a.when, item)) { acts.appendChild(button(a, function () { run(a, key, msgId, function () { load(); reloadAll(); }); })); }
         });
         if (acts.children.length) { li.appendChild(acts); }
+        // a picture from the page's own pictures folder, beside the row
+        var file = block.picture && item[block.picture];
+        if (typeof file === "string" && /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}$/.test(file)) {
+          var img = document.createElement("img");
+          img.src = "/pages/" + encodeURIComponent(page.id) + "/" + encodeURIComponent(file);
+          img.alt = "";
+          img.className = "cp-picture";
+          var body = document.createElement("div");
+          body.className = "cp-row-body";
+          while (li.firstChild) { body.appendChild(li.firstChild); }
+          li.className = "cp-with-picture";
+          li.appendChild(img);
+          li.appendChild(body);
+        }
         return li;
       }
       function listCard(heading, items) {

@@ -556,6 +556,7 @@ def parse_described(found: Any, package: str, version: str) -> tuple[Page, list]
         title = described._label(data.get("title"), "title")  # noqa: SLF001
         heading = described._label(data["heading"], "heading") if data.get("heading") else title  # noqa: SLF001
         icon = described.icon(found.root, data.get("icon"))
+        pictures = described.pictures(found.root, data.get("pictures"))
     except described.DescribedError as e:
         raise PageError(str(e)) from e
     group = data.get("group", "everyday")
@@ -594,7 +595,7 @@ def parse_described(found: Any, package: str, version: str) -> tuple[Page, list]
                 needs=tuple(needs), html=html, icon=icon, package=package, version=version,
                 builtin=False, heading_key=heading["key"],
                 heading=english.get(heading["key"]) or heading.get("en") or label,
-                fragment=True, strings=strings, module=found.module,
+                fragment=True, strings=strings, module=found.module, assets=pictures,
                 described=page_data, refs=refs, by_panel=bool(getattr(found, "by_panel", False)),
                 routes=described.routes_for(pid, refs),
                 # an upload's body may be as large as its block says

@@ -99,14 +99,16 @@ itself: `common.save`, `common.delete`, `common.play`, `common.stop`,
 
 The page around the blocks: `id`, `title`, `group` (default `everyday`),
 `groups` (each with a `title` that may be a label), `order`, `icon` (an SVG in the package), `path` (default
-`/<id>`), `heading`, `needs` (default: the package itself) and `bus`, the
+`/<id>`), `heading`, `needs` (default: the package itself), `pictures` (a
+folder in the package, as `gui/images`, whose pictures are served under
+`/pages/<id>/`: PNG, JPEG, GIF, WebP and SVG, nothing else) and `bus`, the
 prefix every message of the page starts with.
 
 | Block | Fields |
 |---|---|
 | `text` | `text`: a label, and/or `steps`: labels shown as numbered steps. |
 | `status` | `query`, `text` (a label with `{field}` from the answer) and/or `rows` (`label`, `value` with `{field}` or `text` a label, `when`, and `empty`, the label shown when the value is empty; a row without a `label` is a note across the card), `show` (a field that must be true), `actions`, `refresh` (seconds). |
-| `list` | `query`, `items` (the answer's list), `key` (a row's id), `title` (`{field}`), `meta` (a label with `{field}`), `empty`, `split` (`by` a true/false field into two lists, each with a heading), `filter` (`by` a field, `label`, and `all`, the label for no filter: a choice of that field's values above the list, made in the browser), `rename` (`field`, `send`, `when`, `max_length`, `label` for its button), `actions` (one per row), `refresh`, `heading`. |
+| `list` | `query`, `items` (the answer's list), `key` (a row's id), `title` (`{field}`), `text` (`{field}`, under the title), `meta` (a label with `{field}`), `picture` (a field holding a file name in the page's `pictures`, shown beside the row), `empty`, `split` (`by` a true/false field into two lists, each with a heading), `filter` (`by` a field, `label`, and `all`, the label for no filter: a choice of that field's values above the list, made in the browser), `rename` (`field`, `send`, `when`, `max_length`, `label` for its button), `actions` (one per row), `refresh`, `heading`. |
 | `actions` | `actions`: buttons. |
 | `form` | `fields` and `save`: `{"config": "PHAL.<package>", "reload": "<message>"}` writes in the plugin's own place in `mycroft.conf` and asks it to read it again (a plugin's own places are `PHAL.<package>` and the section its entry points name: `tts.<module>`, `stt.<module>`, `PHAL.<name>`; never the choice of module itself); `{"send": "<message>"}` with a `query` sends the values to the skill; `{"settings": true}` reads and writes the skill's own `settings.json` (only the page of a package that registers one skill), merged over what is there so keys the form has not are kept, and the skill reads them as `self.settings`. |
 | `choice` | `param` and `options`: tabs whose value goes with every query on the page. |
