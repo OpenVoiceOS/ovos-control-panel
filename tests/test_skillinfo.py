@@ -218,3 +218,30 @@ def test_a_plugin_is_looked_up_for_the_plugins_page_but_not_as_a_skill(monkeypat
         skillinfo.info("ovos-tts-plugin-piper")
     with pytest.raises(skillinfo.NotASkill):
         skillinfo.info("requests", plugins=True)
+
+
+def test_an_editable_install_reads_the_skill_json_beside_its_code(tmp_path, monkeypatch):
+    """pip install -e lists only its hook, not the skill's files: the
+    skill.json is then read from the folder the code is in."""
+    from importlib import metadata
+
+    pkg = tmp_path / "ovos_skill_editable"
+    (pkg / "locale" / "da-dk").mkdir(parents=True)
+    (pkg / "locale" / "en-us").mkdir(parents=True)
+    (pkg / "__init__.py").write_text("raise RuntimeError('the panel must not import a skill')\n")
+    (pkg / "locale" / "en-us" / "skill.json").write_text(json.dumps({
+        "name": "Editable", "author": "emkay-voice",
+        "icon": "https://raw.githubusercontent.com/emkay-voice/editable/main/icon.png"}))
+    (pkg / "locale" / "da-dk" / "skill.json").write_text(json.dumps({"name": "Redigerbar"}))
+    info = tmp_path / "ovos_skill_editable-1.0.dist-info"
+    info.mkdir()
+    (info / "METADATA").write_text("Metadata-Version: 2.1\nName: ovos-skill-editable\nVersion: 1.0\n"
+                                   "Author: Someone Else\n")
+    (info / "entry_points.txt").write_text("[opm.skill]\neditable.emkay = ovos_skill_editable:Skill\n")
+    (info / "RECORD").write_text("__editable__.ovos_skill_editable-1.0.pth,,\n")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    dist = metadata.Distribution.at(info)
+    found = skillinfo._local_info(dist, "da-dk")
+    assert found["title"] == "Redigerbar"
+    assert skillinfo._local_info(dist, "en-us")["icon_url"].endswith("/icon.png")
+    assert skillinfo._local_info(dist, "en-us")["skill_author"] == "emkay-voice"
