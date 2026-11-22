@@ -183,5 +183,6 @@
  "common.upload.pick": "Elige primero un archivo.",
  "common.upload.kind": "Acepta: {accept}",
  "common.upload.big": "El archivo pesa más de {mb} MB.",
- "common.upload.busy": "Enviando …"
+ "common.upload.busy": "Enviando …",
+ "common.all": "Todos"
 }

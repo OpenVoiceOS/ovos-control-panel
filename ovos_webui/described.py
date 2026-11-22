@@ -342,6 +342,13 @@ class _Checker:
                 out["split"] = {"by": _field_name(split.get("by"), where),
                                 "true": _label(split.get("true"), where),
                                 "false": _label(split.get("false"), where)}
+            flt = raw.get("filter")
+            if flt:
+                if not isinstance(flt, dict):
+                    raise DescribedError(f"{where}: a filter is an object")
+                out["filter"] = {"by": _field_name(flt.get("by"), where),
+                                 "label": _label(flt.get("label"), where),
+                                 "all": _label(flt.get("all", "common.all"), where)}
             rename = raw.get("rename")
             if rename:
                 out["rename"] = {"field": _field_name(rename.get("field"), where),
