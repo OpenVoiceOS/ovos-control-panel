@@ -3,7 +3,7 @@
 Each test fails against the unfixed code and passes after the fix:
 - devicecontrol.get_volume mis-scaled an already-0-100 percent into e.g. 7500%.
 - GgwaveListenBody.timeout had no upper bound (and accepted a bool).
-- VolumeBody/MediaVolumeBody accepted a JSON bool as 1% (pydantic int coercion).
+- VolumeBody accepted a JSON bool as 1% (pydantic int coercion).
 - network._act accepted a failure reply naming a *different* network.
 """
 import threading
@@ -42,8 +42,7 @@ def test_ggwave_listen_takes_no_timeout():
 
 def test_volume_bodies_reject_a_bool_percent():
     from ovos_webui.pages.controls.api import VolumeBody
-    from ovos_webui.pages.media.api import MediaVolumeBody
-    for model in (VolumeBody, MediaVolumeBody):
+    for model in (VolumeBody,):
         assert model(percent=50).percent == 50
         with pytest.raises(ValidationError):
             model(percent=True)

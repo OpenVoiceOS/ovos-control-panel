@@ -260,105 +260,6 @@ def test_the_setup_page_counts_its_own_steps(signed_in_page):
     assert said == numbered, (
         f"the intro says {said} steps and the page has {numbered}: {intro!r}"
     )
-def _media_page(page, url, *, backends, status=None, progress=None, likes=None):
-    """The media page against a device that answers what we say it answers."""
-    import json as _json
-
-    def answer(payload):
-        return lambda route: route.fulfill(
-            status=200, content_type="application/json",
-            body=_json.dumps(payload))
-
-    # Handlers accumulate, and a second call to this would otherwise be
-    # answered by the first call's stubs.
-    for pattern in ("**/api/media/available", "**/api/media/backends",
-                    "**/api/media/status", "**/api/media/progress",
-                    "**/api/media/volume", "**/api/media/seek"):
-        page.unroute(pattern)
-
-    page.route("**/api/media/available", answer({"available": True}))
-    page.route("**/api/media/likes",
-               answer(likes if likes is not None else {"ok": True, "entries": []}))
-    page.route("**/api/media/backends", answer(backends))
-    page.route("**/api/media/status", answer(status or {
-        "state": "playing", "title": "A song", "artist": "Someone",
-        "image": None, "shuffle": False, "repeat": "off", "media_type": None,
-        "playlist_position": 0, "playlist_size": 1}))
-    page.route("**/api/media/progress", answer(progress or {
-        "ok": True, "position": 30000, "length": 240000}))
-    page.route("**/api/media/volume", answer({"percent": 50, "muted": False}))
-    page.goto(f"{url}/media")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(500)
-
-
-def test_a_device_with_no_playback_backend_says_so(signed_in_page):
-    """The hardest media failure to see from outside: every play request is
-    accepted and nothing comes out."""
-    page, url = signed_in_page
-    _media_page(page, url, backends={"ok": True, "backends": [],
-                                     "can_play": False})
-    assert not page.locator("#no-backends").is_hidden(), (
-        "a device that cannot play anything said nothing about it"
-    )
-
-
-def test_a_device_that_cannot_be_asked_is_not_accused_of_being_mute(
-        signed_in_page):
-    """An older media service that does not answer the question has not told
-    us the device has no backends."""
-    page, url = signed_in_page
-    _media_page(page, url, backends={"ok": False, "backends": [],
-                                     "can_play": None})
-    assert page.locator("#no-backends").is_hidden()
-
-
-def test_a_device_with_a_backend_says_nothing(signed_in_page):
-    page, url = signed_in_page
-    _media_page(page, url, backends={
-        "ok": True, "can_play": True,
-        "backends": [{"name": "mpv", "remote": False, "uris": ["file"]}]})
-    assert page.locator("#no-backends").is_hidden()
-
-
-def test_the_scrub_bar_only_appears_for_a_track_with_an_end(signed_in_page):
-    """A live stream has no length, so there is nowhere to drag to."""
-    page, url = signed_in_page
-    good = {"ok": True, "backends": [{"name": "mpv", "remote": False,
-                                      "uris": ["file"]}], "can_play": True}
-
-    _media_page(page, url, backends=good)
-    assert not page.locator("#seek-row").is_hidden(), "no scrub bar for a track"
-    assert page.locator("#seek-length").inner_text() == "4:00"
-    assert page.locator("#seek-position").inner_text() == "0:30"
-
-    _media_page(page, url, backends=good,
-                progress={"ok": True, "position": 9000, "length": None})
-    # Polled rather than read once: the row is hidden when the page's own
-    # progress request comes back, not when the page finishes loading.
-    page.wait_for_selector("#seek-row", state="hidden", timeout=5000)
-
-
-def test_dragging_the_scrub_bar_sends_an_absolute_position(signed_in_page):
-    page, url = signed_in_page
-    sent = []
-    _media_page(page, url, backends={"ok": True, "can_play": True,
-                                     "backends": [{"name": "mpv",
-                                                   "remote": False,
-                                                   "uris": ["file"]}]})
-    page.route("**/api/media/seek", lambda route: (
-        sent.append(route.request.post_data_json),
-        route.fulfill(status=200, content_type="application/json",
-                      body='{"ok": true}')))
-    page.eval_on_selector("#seek", "el => { el.value = 500; "
-                          "el.dispatchEvent(new Event('change', {bubbles: true})); }")
-    page.wait_for_timeout(400)
-
-    assert sent, "dragging the bar sent nothing"
-    # Half of a four minute track, in milliseconds.
-    assert sent[0]["position"] == 120000, sent[0]
-
-
 def test_hidden_means_hidden_whatever_the_element_is(signed_in_page):
     """`hidden` is an attribute, not a class, and any rule that sets
     `display` outranks the browser's default for it.
@@ -369,7 +270,7 @@ def test_hidden_means_hidden_whatever_the_element_is(signed_in_page):
     means to be offering later is a page lying about what it can do.
     """
     page, url = signed_in_page
-    page.goto(f"{url}/media")
+    page.goto(f"{url}/voice")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(300)
 
@@ -379,48 +280,6 @@ def test_hidden_means_hidden_whatever_the_element_is(signed_in_page):
     assert showing == [], f"marked hidden and still on screen: {showing}"
 
 
-def test_the_repeat_box_reports_and_sets_the_state_the_device_is_in(signed_in_page):
-    """`REPEAT` is the queue and `REPEAT_TRACK` is the one track; naming them
-    the other way round makes the badge say the opposite of what is happening.
-    """
-    page, url = signed_in_page
-    good = {"ok": True, "can_play": True,
-            "backends": [{"name": "mpv", "remote": False, "uris": ["file"]}]}
-    _media_page(page, url, backends=good, status={
-        "state": "playing", "title": "A song", "artist": "Someone",
-        "image": None, "shuffle": False, "repeat": "all", "media_type": None,
-        "playlist_position": 0, "playlist_size": 3})
-
-    assert page.locator("#repeat").is_checked(), (
-        "the queue repeats and the box says it does not"
-    )
-    assert "queue" in page.locator("#np-repeat").inner_text().lower()
-
-    sent = []
-    page.route("**/api/media/repeat", lambda route: (
-        sent.append(route.request.post_data_json),
-        route.fulfill(status=200, content_type="application/json",
-                      body='{"ok": true}')))
-    page.uncheck("#repeat")
-    page.wait_for_timeout(400)
-    assert sent == [{"enabled": False}], sent
-
-
-def test_a_single_track_repeat_is_not_called_a_queue_repeat(signed_in_page):
-    page, url = signed_in_page
-    _media_page(page, url,
-                backends={"ok": True, "can_play": True,
-                          "backends": [{"name": "mpv", "remote": False,
-                                        "uris": ["file"]}]},
-                status={"state": "playing", "title": "A song", "artist": "S",
-                        "image": None, "shuffle": False, "repeat": "one",
-                        "media_type": None, "playlist_position": 0,
-                        "playlist_size": 3})
-    said = page.locator("#np-repeat").inner_text().lower()
-    assert "track" in said, said
-    assert not page.locator("#repeat").is_checked(), (
-        "repeating one track is not repeating the queue"
-    )
 def test_looking_up_a_setting_names_the_file_it_comes_from(signed_in_page):
     """The answer to "I changed it and nothing happened" is a filename."""
     page, url = signed_in_page
@@ -467,150 +326,6 @@ def test_the_file_list_shows_the_merge_order(signed_in_page):
     assert "runtime change" in items[-1], items[-1]
 
 
-def test_the_candidate_list_offers_the_other_matches(signed_in_page):
-    """"It played the wrong thing" should be one click, not a rephrase."""
-    import json as _json
-
-    page, url = signed_in_page
-    entries = [
-        {"title": "The right one", "artist": "A", "uri": "file:///a.mp3",
-         "match_confidence": 90},
-        {"title": "The wrong one", "artist": "B", "uri": "file:///b.mp3",
-         "match_confidence": 60},
-    ]
-    page.route("**/api/media/candidates", lambda route: route.fulfill(
-        status=200, content_type="application/json",
-        body=_json.dumps({"ok": True, "entries": entries})))
-    _media_page(page, url, backends={"ok": True, "can_play": True,
-                                     "backends": [{"name": "mpv",
-                                                   "remote": False,
-                                                   "uris": ["file"]}]})
-
-    assert not page.locator("#candidates-card").is_hidden()
-    titles = page.locator("#candidates li button").all_inner_texts()
-    assert "The right one" in titles[0], titles
-
-    sent = []
-    page.route("**/api/media/play_entry", lambda route: (
-        sent.append(route.request.post_data_json),
-        route.fulfill(status=200, content_type="application/json",
-                      body='{"ok": true}')))
-    page.locator("#candidates li button").nth(1).click()
-    page.wait_for_timeout(400)
-    assert sent and sent[0]["entry"]["uri"] == "file:///b.mp3", sent
-    # This row knows the set, because it is the row showing it, so it sends it
-    # rather than making the service read it back.
-    assert [e["uri"] for e in sent[0]["among"]] == \
-        [e["uri"] for e in entries], sent[0]
-
-
-def test_one_candidate_is_not_a_choice(signed_in_page):
-    """A single candidate is what is already playing."""
-    import json as _json
-
-    page, url = signed_in_page
-    page.route("**/api/media/candidates", lambda route: route.fulfill(
-        status=200, content_type="application/json",
-        body=_json.dumps({"ok": True, "entries": [
-            {"title": "Only", "uri": "file:///a.mp3"}]})))
-    _media_page(page, url, backends={"ok": True, "can_play": True,
-                                     "backends": [{"name": "mpv",
-                                                   "remote": False,
-                                                   "uris": ["file"]}]})
-    assert page.locator("#candidates-card").is_hidden()
-
-
-def test_a_player_too_old_to_be_asked_shows_no_candidate_card(signed_in_page):
-    """The queries arrived in ovos-media 2.2.0a1; before that, silence."""
-    import json as _json
-
-    page, url = signed_in_page
-    page.route("**/api/media/candidates", lambda route: route.fulfill(
-        status=200, content_type="application/json",
-        body=_json.dumps({"ok": False, "entries": []})))
-    _media_page(page, url, backends={"ok": True, "can_play": True,
-                                     "backends": [{"name": "mpv",
-                                                   "remote": False,
-                                                   "uris": ["file"]}]})
-    assert page.locator("#candidates-card").is_hidden()
-
-
-def test_a_title_from_a_catalogue_is_never_markup(signed_in_page):
-    """Titles and artists come from the internet by way of a media
-    provider, so they reach the page as text or not at all."""
-    import json as _json
-
-    page, url = signed_in_page
-    page.route("**/api/media/candidates", lambda route: route.fulfill(
-        status=200, content_type="application/json",
-        body=_json.dumps({"ok": True, "entries": [
-            {"title": "<img src=x onerror='window.__x=1'>", "uri": "file:///a.mp3"},
-            {"title": "Second", "artist": "<b>bold</b>", "uri": "file:///b.mp3"}]})))
-    _media_page(page, url, backends={"ok": True, "can_play": True,
-                                     "backends": [{"name": "mpv",
-                                                   "remote": False,
-                                                   "uris": ["file"]}]})
-
-    assert page.evaluate("() => window.__x") is None, "a title ran as script"
-    assert page.locator("#candidates li button img").count() == 0
-    assert page.locator("#candidates li button b").count() == 0
-    assert "<b>bold</b>" in page.locator("#candidates li button").nth(1).inner_text()
-
-
-def test_the_liked_songs_are_listed_and_playable(signed_in_page):
-    import json as _json
-
-    page, url = signed_in_page
-    # A search is showing at the same time: playing a liked song must not
-    # drag those matches along with it.
-    page.route("**/api/media/candidates", lambda route: route.fulfill(
-        status=200, content_type="application/json",
-        body=_json.dumps({"ok": True, "entries": [
-            {"title": "From a search", "uri": "file:///s1.mp3"},
-            {"title": "Also from it", "uri": "file:///s2.mp3"}]})))
-    _media_page(page, url,
-                backends={"ok": True, "can_play": True,
-                          "backends": [{"name": "mpv", "remote": False,
-                                        "uris": ["file"]}]},
-                likes={"ok": True, "entries": [
-                    {"title": "A liked song", "artist": "Someone",
-                     "uri": "file:///liked.mp3"}]})
-
-    page.click("#likes-wrap summary")
-    page.wait_for_timeout(200)
-    assert page.locator("#likes li button").count() == 1
-    assert page.locator("#likes-empty").is_hidden(), (
-        "said nothing is liked while listing something"
-    )
-
-    sent = []
-    page.route("**/api/media/play_entry", lambda route: (
-        sent.append(route.request.post_data_json),
-        route.fulfill(status=200, content_type="application/json",
-                      body='{"ok": true}')))
-    page.locator("#likes li button").first.click()
-    page.wait_for_timeout(400)
-    assert sent and sent[0]["entry"]["uri"] == "file:///liked.mp3", sent
-    # A liked song was not matched for the request on screen, so the page
-    # holds no candidate set for it and says so by leaving `among` out. The
-    # service then reads the device's own set. It must NOT send an empty list:
-    # that states the set is empty, and the device would replace what it
-    # matched with the one liked song -- emptying the card this page adds.
-    assert "among" not in sent[0], sent[0]
-
-
-def test_a_player_that_cannot_be_asked_about_likes_hides_the_list(signed_in_page):
-    """Nothing liked and cannot be asked are different, and the page shows
-    the difference rather than an empty list in both cases."""
-    page, url = signed_in_page
-    _media_page(page, url,
-                backends={"ok": True, "can_play": True,
-                          "backends": [{"name": "mpv", "remote": False,
-                                        "uris": ["file"]}]},
-                likes={"ok": False, "entries": []})
-    assert page.locator("#likes-wrap").is_hidden()
-
-
 def _visible_nav(page):
     return page.evaluate("""() => [...document.querySelectorAll("nav a[href]")]
       .filter(a => a.offsetParent !== null).map(a => a.getAttribute("href"))""")
@@ -640,10 +355,8 @@ def test_the_menu_groups_start_folded_and_open_one_at_a_time(signed_in_page):
     folded = _visible_nav(page)
     assert "/about" in folded and "/skills" in folded
     assert "/intents" not in folded and "/plugins" not in folded
-    assert "/media" not in folded, "the Library folds too"
-    _fold(page, "library").click()
-    assert "/media" in _visible_nav(page)
-    _fold(page, "library").click()
+    # the Library's pages come with their skills, and the test device has none
+    assert not _fold(page, "library").is_visible()
 
     advanced.click()
     understanding = _fold(page, "understanding")
@@ -696,8 +409,8 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
     group with it); reaching the page anyway says what it needs."""
     page, url = signed_in_page
     needs = {"colocated": True, "needs": {
-        k: {"met": k == "media", "suggest": "pkg-" + k}
-        for k in ("media", "network")}}
+        k: {"met": False, "suggest": "pkg-" + k}
+        for k in ("network",)}}
 
     def answer(route):
         route.fulfill(status=200, content_type="application/json", body=json.dumps(needs))
@@ -710,8 +423,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
         page.reload()
         page.wait_for_function("() => document.querySelector('nav a[href=\"/network\"]').hidden")
         shown = _visible_nav(page)
-        assert "/media" in shown
-        assert "/network" not in shown
+        assert "/network" not in shown and "/voice" in shown
         assert not page.locator('nav .nav-group[data-group="screen"]').is_visible()
 
         page.goto(f"{url}/network")

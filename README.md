@@ -28,8 +28,8 @@ Try it, Device, Network and About are there too. Below them, under
 
 - **Voice**: every voice setting, self-hosted servers, translation
 - **Understanding**: intents, transformers, personas
-- **Device**: system, sensors, media
-- **Screen**: apps, wallpaper, the Mark-1 faceplate
+- **Device**: system and sensors, where their plugins are installed
+- **Screen**: apps, wallpaper and the Mark-1 faceplate, the same way
 - **Maintenance**: plugins and updates, the raw settings, send over sound
 
 A page the device cannot use, because a plugin or the hardware is missing,

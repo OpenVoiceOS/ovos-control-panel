@@ -73,7 +73,6 @@ def test_what_it_plays_for_you_is_in_the_library():
     groups = {g["id"]: g for g in pages.GROUPS}
     assert groups["library"]["level"] == groups["music"]["level"] == "everyday"
     assert groups["everyday"]["order"] < groups["library"]["order"] < groups["music"]["order"]
-    assert REG.by_id()["media"].group == "library"
 
 
 def test_every_group_but_the_everyday_pages_folds():

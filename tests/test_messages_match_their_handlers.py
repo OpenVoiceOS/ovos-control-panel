@@ -11,7 +11,7 @@ import threading
 import pytest
 from ovos_utils.fakebus import FakeBus
 
-from ovos_webui import media, system
+from ovos_webui import system
 
 #: Every topic these tests care about, so one bus can watch them all.
 WATCHED = ("mycroft.volume.set", "mycroft.volume.set.gui",
@@ -33,28 +33,6 @@ def _find(seen, msg_type):
         if message.msg_type == msg_type:
             return message
     raise AssertionError(f"{msg_type} was never sent; got {[m.msg_type for m in seen]}")
-
-
-def test_the_media_volume_is_sent_as_the_fraction_both_plugins_expect(sent):
-    """Volume is owned by the PHAL plugins, and both scale by 100.
-
-    alsa binds `mycroft.volume.set`; pulseaudio binds that and
-    `mycroft.volume.set.gui`. Sending `.gui` with a 0-100 int was ignored by
-    alsa and read by pulseaudio as 7300%, clamped to full volume.
-    """
-    bus, seen = sent
-    media.set_volume(bus, 40)
-
-    types = [m.msg_type for m in seen]
-    assert "mycroft.volume.set.gui" not in types, (
-        "alsa does not bind mycroft.volume.set.gui at all, so use the message "
-        "both plugins listen on"
-    )
-    message = _find(seen, "mycroft.volume.set")
-    # both plugins do `message.data["percent"] * 100`
-    assert message.data["percent"] == pytest.approx(0.4)
-
-
 
 
 def test_detecting_the_location_asks_to_replace_the_old_one(sent, monkeypatch):

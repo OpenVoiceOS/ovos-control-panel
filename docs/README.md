@@ -59,7 +59,7 @@ panel runs apart from the assistant, it cannot tell, so every page shows.
 | | Personas | Makes and edits personas — the ordered list of solvers that answer you. | [personas.md](personas.md) |
 | Device | System | SSH and a factory reset, where the system plugin is installed. | [system.md](system.md) |
 | | Sensors | Live readings from the device's sensors, if a sensor plugin is installed. | [sensors.md](sensors.md) |
-| | Media | Shows what is playing and controls playback and volume. | [media.md](media.md) |
+| | Media | What is playing, the queue and the volume; comes with the ovos-control-panel-media extension. | [media.md](media.md) |
 | Screen | Apps | Launches and closes desktop applications on a device with a screen. | [apps.md](apps.md) |
 | | Wallpaper | Sets the background on a device with a screen, from a collection or by address. | [wallpaper.md](wallpaper.md) |
 | | Mark-1 faceplate | Lights the Mark-1's eyes and puts text on its mouth; the editors come with the ovos-control-panel-mark1 extension. | [mark1.md](mark1.md) |

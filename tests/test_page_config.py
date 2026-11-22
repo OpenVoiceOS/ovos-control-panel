@@ -23,10 +23,10 @@ def _menu(client, path="/about"):
 # ── webui.pages and webui.groups ──────────────────────────────────────────────
 def test_prefs_reads_and_checks_the_settings():
     p = pages.prefs({
-        "pages": {"disabled": ["personas", "about", 3], "move": {"media": {"group": "screen", "order": 5}}},
+        "pages": {"disabled": ["personas", "about", 3], "move": {"translate": {"group": "screen", "order": 5}}},
         "groups": {"order": ["screen", "voice"], "rename": {"device": {"label": "Hardware"}, "x": {}}}})
     assert p.disabled == {"personas"}
-    assert p.move == {"media": {"group": "screen", "order": 5}}
+    assert p.move == {"translate": {"group": "screen", "order": 5}}
     assert p.group_order == ["screen", "voice"]
     assert p.rename["device"]["label"] == "Hardware"
     assert any("core page" in x for x in p.problems)
@@ -39,14 +39,14 @@ def test_nothing_set_means_the_menu_as_it_ships():
 
 def test_the_menu_follows_the_settings():
     nav = REG.nav(pages.prefs({
-        "pages": {"disabled": ["personas"], "move": {"media": {"group": "screen", "order": 5}}},
+        "pages": {"disabled": ["personas"], "move": {"translate": {"group": "screen", "order": 5}}},
         "groups": {"order": ["screen"], "rename": {"maintenance": {"label": "Upkeep"}}}}))
     ids = [p["id"] for p in nav["pages"]]
     assert "personas" not in ids
-    media = [p for p in nav["pages"] if p["id"] == "media"][0]
-    assert media["group"] == "screen"
+    moved = [p for p in nav["pages"] if p["id"] == "translate"][0]
+    assert moved["group"] == "screen"
     screen = [p["id"] for p in nav["pages"] if p["group"] == "screen"]
-    assert screen[0] == "media", "order 5 puts it first in the group"
+    assert screen[0] == "translate", "order 5 puts it first in the group"
     advanced = [g["id"] for g in nav["groups"] if g["level"] == "advanced"]
     assert advanced[0] == "screen"
     assert [g for g in nav["groups"] if g["id"] == "maintenance"][0]["label"] == "Upkeep"
