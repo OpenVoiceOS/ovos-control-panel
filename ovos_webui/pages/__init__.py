@@ -514,11 +514,25 @@ def _described_sources(found: list) -> list:
     return out
 
 
+def _own_skill_id(package: str) -> str | None:
+    """The skill a package registers, if it registers exactly one: the name
+    of its opm.skill entry point, which is the skill's id."""
+    from importlib import metadata
+
+    from ovos_webui import skillinfo
+    try:
+        names = {ep.name for ep in metadata.distribution(package).entry_points
+                 if ep.group in skillinfo.SKILL_GROUPS}
+    except (metadata.PackageNotFoundError, Exception):  # noqa: BLE001 - no skill then
+        return None
+    return names.pop() if len(names) == 1 else None
+
+
 def parse_described(found: Any, package: str, version: str) -> tuple[Page, list]:
     """Check a controlpanel.json and turn it into a :class:`Page`."""
     data = found.data
     try:
-        page_data, refs = described.check(data, package)
+        page_data, refs = described.check(data, package, skill_id=_own_skill_id(package))
     except described.DescribedError as e:
         raise PageError(str(e)) from e
     pid = data.get("id")
