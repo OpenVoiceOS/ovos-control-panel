@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a98](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a98) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a97...0.0.1a98)
+
+**Merged pull requests:**
+
+- A page for every wake word plugin: the wake words it hears, and which is in use [\#189](https://github.com/OpenVoiceOS/ovos-control-panel/pull/189) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a97](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a97) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a96...0.0.1a97)
@@ -537,10 +545,6 @@
 ## [0.0.1a32](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a32) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a31...0.0.1a32)
-
-**Merged pull requests:**
-
-- fix: point the bus monitor link at the port busmon actually serves on [\#63](https://github.com/OpenVoiceOS/ovos-control-panel/pull/63) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a31](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a31) (2026-08-26)
 
