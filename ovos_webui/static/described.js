@@ -600,7 +600,7 @@ OvosWebUI.ready(function () {
       var row = document.createElement("div");
       row.className = "row";
       var save = document.createElement("button");
-      save.textContent = t("common.save");
+      save.textContent = t(block.button || "common.save");
       row.appendChild(save);
       card.appendChild(row);
       var msg = msgEl(card);

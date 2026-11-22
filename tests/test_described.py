@@ -438,7 +438,7 @@ def test_every_page_the_panel_brings_is_sound(folder):
     keys = set(found["en"])
     assert all(set(table) == keys for table in found.values()), "the same strings in every language"
     used = set(re.findall(r'"([a-z][\w]*\.[\w.]+)"', (root / described.FILE).read_text()))
-    used -= {data.get("icon")}
+    used -= {data.get("icon"), *data.get("messages", [])}
     assert {k for k in used if not k.startswith(("common.", "ovos."))} <= keys
 
 

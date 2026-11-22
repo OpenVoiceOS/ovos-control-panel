@@ -10,14 +10,13 @@ def test_a_page_is_usable_with_any_of_its_packages():
     assert out["colocated"] is True
     assert out["needs"]["system"]["met"] is True
     assert out["needs"]["media"]["met"] is True
-    assert out["needs"]["mark1"]["met"] is False
-    assert out["needs"]["mark1"]["suggest"] == "ovos-PHAL-plugin-mk1"
+    assert out["needs"]["network"]["met"] is False
 
 
 def test_package_names_are_matched_case_insensitively():
     # installed_versions() lowercases; the pages keep PyPI's own spelling
-    out = pages.needs(REG, dict(ON_DEVICE, **{"ovos-phal-plugin-mk1": "0.1.3"}))
-    assert out["needs"]["mark1"]["met"] is True
+    out = pages.needs(REG, dict(ON_DEVICE, **{"ovos-phal-plugin-connectivity-events": "0.1"}))
+    assert out["needs"]["network"]["met"] is True
 
 
 def test_a_panel_running_apart_from_the_assistant_hides_nothing():
@@ -28,7 +27,7 @@ def test_a_panel_running_apart_from_the_assistant_hides_nothing():
 
 def test_only_pages_with_needs_are_reported():
     out = pages.needs(REG, ON_DEVICE)
-    assert set(out["needs"]) == {"network", "system", "media", "mark1"}
+    assert set(out["needs"]) == {"network", "system", "media"}
 
 
 def test_the_route_answers(client):

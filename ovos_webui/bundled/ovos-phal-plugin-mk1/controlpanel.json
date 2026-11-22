@@ -1,0 +1,204 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-phal-plugin-mk1>=0.1.0,<1",
+ "id": "mark1",
+ "path": "/mark1",
+ "title": "mark1.title",
+ "group": "screen",
+ "order": 30,
+ "icon": "controlpanel.svg",
+ "messages": [
+  "enclosure.eyes.on",
+  "enclosure.eyes.off",
+  "enclosure.eyes.reset",
+  "enclosure.eyes.narrow",
+  "enclosure.eyes.spin",
+  "enclosure.eyes.blink",
+  "enclosure.eyes.color",
+  "enclosure.eyes.level",
+  "enclosure.mouth.text",
+  "enclosure.mouth.reset",
+  "enclosure.system.reset",
+  "enclosure.system.mute",
+  "enclosure.system.unmute",
+  "enclosure.system.blink"
+ ],
+ "blocks": [
+  {
+   "type": "text",
+   "text": "mark1.plain.intro"
+  },
+  {
+   "type": "actions",
+   "heading": "mark1.eyes.title",
+   "actions": [
+    {
+     "label": "mark1.eyes.on",
+     "send": "enclosure.eyes.on",
+     "answer": false
+    },
+    {
+     "label": "mark1.eyes.off",
+     "send": "enclosure.eyes.off",
+     "answer": false
+    },
+    {
+     "label": "mark1.eyes.blink",
+     "send": "enclosure.eyes.blink",
+     "answer": false,
+     "data": {
+      "side": "b"
+     }
+    },
+    {
+     "label": "mark1.eyes.narrow",
+     "send": "enclosure.eyes.narrow",
+     "answer": false
+    },
+    {
+     "label": "mark1.eyes.spin",
+     "send": "enclosure.eyes.spin",
+     "answer": false
+    },
+    {
+     "label": "mark1.eyes.reset",
+     "send": "enclosure.eyes.reset",
+     "answer": false
+    }
+   ]
+  },
+  {
+   "type": "actions",
+   "heading": "mark1.eyes.colorLabel",
+   "actions": [
+    {
+     "label": "mark1.color.blue",
+     "send": "enclosure.eyes.color",
+     "answer": false,
+     "data": {
+      "r": 0,
+      "g": 120,
+      "b": 255
+     }
+    },
+    {
+     "label": "mark1.color.green",
+     "send": "enclosure.eyes.color",
+     "answer": false,
+     "data": {
+      "r": 0,
+      "g": 200,
+      "b": 80
+     }
+    },
+    {
+     "label": "mark1.color.red",
+     "send": "enclosure.eyes.color",
+     "answer": false,
+     "data": {
+      "r": 255,
+      "g": 30,
+      "b": 30
+     }
+    },
+    {
+     "label": "mark1.color.white",
+     "send": "enclosure.eyes.color",
+     "answer": false,
+     "data": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+     }
+    }
+   ]
+  },
+  {
+   "type": "actions",
+   "heading": "mark1.eyes.brightness",
+   "actions": [
+    {
+     "label": "mark1.level.low",
+     "send": "enclosure.eyes.level",
+     "answer": false,
+     "data": {
+      "level": 5
+     }
+    },
+    {
+     "label": "mark1.level.mid",
+     "send": "enclosure.eyes.level",
+     "answer": false,
+     "data": {
+      "level": 15
+     }
+    },
+    {
+     "label": "mark1.level.high",
+     "send": "enclosure.eyes.level",
+     "answer": false,
+     "data": {
+      "level": 30
+     }
+    }
+   ]
+  },
+  {
+   "type": "form",
+   "heading": "mark1.mouth.title",
+   "save": {
+    "send": "enclosure.mouth.text",
+    "answer": false,
+    "label": "mark1.mouth.textSend"
+   },
+   "fields": [
+    {
+     "name": "text",
+     "label": "mark1.mouth.textLabel",
+     "type": "text",
+     "required": true,
+     "max_length": 60
+    }
+   ]
+  },
+  {
+   "type": "actions",
+   "actions": [
+    {
+     "label": "mark1.mouth.reset",
+     "send": "enclosure.mouth.reset",
+     "answer": false
+    }
+   ]
+  },
+  {
+   "type": "actions",
+   "heading": "mark1.system.title",
+   "actions": [
+    {
+     "label": "mark1.system.mute",
+     "send": "enclosure.system.mute",
+     "answer": false
+    },
+    {
+     "label": "mark1.system.unmute",
+     "send": "enclosure.system.unmute",
+     "answer": false
+    },
+    {
+     "label": "mark1.system.blink",
+     "send": "enclosure.system.blink",
+     "answer": false,
+     "data": {
+      "times": 3
+     }
+    },
+    {
+     "label": "mark1.system.reset",
+     "send": "enclosure.system.reset",
+     "answer": false
+    }
+   ]
+  }
+ ]
+}

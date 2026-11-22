@@ -1,9 +1,11 @@
 """The page registry: every page in the menu, wherever it comes from.
 
-The panel's own pages are Python modules in this package (:data:`BUILTIN`),
-each with a ``PAGE`` description (see ``docs/pages.md``). Every other
-package describes its page in a ``controlpanel.json`` (see
-:mod:`ovos_webui.described`); the panel draws it.
+A skill or plugin describes its page in a ``controlpanel.json`` (see
+:mod:`ovos_webui.described`); the panel draws it, and may bring one for a
+package that has none. The panel's own pages are Python modules in this
+package (:data:`BUILTIN`). A **panel extension** -- a package written only
+to add a richer page to this panel, as the Mark-1 editors -- registers a
+Python page under the ``opm.control_panel.page`` entry point group.
 
 :func:`load` reads them once and returns a :class:`Registry`: the pages
 that loaded, the menu groups, and the problems with the ones that did not. A
@@ -25,6 +27,9 @@ from typing import Any, Callable
 from ovos_webui import described
 
 LOG = logging.getLogger(__name__)
+
+#: Where a panel extension registers its Python pages.
+ENTRY_POINT = "opm.control_panel.page"
 
 #: The versions of the page contract this panel can load.
 API_VERSIONS = frozenset({1})
@@ -67,7 +72,7 @@ MAX_STRINGS = 256 * 1024
 BUILTIN = (
     "dashboard", "setup", "tryit", "controls", "network", "voice", "skills", "backup",
     "about", "voice_all", "servers", "translate", "intents", "transformers", "personas",
-    "system", "media", "mark1", "plugins", "settings", "panel",
+    "system", "media", "plugins", "settings", "panel",
     "sound",
 )
 
@@ -461,6 +466,18 @@ def _own_pages() -> list:
     return [_Own(name) for name in BUILTIN]
 
 
+def _extensions() -> list:
+    """The pages panel extensions register (never the panel's own: those
+    are read from BUILTIN, whatever an old install's metadata says)."""
+    try:
+        eps = list(metadata.entry_points(group=ENTRY_POINT))
+    except Exception as e:  # noqa: BLE001 - broken metadata must not stop the panel
+        LOG.warning("could not read the %s entry points: %s", ENTRY_POINT, e)
+        return []
+    return [ep for ep in eps
+            if (getattr(getattr(ep, "dist", None), "name", "") or "").lower() != OWN_DIST]
+
+
 def _own_version() -> str:
     from ovos_webui.version import __version__
     return __version__
@@ -483,8 +500,8 @@ def _asset_version() -> str:
 
 def _sources(eps: list | None) -> list[tuple[str, Callable[[], Any], str, str, str]]:
     """(name, loader, module, package, version) for every Python page: the
-    panel's own, or ``eps`` (tests)."""
-    eps = _own_pages() if eps is None else eps
+    panel's own and the extensions', or ``eps`` (tests)."""
+    eps = _own_pages() + _extensions() if eps is None else eps
     found = []
     for ep in eps:
         dist = getattr(ep, "dist", None)
@@ -501,12 +518,16 @@ def _replaces(new: Page, old: Page) -> bool:
 
 
 def _takes_over(new: Page, old: Page) -> bool:
-    """Whether ``new`` replaces ``old``: a page from another package with the
-    id of one of the panel's own pages that are not core. That is how a page
-    moves out of the panel into the plugin that does the work (the Network
-    page into the network-manager plugin): the plugin brings it, and the
-    panel's copy steps aside until it is removed. The core pages stay."""
-    return old.builtin and not new.builtin and old.id not in CORE
+    """Whether ``new`` replaces ``old``, a page with the same id:
+
+    - a page from another package replaces one of the panel's own that is not
+      core (the plugin that does the work brings it);
+    - any package's own page replaces one the panel describes for a plugin
+      (the Mark-1 extension's editors over the panel's plain Mark-1 page).
+    """
+    if old.builtin and not new.builtin and old.id not in CORE:
+        return True
+    return old.by_panel and not new.by_panel and not new.builtin
 
 
 def _described_sources(found: list) -> list:
