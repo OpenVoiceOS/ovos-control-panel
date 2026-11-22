@@ -65,6 +65,26 @@ OpenVoiceOS. The page leaves out any package that registers no skill and
 depends on no OpenVoiceOS package, so those are never offered. `/skills#find`
 opens this tab directly.
 
+### What is in the OVOS release
+
+OpenVoiceOS publishes, per channel, which packages belong to its release and
+which versions go together ([ovos-releases](https://github.com/OpenVoiceOS/ovos-releases):
+`constraints-stable.txt`, `-testing`, `-alpha`). The device's installer
+installs against one of them: `skills.installer.constraints`, or the stable one
+when nothing is set. The search reads the same file:
+
+- **Show: What is in the OVOS release** (the default) lists what belongs to
+  that release, and what is installed.
+- **Show: Everything on PyPI** lists all of it, and says that none of it is
+  checked: not whether it works with the device's versions, nor whether anyone
+  still looks after it.
+- Each result says **in the OVOS release** (with the release's name) or
+  **not checked**.
+
+When OpenVoiceOS moves a package into or out of its release, the page follows
+by itself. If the file cannot be read, everything is shown and the page says
+why. The file is read again every six hours.
+
 Installing a skill changes the software on the device, so it **always needs a
 token**. See [security.md](security.md). The skills service rescans about every
 thirty seconds and loads a newly installed skill on its own.

@@ -33,6 +33,12 @@
   <div class="card">
     <label data-i18n="plugins.search.label">Search<input id="q" placeholder="for example: piper, vosk, wikipedia" data-i18n-attr="placeholder:plugins.search.placeholder"></label>
     <label data-i18n="plugins.kind.label">Kind<select id="kind"><option value="" data-i18n="plugins.kind.any">Any</option></select></label>
+    <label><span data-i18n="release.show">Show</span>
+      <select id="from">
+        <option value="release" data-i18n="release.only">What is in the OVOS release</option>
+        <option value="all" data-i18n="release.all">Everything on PyPI</option>
+      </select></label>
+    <p class="hint" id="from-note" hidden></p>
     <div class="row">
       <button id="go" data-i18n="plugins.search.button">Search</button>
       <button class="secondary refresh" id="refresh" data-i18n="plugins.refresh.button">Update the list from PyPI</button>
@@ -78,10 +84,12 @@ OvosWebUI.ready(function () {
     vad: "wake_word", gui: "gui", media: "media", media_provider: "media", translate: "language",
     lang_detect: "language", persona: "persona"};
 
+  var lastRelease = null;
   function card(r) {
-    var state = r.installed
+    var state = (r.installed
       ? '<span class="badge ready">' + OvosWebUI.t("plugins.badge.installed", "installed") + " " + esc(r.version || "") + "</span>"
-      : '<span class="badge">' + OvosWebUI.t("plugins.badge.available", "available") + "</span>";
+      : '<span class="badge">' + OvosWebUI.t("plugins.badge.available", "available") + "</span>")
+      + " " + OvosWebUI.releaseBadge(r, lastRelease);
     // Both actions are low-emphasis in a long list, so red stays reserved for
     // the page's own primary actions instead of becoming wallpaper.
     var button = r.installed
@@ -171,9 +179,12 @@ OvosWebUI.ready(function () {
     el("results").innerHTML = '<div class="card">' + OvosWebUI.t("plugins.searching", "Searching…") + '</div>';
     var url = "/api/plugins/search?q=" + encodeURIComponent(el("q").value)
       + "&kind=" + encodeURIComponent(el("kind").value)
-      + (refresh ? "&refresh=true" : "");
+      + (refresh ? "&refresh=true" : "")
+      + (el("from").value === "release" ? "&release=true" : "");
     return api(url).then(function (r) {
       fillKinds(r.kinds);
+      lastRelease = r.release;
+      OvosWebUI.releaseNote(el("from-note"), r.release, el("from").value === "release");
       // skills have their own page; this one is for everything else
       var plugins = r.results.filter(function (x) { return x.kind !== "skill"; });
       var shown = plugins.slice(0, MAX_RESULTS);
@@ -249,6 +260,9 @@ OvosWebUI.ready(function () {
   }
 
   el("go").addEventListener("click", function () { triggerSearch(false); });
+  el("from").addEventListener("change", function () {
+    if (el("q").value.trim() || el("kind").value) { triggerSearch(false); }
+  });
   el("refresh").addEventListener("click", function () { search(true); });
   el("q").addEventListener("keydown", function (e) { if (e.key === "Enter") { triggerSearch(false); } });
 

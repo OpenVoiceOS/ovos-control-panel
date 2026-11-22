@@ -195,5 +195,14 @@
  "provider.allOff": "Alle medieudbydere er slået fra i OCP-pipelinens konfiguration, så der søges ikke i nogen.",
  "provider.turnOn": "Slå til",
  "provider.turnOff": "Slå fra",
- "provider.restart": "Assistenten opdager ændringen, når den starter igen."
+ "provider.restart": "Assistenten opdager ændringen, når den starter igen.",
+ "release.show": "Vis",
+ "release.only": "Det, der er med i OVOS-udgivelsen",
+ "release.all": "Alt på PyPI",
+ "release.in": "med i OVOS-udgivelsen",
+ "release.not": "ikke kontrolleret",
+ "release.unknown": "OVOS-udgivelsen kunne ikke læses, så alt på PyPI vises.",
+ "release.allWarn": "Alt på PyPI vises, og intet af det er kontrolleret: hverken om det virker med enhedens versioner, eller om nogen stadig vedligeholder det. Installeren tjekker stadig versionerne, før den installerer.",
+ "release.onlyNote": "Kun det, der hører til den OVOS-udgivelse, enheden følger",
+ "release.onlyNoteEnd": ", og det, der er installeret."
 }

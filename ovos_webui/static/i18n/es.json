@@ -195,5 +195,14 @@
  "provider.allOff": "Todos los proveedores de medios están desactivados en la configuración del pipeline OCP, así que no se busca en ninguno.",
  "provider.turnOn": "Activar",
  "provider.turnOff": "Desactivar",
- "provider.restart": "El asistente aplica el cambio cuando vuelve a arrancar."
+ "provider.restart": "El asistente aplica el cambio cuando vuelve a arrancar.",
+ "release.show": "Mostrar",
+ "release.only": "Lo que está en la versión de OVOS",
+ "release.all": "Todo lo que hay en PyPI",
+ "release.in": "en la versión de OVOS",
+ "release.not": "sin comprobar",
+ "release.unknown": "No se pudo leer la versión de OVOS, así que se muestra todo lo que hay en PyPI.",
+ "release.allWarn": "Se muestra todo lo que hay en PyPI y nada está comprobado: ni si funciona con las versiones de este dispositivo ni si alguien lo sigue manteniendo. El instalador sigue comprobando las versiones antes de instalar.",
+ "release.onlyNote": "Solo lo que forma parte de la versión de OVOS que sigue este dispositivo",
+ "release.onlyNoteEnd": ", y lo que está instalado."
 }

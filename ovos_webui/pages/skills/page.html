@@ -65,6 +65,12 @@
     <p class="hint" data-i18n="skills.find.intro">Skills published on PyPI that load in OpenVoiceOS. Installing one takes effect after the OVOS services restart.</p>
     <div class="card">
       <label data-i18n="skills.find.label">Search<input id="q" placeholder="for example: weather, jokes, home assistant" data-i18n-attr="placeholder:skills.find.placeholder"></label>
+      <label><span data-i18n="release.show">Show</span>
+        <select id="from">
+          <option value="release" data-i18n="release.only">What is in the OVOS release</option>
+          <option value="all" data-i18n="release.all">Everything on PyPI</option>
+        </select></label>
+      <p class="hint" id="from-note" hidden></p>
       <div class="row"><button id="go" data-i18n="skills.find.button">Search</button></div>
       <p class="hint" id="cacheinfo"></p>
     </div>
@@ -596,15 +602,18 @@ OvosWebUI.ready(function () {
     searching = true;
     el("go").disabled = true;
     el("results").innerHTML = '<div class="card">' + esc(t("plugins.searching", "Searching…")) + "</div>";
-    return api("/api/plugins/search?kind=skill&q=" + encodeURIComponent(q)).then(function (r) {
+    var onlyRelease = el("from").value === "release";
+    return api("/api/plugins/search?kind=skill&q=" + encodeURIComponent(q) + (onlyRelease ? "&release=true" : "")).then(function (r) {
+      OvosWebUI.releaseNote(el("from-note"), r.release, onlyRelease);
       var shown = r.results.slice(0, 60);
       el("cacheinfo").textContent = r.offline
         ? t("plugins.offline", "PyPI could not be reached, so only the plugins already installed are listed.")
         : r.total + " " + t("skills.find.count", "skill(s) match.")
           + (r.stale ? " " + t("plugins.stale", "PyPI could not be reached, so this list may be old.") : "");
       el("results").innerHTML = shown.length ? shown.map(function (p) {
-        var state = p.installed
-          ? '<span class="badge ready">' + esc(t("skills.find.installed", "installed")) + "</span>" : "";
+        var state = (p.installed
+          ? '<span class="badge ready">' + esc(t("skills.find.installed", "installed")) + "</span> " : "")
+          + OvosWebUI.releaseBadge(p, r.release);
         var action = p.installed
           ? '<button class="secondary" data-open="' + esc(p.name) + '">' + esc(t("skills.open", "Open")) + "</button>"
           : '<button class="secondary" data-add="' + esc(p.name) + '" aria-label="'
@@ -642,6 +651,7 @@ OvosWebUI.ready(function () {
     });
   }
   el("go").addEventListener("click", search);
+  el("from").addEventListener("change", function () { if (el("q").value.trim()) { search(); } });
   el("q").addEventListener("keydown", function (e) { if (e.key === "Enter") { search(); } });
   el("filter").addEventListener("input", renderList);
 

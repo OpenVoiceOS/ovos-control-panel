@@ -615,8 +615,34 @@
     });
   }
 
+  // Whether a package is in the OVOS release the device follows (the
+  // installer's constraints file), for the Skills and Plugins searches.
+  function releaseName(rel) {
+    return rel && rel.name ? " (" + rel.name + ")" : "";
+  }
+  function releaseBadge(p, rel) {
+    if (!rel || !rel.known || p.in_release === null || p.in_release === undefined) { return ""; }
+    return p.in_release
+      ? '<span class="badge ready">' + esc(t("release.in", "in the OVOS release") + releaseName(rel)) + "</span>"
+      : '<span class="badge na">' + esc(t("release.not", "not checked")) + "</span>";
+  }
+  function releaseNote(node, rel, onlyRelease) {
+    var text = "";
+    if (rel && !rel.known) {
+      text = t("release.unknown", "The OVOS release could not be read, so everything on PyPI is shown.");
+    } else if (!onlyRelease) {
+      text = t("release.allWarn", "Everything on PyPI is shown, and none of it is checked: not whether it works with this device's versions, nor whether anyone still looks after it. The installer still checks the versions before it installs.");
+    } else {
+      text = t("release.onlyNote", "Only what belongs to the OVOS release this device follows") + releaseName(rel)
+        + t("release.onlyNoteEnd", ", and what is installed.");
+    }
+    node.textContent = text;
+    node.hidden = !text;
+  }
+
   window.OvosWebUI = {
     api: api, el: el, say: say, sayHtml: sayHtml, esc: esc, t: t, applyI18n: applyI18n,
+    releaseBadge: releaseBadge, releaseNote: releaseNote,
     fmtDateTime: fmtDateTime,
     ready: function (fn) {
       document.addEventListener("DOMContentLoaded", function () {
