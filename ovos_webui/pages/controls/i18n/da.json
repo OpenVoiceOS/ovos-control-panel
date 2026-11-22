@@ -35,5 +35,15 @@
  "controls.volume.unmutedMsg": "Lyden er tændt.",
  "controls.installed.pre": "Installeret. ",
  "controls.installed.link": "Genstart OVOS-tjenesterne",
- "controls.installed.post": ", og genindlæs så denne side."
+ "controls.installed.post": ", og genindlæs så denne side.",
+ "controls.cap.volume.label": "Lydstyrke",
+ "controls.cap.volume.hint": "Bestem hvor højt enheden taler og afspiller medier.",
+ "controls.cap.power.label": "Strøm",
+ "controls.cap.power.hint": "Genstart tjenesterne eller hele enheden.",
+ "controls.cap.system.label": "System",
+ "controls.cap.system.hint": "SSH og nulstilling til fabriksindstillinger, fra siden System.",
+ "controls.cap.network.label": "Wi-Fi-opsætning",
+ "controls.cap.network.hint": "Søg efter og tilslut Wi-Fi-netværk med udvidelsen ovos-control-panel-network. Kræver dette plugin, som kører med admin-tjenesten.",
+ "controls.cap.ggwave.label": "Lytter til Send med lyd",
+ "controls.cap.ggwave.hint": "Lader enheden høre data, der sendes med lyd fra siden Send med lyd."
 }
