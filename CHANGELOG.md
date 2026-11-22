@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a82](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a82) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a81...0.0.1a82)
+
+**Merged pull requests:**
+
+- Docs for pages in three parts, a JSON Schema, and the page for other UIs [\#165](https://github.com/OpenVoiceOS/ovos-control-panel/pull/165) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a81](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a81) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a80...0.0.1a81)
@@ -470,7 +478,6 @@
 - test: catch pages that use an undefined i18n key [\#47](https://github.com/OpenVoiceOS/ovos-control-panel/pull/47) ([JarbasAl](https://github.com/JarbasAl))
 - feat: add a real wake-word test to setup [\#46](https://github.com/OpenVoiceOS/ovos-control-panel/pull/46) ([JarbasAl](https://github.com/JarbasAl))
 - feat: save and share your own Mark-1 faceplate drawings [\#45](https://github.com/OpenVoiceOS/ovos-control-panel/pull/45) ([JarbasAl](https://github.com/JarbasAl))
-- docs: smooth the first-run guide \(Wi-Fi, phone access, token button\) [\#44](https://github.com/OpenVoiceOS/ovos-control-panel/pull/44) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
