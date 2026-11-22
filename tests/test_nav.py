@@ -61,14 +61,12 @@ def test_the_core_pages_are_the_panels_own():
     assert pages.CORE <= {p.id for p in REG.pages}
 
 
-def test_the_entry_points_list_every_builtin_page():
-    """pyproject.toml registers each of the panel's own pages, so an installed
-    panel finds them the same way it finds anyone else's."""
-    text = (Path(__file__).parent.parent / "pyproject.toml").read_text(encoding="utf-8")
-    section = text.split('[project.entry-points."opm.control_panel.page"]', 1)[1].split("\n\n", 1)[0]
-    registered = {line.split("=", 1)[1].strip().strip('"').split(":")[0].rsplit(".", 1)[1]
-                  for line in section.strip().splitlines() if "=" in line}
-    assert registered == set(pages.BUILTIN)
+def test_every_page_folder_is_one_of_the_panels_own():
+    """The panel reads its own pages from BUILTIN, so a page folder left out
+    of it would never show."""
+    root = Path(pages.__file__).parent
+    folders = {p.name for p in root.iterdir() if (p / "__init__.py").is_file()}
+    assert folders == set(pages.BUILTIN)
 
 
 def test_what_it_plays_for_you_is_in_the_library():

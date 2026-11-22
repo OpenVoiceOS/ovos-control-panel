@@ -2,8 +2,8 @@
 
 > **Status: partly built.** Comments go in #115.
 >
-> - **Built:** the registry and the `opm.control_panel.page` entry point, the
->   checks on a page description, groups a page brings, the menu built from
+> - **Built:** the registry, `controlpanel.json` for every other package's
+>   page, the checks on a page description, groups a page brings, the menu built from
 >   the registry, `needs`, icons, `heading`, `routes`, `assets`, per-page
 >   `i18n`, wrapping a page's body in the shell, and the list of pages on the
 >   About page. Every one of the panel's own pages uses it: each is a body in
@@ -16,19 +16,20 @@
 
 The control panel is a small shell. The shell does the sign in, the menu,
 the languages, the look and the safety checks. Everything you see in the menu
-is a **page**, and every page is registered the same way, whether it ships with
-the panel, with a plugin, with a skill, or in a package written only to extend
-the panel.
+is a **page**.
 
-The panel's own pages use the same mechanism as everyone else's. So moving a
-page out of the panel later (the Mark-1 page to the Mark-1 plugin, say) is a
-matter of moving a folder.
+A skill, a plugin or a package written only to extend the panel describes its
+page in a `controlpanel.json`, and the panel draws it: see
+[Pages described in a file](#pages-described-in-a-file). The panel's own pages
+are Python, in `ovos_webui/pages/`. A page moves out of the panel (the Mark-1
+page to the Mark-1 plugin, say) by becoming a `controlpanel.json`: in the
+plugin, or, until the plugin has one, in the panel's `bundled/` folder.
 
 ## Contents
 
 - [Two kinds of page](#two-kinds-of-page)
 - [Pages described in a file](#pages-described-in-a-file)
-- [Registering a page](#registering-a-page)
+- [The panel's own pages](#the-panels-own-pages)
 - [The page description](#the-page-description)
 - [The menu](#the-menu)
 - [Languages](#languages)
@@ -172,24 +173,20 @@ panel"; the rest of the page still works.
 A package that has both a described page and an HTML page with the same id
 keeps the described one.
 
-## Registering a page
+## The panel's own pages
 
-A package registers its pages under the `opm.control_panel.page` entry point
-group, the same way it registers any other OVOS plugin:
+The panel's own pages are Python modules in `ovos_webui/pages/`, each listed
+in `BUILTIN` and each with a `PAGE` description. Other packages cannot add a
+Python page: they describe theirs in a `controlpanel.json`. (Before 0.0.1a82 a
+package could register one under the `opm.control_panel.page` entry point;
+the panel no longer reads it.)
 
-```toml
-[project.entry-points."opm.control_panel.page"]
-emkay-guardian = "ovos_skill_guardian.panel:PAGE"
-```
-
-The entry point points at a page description: a dict, or a `ControlPanelPage`
-from `ovos_webui.pages`. One package can register several pages.
-
-The panel looks the group up when it starts. A page whose description is broken
-is left out and named in the log and on the About page. It never stops the panel
-from starting.
+A page whose description is broken is left out and named in the log and on
+the About page. It never stops the panel from starting.
 
 ## The page description
+
+This is the description of one of the panel's own pages.
 
 ```python
 PAGE = {
@@ -224,7 +221,7 @@ PAGE = {
 | `order` | no | Position within the group, lowest first. Default 100. |
 | `needs` | no | Packages that make the page work; any one of them is enough. If none is installed on a device that shares the assistant's environment, the page leaves the menu, and says it needs the first one if you reach it anyway. |
 | `icon` | no | An SVG file (at most 16 KB) in the page's folder. It is used as a mask, so it takes the menu's colour. |
-| `html` | yes | The page's body, as a file name next to the module the entry point is in, or as `(package, name)`. The shell wraps it in the common header and menu, inside `<main>`; a `<style>` or `<script>` element in it stays where it is. A whole document (starting with `<!doctype html>`) is served as it is, with the menu added to its head. |
+| `html` | yes | The page's body, as a file name next to the page's module, or as `(package, name)`. The shell wraps it in the common header and menu, inside `<main>`; a `<style>` or `<script>` element in it stays where it is. A whole document (starting with `<!doctype html>`) is served as it is, with the menu added to its head. |
 | `assets` | no | A folder of files served under `/pages/<id>/`: a path next to the module (it may have several parts, as `gui/images`), or `(package, path)` for a folder elsewhere in the page's package. |
 | `i18n` | no | A folder of `<lang>.json` files. See [Languages](#languages). |
 | `bus` | no | The messages the page may send and listen for. See [The bus bridge](#the-bus-bridge). |
