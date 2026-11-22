@@ -42,7 +42,7 @@ from fastapi.responses import (
 from ovos_utils.log import LOG
 from pydantic import BaseModel, Field
 
-from ovos_webui import branding, configio, health, installer, pypi, recommends, voicecfg
+from ovos_webui import branding, configio, described, health, installer, pypi, recommends, voicecfg
 from ovos_webui import pages as page_registry
 from ovos_webui.auth import (
     COOKIE_NAME,
@@ -457,7 +457,9 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
                 or any(p in ("", ".", "..") or p.startswith(".") for p in parts):
             raise HTTPException(404, "no such asset")
         target = page.assets.joinpath(*parts)
-        if not target.is_file():
+        # a described page's folder serves pictures only
+        if not target.is_file() or (page.described is not None
+                                    and Path(parts[-1]).suffix.lower() not in described.PICTURE_TYPES):
             raise HTTPException(404, "no such asset")
         media, _ = mimetypes.guess_type(parts[-1])
         return Response(target.read_bytes(), media_type=media or "application/octet-stream",

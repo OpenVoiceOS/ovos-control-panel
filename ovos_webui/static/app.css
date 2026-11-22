@@ -920,6 +920,11 @@ html.i18n-wait body { visibility: hidden; }
 .cp-filter select { width: auto; }
 .cp-title { font-weight: 650; }
 .cp-meta { color: var(--muted); font-size: 0.9em; overflow-wrap: anywhere; }
+.cp-text { overflow-wrap: anywhere; }
+.cp-list li.cp-with-picture { grid-template-columns: 5rem 1fr; gap: 1rem; align-items: start; }
+.cp-row-body { display: grid; gap: 0.35rem; min-width: 0; }
+.cp-picture { width: 5rem; height: 5rem; object-fit: contain; border-radius: var(--radius-sm); }
+@media (max-width: 30rem) { .cp-list li.cp-with-picture { grid-template-columns: 1fr; } }
 #cp-page textarea { width: 100%; font-family: inherit; min-height: 6rem; }
 .cp-rows { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 1rem; margin: 0.5rem 0; }
 .cp-rows dt { color: var(--muted); }

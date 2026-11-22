@@ -485,6 +485,14 @@ class _Checker:
                 out["meta"] = _label(raw["meta"], where)
             if raw.get("empty") is not None:
                 out["empty"] = _label(raw["empty"], where)
+            if raw.get("text") is not None:
+                # a row's text under its title, like the title: "{field}"
+                out["text"] = str(raw["text"])[:200]
+            if raw.get("picture") is not None:
+                # a row's picture: the field holds a file name in the page's pictures
+                if not self.data.get("pictures"):
+                    raise DescribedError(f"{where}: a picture needs the page's pictures folder")
+                out["picture"] = _field_name(raw["picture"], where)
             split = raw.get("split")
             if split:
                 out["split"] = {"by": _field_name(split.get("by"), where),
@@ -670,6 +678,23 @@ def english(page: dict, found: dict[str, dict[str, str]]) -> dict[str, str]:
     walk(page)
     out.update(found.get("en") or {})
     return out
+
+
+#: the files a page's pictures folder serves
+PICTURE_TYPES = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"})
+
+
+def pictures(root: Path, spec: Any) -> Path | None:
+    """The page's pictures: a folder in the package, served under /pages/<id>/."""
+    if not spec:
+        return None
+    if not isinstance(spec, str) or spec.startswith("/") or "\\" in spec \
+            or any(not p or p.startswith(".") for p in spec.split("/")):
+        raise DescribedError(f"not a folder in the package: {spec!r}")
+    path = root.joinpath(*spec.split("/"))
+    if not path.is_dir():
+        raise DescribedError(f"{spec} is not there")
+    return path
 
 
 def icon(root: Path, spec: Any) -> str | None:
