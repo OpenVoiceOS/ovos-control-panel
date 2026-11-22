@@ -44,5 +44,10 @@
  "panel.rec.path": "المجلد (مرتب كملف‑تعريف/لغة.conf)",
  "panel.rec.nowFolder": "قيد الاستخدام: التوصيات في",
  "panel.rec.nowOvos": "قيد الاستخدام: توصيات OpenVoiceOS.",
- "panel.rec.saved": "تم الحفظ."
+ "panel.rec.saved": "تم الحفظ.",
+ "panel.uploads.title": "الرفع",
+ "panel.uploads.hint": "أكبر ملف يمكن لصفحة أن تضعه على الجهاز، مثل فيلم أو أغنية في صفحة الوسائط. الجهاز الذي لن يحفظ أفلامًا أبدًا يمكنه قبول أقل.",
+ "panel.uploads.max": "أكبر ملف (ميغابايت)",
+ "panel.uploads.default": "هذه هي القيمة الافتراضية.",
+ "panel.uploads.bad": "اكتب عددًا صحيحًا من الميغابايت، 1 على الأقل."
 }

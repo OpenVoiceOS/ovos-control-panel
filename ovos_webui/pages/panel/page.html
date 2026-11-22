@@ -45,6 +45,19 @@
     <div class="msg" id="msg-rec" role="status" aria-live="polite" hidden></div>
   </div>
 
+  <h2 data-i18n="panel.uploads.title">Uploads</h2>
+  <div class="card">
+    <p class="hint" data-i18n="panel.uploads.hint">The largest file a page may put on the device, such as a film or a song on the Media page. A device that is never meant to hold films can take less.</p>
+    <label><span data-i18n="panel.uploads.max">Largest file (MB)</span>
+      <input type="number" id="uploads-max" min="1" max="1048576" step="1" inputmode="numeric"></label>
+    <p class="hint" id="uploads-now"></p>
+    <div class="row">
+      <button id="uploads-save" data-i18n="panel.look.save">Save</button>
+      <button class="secondary" id="uploads-reset" data-i18n="panel.look.reset">Back to the default</button>
+    </div>
+    <div class="msg" id="msg-uploads" role="status" aria-live="polite" hidden></div>
+  </div>
+
   <h2 data-i18n="panel.pages.title">Added pages</h2>
   <div class="card" id="pages-card">
     <p class="hint" data-i18n="panel.pages.hint">Pages that skills and plugins add to the panel. Untick one to take it out of the menu on this device.</p>
@@ -142,6 +155,30 @@ OvosWebUI.ready(function () {
       .catch(function (e) { OvosWebUI.say("msg-rec", e.message, true); });
   });
   api("/api/panel/recommends").then(showRec).catch(function (e) { OvosWebUI.say("msg-rec", e.message, true); });
+
+  // ── the largest file a page may put on the device ──────────────────────
+  function showUploads(r) {
+    el("uploads-max").value = r.max_mb;
+    el("uploads-now").textContent = r.yours ? "" :
+      t("panel.uploads.default", "This is the default.");
+  }
+  function saveUploads(mb, done) {
+    api("/api/panel/uploads", {method: "POST", headers: json, body: JSON.stringify({max_mb: mb})})
+      .then(function (r) { showUploads(r); OvosWebUI.say("msg-uploads", done); })
+      .catch(function (e) { OvosWebUI.say("msg-uploads", e.message, true); });
+  }
+  el("uploads-save").addEventListener("click", function () {
+    var mb = parseInt(el("uploads-max").value, 10);
+    if (!(mb >= 1 && mb <= 1048576)) {
+      OvosWebUI.say("msg-uploads", t("panel.uploads.bad", "Give a whole number of MB, at least 1."), true);
+      return;
+    }
+    saveUploads(mb, t("panel.rec.saved", "Saved."));
+  });
+  el("uploads-reset").addEventListener("click", function () {
+    saveUploads(0, t("panel.rec.saved", "Saved."));
+  });
+  api("/api/panel/uploads").then(showUploads).catch(function (e) { OvosWebUI.say("msg-uploads", e.message, true); });
 
   // ── added pages: a switch each ───────────────────────────────────────────
   // the menu already has each page's title in the device's language

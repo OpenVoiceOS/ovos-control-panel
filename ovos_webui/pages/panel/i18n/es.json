@@ -44,5 +44,10 @@
  "panel.rec.path": "Carpeta (organizada como perfil/idioma.conf)",
  "panel.rec.nowFolder": "En uso: las recomendaciones de",
  "panel.rec.nowOvos": "En uso: las recomendaciones de OpenVoiceOS.",
- "panel.rec.saved": "Guardado."
+ "panel.rec.saved": "Guardado.",
+ "panel.uploads.title": "Subidas",
+ "panel.uploads.hint": "El archivo más grande que una página puede guardar en el dispositivo, como una película o una canción en la página Medios. Un dispositivo que nunca guardará películas puede aceptar menos.",
+ "panel.uploads.max": "Archivo más grande (MB)",
+ "panel.uploads.default": "Es el valor predeterminado.",
+ "panel.uploads.bad": "Indica un número entero de MB, al menos 1."
 }

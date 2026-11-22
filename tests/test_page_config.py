@@ -226,3 +226,27 @@ def test_the_recommendations_folder_is_set_from_the_panel(token_client, tmp_path
     assert c.post("/api/panel/recommends", json={"path": "openvoiceos"}).json()["distribution"] is False
     c.post("/api/panel/recommends", json={"path": ""})
     assert "recommends" not in _json.loads(configio.user_config_path().read_text())["webui"]
+
+
+def test_the_largest_upload_is_set_on_the_control_panel_page(token_client):
+    import json as _json
+
+    from ovos_webui import configio
+    c = token_client
+    assert configio.max_upload_mb() == configio.MAX_UPLOAD_MB_DEFAULT == 1024
+    assert c.post("/api/panel/uploads", json={"max_mb": 50}).status_code == 401, "needs the token"
+    c.headers["Authorization"] = "Bearer s3cret-token"
+    assert c.get("/api/panel/uploads").json() == {"max_mb": 1024, "default": 1024, "yours": None}
+    for bad in (-1, 1024 * 1024 + 1, "50", 2.5, True):
+        assert c.post("/api/panel/uploads", json={"max_mb": bad}).status_code == 422, bad
+    assert c.post("/api/panel/uploads", json={"max_mb": 50}).json()["max_mb"] == 50
+    assert configio.max_upload_mb() == 50
+    assert _json.loads(configio.user_config_path().read_text())["webui"]["max_upload_mb"] == 50
+    assert c.post("/api/panel/uploads", json={"max_mb": 0}).json() == {"max_mb": 1024, "default": 1024, "yours": None}
+    assert "max_upload_mb" not in _json.loads(configio.user_config_path().read_text())["webui"]
+
+
+@pytest.mark.parametrize("raw", ["big", 0, -5, True, 10 ** 9, 2.0])
+def test_a_largest_upload_that_makes_no_sense_is_the_default(raw):
+    _set_webui({"max_upload_mb": raw})
+    assert configio.max_upload_mb() == configio.MAX_UPLOAD_MB_DEFAULT

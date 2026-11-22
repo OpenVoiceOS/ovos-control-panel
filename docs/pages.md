@@ -363,6 +363,15 @@ The name, the logo and the colours are public, like `app.css`, because the
 sign in page wears them too.
 A theme plugin can come later if a distribution needs more than this.
 
+### The largest file
+
+`webui.max_upload_mb` is the largest file, in MB, that a page may put on the
+device: 1024 (enough for a film) unless it is set. It is set on the Control
+panel page, or by a distribution that is never meant to hold films. A page
+that writes files in parts reads it with
+`ovos_webui.configio.max_upload_mb()` (the Media extension does); each request
+is still held to the page's own `uploads` size.
+
 ## Trust and safety
 
 A panel extension runs with the panel's full trust. Its Python runs in the

@@ -44,5 +44,10 @@
  "panel.rec.path": "Folder (laid out as profile/language.conf)",
  "panel.rec.nowFolder": "In use: the recommendations in",
  "panel.rec.nowOvos": "In use: OpenVoiceOS's own recommendations.",
- "panel.rec.saved": "Saved."
+ "panel.rec.saved": "Saved.",
+ "panel.uploads.title": "Uploads",
+ "panel.uploads.hint": "The largest file a page may put on the device, such as a film or a song on the Media page. A device that is never meant to hold films can take less.",
+ "panel.uploads.max": "Largest file (MB)",
+ "panel.uploads.default": "This is the default.",
+ "panel.uploads.bad": "Give a whole number of MB, at least 1."
 }

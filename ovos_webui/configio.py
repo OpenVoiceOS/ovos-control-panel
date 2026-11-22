@@ -293,6 +293,24 @@ QUICK_KEYS = [
 ]
 
 
+#: The largest file the device takes from the panel, in MB, unless
+#: webui.max_upload_mb says otherwise: enough for a film. A device that is
+#: never meant to hold films (a phone, a reception desk) sets it lower.
+MAX_UPLOAD_MB_DEFAULT = 1024
+MAX_UPLOAD_MB_LIMIT = 1024 * 1024
+
+
+def max_upload_mb() -> int:
+    """The largest file, in MB, that a page may take from the panel and keep
+    on the device (``webui.max_upload_mb``, set on the Control panel page).
+    For pages that write files in parts, as the Media extension does; each
+    request is still held to the page's own upload size."""
+    raw = section("webui").get("max_upload_mb")
+    if isinstance(raw, int) and not isinstance(raw, bool) and 1 <= raw <= MAX_UPLOAD_MB_LIMIT:
+        return raw
+    return MAX_UPLOAD_MB_DEFAULT
+
+
 def get_in(data: dict[str, Any], path: list[str]) -> Any:
     """Return the value at ``path`` in ``data``, or ``None``."""
     node: Any = data
