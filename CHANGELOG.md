@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a97](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a97) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a96...0.0.1a97)
+
+**Merged pull requests:**
+
+- fix: packaging is a dependency [\#186](https://github.com/OpenVoiceOS/ovos-control-panel/pull/186) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a96](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a96) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a95...0.0.1a96)
@@ -537,10 +545,6 @@
 ## [0.0.1a31](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a31) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a30...0.0.1a31)
-
-**Merged pull requests:**
-
-- fix: say truthfully which settings need a restart [\#62](https://github.com/OpenVoiceOS/ovos-control-panel/pull/62) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a30](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a30) (2026-08-26)
 
