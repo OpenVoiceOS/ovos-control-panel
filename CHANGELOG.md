@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a89](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a89) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a88...0.0.1a89)
+
+**Merged pull requests:**
+
+- The largest file a page may put on the device, set on the Control panel page [\#175](https://github.com/OpenVoiceOS/ovos-control-panel/pull/175) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a88](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a88) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a87...0.0.1a88)
@@ -519,7 +527,6 @@
 - feat: add Portuguese and Spanish UI locales [\#54](https://github.com/OpenVoiceOS/ovos-control-panel/pull/54) ([JarbasAl](https://github.com/JarbasAl))
 - fix: correct the config-union comment \(caching, not schema filtering\) [\#53](https://github.com/OpenVoiceOS/ovos-control-panel/pull/53) ([JarbasAl](https://github.com/JarbasAl))
 - feat: hear the current voice from the Voice page [\#52](https://github.com/OpenVoiceOS/ovos-control-panel/pull/52) ([JarbasAl](https://github.com/JarbasAl))
-- feat: cross-link the Voice and Transformers pages [\#51](https://github.com/OpenVoiceOS/ovos-control-panel/pull/51) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
