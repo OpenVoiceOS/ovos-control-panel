@@ -1,19 +1,19 @@
 {
- "hdr.wallpaper": "Baggrund",
+ "wallpaper.title": "Baggrund",
  "wallpaper.intro": "Skift baggrundsbillede på en enhed med skærm. Vælg et fra samlingen, sæt et ud fra dets adresse, eller lad enheden skifte mellem dem. Det kræver wallpaper-manager-pluginnet på enheden.",
- "wallpaper.missing": "Wallpaper-manageren svarede ikke. Er den installeret på enheden?",
  "wallpaper.current.title": "Nuværende baggrund",
  "wallpaper.current.none": "Der er ikke sat nogen baggrund.",
  "wallpaper.next": "Næste baggrund",
- "wallpaper.rotate": "Skift automatisk mellem baggrunde",
- "wallpaper.rotateEvery": "Hvert {s}. sekund.",
  "wallpaper.choose.title": "Vælg en baggrund",
  "wallpaper.choose.none": "Denne kilde har ingen baggrunde at vise.",
  "wallpaper.provider": "Kilde",
  "wallpaper.byUrl": "Eller sæt en ud fra dens adresse",
  "wallpaper.set": "Sæt",
- "wallpaper.setting": "Sætter…",
- "wallpaper.setDone": "Baggrunden er sat.",
- "wallpaper.setThis": "Sæt baggrund: {n}",
- "wallpaper.brokenThumb": "Kunne ikke indlæse baggrund: {n}"
+ "wallpaper.rotate.title": "Automatisk skift",
+ "wallpaper.rotate.on": "Skifter til den næste hvert {rotation_time}. sekund.",
+ "wallpaper.rotate.off": "Bliver, til du skifter den.",
+ "wallpaper.rotate.start": "Slå til",
+ "wallpaper.rotate.stop": "Slå fra",
+ "wallpaper.use": "Brug",
+ "wallpaper.address": "Adresse"
 }

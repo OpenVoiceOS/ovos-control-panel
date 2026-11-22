@@ -365,7 +365,13 @@ OvosWebUI.ready(function () {
       }
       function load() {
         return post("/query", {ref: block.ref, params: params}).then(function (data) {
-          lastItems = get(data, block.items) || [];
+          // a list of text is rows with that text as their key
+          lastItems = (get(data, block.items) || []).map(function (i) {
+            if (typeof i !== "string") { return i; }
+            var row = {};
+            row[block.key] = i;
+            return row;
+          });
           if (choose) { fillChooser(lastItems); }
           draw(lastItems);
         }).catch(function (e) {

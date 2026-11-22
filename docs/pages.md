@@ -121,7 +121,8 @@ or a download, `{"label", "download", "file":
 {"data": <answer field, base64>, "name": "{name}.mid", "type": <media type>}}`,
 with `when` (`"field"` or `"!field"` on the row) and `confirm` (a label).
 A message that gets no answer (the plugin acts and says nothing) is marked
-`"answer": false`: the panel sends it and is done.
+`"answer": false`: the panel sends it and is done. A list whose answer is a
+list of text (addresses, names) has rows with that text as their `key`.
 A field is `{"name", "label", "type"}`, the type one of `text`, `password`,
 `url` (http:// or https://), `number`, `slider`, `checkbox`, `select`
 (`options`, or `options_from` a query, or on a TTS plugin's page `"voices": true`: the voices the plugin itself lists for the reader's language, read in a process of their own so its code never runs in the panel) and `lines`, with `required`, `hint`, `min`, `max`, `step` and `max_length`.

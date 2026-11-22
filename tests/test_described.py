@@ -613,3 +613,27 @@ def test_the_apps_page_the_panel_brings_launches_by_name(bus, monkeypatch):
         assert c.post("/api/cp/apps/query", json={"ref": "b1"}).json()["apps"][0]["name"] == "Firefox"
         assert c.post("/api/cp/apps/act", json={"ref": "b1.a0", "key": "Firefox"}).status_code == 200
     assert ("ovos.phal.app_launcher.launch", {"name": "Firefox"}) in seen
+
+
+def test_the_wallpaper_page_lists_text_and_sends_what_gets_no_answer(bus, monkeypatch):
+    root = described.BUNDLED / "ovos-phal-plugin-wallpaper-manager"
+    data = json.loads((root / "controlpanel.json").read_text(encoding="utf-8"))
+    found = described.Found("ovos-PHAL-plugin-wallpaper-manager", "0.2.8a2", "ovos_PHAL_plugin_wallpaper_manager",
+                            root, data, by_panel=True)
+    monkeypatch.setattr(described, "discover", lambda: [found])
+    seen = []
+    bus.on("ovos.wallpaper.manager.change.wallpaper", lambda m: seen.append(m.msg_type))
+
+    def set_it(message):
+        seen.append((message.msg_type, dict(message.data)))
+        bus.emit(message.response({"wallpaper": message.data["url"]}))
+    bus.on("ovos.wallpaper.manager.set.wallpaper", set_it)
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
+    with TestClient(app, base_url="http://127.0.0.1:8500", headers={"sec-fetch-site": "same-origin",
+                                                                    "Authorization": "Bearer s3cret-token"}) as c:
+        # "next": the plugin acts and does not answer
+        assert c.post("/api/cp/wallpaper/act", json={"ref": "b1.a0"}).json() == {}
+        # a row of the collection (a list of text) is set by its address
+        assert c.post("/api/cp/wallpaper/act", json={"ref": "b4.a0", "key": "/home/me/sea.jpg"}).status_code == 200
+    assert seen == ["ovos.wallpaper.manager.change.wallpaper",
+                    ("ovos.wallpaper.manager.set.wallpaper", {"url": "/home/me/sea.jpg"})]

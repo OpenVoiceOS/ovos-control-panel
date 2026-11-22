@@ -1,19 +1,19 @@
 {
- "hdr.wallpaper": "Fondo de pantalla",
+ "wallpaper.title": "Fondo de pantalla",
  "wallpaper.intro": "Cambie el fondo de pantalla de un dispositivo con pantalla. Elija uno de la colección, establezca uno por su dirección, o deje que el dispositivo los vaya rotando. Esto necesita el complemento wallpaper-manager en el dispositivo.",
- "wallpaper.missing": "El gestor de fondos de pantalla no ha respondido. ¿Está instalado en el dispositivo?",
  "wallpaper.current.title": "Fondo de pantalla actual",
  "wallpaper.current.none": "No hay ningún fondo de pantalla establecido.",
  "wallpaper.next": "Siguiente fondo de pantalla",
- "wallpaper.rotate": "Rotar automáticamente entre fondos de pantalla",
- "wallpaper.rotateEvery": "Cada {s} segundos.",
  "wallpaper.choose.title": "Elija un fondo de pantalla",
  "wallpaper.choose.none": "Esta fuente no tiene fondos de pantalla que mostrar.",
  "wallpaper.provider": "Fuente",
  "wallpaper.byUrl": "O establezca uno por su dirección",
  "wallpaper.set": "Establecer",
- "wallpaper.setting": "Estableciendo…",
- "wallpaper.setDone": "Fondo de pantalla establecido.",
- "wallpaper.setThis": "Establecer fondo de pantalla: {n}",
- "wallpaper.brokenThumb": "No se ha podido cargar el fondo de pantalla: {n}"
+ "wallpaper.rotate.title": "Rotación automática",
+ "wallpaper.rotate.on": "Cambia al siguiente cada {rotation_time} segundos.",
+ "wallpaper.rotate.off": "Se queda hasta que usted lo cambie.",
+ "wallpaper.rotate.start": "Activar",
+ "wallpaper.rotate.stop": "Desactivar",
+ "wallpaper.use": "Usar",
+ "wallpaper.address": "Dirección"
 }

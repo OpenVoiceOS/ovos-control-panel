@@ -1,19 +1,19 @@
 {
- "hdr.wallpaper": "Papel de parede",
+ "wallpaper.title": "Papel de parede",
  "wallpaper.intro": "Altere o papel de parede num dispositivo com ecrã. Escolha um da coleção, defina um pelo seu endereço, ou deixe o dispositivo alternar entre eles. Isto precisa do plugin wallpaper-manager no dispositivo.",
- "wallpaper.missing": "O gestor de papéis de parede não respondeu. Está instalado no dispositivo?",
  "wallpaper.current.title": "Papel de parede atual",
  "wallpaper.current.none": "Nenhum papel de parede está definido.",
  "wallpaper.next": "Papel de parede seguinte",
- "wallpaper.rotate": "Alternar papéis de parede automaticamente",
- "wallpaper.rotateEvery": "A cada {s} segundos.",
  "wallpaper.choose.title": "Escolha um papel de parede",
  "wallpaper.choose.none": "Esta origem não tem papéis de parede para mostrar.",
  "wallpaper.provider": "Origem",
  "wallpaper.byUrl": "Ou defina um pelo seu endereço",
  "wallpaper.set": "Definir",
- "wallpaper.setting": "A definir…",
- "wallpaper.setDone": "Papel de parede definido.",
- "wallpaper.setThis": "Definir papel de parede: {n}",
- "wallpaper.brokenThumb": "Não foi possível carregar o papel de parede: {n}"
+ "wallpaper.rotate.title": "Alternância automática",
+ "wallpaper.rotate.on": "Muda para o seguinte a cada {rotation_time} segundos.",
+ "wallpaper.rotate.off": "Fica até o mudar.",
+ "wallpaper.rotate.start": "Ativar",
+ "wallpaper.rotate.stop": "Desativar",
+ "wallpaper.use": "Usar",
+ "wallpaper.address": "Endereço"
 }
