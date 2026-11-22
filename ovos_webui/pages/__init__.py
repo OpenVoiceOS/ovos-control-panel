@@ -59,7 +59,7 @@ OWN_DIST = "ovos-control-panel"
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 _PATH_RE = re.compile(r"^/[a-z0-9/_-]*$")
 _KNOWN = {"api_version", "id", "path", "title", "heading", "group", "groups", "order",
-          "needs", "icon", "html", "assets", "i18n", "bus", "routes", "uploads", "manual"}
+          "needs", "icon", "html", "assets", "i18n", "routes", "uploads", "manual"}
 #: The largest upload a page may ask for, per request.
 MAX_PAGE_UPLOAD = 64 * 1024 * 1024
 _LANG_RE = re.compile(r"^[a-z]{2,3}(-[a-z0-9]{2,8})?$")
