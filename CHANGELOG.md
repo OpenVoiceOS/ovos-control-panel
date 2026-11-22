@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.1a90](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a90) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a89...0.0.1a90)
+
+**Merged pull requests:**
+
+- Media providers: a page each, and their settings where the pipeline reads them [\#178](https://github.com/OpenVoiceOS/ovos-control-panel/pull/178) ([andlo](https://github.com/andlo))
+- Setup guides a distribution can choose [\#177](https://github.com/OpenVoiceOS/ovos-control-panel/pull/177) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a89](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a89) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a88...0.0.1a89)
@@ -525,8 +534,6 @@
 - fix: clear ruff lint errors so the lint check can pass [\#56](https://github.com/OpenVoiceOS/ovos-control-panel/pull/56) ([JarbasAl](https://github.com/JarbasAl))
 - fix: install the transformer plugins the tests require [\#55](https://github.com/OpenVoiceOS/ovos-control-panel/pull/55) ([JarbasAl](https://github.com/JarbasAl))
 - feat: add Portuguese and Spanish UI locales [\#54](https://github.com/OpenVoiceOS/ovos-control-panel/pull/54) ([JarbasAl](https://github.com/JarbasAl))
-- fix: correct the config-union comment \(caching, not schema filtering\) [\#53](https://github.com/OpenVoiceOS/ovos-control-panel/pull/53) ([JarbasAl](https://github.com/JarbasAl))
-- feat: hear the current voice from the Voice page [\#52](https://github.com/OpenVoiceOS/ovos-control-panel/pull/52) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
