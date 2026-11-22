@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a78](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a78) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a77...0.0.1a78)
+
+**Merged pull requests:**
+
+- feat: pages the panel brings, a plugin's own config places, and a module block [\#155](https://github.com/OpenVoiceOS/ovos-control-panel/pull/155) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a77](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a77) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a76...0.0.1a77)
@@ -443,7 +451,6 @@
 - feat: configurable package index for self-hosters [\#37](https://github.com/OpenVoiceOS/ovos-control-panel/pull/37) ([JarbasAl](https://github.com/JarbasAl))
 - feat: larger-text toggle for low-vision and elderly users [\#36](https://github.com/OpenVoiceOS/ovos-control-panel/pull/36) ([JarbasAl](https://github.com/JarbasAl))
 - feat: Simple mode — hide advanced pages for everyday use [\#35](https://github.com/OpenVoiceOS/ovos-control-panel/pull/35) ([JarbasAl](https://github.com/JarbasAl))
-- fix: audit a11y defects \(pipeline focus, wallpaper labels\) + security doc accuracy [\#34](https://github.com/OpenVoiceOS/ovos-control-panel/pull/34) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
