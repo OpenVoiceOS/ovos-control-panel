@@ -54,17 +54,20 @@ panel runs apart from the assistant, it cannot tell, so every page shows.
 | Voice | All voice settings | Every voice setting: also listening, speech to text, the pipeline order and transformers. | [voice-settings.md](voice-settings.md) |
 | | Servers | Points speech-to-text, text-to-speech, and translation at self-hosted servers, with failover. | [servers.md](servers.md) |
 | | Translate | Translates what a skill says and hears into your language. | [translate.md](translate.md) |
+| | *each voice or listener plugin* | Whether it is the one in use or the fallback, buttons to make it so, and a sentence to hear a voice; its own settings when it describes them. | [controlpanel-json.md](controlpanel-json.md#module) |
 | Understanding | Intents | Dry-runs a sentence, shows active skills, and browses every registered intent. | [intents.md](intents.md) |
 | | Transformers | Turns transformer plugins on or off, orders them, and edits each plugin's settings. | [transformers.md](transformers.md) |
 | | Personas | Makes and edits personas — the ordered list of solvers that answer you. | [personas.md](personas.md) |
 | Device | System | SSH and a factory reset, where the system plugin is installed. | [system.md](system.md) |
 | | Sensors | Live readings from the device's sensors, if a sensor plugin is installed. | [sensors.md](sensors.md) |
-| | Media | What is playing, the queue and the volume; comes with the ovos-control-panel-media extension. | [media.md](media.md) |
+| Library | Media | What is playing, the queue, the volume, and your own songs and films to put on the device; comes with the ovos-control-panel-media extension. | [media.md](media.md) |
+| | *each media provider* | Whether the assistant searches it when asked to play something, and a switch; its own settings when it describes them. | [controlpanel-json.md](controlpanel-json.md#provider) |
 | Screen | Apps | Launches and closes desktop applications on a device with a screen. | [apps.md](apps.md) |
 | | Wallpaper | Sets the background on a device with a screen, from a collection or by address. | [wallpaper.md](wallpaper.md) |
 | | Mark-1 faceplate | Lights the Mark-1's eyes and puts text on its mouth; the editors come with the ovos-control-panel-mark1 extension. | [mark1.md](mark1.md) |
 | Maintenance | Plugins | Finds OVOS plugins and installs or removes them; updates and the release channel. | [plugins.md](plugins.md), [updates.md](updates.md) |
 | | Settings | Changes your layer of `mycroft.conf`, as a form or as raw JSON or YAML. | [configuration.md](configuration.md) |
+| | Control panel | The panel's own name, colour and theme, where recommendations come from, stores, the largest upload, which added pages show, and the token. | [pages.md](pages.md#configuration) |
 | | Send over sound | Sends Wi-Fi credentials, installs, or commands to a nearby device by playing a sound. | [send-over-sound.md](send-over-sound.md) |
 
 ### Not in the menu
