@@ -65,5 +65,6 @@
  "skills.info.failed": "No se pudieron obtener los detalles.",
  "skills.by": "De",
  "skills.version": "versión",
- "skills.released": "publicada el"
+ "skills.released": "publicada el",
+ "skills.ownPage": "Tiene una página propia en el menú:"
 }
