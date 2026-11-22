@@ -28,6 +28,8 @@ PAGE = {
                     {"name": "loud", "label": "demo.loud", "type": "slider", "min": 0, "max": 10},
                     {"name": "secret", "label": "demo.secret", "type": "password"}]},
         {"type": "sparkles", "what": "a block from the future"},
+        {"type": "upload", "send": "ovos.demo.upload", "accept": [".TXT", ".pdf"], "max_mb": 1,
+         "field": {"name": "title", "label": "demo.title"}},
     ],
 }
 
@@ -38,8 +40,9 @@ def checked(page=None, package="ovos-phal-plugin-demo"):
 
 def test_a_file_is_checked_and_numbered():
     page, refs = checked()
-    assert [b["type"] for b in page["blocks"]] == ["text", "choice", "list", "form", "unknown"]
-    assert set(refs) == {"b2", "b2.rename", "b2.a0", "b2.a1", "b2.a2", "b3.form"}
+    assert [b["type"] for b in page["blocks"]] == ["text", "choice", "list", "form", "unknown", "upload"]
+    assert set(refs) == {"b2", "b2.rename", "b2.a0", "b2.a1", "b2.a2", "b3.form", "b5.upload"}
+    assert page["blocks"][5]["accept"] == [".pdf", ".txt"]
     assert refs["b2.a0"]["confirm"] == {"key": "common.sure"}, "a delete always asks first"
     assert refs["b2.a0"]["privileged"] and not refs["b2.a2"]["privileged"]
     assert not refs["b2.a1"]["privileged"], "a download is a read"
@@ -111,6 +114,7 @@ def app(bus, monkeypatch, tmp_path):
     answer("ovos.demo.delete", {"ok": True})
     answer("ovos.demo.play", {"ok": True})
     answer("ovos.demo.file", {"name": "Mine", "data": base64.b64encode(b"hello").decode()})
+    answer("ovos.demo.upload", {"ok": True})
     bus.on("ovos.demo.reload", lambda m: seen.append((m.msg_type, {})))
     app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
     with TestClient(app, base_url="http://127.0.0.1:8500",
@@ -239,3 +243,36 @@ def test_a_described_page_brings_a_group_named_by_a_label(tmp_path):
     found = described.Found("ovos-skill-books", "1.0", "ovos_skill_books", root, page)
     _, groups = pages.parse_described(found, "ovos-skill-books", "1.0")
     assert groups == [{"id": "shelf", "key": "nav.group.shelf", "label": "Shelf", "order": 5, "level": "everyday"}]
+
+
+def test_the_menu_carries_a_mark_of_the_pages_strings(tmp_path):
+    """The browser keeps the strings it read; a page updated with new words
+    changes the mark, so they are read again."""
+    def reg(words):
+        root = tmp_path / words
+        (root / "locale" / "da-DK").mkdir(parents=True, exist_ok=True)
+        (root / "locale" / "da-DK" / "controlpanel.json").write_text(json.dumps({"demo.title": words}))
+        found = described.Found("ovos-phal-plugin-demo", "1.0", "ovos_phal_plugin_demo", root, PAGE)
+        return pages.load([], files=[found])
+    first, again, other = reg("Prøve"), reg("Prøve"), reg("Prøv")
+    assert first.nav()["strings"] == again.nav()["strings"] != other.nav()["strings"]
+
+
+def test_an_upload_goes_to_the_skill_in_parts(app, monkeypatch):
+    c, seen = app
+    monkeypatch.setattr(described, "UPLOAD_PART", 4)
+    files = {"file": ("../../etc/My letter.txt", b"hello world", "text/plain")}
+    form = {"ref": "b5.upload", "title": " Mit brev "}
+    assert c.post("/api/cp/demo/upload", data=form, files=files).status_code in (401, 403), "it needs the token"
+    c.headers["Authorization"] = "Bearer s3cret-token"
+    assert c.post("/api/cp/demo/upload", data=form, files=files).json() == {"ok": True}
+    parts = [d for t, d in seen if t == "ovos.demo.upload"]
+    assert [p["part"] for p in parts] == [0, 1, 2] and {p["parts"] for p in parts} == {3}
+    assert {p["name"] for p in parts} == {"My letter.txt"} and {p["title"] for p in parts} == {"Mit brev"}
+    assert len({p["upload"] for p in parts}) == 1
+    assert b"".join(base64.b64decode(p["data"]) for p in parts) == b"hello world"
+    bad = {"file": ("x.exe", b"MZ", "application/octet-stream")}
+    assert c.post("/api/cp/demo/upload", data={"ref": "b5.upload"}, files=bad).status_code == 415
+    big = {"file": ("big.pdf", b"x" * (1024 * 1024 + 1), "application/pdf")}
+    assert c.post("/api/cp/demo/upload", data={"ref": "b5.upload"}, files=big).status_code == 413
+    assert c.post("/api/cp/demo/upload", data={"ref": "b2"}, files=files).status_code == 400

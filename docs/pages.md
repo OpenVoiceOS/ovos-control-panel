@@ -110,6 +110,7 @@ prefix every message of the page starts with.
 | `actions` | `actions`: buttons. |
 | `form` | `fields` and `save`: `{"config": "PHAL.<package>", "reload": "<message>"}` writes in the plugin's own place in `mycroft.conf` and asks it to read it again; `{"send": "<message>"}` with a `query` sends the values to the skill. |
 | `choice` | `param` and `options`: tabs whose value goes with every query on the page. |
+| `upload` | `send`, `accept` (the file endings it takes: `[".pdf", ".txt"]`), `max_mb` (1 to 64, default 10) and a `field` (`name`, `label`, `max_length`) sent along, such as a title. The file goes to the skill in parts of 512 KB, each a message with `upload` (one id for all the parts), `name`, `part` (from 0), `parts`, `data` (base64) and the field; the answer to the last part is the answer. An upload always needs the token. |
 
 An action is `{"label", "send"}`, with `data` it always sends (a test sound),
 or a download, `{"label", "download", "file":
@@ -157,6 +158,9 @@ panel"; the rest of the page still works.
 - **A form writes only in the plugin's own place** in `mycroft.conf`
   (`PHAL.<package>`). A password is never sent back to the browser; an empty
   one keeps what is there.
+- **Uploads** take only the file endings and the size the file says, need the
+  token, and reach the skill as a bare file name (no folders) in parts the bus
+  can carry; where the file is kept is the skill's to decide.
 - **Downloads** are only of a short list of types (MIDI, audio, PDF, plain
   text, JSON, CSV, images, EPUB), always as attachments.
 - **Values are text.** What the skill answers is put on the page as text,

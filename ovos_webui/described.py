@@ -31,7 +31,7 @@ MAX_STRINGS = 256 * 1024
 MAX_ICON = 16 * 1024
 #: The blocks this panel draws. A block of another type is drawn as "this
 #: needs a newer control panel", and the rest of the page still works.
-BLOCKS = frozenset({"text", "status", "list", "actions", "form", "choice"})
+BLOCKS = frozenset({"text", "status", "list", "actions", "form", "choice", "upload"})
 FIELD_TYPES = frozenset({"text", "password", "url", "number", "slider", "checkbox", "select", "lines"})
 _URL_RE = re.compile(r"^https?://[^\s/]+\S*$")
 #: A page's messages start with its own prefix, never with one of these.
@@ -46,6 +46,11 @@ _FIELD_RE = re.compile(r"^[a-z_][a-z0-9_]{0,63}$")
 #: a field in an answer, maybe nested: "ports.outputs"
 _PATH_RE = re.compile(r"^[a-z_][a-z0-9_]{0,63}(\.[a-z_][a-z0-9_]{0,63}){0,3}$")
 MAX_DATA = 4096
+#: An upload goes to the skill over the bus in parts of this size, so no
+#: message is larger than the bus takes; a file is at most MAX_UPLOAD_MB.
+UPLOAD_PART = 512 * 1024
+MAX_UPLOAD_MB = 64
+_EXT_RE = re.compile(r"^\.[a-z0-9]{1,10}$")
 _LANG_DIR = re.compile(r"^[a-zA-Z]{2,3}([-_][a-zA-Z0-9]{2,8})?$")
 _CONFIG_RE = re.compile(r"^[A-Za-z0-9_-]+(\.[A-Za-z0-9_.-]+)*$")
 #: What a download may be.
@@ -377,6 +382,25 @@ class _Checker:
             else:
                 raise DescribedError(f"{where}: a form saves with send or config")
             self.refs[ref + ".form"] = {"kind": "form", "block": out}
+        if kind == "upload":
+            out["send"] = self.message(raw.get("send"), where)
+            accept = raw.get("accept") or []
+            if not isinstance(accept, list) or not accept or len(accept) > 30 \
+                    or not all(isinstance(a, str) and _EXT_RE.match(a.lower()) for a in accept):
+                raise DescribedError(f"{where}: accept is a list of file endings (.pdf)")
+            out["accept"] = sorted({a.lower() for a in accept})
+            mb = raw.get("max_mb", 10)
+            if not isinstance(mb, int) or isinstance(mb, bool) or not 1 <= mb <= MAX_UPLOAD_MB:
+                raise DescribedError(f"{where}: max_mb is a whole number from 1 to {MAX_UPLOAD_MB}")
+            out["max_mb"] = mb
+            if raw.get("field") is not None:
+                f = raw["field"]
+                if not isinstance(f, dict):
+                    raise DescribedError(f"{where}: the field is an object")
+                out["field"] = {"name": _field_name(f.get("name"), where), "label": _label(f.get("label"), where),
+                                "max_length": min(int(f.get("max_length", 200)), 300)}
+            out["privileged"] = True
+            self.refs[ref + ".upload"] = {"kind": "upload", "block": out}
         if kind == "choice":
             out["param"] = _field_name(raw.get("param"), where)
             options = raw.get("options") or []
@@ -607,7 +631,7 @@ def routes_for(pid: str, refs: dict[str, dict]):
     """The routes of a described page: its bus bridge. Every request names a
     part of the page (``ref``); the message and the data it may carry come
     from the file, never from the request."""
-    from fastapi import Body, HTTPException, Response
+    from fastapi import Body, HTTPException, Request, Response
 
     def bad(e: Exception):
         return HTTPException(400, str(e))
@@ -755,4 +779,56 @@ def routes_for(pid: str, refs: dict[str, dict]):
                 return {"ok": True}
             return _ask(r, block["send"], values)
 
+        async def upload(request: Request) -> dict[str, Any]:
+            from starlette.concurrency import run_in_threadpool
+            form = await request.form()
+            decl = refs.get(str(form.get("ref", "")))
+            if decl is None or decl["kind"] != "upload":
+                raise HTTPException(400, "that part is not an upload")
+            block = decl["block"]
+            file = form.get("file")
+            if not hasattr(file, "read"):
+                raise HTTPException(400, "no file was sent")
+            name = upload_name(getattr(file, "filename", "") or "")
+            if Path(name).suffix.lower() not in block["accept"]:
+                raise HTTPException(415, "the file is not one of " + ", ".join(block["accept"]))
+            blob = await file.read()
+            if not blob:
+                raise HTTPException(400, "the file is empty")
+            if len(blob) > block["max_mb"] * 1024 * 1024:
+                raise HTTPException(413, f"the file is larger than {block['max_mb']} MB")
+            extra = {}
+            if block.get("field"):
+                f = block["field"]
+                extra[f["name"]] = _text(form.get(f["name"]) or "", f["max_length"]).strip()
+            return await run_in_threadpool(send_upload, r, block["send"], name, blob, extra)
+
+        # this module's annotations are text; the route needs the class itself
+        upload.__annotations__["request"] = Request
+        r.privileged.post(base + "/upload")(upload)
+
     return add
+
+
+def upload_name(name: str) -> str:
+    """A file's name without folders or characters a file name cannot have."""
+    import unicodedata
+    name = unicodedata.normalize("NFC", name.replace("\\", "/").rsplit("/", 1)[-1]).strip()
+    name = re.sub(r'[\x00-\x1f/\\:*?"<>|]+', "_", name).lstrip(".")
+    return name[:180] or "file"
+
+
+def send_upload(r, msg_type: str, name: str, blob: bytes, extra: dict) -> dict:
+    """Send a file to the skill in parts: each message carries ``upload`` (the
+    same id for every part), ``name``, ``part`` (from 0), ``parts`` and
+    ``data`` (base64), and the upload's field. The answer to the last part is
+    the skill's answer."""
+    import uuid
+    upload_id = uuid.uuid4().hex
+    parts = max(1, -(-len(blob) // UPLOAD_PART))
+    answer: dict = {}
+    for n in range(parts):
+        chunk = blob[n * UPLOAD_PART:(n + 1) * UPLOAD_PART]
+        answer = _ask(r, msg_type, {"upload": upload_id, "name": name, "part": n, "parts": parts,
+                                    "data": base64.b64encode(chunk).decode("ascii"), **extra})
+    return answer

@@ -179,5 +179,9 @@
  "common.password_set": "Hay una contraseña; déjalo vacío para conservarla.",
  "common.noanswer": "La skill o el plugin no respondió. ¿Está en marcha?",
  "common.needed": "Rellena: {fields}",
- "common.nofile": "La respuesta no traía ningún archivo."
+ "common.nofile": "La respuesta no traía ningún archivo.",
+ "common.upload.pick": "Elige primero un archivo.",
+ "common.upload.kind": "Acepta: {accept}",
+ "common.upload.big": "El archivo pesa más de {mb} MB.",
+ "common.upload.busy": "Enviando …"
 }

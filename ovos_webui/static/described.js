@@ -23,7 +23,11 @@ OvosWebUI.ready(function () {
     "common.name": "Name", "common.none": "Nothing here yet.", "common.password_set": "A password is set; leave empty to keep it.",
     "common.noanswer": "The skill or plugin did not answer. Is it running?",
     "common.needed": "Fill in: {fields}",
-    "common.nofile": "The answer carried no file."
+    "common.nofile": "The answer carried no file.",
+    "common.upload.pick": "Choose a file first.",
+    "common.upload.kind": "It can take: {accept}",
+    "common.upload.big": "The file is larger than {mb} MB.",
+    "common.upload.busy": "Sending …"
   };
   // What the server says, in the words of the page: its known answers have
   // keys here, and a skill may answer with a key of its own page.
@@ -296,8 +300,12 @@ OvosWebUI.ready(function () {
           }
           holder.appendChild(msgCard);
         }).catch(function (e) {
+          // the list's own heading over what went wrong
           holder.innerHTML = "";
-          holder.appendChild(msgCard);
+          var heading = block.heading || (block.split && block.split["false"]);
+          var card = heading ? section({heading: heading}) : holder;
+          card.appendChild(msgCard);
+          if (card !== holder) { holder.appendChild(card); }
           say(msgId, why(e), true);
         });
       }
@@ -307,6 +315,66 @@ OvosWebUI.ready(function () {
       load();
       if (block.refresh) { setInterval(load, block.refresh * 1000); }
       return holder;
+    },
+    upload: function (block) {
+      var card = section(block);
+      var file = document.createElement("input");
+      file.type = "file";
+      file.accept = block.accept.join(",");
+      var pick = document.createElement("label");
+      pick.appendChild(file);
+      card.appendChild(pick);
+      var kinds = document.createElement("p");
+      kinds.className = "hint";
+      kinds.textContent = t("common.upload.kind").replace("{accept}", block.accept.join(", "));
+      card.appendChild(kinds);
+      var extra = null;
+      if (block.field) {
+        var label = document.createElement("label");
+        label.textContent = t(block.field.label);
+        extra = document.createElement("input");
+        extra.type = "text";
+        extra.maxLength = block.field.max_length;
+        label.appendChild(extra);
+        card.appendChild(label);
+      }
+      var row = document.createElement("div");
+      row.className = "row";
+      var send = document.createElement("button");
+      send.textContent = t("common.upload");
+      row.appendChild(send);
+      card.appendChild(row);
+      var msg = msgEl(card);
+      send.addEventListener("click", function () {
+        var f = file.files && file.files[0];
+        if (!f) { say(msg, t("common.upload.pick"), true); return; }
+        var dot = f.name.lastIndexOf(".");
+        var ending = dot >= 0 ? f.name.slice(dot).toLowerCase() : "";
+        if (block.accept.indexOf(ending) < 0) {
+          say(msg, t("common.upload.kind").replace("{accept}", block.accept.join(", ")), true);
+          return;
+        }
+        if (f.size > block.max_mb * 1024 * 1024) {
+          say(msg, t("common.upload.big").replace("{mb}", block.max_mb), true);
+          return;
+        }
+        var fd = new FormData();
+        fd.append("ref", block.ref + ".upload");
+        fd.append("file", f);
+        if (extra) { fd.append(block.field.name, extra.value.trim()); }
+        send.disabled = true;
+        say(msg, t("common.upload.busy"));
+        OvosWebUI.api(base + "/upload", {method: "POST", body: fd})
+          .then(function () {
+            say(msg, t("common.done"));
+            file.value = "";
+            if (extra) { extra.value = ""; }
+            reloadAll();
+          })
+          .catch(function (e) { say(msg, why(e), true); })
+          .then(function () { send.disabled = false; });
+      });
+      return card;
     },
     form: function (block) {
       var card = section(block);

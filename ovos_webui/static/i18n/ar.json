@@ -179,5 +179,9 @@
  "common.password_set": "توجد كلمة مرور؛ اترك الحقل فارغًا للاحتفاظ بها.",
  "common.noanswer": "لم تُجب المهارة أو الإضافة. هل هي قيد التشغيل؟",
  "common.needed": "املأ: {fields}",
- "common.nofile": "لم يحمل الرد أي ملف."
+ "common.nofile": "لم يحمل الرد أي ملف.",
+ "common.upload.pick": "اختر ملفًا أولًا.",
+ "common.upload.kind": "يقبل: {accept}",
+ "common.upload.big": "الملف أكبر من {mb} ميغابايت.",
+ "common.upload.busy": "جارٍ الإرسال …"
 }

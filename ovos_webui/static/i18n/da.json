@@ -179,5 +179,9 @@
  "common.password_set": "Der er sat en adgangskode; lad feltet stå tomt for at beholde den.",
  "common.noanswer": "Skill'en eller pluginnet svarede ikke. Kører det?",
  "common.needed": "Udfyld: {fields}",
- "common.nofile": "Svaret havde ingen fil med."
+ "common.nofile": "Svaret havde ingen fil med.",
+ "common.upload.pick": "Vælg en fil først.",
+ "common.upload.kind": "Den kan tage: {accept}",
+ "common.upload.big": "Filen er større end {mb} MB.",
+ "common.upload.busy": "Sender …"
 }

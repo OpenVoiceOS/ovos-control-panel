@@ -141,6 +141,7 @@ class Registry:
     def drop(self, page: Page, error: str) -> None:
         """Leave a page out after it loaded, with the reason."""
         self.pages = [p for p in self.pages if p is not page]
+        self._strings_mark = None
         self.problems.append({"page": page.id, "package": page.package, "error": error})
         LOG.warning("page %s from %s left out: %s", page.id, page.package, error)
 
@@ -200,7 +201,18 @@ class Registry:
         used = {x[3]["group"] for x in shown}
         ordered = sorted((g for g in groups.values() if g["id"] in used),
                          key=lambda g: (rank[g["id"]], g["id"]))
-        return {"groups": ordered, "pages": [x[3] for x in shown], "langs": self.langs()}
+        return {"groups": ordered, "pages": [x[3] for x in shown], "langs": self.langs(),
+                "strings": self.strings_mark()}
+
+    def strings_mark(self) -> str:
+        """A short mark of the pages' strings: the browser keeps the strings
+        it read until this changes (a page updated with new words)."""
+        if getattr(self, "_strings_mark", None) is None:
+            import hashlib
+            text = json.dumps([[p.id, p.version, p.strings] for p in self.pages],
+                              sort_keys=True, ensure_ascii=False, default=str)
+            self._strings_mark = hashlib.sha1(text.encode()).hexdigest()[:10]
+        return self._strings_mark
 
     def langs(self) -> list[str]:
         """Every language there are strings for: the panel's and the pages'."""
@@ -562,7 +574,11 @@ def parse_described(found: Any, package: str, version: str) -> tuple[Page, list]
                 heading=english.get(heading["key"]) or heading.get("en") or label,
                 fragment=True, strings=strings, module=found.module,
                 described=page_data, refs=refs,
-                routes=described.routes_for(pid, refs))
+                routes=described.routes_for(pid, refs),
+                # an upload's body may be as large as its block says
+                uploads={f"/api/cp/{pid}/upload": max(b["max_mb"] for b in page_data["blocks"]
+                                                      if b["type"] == "upload") * 1024 * 1024 + 64 * 1024}
+                if any(b["type"] == "upload" for b in page_data["blocks"]) else {})
     return page, groups
 
 
