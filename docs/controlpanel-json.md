@@ -204,7 +204,7 @@ device, a one-time code to scan with a phone.
 
 ```json
 {"type": "qr", "heading": "house.add", "text": "house.add.intro",
- "action": {"label": "house.add.button", "send": "ovos.house.pair"},
+ "action": {"label": "house.add.button", "send": "ovos.house.pair", "host": true},
  "field": "url", "expires": "seconds", "note": "house.add.note"}
 ```
 
@@ -253,6 +253,7 @@ pipeline will look.
 | `confirm_text` | For what cannot be undone: a word in capitals, as `RESET`, the reader must type before it is sent; `confirm` is then the question that asks for it. |
 | `done` | A label said once it is sent, in place of "Done.": "The device is wiping now and will restart." |
 | `privileged` | Default `true`: it needs the token. A download defaults to `false`. |
+| `host` | `true`: the name the panel was opened by goes along as `host` (`house.local`, `192.168.1.20`), for a link the reader's other devices can open. Only a plain name or address; never more of the request. |
 
 The media types a download may have: `audio/midi`, `audio/mpeg`, `audio/ogg`,
 `audio/wav`, `audio/flac`, `application/pdf`, `text/plain`,

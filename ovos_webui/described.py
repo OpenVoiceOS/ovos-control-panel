@@ -496,6 +496,13 @@ class _Checker:
                 if not isinstance(raw["data"], dict) or len(json.dumps(raw["data"])) > MAX_DATA:
                     raise DescribedError(f"{where}: data must be a small object")
                 out["data"] = raw["data"]
+        if raw.get("host") is not None:
+            # the name the panel was opened by goes along as "host", for a
+            # link the reader's other devices can open (a pairing QR code)
+            if not isinstance(raw["host"], bool):
+                raise DescribedError(f"{where}: host is true or false")
+            if raw["host"]:
+                out["host"] = True
         out["when"] = _when(raw.get("when"), where)
         if raw.get("done") is not None:
             # what is said once it is sent: "the device is wiping now"
@@ -1066,11 +1073,15 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
     def bad(e: Exception):
         return HTTPException(400, str(e))
 
-    def act(r, body: dict, privileged: bool) -> dict:
+    def act(r, body: dict, privileged: bool, host: str = "") -> dict:
         try:
             msg, data, decl = message_for(refs, str(body.get("ref", "")), body)
         except DescribedError as e:
             raise bad(e) from None
+        if decl.get("host"):
+            # only a plain name or address, never what else a Host header says
+            from ovos_webui import framing
+            data["host"] = framing._hostname(host) or ""  # noqa: SLF001
         if decl["kind"] == "query" or decl.get("download"):
             raise HTTPException(400, "that part is not an action")
         if decl.get("privileged", True) and not privileged:
@@ -1124,13 +1135,18 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
                 raise HTTPException(400, "that field has no options to ask for")
             return _ask(r, field_["options_from"]["query"], {})
 
-        @r.privileged.post(base + "/act")
-        def act_locked(body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
-            return act(r, body, privileged=True)
+        def act_locked(request: Request, body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
+            return act(r, body, privileged=True, host=request.headers.get("host", ""))
 
-        @r.api.post(base + "/act-open")
-        def act_open(body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
-            return act(r, body, privileged=False)
+        def act_open(request: Request, body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
+            return act(r, body, privileged=False, host=request.headers.get("host", ""))
+
+        # this module's annotations are text; the routes need the classes themselves
+        for f in (act_locked, act_open):
+            f.__annotations__["request"] = Request
+            f.__annotations__["body"] = dict[str, Any]
+        r.privileged.post(base + "/act")(act_locked)
+        r.api.post(base + "/act-open")(act_open)
 
         def download(ref: str, key: str, privileged: bool) -> Response:
             decl = refs.get(ref)

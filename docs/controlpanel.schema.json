@@ -265,6 +265,10 @@
     },
     "done": {
      "$ref": "#/$defs/label"
+    },
+    "host": {
+     "type": "boolean",
+     "description": "Send the name the panel was opened by along, as host."
     }
    },
    "additionalProperties": false,

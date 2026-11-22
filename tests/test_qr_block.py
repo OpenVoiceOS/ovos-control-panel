@@ -79,3 +79,26 @@ def test_the_qr_library_is_served_with_its_licence(client):
     client.headers["Authorization"] = "Bearer s3cret-token"
     r = client.get("/static/vendor/qrcode/qrcode.js")
     assert r.status_code == 200 and "Kazuhiko Arase" in r.text and "MIT" in r.text
+
+
+def test_an_action_can_take_the_name_the_panel_was_opened_by(bus, monkeypatch, tmp_path):
+    page = json.loads(json.dumps(PAGE))
+    page["blocks"][0]["action"]["host"] = True
+    root = tmp_path / "ovos_phal_plugin_house"
+    root.mkdir()
+    found = described.Found("ovos-phal-plugin-house", "1.0", "ovos_phal_plugin_house", root, page)
+    monkeypatch.setattr(described, "discover", lambda: [found])
+    seen = []
+    bus.on("ovos.house.pair", lambda m: (seen.append(dict(m.data)), bus.emit(m.response({"url": "x"}))))
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False, hostnames=("house.local",))
+    with TestClient(app, base_url="http://house.local:8500",
+                    headers={"sec-fetch-site": "same-origin", "Authorization": "Bearer s3cret-token"}) as c:
+        assert c.post("/api/cp/house/act", json={"ref": "b0.a0"}).status_code == 200
+    assert seen == [{"host": "house.local"}], "the name without its port, and nothing else"
+
+
+def test_host_is_true_or_false():
+    page = json.loads(json.dumps(PAGE))
+    page["blocks"][0]["action"]["host"] = "yes"
+    with pytest.raises(described.DescribedError, match="host is true or false"):
+        checked(page)
