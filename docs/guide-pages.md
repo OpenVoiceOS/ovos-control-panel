@@ -159,7 +159,8 @@ the plugin's own place in `mycroft.conf`, and asks it to read it again:
 ```
 
 A plugin's own places are `PHAL.<package>` and the section its entry points
-name (`tts.<module>`, `stt.<module>`, `PHAL.<name>`). A TTS or STT plugin can
+name (`tts.<module>`, `stt.<module>`, `PHAL.<name>`; for a transformer, the
+section its service loads it from, as `audio_transformers.<name>`). A TTS or STT plugin can
 add `{"type": "module", "kind": "tts"}`: whether it is the voice in use,
 buttons to make it so, and a sentence to hear it.
 

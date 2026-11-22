@@ -159,7 +159,7 @@ Asks once, and shows the answer.
 
 | `save` | |
 | --- | --- |
-| `{"config": "PHAL.<package>", "reload": "<message>"}` | Writes in the plugin's own place in `mycroft.conf`, then sends `reload` with `{"config": <the section as saved>}`. A plugin's own places are `PHAL.<package>` and the section its entry points name: `tts.<module>`, `stt.<module>`, `PHAL.<name>`. Never the choice of module itself. |
+| `{"config": "PHAL.<package>", "reload": "<message>"}` | Writes in the plugin's own place in `mycroft.conf`, then sends `reload` with `{"config": <the section as saved>}`. A plugin's own places are `PHAL.<package>` and the section its entry points name: `tts.<module>`, `stt.<module>`, `PHAL.<name>`, and for a transformer the section its service loads it from (`audio_transformers.<name>`, `utterance_transformers.<name>`, `metadata_transformers.<name>`, `intent_transformers.<name>`, `dialog_transformers.<name>`, `tts_transformers.<name>`). Never the choice of module itself. |
 | `{"settings": true}` | Reads and writes the skill's own `settings.json`, merged over what is there so keys the form has not are kept; the skill reads them as `self.settings`. Only for a package that registers one skill. |
 | `{"send": "<message>"}` | Sends the values to the skill; `query` reads them. |
 | `{"send": "<message>", "answer": false}` | Sends the values, and no answer comes; there is nothing to read, so the form starts from its defaults (text for the Mark-1 mouth). |
