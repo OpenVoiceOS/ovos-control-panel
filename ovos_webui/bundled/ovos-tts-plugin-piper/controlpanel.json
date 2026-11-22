@@ -25,9 +25,15 @@
     {
      "name": "voice",
      "label": "piper.voice",
-     "type": "text",
+     "type": "select",
+     "voices": true,
+     "options": [
+      {
+       "value": "default",
+       "label": "piper.voice.default"
+      }
+     ],
      "default": "default",
-     "max_length": 100,
      "hint": "piper.voice.hint"
     },
     {

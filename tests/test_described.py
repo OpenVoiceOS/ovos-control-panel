@@ -458,3 +458,51 @@ def test_a_package_that_names_itself_with_underscores_is_found(tmp_path, monkeyp
     monkeypatch.setattr(described.metadata, "distributions", lambda: [dist])
     [found] = described.discover()
     assert found.package == "ovos-skill-weather" and found.by_panel
+
+
+def test_a_voice_field_is_only_for_a_tts_plugin():
+    page = {"controlpanel": 1, "id": "v", "bus": "ovos.v.", "blocks": [{"type": "form", "save": {"settings": True},
+            "fields": [{"name": "voice", "label": "v.voice", "type": "select", "voices": True}]}]}
+    with pytest.raises(described.DescribedError, match="TTS plugin"):
+        described.check(page, "ovos-skill-v", skill_id="ovos-skill-v.me")
+    out, _ = described.check(page, "ovos-tts-plugin-v", skill_id="ovos-skill-v.me",
+                             modules={"tts": ["ovos-tts-plugin-v"]})
+    assert out["blocks"][0]["fields"][0]["voices"] == "ovos-tts-plugin-v"
+
+
+def test_a_plugins_voices_are_read_in_a_process_of_their_own(monkeypatch):
+    import subprocess
+    calls = []
+    configs = {"da-DK": [{"voice": "da_DK-talesyntese-medium", "display_name": "Talesyntese"}],
+               "da": [{"voice": "da_DK-talesyntese-medium"}, {"voice": "da-other", "meta": {"display_name": "Anden"}}],
+               "en-GB": [{"alan-low": {"voice": "alan-low", "offline": True}}], "sv": [{"voice": "sv"}]}
+
+    def run(cmd, **kw):
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, stdout="log line\n" + json.dumps(configs), stderr="")
+    monkeypatch.setattr(subprocess, "run", run)
+    monkeypatch.setattr(described, "_VOICES", {})
+    voices = described.plugin_voices("ovos-tts-plugin-x", "1.0", "da-DK")
+    assert voices == [{"value": "da_DK-talesyntese-medium", "label": "Talesyntese"},
+                      {"value": "da-other", "label": "Anden"}]
+    assert described.plugin_voices("ovos-tts-plugin-x", "1.0", "en-US") == [{"value": "alan-low", "label": "alan-low"}]
+    assert len(calls) == 1, "read once per version"
+    assert "-c" in calls[0] and calls[0][-1] == "ovos-tts-plugin-x"
+
+
+def test_a_plugin_that_says_nothing_has_no_voices(monkeypatch):
+    import subprocess
+
+    def slow(cmd, **kw):
+        raise subprocess.TimeoutExpired(cmd, kw.get("timeout"))
+    monkeypatch.setattr(subprocess, "run", slow)
+    monkeypatch.setattr(described, "_VOICES", {})
+    assert described.plugin_voices("ovos-tts-plugin-slow", "1.0", "da") == []
+
+
+def test_the_voices_code_runs_and_finds_nothing_for_an_unknown_plugin():
+    import subprocess
+    import sys
+    done = subprocess.run([sys.executable, "-c", described._VOICES_CODE, "ovos-tts-plugin-none"],
+                          capture_output=True, text=True, timeout=60)
+    assert done.returncode == 0 and json.loads(done.stdout) == {}

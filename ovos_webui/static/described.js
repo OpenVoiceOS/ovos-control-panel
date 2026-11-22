@@ -484,6 +484,26 @@ OvosWebUI.ready(function () {
               opt.value = o.value; opt.textContent = t(o.label);
               input.appendChild(opt);
             });
+            if (f.voices) {
+              // the plugin's own voices for the reader's language
+              OvosWebUI.api(base + "/voices?ref=" + encodeURIComponent(block.ref + ".form") + "&field="
+                + encodeURIComponent(f.name) + "&lang=" + encodeURIComponent(document.documentElement.lang || "en"))
+                .then(function (data) {
+                  (data.voices || []).forEach(function (o) {
+                    var opt = document.createElement("option");
+                    opt.value = o.value; opt.textContent = o.label;
+                    input.appendChild(opt);
+                  });
+                  var want = input.dataset.want;
+                  if (want && !Array.prototype.some.call(input.options, function (o) { return o.value === want; })) {
+                    // a voice set by hand stays, even if the plugin does not list it
+                    var own = document.createElement("option");
+                    own.value = want; own.textContent = want;
+                    input.appendChild(own);
+                  }
+                  if (want) { input.value = want; }
+                }).catch(function () { /* the fixed options stay */ });
+            }
             if (f.options_from) {
               post("/options", {ref: block.ref + ".form", field: f.name}).then(function (data) {
                 var src = f.options_from;
@@ -562,7 +582,15 @@ OvosWebUI.ready(function () {
           if (f.type === "checkbox") { input.checked = "on" in f ? !same(v, f.off) : !!v; }
           else if (f.type === "password") { input.placeholder = v.set ? t("common.password_set") : ""; inputs[name].set = !!v.set; }
           else if (f.type === "lines") { input.value = (Array.isArray(v) ? v : (v ? [String(v)] : [])).join("\n"); }
-          else { input.value = v; input.dataset.want = v; }
+          else {
+            if (f.voices && input.tagName === "SELECT" && v !== "" &&
+                !Array.prototype.some.call(input.options, function (o) { return o.value === String(v); })) {
+              var own = document.createElement("option");
+              own.value = String(v); own.textContent = String(v);
+              input.appendChild(own);
+            }
+            input.value = v; input.dataset.want = v;
+          }
           if (input.cpShow) { input.cpShow(); }
         });
         showFields();

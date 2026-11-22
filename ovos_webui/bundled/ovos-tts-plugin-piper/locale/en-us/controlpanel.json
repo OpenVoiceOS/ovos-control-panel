@@ -2,9 +2,10 @@
  "piper.title": "Piper voice",
  "piper.intro": "Piper makes the voice on the device itself: nothing you are answered leaves it. The first time a voice is used it is downloaded.",
  "piper.voice": "Voice",
- "piper.voice.hint": "default picks the language's own voice. Another voice by its name, such as en_GB-alan-low or da_DK-talesyntese-medium.",
+ "piper.voice.hint": "The voices Piper has for your language. The first time one is used it is downloaded.",
  "piper.cuda": "Use the graphics card (CUDA)",
  "piper.cuda.hint": "Only on a device with an NVIDIA graphics card and onnxruntime-gpu.",
  "piper.speed": "How slowly it speaks",
- "piper.speed.hint": "1 is the voice's own pace; lower is faster, higher is slower."
+ "piper.speed.hint": "1 is the voice's own pace; lower is faster, higher is slower.",
+ "piper.voice.default": "The language's own voice"
 }

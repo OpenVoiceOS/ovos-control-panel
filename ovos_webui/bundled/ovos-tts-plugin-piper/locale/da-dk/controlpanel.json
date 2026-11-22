@@ -2,9 +2,10 @@
  "piper.title": "Piper-stemme",
  "piper.intro": "Piper laver stemmen på selve enheden: intet af det, du får svar på, forlader den. Første gang en stemme bruges, hentes den.",
  "piper.voice": "Stemme",
- "piper.voice.hint": "default vælger sprogets egen stemme. En anden stemme ved sit navn, fx da_DK-talesyntese-medium eller en_GB-alan-low.",
+ "piper.voice.hint": "De stemmer, Piper har til dit sprog. Første gang en bruges, hentes den.",
  "piper.cuda": "Brug grafikkortet (CUDA)",
  "piper.cuda.hint": "Kun på en enhed med et NVIDIA-grafikkort og onnxruntime-gpu.",
  "piper.speed": "Hvor langsomt den taler",
- "piper.speed.hint": "1 er stemmens eget tempo; lavere er hurtigere, højere er langsommere."
+ "piper.speed.hint": "1 er stemmens eget tempo; lavere er hurtigere, højere er langsommere.",
+ "piper.voice.default": "Sprogets egen stemme"
 }

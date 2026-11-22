@@ -236,6 +236,65 @@ def plugin_modules(package: str) -> dict[str, list[str]]:
     return out
 
 
+#: What a TTS plugin says about its voices, per (module, version): read in a
+#: process of its own, since it is the plugin's code, and kept.
+_VOICES: dict[tuple[str, str], dict[str, list]] = {}
+VOICES_TIMEOUT = 30
+_VOICES_CODE = (
+    "import json, sys\n"
+    "from importlib import metadata\n"
+    "name = sys.argv[1] + '.config'\n"
+    "found = None\n"
+    "for group in ('opm.tts.config', 'mycroft.plugin.tts.config'):\n"
+    "    for ep in metadata.entry_points(group=group):\n"
+    "        if found is None and ep.name == name:\n"
+    "            found = ep.load()\n"
+    "print(json.dumps(found if isinstance(found, dict) else {}, default=str))\n")
+
+
+def plugin_voices(module: str, version: str, lang: str) -> list[dict[str, str]]:
+    """The voices a TTS plugin offers for ``lang`` (the language, any
+    country): its own list (the ``<module>.config`` entry point, under the
+    plugin manager's group or the older Mycroft one), read in a separate
+    process with a time limit, so the plugin's code never runs in the panel.
+    Nothing when it says nothing or takes too long."""
+    import subprocess
+    import sys
+
+    key = (module, version)
+    if key not in _VOICES:
+        found: dict[str, list] = {}
+        try:
+            done = subprocess.run([sys.executable, "-c", _VOICES_CODE, module], capture_output=True,
+                                  text=True, timeout=VOICES_TIMEOUT, check=False)
+            data = json.loads(done.stdout.strip().splitlines()[-1]) if done.returncode == 0 and done.stdout else {}
+            if isinstance(data, dict):
+                found = {str(k): v for k, v in data.items() if isinstance(v, list)}
+        except (subprocess.SubprocessError, OSError, ValueError, IndexError) as e:
+            LOG.info("no voices read from %s: %s", module, e)
+        _VOICES[key] = found
+    base = (lang or "en").replace("_", "-").lower().split("-")[0]
+    full = (lang or "").replace("_", "-").lower()
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    # the language with its own country first, then the others
+    for code in sorted(_VOICES[key], key=lambda c: (c.lower() != full, c)):
+        if code.replace("_", "-").lower().split("-")[0] != base:
+            continue
+        for cfg in _VOICES[key][code]:
+            if isinstance(cfg, dict) and "voice" not in cfg and len(cfg) == 1 \
+                    and isinstance(next(iter(cfg.values())), dict):
+                cfg = next(iter(cfg.values()))      # Piper: {"alan-low": {"voice": "alan-low", ...}}
+            voice = cfg.get("voice") if isinstance(cfg, dict) else None
+            if not isinstance(voice, str) or not voice or voice in seen or len(voice) > 200:
+                continue
+            seen.add(voice)
+            meta = cfg.get("meta") if isinstance(cfg.get("meta"), dict) else {}
+            name = cfg.get("display_name") or meta.get("display_name") or voice
+            out.append({"value": voice, "label": str(name)[:120]})
+    return out
+
+
 def is_key(raw: Any) -> bool:
     """Whether a text is a label's key (``books.title``)."""
     return isinstance(raw, str) and bool(_KEY_RE.match(raw))
@@ -356,12 +415,17 @@ class _Checker:
                                        "items": _path(src.get("items", "options"), where),
                                        "value": _field_name(src.get("value", "value"), where),
                                        "label": _field_name(src.get("label", "label"), where)}
+            if raw.get("voices"):
+                # the voices the page's TTS plugin offers for the language
+                if raw["voices"] is not True or not (getattr(self, "modules", None) or {}).get("tts"):
+                    raise DescribedError(f"{where}: voices is true, on a page of a TTS plugin")
+                out["voices"] = self.modules["tts"][0]
             options = raw.get("options") or []
             if not isinstance(options, list):
                 raise DescribedError(f"{where}: options must be a list")
             out["options"] = [{"value": str(o.get("value"))[:200], "label": _label(o.get("label"), where)}
                               for o in options if isinstance(o, dict)]
-            if not out["options"] and "options_from" not in out:
+            if not out["options"] and "options_from" not in out and "voices" not in out:
                 raise DescribedError(f"{where}: a select needs options")
         return out
 
@@ -698,7 +762,7 @@ def form_values(decl: dict, given: Any) -> dict[str, Any]:
         elif kind == "select":
             value = _text(value, 200)
             fixed = {o["value"] for o in f.get("options") or ()}
-            if fixed and "options_from" not in f and value not in fixed:
+            if fixed and "options_from" not in f and "voices" not in f and value not in fixed:
                 raise DescribedError(f"{name} is not one of its options")
         else:
             value = _text(value, f["max_length"]).strip() if kind == "url" else _text(value, f["max_length"])
@@ -913,6 +977,20 @@ def routes_for(pid: str, refs: dict[str, dict]):
                     raise HTTPException(400, str(e)) from None
                 return {"ok": True}
             return _ask(r, block["send"], values)
+
+        @r.api.get(base + "/voices")
+        def voices(ref: str, field: str, lang: str = "") -> dict[str, Any]:
+            decl = refs.get(ref)
+            if decl is None or decl["kind"] != "form":
+                raise HTTPException(400, "that part is not a form")
+            f = next((x for x in decl["block"]["fields"] if x["name"] == field and x.get("voices")), None)
+            if f is None:
+                raise HTTPException(400, "that field has no voices")
+            try:
+                version = metadata.version(f["voices"])
+            except Exception:  # noqa: BLE001 - the module may be named unlike its package
+                version = ""
+            return {"voices": plugin_voices(f["voices"], version, lang or "en")}
 
         def module_decl(ref: str) -> dict:
             decl = refs.get(ref)
