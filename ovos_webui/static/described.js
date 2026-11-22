@@ -25,6 +25,7 @@
       "common.noanswer": "The skill or plugin did not answer. Is it running?",
       "common.needed": "Fill in: {fields}",
       "common.nofile": "The answer carried no file.",
+      "common.noqr": "The answer carried no code to show.",
       "common.upload.pick": "Choose a file first.",
       "common.upload.kind": "It can take: {accept}",
       "common.upload.big": "The file is larger than {mb} MB.",
@@ -139,6 +140,40 @@
         .catch(function (e) { say(msg, why(e), true); });
     }
 
+    // the QR library, loaded the first time a qr block needs it
+    // (static/vendor/qrcode, MIT), from the panel's own origin
+    function qrLib() {
+      if (window.qrcode) { return Promise.resolve(window.qrcode); }
+      if (!qrLib.loading) {
+        qrLib.loading = new Promise(function (ok, fail) {
+          var s = document.createElement("script");
+          s.src = "/static/vendor/qrcode/qrcode.js";
+          s.onload = function () { window.qrcode ? ok(window.qrcode) : fail(new Error("no QR library")); };
+          s.onerror = function () { fail(new Error("no QR library")); };
+          document.head.appendChild(s);
+        });
+      }
+      return qrLib.loading;
+    }
+    // the code on a canvas, dark on light with a quiet zone, whatever the theme
+    function drawQr(canvas, qrcode, value) {
+      qrcode.stringToBytes = qrcode.stringToBytesFuncs["UTF-8"];
+      var code = qrcode(0, "M");
+      code.addData(value, "Byte");
+      code.make();
+      var n = code.getModuleCount(), quiet = 4, cell = Math.max(3, Math.floor(240 / (n + 2 * quiet)));
+      var size = (n + 2 * quiet) * cell;
+      canvas.width = size; canvas.height = size;
+      var ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = "#000000";
+      for (var y = 0; y < n; y++) {
+        for (var x = 0; x < n; x++) {
+          if (code.isDark(y, x)) { ctx.fillRect((x + quiet) * cell, (y + quiet) * cell, cell, cell); }
+        }
+      }
+    }
+
     var refreshers = [];
     function section(block) {
       var card = document.createElement("section");
@@ -240,6 +275,52 @@
         refreshers.push(load);
         load();
         if (block.refresh) { setInterval(load, block.refresh * 1000); }
+        return card;
+      },
+      qr: function (block) {
+        // a button; the answer's field drawn as a QR code here, never shown
+        // as text, and gone again when the answer says it expires
+        var card = section(block);
+        if (block.text) {
+          var intro = document.createElement("p");
+          intro.textContent = t(block.text);
+          card.appendChild(intro);
+        }
+        var row = document.createElement("div");
+        row.className = "row";
+        card.appendChild(row);
+        var shown = document.createElement("div");
+        shown.className = "cp-qr";
+        shown.hidden = true;
+        var canvas = document.createElement("canvas");
+        canvas.setAttribute("role", "img");
+        canvas.setAttribute("aria-label", t(block.action.label));
+        shown.appendChild(canvas);
+        var note = document.createElement("p");
+        note.className = "hint";
+        shown.appendChild(note);
+        card.appendChild(shown);
+        var msg = msgEl(card);
+        var timer = null;
+        function hide() { shown.hidden = true; if (timer) { clearTimeout(timer); timer = null; } }
+        row.appendChild(button(block.action, function () {
+          run(block.action, null, msg, function (answer) {
+            var value = get(answer || {}, block.field);
+            if (typeof value !== "string" || !value || value.length > 2000) {
+              say(msg, t("common.noqr"), true);
+              return;
+            }
+            qrLib().then(function (qrcode) {
+              drawQr(canvas, qrcode, value);
+              note.textContent = block.note ? fill(t(block.note), answer) : "";
+              note.hidden = !block.note;
+              shown.hidden = false;
+              var left = block.expires ? Number(get(answer, block.expires)) : 0;
+              if (timer) { clearTimeout(timer); }
+              timer = left > 0 ? setTimeout(hide, Math.min(left, 86400) * 1000) : null;
+            }).catch(function (e) { say(msg, why(e), true); });
+          });
+        }));
         return card;
       },
       actions: function (block) {

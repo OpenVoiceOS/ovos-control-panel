@@ -174,6 +174,7 @@
  "common.noanswer": "The skill or plugin did not answer. Is it running?",
  "common.needed": "Fill in: {fields}",
  "common.nofile": "The answer carried no file.",
+ "common.noqr": "The answer carried no code to show.",
  "common.upload.pick": "Choose a file first.",
  "common.upload.kind": "It can take: {accept}",
  "common.upload.big": "The file is larger than {mb} MB.",

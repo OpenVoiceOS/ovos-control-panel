@@ -33,7 +33,7 @@ MAX_STRINGS = 256 * 1024
 MAX_ICON = 16 * 1024
 #: The blocks this panel draws. A block of another type is drawn as "this
 #: needs a newer control panel", and the rest of the page still works.
-BLOCKS = frozenset({"text", "status", "list", "actions", "form", "choice", "upload", "module", "provider"})
+BLOCKS = frozenset({"text", "status", "list", "actions", "form", "choice", "upload", "module", "provider", "qr"})
 FIELD_TYPES = frozenset({"text", "password", "url", "number", "slider", "checkbox", "select", "lines"})
 _URL_RE = re.compile(r"^https?://[^\s/]+\S*$")
 #: A page's messages start with its own prefix, never with one of these.
@@ -496,6 +496,13 @@ class _Checker:
                 if not isinstance(raw["data"], dict) or len(json.dumps(raw["data"])) > MAX_DATA:
                     raise DescribedError(f"{where}: data must be a small object")
                 out["data"] = raw["data"]
+        if raw.get("host") is not None:
+            # the name the panel was opened by goes along as "host", for a
+            # link the reader's other devices can open (a pairing QR code)
+            if not isinstance(raw["host"], bool):
+                raise DescribedError(f"{where}: host is true or false")
+            if raw["host"]:
+                out["host"] = True
         out["when"] = _when(raw.get("when"), where)
         if raw.get("done") is not None:
             # what is said once it is sent: "the device is wiping now"
@@ -669,6 +676,22 @@ class _Checker:
                 act["ref"] = f"{ref}.a{j}"
                 out["actions"].append(act)
                 self.refs[act["ref"]] = {"kind": "action", "block": out, **act}
+        if kind == "qr":
+            # a button; the answer's field drawn as a QR code in the browser,
+            # never shown as text (a pairing link, a one-time code)
+            act = self.action(raw.get("action"), f"{where}, action", row=False)
+            if act.get("download") or act.get("answer") is False:
+                raise DescribedError(f"{where}: a qr block's action sends a message and reads its answer")
+            act["ref"] = f"{ref}.a0"
+            out["action"] = act
+            self.refs[act["ref"]] = {"kind": "action", "block": out, **act}
+            out["field"] = _path(raw.get("field", "url"), where)
+            if raw.get("expires") is not None:
+                # a field of the answer: seconds until the code no longer works
+                out["expires"] = _field_name(raw["expires"], where)
+            for extra in ("text", "note"):
+                if raw.get(extra) is not None:
+                    out[extra] = _label(raw[extra], where)
         if kind == "form":
             fields = raw.get("fields") or []
             if not isinstance(fields, list) or not fields:
@@ -1050,11 +1073,15 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
     def bad(e: Exception):
         return HTTPException(400, str(e))
 
-    def act(r, body: dict, privileged: bool) -> dict:
+    def act(r, body: dict, privileged: bool, host: str = "") -> dict:
         try:
             msg, data, decl = message_for(refs, str(body.get("ref", "")), body)
         except DescribedError as e:
             raise bad(e) from None
+        if decl.get("host"):
+            # only a plain name or address, never what else a Host header says
+            from ovos_webui import framing
+            data["host"] = framing._hostname(host) or ""  # noqa: SLF001
         if decl["kind"] == "query" or decl.get("download"):
             raise HTTPException(400, "that part is not an action")
         if decl.get("privileged", True) and not privileged:
@@ -1108,13 +1135,18 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
                 raise HTTPException(400, "that field has no options to ask for")
             return _ask(r, field_["options_from"]["query"], {})
 
-        @r.privileged.post(base + "/act")
-        def act_locked(body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
-            return act(r, body, privileged=True)
+        def act_locked(request: Request, body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
+            return act(r, body, privileged=True, host=request.headers.get("host", ""))
 
-        @r.api.post(base + "/act-open")
-        def act_open(body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
-            return act(r, body, privileged=False)
+        def act_open(request: Request, body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
+            return act(r, body, privileged=False, host=request.headers.get("host", ""))
+
+        # this module's annotations are text; the routes need the classes themselves
+        for f in (act_locked, act_open):
+            f.__annotations__["request"] = Request
+            f.__annotations__["body"] = dict[str, Any]
+        r.privileged.post(base + "/act")(act_locked)
+        r.api.post(base + "/act-open")(act_open)
 
         def download(ref: str, key: str, privileged: bool) -> Response:
             decl = refs.get(ref)

@@ -197,6 +197,28 @@ The panel's own part: whether this plugin is the voice or the listener in use,
 or the fallback, buttons to make it so, and for a voice in use, a sentence to
 hear it. Nothing of it comes from the file.
 
+### qr
+
+A button, and a field of its answer drawn as a QR code: a link for pairing a
+device, a one-time code to scan with a phone.
+
+```json
+{"type": "qr", "heading": "house.add", "text": "house.add.intro",
+ "action": {"label": "house.add.button", "send": "ovos.house.pair", "host": true},
+ "field": "url", "expires": "seconds", "note": "house.add.note"}
+```
+
+| Key | |
+| --- | --- |
+| `action` | The [button](#actions). Its answer holds the code. It needs the token unless it says `"privileged": false`. |
+| `field` | The field of the answer to draw, text of up to 2000 characters. Default `url`. |
+| `expires` | A field of the answer: seconds until the code stops working. The code goes from the page then. |
+| `text` | A label above the button. |
+| `note` | A label under the code, with values from the answer: "Scan it within {minutes} minutes". |
+
+The code is drawn in the browser by the panel itself; it is never shown as
+text, sent anywhere else or kept, so a code that is a secret stays one.
+
 ### provider
 
 No keys but `heading`, on the page of a package that brings one media
@@ -231,6 +253,7 @@ pipeline will look.
 | `confirm_text` | For what cannot be undone: a word in capitals, as `RESET`, the reader must type before it is sent; `confirm` is then the question that asks for it. |
 | `done` | A label said once it is sent, in place of "Done.": "The device is wiping now and will restart." |
 | `privileged` | Default `true`: it needs the token. A download defaults to `false`. |
+| `host` | `true`: the name the panel was opened by goes along as `host` (`house.local`, `192.168.1.20`), for a link the reader's other devices can open. Only a plain name or address; never more of the request. |
 
 The media types a download may have: `audio/midi`, `audio/mpeg`, `audio/ogg`,
 `audio/wav`, `audio/flac`, `application/pdf`, `text/plain`,
