@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.1a81](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a81) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a80...0.0.1a81)
+
+**Merged pull requests:**
+
+- Mark 1 leaves the core: a plain page the panel brings, editors as an extension [\#164](https://github.com/OpenVoiceOS/ovos-control-panel/pull/164) ([andlo](https://github.com/andlo))
+- Move the Sensors page out of the core, as a page the panel brings [\#162](https://github.com/OpenVoiceOS/ovos-control-panel/pull/162) ([andlo](https://github.com/andlo))
+- Move the Wallpaper page out of the core, as a page the panel brings [\#161](https://github.com/OpenVoiceOS/ovos-control-panel/pull/161) ([andlo](https://github.com/andlo))
+- Move the Apps page out of the core, as a page the panel brings [\#160](https://github.com/OpenVoiceOS/ovos-control-panel/pull/160) ([andlo](https://github.com/andlo))
+- Other packages bring their page as controlpanel.json, not Python [\#159](https://github.com/OpenVoiceOS/ovos-control-panel/pull/159) ([andlo](https://github.com/andlo))
+- A described page can show pictures from its own package [\#158](https://github.com/OpenVoiceOS/ovos-control-panel/pull/158) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a80](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a80) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a79...0.0.1a80)
@@ -458,13 +471,6 @@
 - feat: add a real wake-word test to setup [\#46](https://github.com/OpenVoiceOS/ovos-control-panel/pull/46) ([JarbasAl](https://github.com/JarbasAl))
 - feat: save and share your own Mark-1 faceplate drawings [\#45](https://github.com/OpenVoiceOS/ovos-control-panel/pull/45) ([JarbasAl](https://github.com/JarbasAl))
 - docs: smooth the first-run guide \(Wi-Fi, phone access, token button\) [\#44](https://github.com/OpenVoiceOS/ovos-control-panel/pull/44) ([JarbasAl](https://github.com/JarbasAl))
-- feat: generate an access token in the browser, no terminal [\#43](https://github.com/OpenVoiceOS/ovos-control-panel/pull/43) ([JarbasAl](https://github.com/JarbasAl))
-- feat: add the Mark-1 eye volume-meter slider [\#42](https://github.com/OpenVoiceOS/ovos-control-panel/pull/42) ([JarbasAl](https://github.com/JarbasAl))
-- rename: ovos-webui is now ovos-control-panel [\#41](https://github.com/OpenVoiceOS/ovos-control-panel/pull/41) ([JarbasAl](https://github.com/JarbasAl))
-- feat: collapse the advanced Voice settings behind a disclosure [\#40](https://github.com/OpenVoiceOS/ovos-control-panel/pull/40) ([JarbasAl](https://github.com/JarbasAl))
-- feat: sensors page — live readings from the device's sensors [\#39](https://github.com/OpenVoiceOS/ovos-control-panel/pull/39) ([JarbasAl](https://github.com/JarbasAl))
-- fix: confirm before saving on the Transformers page [\#38](https://github.com/OpenVoiceOS/ovos-control-panel/pull/38) ([JarbasAl](https://github.com/JarbasAl))
-- feat: configurable package index for self-hosters [\#37](https://github.com/OpenVoiceOS/ovos-control-panel/pull/37) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
