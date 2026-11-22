@@ -1,4 +1,6 @@
 """Voice and language: one of the control panel's own pages."""
+from ovos_webui.pages.voice.api import routes
+
 PAGE = {
     "api_version": 1,
     "id": "voice",
@@ -10,4 +12,5 @@ PAGE = {
     "icon": "icon.svg",
     "heading": {"key": "voice.title", "label": "Voice and language"},
     "i18n": "i18n",
+    "routes": routes,
 }

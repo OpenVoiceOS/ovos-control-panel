@@ -55,5 +55,14 @@
  "voice.tts.sample": "Hello, this is how I sound.",
  "voice.intro.all": "How the device listens and speaks: the wake word, how it tells speech from silence, the plugins that turn speech into text and text into speech, and the language. Changes are saved to your own layer of mycroft.conf, the same file you can edit as text on the Settings page.",
  "voice.more.link": "All voice settings",
- "voice.more.lead": "Speech to text, how it tells speech from silence and the order it tries to understand you are under"
+ "voice.more.lead": "Speech to text, how it tells speech from silence and the order it tries to understand you are under",
+ "voice.location.title": "Location",
+ "voice.location.button": "Detect my location",
+ "voice.location.hint": "Looks up an approximate location from the device's public IP address, and saves it as the device location.",
+ "voice.location.confirm": "Look up an approximate location from this device's public IP address, and save it as the device location?",
+ "voice.location.working": "Looking up location…",
+ "voice.location.done": "Location found and stored.",
+ "voice.location.overridden": "Location found, but your configuration sets a location of its own, which wins. Clear it on the Settings page to use the detected one.",
+ "voice.location.ignored": "Location found, but this device is configured to ignore the detected location. It will keep the location it already has.",
+ "voice.location.failed": "That did not work."
 }

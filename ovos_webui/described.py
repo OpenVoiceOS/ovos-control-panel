@@ -45,6 +45,7 @@ _BUS_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*(\.[a-z0-9_-]+)*\.$")
 _MSG_RE = re.compile(r"^[a-z0-9][a-z0-9_.:-]{0,127}$")
 _KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 _FIELD_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,63}$")
+_TYPED_RE = re.compile(r"^[A-Z0-9]{2,20}$")
 #: a field in an answer, maybe nested: "ports.outputs"
 _PATH_RE = re.compile(r"^[a-z_][a-z0-9_]{0,63}(\.[a-z_][a-z0-9_]{0,63}){0,3}$")
 MAX_DATA = 4096
@@ -410,7 +411,16 @@ class _Checker:
                     raise DescribedError(f"{where}: data must be a small object")
                 out["data"] = raw["data"]
         out["when"] = _when(raw.get("when"), where)
+        if raw.get("done") is not None:
+            # what is said once it is sent: "the device is wiping now"
+            out["done"] = _label(raw["done"], where)
         confirm = raw.get("confirm")
+        typed = raw.get("confirm_text")
+        if typed is not None:
+            # a word the reader must type first, for what cannot be undone
+            if not isinstance(typed, str) or not _TYPED_RE.match(typed) or confirm is None:
+                raise DescribedError(f"{where}: confirm_text is a word to type, with a confirm label that asks for it")
+            out["confirm_text"] = typed
         if confirm is not None:
             out["confirm"] = _label(confirm, where)
         elif any(w in (out.get("send") or "").lower() for w in DESTRUCTIVE):

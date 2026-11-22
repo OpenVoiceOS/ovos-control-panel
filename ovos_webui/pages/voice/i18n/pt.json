@@ -55,5 +55,14 @@
  "voice.tts.sample": "Olá, é assim que soo.",
  "voice.intro.all": "Como o dispositivo ouve e fala: a palavra de despertar, como distingue a fala do silêncio, os plugins que transformam fala em texto e texto em fala, e a língua. As alterações são guardadas na sua própria camada do mycroft.conf, o mesmo ficheiro que pode editar como texto na página Definições.",
  "voice.more.link": "Todas as definições de voz",
- "voice.more.lead": "A fala para texto, como distingue a fala do silêncio e a ordem em que tenta entendê-lo estão em"
+ "voice.more.lead": "A fala para texto, como distingue a fala do silêncio e a ordem em que tenta entendê-lo estão em",
+ "voice.location.title": "Localização",
+ "voice.location.button": "Detetar a minha localização",
+ "voice.location.hint": "Procura uma localização aproximada a partir do endereço IP público do dispositivo, e guarda-a como a localização do dispositivo.",
+ "voice.location.confirm": "Procurar uma localização aproximada a partir do endereço IP público deste dispositivo, e guardá-la como a localização do dispositivo?",
+ "voice.location.working": "A procurar a localização…",
+ "voice.location.done": "Localização encontrada e guardada.",
+ "voice.location.overridden": "Localização encontrada, mas a sua configuração define uma localização própria, que prevalece. Limpe-a na página de Definições para usar a detetada.",
+ "voice.location.ignored": "Localização encontrada, mas este dispositivo está configurado para ignorar a localização detetada. Vai manter a que já tem.",
+ "voice.location.failed": "Isso não funcionou."
 }

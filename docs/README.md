@@ -42,7 +42,7 @@ panel runs apart from the assistant, it cannot tell, so every page shows.
 | Try it | Sends a typed question through the device, the way a spoken one would go. | [tryit.md](tryit.md) |
 | Device | Volume, microphone mute, restart and reboot. | [controls.md](controls.md) |
 | Network | Whether the device is online, and the Wi-Fi networks near it. | [network.md](network.md) |
-| Voice and language | The wake word, the voice and the language. | [voice-settings.md](voice-settings.md) |
+| Voice and language | The wake word, the voice, the language and the location. | [voice-settings.md](voice-settings.md) |
 | Skills | The skills on the device, their details and settings, and new ones to install. | [skills.md](skills.md) |
 | Backup | Downloads a copy of your settings, and puts a copy back. | [backup-restore.md](backup-restore.md) |
 | About | Shows the installed package versions and useful links. | [about.md](about.md) |
@@ -57,7 +57,7 @@ panel runs apart from the assistant, it cannot tell, so every page shows.
 | Understanding | Intents | Dry-runs a sentence, shows active skills, and browses every registered intent. | [intents.md](intents.md) |
 | | Transformers | Turns transformer plugins on or off, orders them, and edits each plugin's settings. | [transformers.md](transformers.md) |
 | | Personas | Makes and edits personas — the ordered list of solvers that answer you. | [personas.md](personas.md) |
-| Device | System | SSH, the device location, and a factory reset. | [system.md](system.md) |
+| Device | System | SSH and a factory reset, where the system plugin is installed. | [system.md](system.md) |
 | | Sensors | Live readings from the device's sensors, if a sensor plugin is installed. | [sensors.md](sensors.md) |
 | | Media | Shows what is playing and controls playback and volume. | [media.md](media.md) |
 | Screen | Apps | Launches and closes desktop applications on a device with a screen. | [apps.md](apps.md) |

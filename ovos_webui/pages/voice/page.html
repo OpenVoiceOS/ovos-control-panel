@@ -128,6 +128,16 @@
     <div class="msg" id="msg-lang" role="status" aria-live="polite" hidden></div>
   </div>
 
+  <h2 data-i18n="voice.location.title">Location</h2>
+  <div class="card" id="location-card">
+    <div class="row">
+      <button class="secondary" id="detect-location" data-i18n="voice.location.button">Detect my location</button>
+    </div>
+    <p class="hint" data-i18n="voice.location.hint">Looks up an approximate location from the device's public IP
+      address, and saves it as the device location.</p>
+    <div class="msg" id="msg-location" role="status" aria-live="polite" hidden></div>
+  </div>
+
   </div>
 
   <p class="hint foot"><a data-i18n="foot.manual"
@@ -356,5 +366,35 @@ OvosWebUI.ready(function () {
 
   el("voice-body").hidden = true;
   load();
+
+  // ── detect location by IP (ovos-PHAL-plugin-ipgeo) ─────────────────────────
+  el("detect-location").addEventListener("click", function () {
+    if (!OvosWebUI.confirmed(t("voice.location.confirm",
+      "Look up an approximate location from this device's public IP address, and save it as the device location?"))) { return; }
+    el("detect-location").disabled = true;
+    OvosWebUI.say("msg-location", t("voice.location.working", "Looking up location…"));
+    api("/api/location/detect", {method: "POST"})
+      .then(function (r) {
+        if (r.ok) {
+          // The plugin writes the web cache, which every later layer outranks.
+          // A location set by hand wins and can be cleared; a device told to
+          // ignore the web cache cannot be fixed from the Settings page, so
+          // the two cases say different things.
+          var msg;
+          if (r.reason === "ignored") {
+            msg = t("voice.location.ignored", "Location found, but this device is configured to ignore the detected location. It will keep the location it already has.");
+          } else if (r.overridden) {
+            msg = t("voice.location.overridden", "Location found, but your configuration sets a location of its own, which wins. Clear it on the Settings page to use the detected one.");
+          } else {
+            msg = t("voice.location.done", "Location found and stored.");
+          }
+          OvosWebUI.say("msg-location", msg, !!r.overridden);
+        } else {
+          OvosWebUI.say("msg-location", r.error || t("voice.location.failed", "That did not work."), true);
+        }
+      })
+      .catch(function (e) { OvosWebUI.say("msg-location", e.message, true); })
+      .then(function () { el("detect-location").disabled = false; });
+  });
 });
 </script>

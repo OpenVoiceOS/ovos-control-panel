@@ -81,6 +81,21 @@ The language the device speaks and listens in, for example `en-us` or
 `pt-pt`. Extra languages can be listed too. The device also tries to
 understand those, alongside the main one.
 
+## Location
+
+**Detect my location** looks up an approximate location from the device's
+public IP address, with `ovos-PHAL-plugin-ipgeo`, and saves it as the device
+location. Review it afterwards on the [Settings](configuration.md) page.
+
+The lookup goes out to the internet, so give it a few seconds. It writes the
+location into the lowest configuration layer the device reads, which means a
+location you have set yourself keeps winning; when that happens the page says
+so and points you at the Settings page to clear it. On a device whose
+administrator has switched off the remote configuration layer, or protected
+the location key, the detected location cannot be stored at all and the page
+says that instead: there is nothing to clear, and the device keeps the
+location it has.
+
 ## After a save
 
 The wake word, the speech-to-text engine and the silence detector apply as

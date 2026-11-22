@@ -1,0 +1,17 @@
+{
+ "system.title": "System",
+ "system.intro": "Remote access over SSH, and a factory reset, from the system plugin. The device's location is on the Voice and language page.",
+ "system.ssh.title": "SSH",
+ "system.ssh.hint": "SSH lets you log into the device over the network with a terminal. Only turn it on if you trust this network.",
+ "system.ssh.on": "SSH is on. The device accepts remote terminal logins.",
+ "system.ssh.off": "SSH is off.",
+ "system.ssh.turnOn": "Turn SSH on",
+ "system.ssh.turnOff": "Turn SSH off",
+ "system.ssh.confirmOn": "Turn SSH on? The device will accept remote terminal logins on this network.",
+ "system.ssh.confirmOff": "Turn SSH off? You will not be able to log in remotely until you turn it back on.",
+ "system.factory.title": "Factory reset",
+ "system.factory.warn": "This erases all settings, skills, and personal data on the device and returns it to its factory defaults. This cannot be undone.",
+ "system.factory.button": "Factory reset",
+ "system.factory.typePrompt": "This erases all settings and data on the device and cannot be undone. Type RESET to continue:",
+ "system.factory.sent": "Sent. If the system plugin is installed, the device is wiping now and will restart."
+}

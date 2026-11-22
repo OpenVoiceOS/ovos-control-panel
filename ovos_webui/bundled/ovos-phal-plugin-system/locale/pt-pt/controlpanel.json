@@ -1,0 +1,17 @@
+{
+ "system.title": "Sistema",
+ "system.intro": "Acesso remoto por SSH e reposição de fábrica, do plugin do sistema. A localização do dispositivo está na página Voz e idioma.",
+ "system.ssh.title": "SSH",
+ "system.ssh.hint": "O SSH permite iniciar sessão no dispositivo pela rede com um terminal. Só o ligue se confiar nesta rede.",
+ "system.ssh.on": "O SSH está ligado. O dispositivo aceita inícios de sessão remotos por terminal.",
+ "system.ssh.off": "O SSH está desligado.",
+ "system.ssh.turnOn": "Ligar o SSH",
+ "system.ssh.turnOff": "Desligar o SSH",
+ "system.ssh.confirmOn": "Ligar o SSH? O dispositivo passará a aceitar inícios de sessão remotos por terminal nesta rede.",
+ "system.ssh.confirmOff": "Desligar o SSH? Não conseguirá iniciar sessão remotamente até o voltar a ligar.",
+ "system.factory.title": "Reposição de fábrica",
+ "system.factory.warn": "Isto apaga todas as definições, skills e dados pessoais do dispositivo e devolve-o aos valores de fábrica. Não pode ser anulado.",
+ "system.factory.button": "Repor de fábrica",
+ "system.factory.typePrompt": "Isto apaga todas as definições e dados do dispositivo e não pode ser anulado. Escreva RESET para continuar:",
+ "system.factory.sent": "Enviado. Se o plugin do sistema estiver instalado, o dispositivo está agora a apagar tudo e vai reiniciar."
+}

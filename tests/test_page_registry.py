@@ -107,10 +107,10 @@ def test_a_core_page_cannot_be_taken_over():
     assert "already has the id" in reg.problems[0]["error"]
 
 
-def test_network_and_system_leave_a_device_without_their_plugins():
+def test_network_leaves_a_device_without_its_plugins():
     reg = pages.load(_own())
     found = pages.needs(reg, have={"ovos-control-panel": "1"})["needs"]
-    assert found["network"]["met"] is False and found["system"]["met"] is False
+    assert found["network"]["met"] is False
     found = pages.needs(reg, have={"ovos-phal-plugin-connectivity-events": "1"})["needs"]
     assert found["network"]["met"] is True, "the internet check alone is worth the page"
 

@@ -257,6 +257,14 @@
     },
     "privileged": {
      "type": "boolean"
+    },
+    "confirm_text": {
+     "type": "string",
+     "pattern": "^[A-Z0-9]{2,20}$",
+     "description": "A word the reader must type first, with confirm as the question that asks for it."
+    },
+    "done": {
+     "$ref": "#/$defs/label"
     }
    },
    "additionalProperties": false,

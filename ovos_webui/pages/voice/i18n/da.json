@@ -55,5 +55,14 @@
  "voice.tts.sample": "Hej, sådan lyder jeg.",
  "voice.intro.all": "Hvordan enheden lytter og taler: wake word, hvordan den skelner tale fra stilhed, de plugins, der gør tale til tekst og tekst til tale, og sproget. Ændringer gemmes i dit eget lag af mycroft.conf, den samme fil, du kan redigere som tekst på siden Indstillinger.",
  "voice.more.link": "Alle stemmeindstillinger",
- "voice.more.lead": "Tale til tekst, hvordan den skelner tale fra stilhed, og rækkefølgen, den prøver at forstå dig i, ligger under"
+ "voice.more.lead": "Tale til tekst, hvordan den skelner tale fra stilhed, og rækkefølgen, den prøver at forstå dig i, ligger under",
+ "voice.location.title": "Placering",
+ "voice.location.button": "Find min placering",
+ "voice.location.hint": "Slår en omtrentlig placering op ud fra enhedens offentlige IP-adresse og gemmer den som enhedens placering.",
+ "voice.location.confirm": "Slå en omtrentlig placering op ud fra denne enheds offentlige IP-adresse, og gem den som enhedens placering?",
+ "voice.location.working": "Slår placering op…",
+ "voice.location.done": "Placeringen er fundet og gemt.",
+ "voice.location.overridden": "Placeringen er fundet, men din konfiguration sætter sin egen placering, og den vinder. Ryd den på siden Indstillinger for at bruge den fundne.",
+ "voice.location.ignored": "Placeringen er fundet, men enheden er sat op til at ignorere den fundne placering. Den beholder den placering, den allerede har.",
+ "voice.location.failed": "Det virkede ikke."
 }

@@ -1,0 +1,17 @@
+{
+ "system.title": "Sistema",
+ "system.intro": "Acceso remoto por SSH y restablecimiento de fábrica, del plugin del sistema. La ubicación del dispositivo está en la página Voz e idioma.",
+ "system.ssh.title": "SSH",
+ "system.ssh.hint": "SSH le permite conectarse al dispositivo por red con una terminal. Actívelo solo si confía en esta red.",
+ "system.ssh.on": "SSH está activado. El dispositivo acepta conexiones de terminal remotas.",
+ "system.ssh.off": "SSH está desactivado.",
+ "system.ssh.turnOn": "Activar SSH",
+ "system.ssh.turnOff": "Desactivar SSH",
+ "system.ssh.confirmOn": "¿Activar SSH? El dispositivo aceptará conexiones de terminal remotas en esta red.",
+ "system.ssh.confirmOff": "¿Desactivar SSH? No podrá conectarse remotamente hasta que lo vuelva a activar.",
+ "system.factory.title": "Restablecimiento de fábrica",
+ "system.factory.warn": "Esto borra todos los ajustes, habilidades y datos personales del dispositivo y lo devuelve a sus valores de fábrica. Esta acción no se puede deshacer.",
+ "system.factory.button": "Restablecimiento de fábrica",
+ "system.factory.typePrompt": "Esto borra todos los ajustes y datos del dispositivo y no se puede deshacer. Escriba RESET para continuar:",
+ "system.factory.sent": "Enviado. Si el complemento del sistema está instalado, el dispositivo se está borrando ahora y se reiniciará."
+}

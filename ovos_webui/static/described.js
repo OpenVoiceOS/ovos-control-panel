@@ -18,7 +18,7 @@ OvosWebUI.ready(function () {
     "common.save": "Save", "common.delete": "Delete", "common.play": "Play", "common.stop": "Stop",
     "common.download": "Download", "common.upload": "Upload", "common.refresh": "Refresh",
     "common.cancel": "Cancel", "common.rename": "Save name", "common.sure": "Are you sure?",
-    "common.saved": "Saved.", "common.done": "Done.", "common.loading": "Loading …",
+    "common.saved": "Saved.", "common.done": "Done.", "common.nomatch": "That did not match, so nothing was sent.", "common.loading": "Loading …",
     "common.newer": "This part of the page needs a newer control panel.",
     "common.name": "Name", "common.none": "Nothing here yet.", "common.password_set": "A password is set; leave empty to keep it.",
     "common.noanswer": "The skill or plugin did not answer. Is it running?",
@@ -114,7 +114,12 @@ OvosWebUI.ready(function () {
     return b;
   }
   function run(action, key, msg, after) {
-    if (action.confirm && !OvosWebUI.confirmed(t(action.confirm))) { return; }
+    if (action.confirm_text) {
+      // what cannot be undone: the reader types the word the label asks for
+      var typed = window.prompt(t(action.confirm));
+      if (typed === null) { return; }
+      if (typed.trim() !== action.confirm_text) { say(msg, t("common.nomatch"), true); return; }
+    } else if (action.confirm && !OvosWebUI.confirmed(t(action.confirm))) { return; }
     if (action.download) {
       var url = base + (action.privileged ? "/download-locked" : "/download") + "?ref="
         + encodeURIComponent(action.ref) + "&key=" + encodeURIComponent(key || "");
@@ -122,7 +127,7 @@ OvosWebUI.ready(function () {
       return;
     }
     post(action.privileged ? "/act" : "/act-open", {ref: action.ref, key: key, params: params})
-      .then(function (r) { say(msg, t("common.done")); if (after) { after(r); } })
+      .then(function (r) { say(msg, t(action.done || "common.done")); if (after) { after(r); } })
       .catch(function (e) { say(msg, why(e), true); });
   }
 
