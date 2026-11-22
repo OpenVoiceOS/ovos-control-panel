@@ -1,0 +1,17 @@
+{
+ "system.title": "System",
+ "system.intro": "Fjernadgang over SSH og fabriksnulstilling, fra system-pluginnet. Enhedens placering står på siden Stemme og sprog.",
+ "system.ssh.title": "SSH",
+ "system.ssh.hint": "Med SSH kan du logge ind på enheden over netværket med en terminal. Slå det kun til, hvis du stoler på dette netværk.",
+ "system.ssh.on": "SSH er slået til. Enheden tager imod fjernlogin via terminal.",
+ "system.ssh.off": "SSH er slået fra.",
+ "system.ssh.turnOn": "Slå SSH til",
+ "system.ssh.turnOff": "Slå SSH fra",
+ "system.ssh.confirmOn": "Slå SSH til? Enheden vil tage imod fjernlogin via terminal på dette netværk.",
+ "system.ssh.confirmOff": "Slå SSH fra? Du kan ikke logge ind udefra, før du slår det til igen.",
+ "system.factory.title": "Nulstil til fabriksindstillinger",
+ "system.factory.warn": "Dette sletter alle indstillinger, skills og personlige data på enheden og sætter den tilbage til fabriksindstillingerne. Det kan ikke fortrydes.",
+ "system.factory.button": "Nulstil til fabriksindstillinger",
+ "system.factory.typePrompt": "Dette sletter alle indstillinger og data på enheden og kan ikke fortrydes. Skriv RESET for at fortsætte:",
+ "system.factory.sent": "Sendt. Hvis system-pluginnet er installeret, sletter enheden nu alt og genstarter."
+}

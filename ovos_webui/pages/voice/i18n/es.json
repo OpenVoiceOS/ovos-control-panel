@@ -55,5 +55,14 @@
  "voice.tts.sample": "Hola, así es como sueno.",
  "voice.intro.all": "Cómo escucha y habla el dispositivo: la palabra de activación, cómo distingue la voz del silencio, los plugins que convierten la voz en texto y el texto en voz, y el idioma. Los cambios se guardan en su propia capa de mycroft.conf, el mismo archivo que puede editar como texto en la página Ajustes.",
  "voice.more.link": "Todos los ajustes de voz",
- "voice.more.lead": "La voz a texto, cómo distingue la voz del silencio y el orden en que intenta entenderle están en"
+ "voice.more.lead": "La voz a texto, cómo distingue la voz del silencio y el orden en que intenta entenderle están en",
+ "voice.location.title": "Ubicación",
+ "voice.location.button": "Detectar mi ubicación",
+ "voice.location.hint": "Busca una ubicación aproximada a partir de la dirección IP pública del dispositivo, y la guarda como la ubicación del dispositivo.",
+ "voice.location.confirm": "¿Buscar una ubicación aproximada a partir de la dirección IP pública de este dispositivo, y guardarla como la ubicación del dispositivo?",
+ "voice.location.working": "Buscando ubicación…",
+ "voice.location.done": "Ubicación encontrada y guardada.",
+ "voice.location.overridden": "Ubicación encontrada, pero su configuración define una propia, que prevalece. Bórrela en la página de Ajustes para usar la detectada.",
+ "voice.location.ignored": "Ubicación encontrada, pero este dispositivo está configurado para ignorar la ubicación detectada. Mantendrá la que ya tiene.",
+ "voice.location.failed": "Eso no ha funcionado."
 }

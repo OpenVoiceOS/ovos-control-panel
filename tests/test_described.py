@@ -724,3 +724,41 @@ def test_the_list_of_pages_says_which_are_described(app):
     c.headers["Authorization"] = "Bearer s3cret-token"
     listed = {p["id"]: p["described"] for p in c.get("/api/pages").json()["pages"]}
     assert listed["demo"] is True and listed["about"] is False
+
+
+def test_what_cannot_be_undone_asks_for_a_typed_word():
+    page = {"controlpanel": 1, "id": "w", "title": "w.title", "bus": "ovos.w.", "blocks": [
+        {"type": "actions", "actions": [{"label": "w.wipe", "send": "ovos.w.wipe", "answer": False,
+                                         "confirm": "w.type", "confirm_text": "RESET", "done": "w.sent"}]}]}
+    out, _ = checked(page, "ovos-phal-plugin-w")
+    action = out["blocks"][0]["actions"][0]
+    assert action["confirm_text"] == "RESET" and action["done"] == {"key": "w.sent"}
+    for bad in ("reset", "R", {"word": 1}):
+        page["blocks"][0]["actions"][0]["confirm_text"] = bad
+        with pytest.raises(described.DescribedError, match="confirm_text"):
+            checked(page, "ovos-phal-plugin-w")
+    page["blocks"][0]["actions"][0].update(confirm_text="RESET")
+    page["blocks"][0]["actions"][0].pop("confirm")
+    with pytest.raises(described.DescribedError, match="confirm_text"):
+        checked(page, "ovos-phal-plugin-w")
+
+
+def test_the_system_page_the_panel_brings_reads_ssh_and_resets_only_on_its_word(bus, monkeypatch):
+    root = described.BUNDLED / "ovos-phal-plugin-system"
+    data = json.loads((root / "controlpanel.json").read_text(encoding="utf-8"))
+    found = described.Found("ovos-PHAL-plugin-system", "1.3.8a4", "ovos_PHAL_plugin_system", root, data,
+                            by_panel=True)
+    monkeypatch.setattr(described, "discover", lambda: [found])
+    seen = []
+    bus.on("system.ssh.status", lambda m: bus.emit(m.response({"enabled": False})))
+    bus.on("system.ssh.enable", lambda m: seen.append(m.msg_type))
+    bus.on("system.factory.reset", lambda m: seen.append(m.msg_type))
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
+    with TestClient(app, base_url="http://127.0.0.1:8500", headers={"sec-fetch-site": "same-origin",
+                                                                    "Authorization": "Bearer s3cret-token"}) as c:
+        assert c.post("/api/cp/system/query", json={"ref": "b1"}).json() == {"enabled": False}
+        assert c.post("/api/cp/system/act", json={"ref": "b1.a0"}).json() == {}
+        page = c.get("/api/cp/system/page").json()["page"]
+    reset = page["blocks"][4]["actions"][0]
+    assert reset["confirm_text"] == "RESET" and reset["done"]["key"] == "system.factory.sent"
+    assert seen == ["system.ssh.enable"], "the reset is never sent without the typed word"

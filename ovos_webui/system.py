@@ -1,23 +1,9 @@
-"""SSH, factory reset, connectivity, and IP-geolocation over
-the message bus.
+"""Connectivity and IP-geolocation over the message bus.
 
-These use the message types ``ovos-PHAL-plugin-system`` (SSH, factory reset),
-``ovos-PHAL-plugin-connectivity-events`` (connectivity), and
-``ovos-PHAL-plugin-ipgeo`` (IP geolocation) already register — no new ones are
-introduced:
-
-* ``system.ssh.status`` -> ``.response`` (``enabled``) — ovos-PHAL-plugin-system
-  ``handle_ssh_status`` replies with ``message.response(...)``, i.e. the usual
-  ``<type>.response`` topic.
-* ``system.ssh.enable`` -> the plugin emits ``system.ssh.enabled`` once it has
-  run ``systemctl enable``/``start``; ``system.ssh.disable`` -> ``system.ssh.disabled``
-  the same way (``handle_ssh_enable_request`` / ``handle_ssh_disable_request``).
-* ``system.factory.reset`` — destructive: the plugin forwards the message to
-  ``system.factory.reset.start`` at once, then wipes cache/data and lets other
-  PHAL plugins registered on ``system.factory.reset.register`` run their own
-  wipe (``handle_factory_reset_request``). There is no "done" reply to wait on
-  — the wipe can outlive the request — so this is fire-and-forget like the
-  existing reboot/shutdown actions on the controls page.
+SSH and the factory reset are a page the panel brings for
+``ovos-PHAL-plugin-system`` (``bundled/ovos-phal-plugin-system``). What is left
+here uses the message types ``ovos-PHAL-plugin-connectivity-events`` and
+``ovos-PHAL-plugin-ipgeo`` already register:
 
 * ``ovos.PHAL.internet_check`` drives ``ovos-PHAL-plugin-connectivity-events``
   to answer on ``mycroft.internet.state`` and ``mycroft.network.state``
@@ -51,68 +37,11 @@ DEFAULT_TIMEOUT = 5.0
 #: goes ahead behind the reader's back.
 GEOLOCATE_TIMEOUT = 30.0
 
-#: Wiping and unregistering things device-side can take a moment longer than
-#: an ordinary query, but this is still fire-and-forget: no reply is awaited.
-FACTORY_RESET_TIMEOUT = 5.0
-
-#: A loose BCP-47-ish check: 2-3 letter language, optional region/script,
-#: e.g. "en", "en-US", "en_US", "pt-PT", "zh-Hans-CN". Not a full BCP-47
-#: validator — just enough to keep obvious junk off the bus.
-
 
 def _msg(msg_type: str, data: dict[str, Any] | None = None):
     from ovos_bus_client.message import Message
 
     return Message(msg_type, data or {}, {"source": "ovos-webui"})
-
-
-# ── SSH ───────────────────────────────────────────────────────────────────────
-def ssh_status(bus) -> dict[str, Any]:
-    """Return ``{"available": bool, "enabled": bool|None}``.
-
-    ``available`` is False when nothing answered ``system.ssh.status`` inside
-    the timeout — that is the capability gate: the system plugin is not
-    installed, or not running.
-    """
-    from ovos_webui import buswait
-
-    reply = buswait.wait_for_response(bus, _msg("system.ssh.status"),
-                                      timeout=DEFAULT_TIMEOUT)
-    if reply is None:
-        return {"available": False, "enabled": None}
-    data = reply.data or {}
-    return {"available": True, "enabled": bool(data.get("enabled"))}
-
-
-def ssh_enable(bus) -> dict[str, Any]:
-    """Ask the system plugin to enable and start the SSH service."""
-    from ovos_webui import buswait
-
-    ok = buswait.emit(bus, _msg("system.ssh.enable"))
-    return {"sent": ok}
-
-
-def ssh_disable(bus) -> dict[str, Any]:
-    """Ask the system plugin to stop and disable the SSH service."""
-    from ovos_webui import buswait
-
-    ok = buswait.emit(bus, _msg("system.ssh.disable"))
-    return {"sent": ok}
-
-
-# ── factory reset ────────────────────────────────────────────────────────────
-def factory_reset(bus) -> dict[str, Any]:
-    """Ask the system plugin to wipe the device back to defaults.
-
-    Destructive and irreversible on the device; the UI must confirm this with
-    the user before ever calling it. Fire-and-forget: the plugin starts
-    wiping immediately and there is no single "done" reply to wait for.
-    """
-    from ovos_webui import buswait
-
-    ok = buswait.emit(bus, _msg("system.factory.reset"),
-                      timeout=FACTORY_RESET_TIMEOUT)
-    return {"sent": ok}
 
 
 # ── connectivity ─────────────────────────────────────────────────────────────

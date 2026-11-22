@@ -40,7 +40,7 @@ def test_nothing_set_means_the_menu_as_it_ships():
 def test_the_menu_follows_the_settings():
     nav = REG.nav(pages.prefs({
         "pages": {"disabled": ["personas"], "move": {"media": {"group": "screen", "order": 5}}},
-        "groups": {"order": ["screen"], "rename": {"device": {"label": "Hardware"}}}}))
+        "groups": {"order": ["screen"], "rename": {"maintenance": {"label": "Upkeep"}}}}))
     ids = [p["id"] for p in nav["pages"]]
     assert "personas" not in ids
     media = [p for p in nav["pages"] if p["id"] == "media"][0]
@@ -49,7 +49,7 @@ def test_the_menu_follows_the_settings():
     assert screen[0] == "media", "order 5 puts it first in the group"
     advanced = [g["id"] for g in nav["groups"] if g["level"] == "advanced"]
     assert advanced[0] == "screen"
-    assert [g for g in nav["groups"] if g["id"] == "device"][0]["label"] == "Hardware"
+    assert [g for g in nav["groups"] if g["id"] == "maintenance"][0]["label"] == "Upkeep"
 
 
 def test_a_page_turned_off_answers_nothing(client):

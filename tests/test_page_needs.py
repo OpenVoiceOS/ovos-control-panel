@@ -8,7 +8,6 @@ REG = pages.load()
 def test_a_page_is_usable_with_any_of_its_packages():
     out = pages.needs(REG, dict(ON_DEVICE, **{"ovos-plugin-common-play": "1.3.1"}))
     assert out["colocated"] is True
-    assert out["needs"]["system"]["met"] is True
     assert out["needs"]["media"]["met"] is True
     assert out["needs"]["network"]["met"] is False
 
@@ -27,7 +26,7 @@ def test_a_panel_running_apart_from_the_assistant_hides_nothing():
 
 def test_only_pages_with_needs_are_reported():
     out = pages.needs(REG, ON_DEVICE)
-    assert set(out["needs"]) == {"network", "system", "media"}
+    assert set(out["needs"]) == {"network", "media"}
 
 
 def test_the_route_answers(client):

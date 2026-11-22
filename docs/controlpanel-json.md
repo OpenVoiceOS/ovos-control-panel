@@ -212,6 +212,8 @@ hear it. Nothing of it comes from the file.
 | `download` | Instead of `send`: a message whose answer is a file, with `file`: `{"data": <the answer's field, base64>, "name": "{name}.mid", "type": <media type>}`. |
 | `when` | A [condition](#conditions): on a row, on the row; in a status, on the answer. |
 | `confirm` | A label: asked before it is sent. |
+| `confirm_text` | For what cannot be undone: a word in capitals, as `RESET`, the reader must type before it is sent; `confirm` is then the question that asks for it. |
+| `done` | A label said once it is sent, in place of "Done.": "The device is wiping now and will restart." |
 | `privileged` | Default `true`: it needs the token. A download defaults to `false`. |
 
 The media types a download may have: `audio/midi`, `audio/mpeg`, `audio/ogg`,
@@ -305,8 +307,8 @@ is then not needed; with both, the page may use either.
 
 Each such page should also go to the package as a pull request, so it can
 leave the panel. The pages the panel brings today: the TTS and STT server
-plugins, Piper, the app launcher, the wallpaper manager, ovos-PHAL-sensors and
-the Mark-1 plugin.
+plugins, Piper, the app launcher, the wallpaper manager, ovos-PHAL-sensors, the
+Mark-1 plugin and the system plugin.
 
 ## Versions and older panels
 

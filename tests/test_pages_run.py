@@ -633,9 +633,9 @@ def test_the_menu_groups_start_folded_and_open_one_at_a_time(signed_in_page):
     assert page.locator("#simple-toggle").count() == 0, "the header switch is gone"
     advanced = _fold(page, "advanced")
     assert advanced.is_visible() and advanced.get_attribute("aria-expanded") == "false"
-    # voice, understanding, device, maintenance: the screen group's pages
+    # voice, understanding, maintenance: the device and screen groups' pages
     # come with their plugins, and the test device has none
-    assert page.locator("nav .nav-advanced .nav-sub button.nav-fold").count() == 4
+    assert page.locator("nav .nav-advanced .nav-sub button.nav-fold").count() == 3
     assert not _fold(page, "understanding").is_visible(), "Advanced folds its groups away"
     folded = _visible_nav(page)
     assert "/about" in folded and "/skills" in folded
@@ -696,8 +696,8 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
     group with it); reaching the page anyway says what it needs."""
     page, url = signed_in_page
     needs = {"colocated": True, "needs": {
-        k: {"met": k in ("system", "media"), "suggest": "pkg-" + k}
-        for k in ("system", "media", "network")}}
+        k: {"met": k == "media", "suggest": "pkg-" + k}
+        for k in ("media", "network")}}
 
     def answer(route):
         route.fulfill(status=200, content_type="application/json", body=json.dumps(needs))
@@ -710,7 +710,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
         page.reload()
         page.wait_for_function("() => document.querySelector('nav a[href=\"/network\"]').hidden")
         shown = _visible_nav(page)
-        assert "/system" in shown and "/media" in shown
+        assert "/media" in shown
         assert "/network" not in shown
         assert not page.locator('nav .nav-group[data-group="screen"]').is_visible()
 
@@ -919,9 +919,9 @@ def test_the_internet_status_moved_to_network(signed_in_page):
     page.goto(f"{url}/network")
     page.wait_for_load_state("networkidle")
     assert page.locator("#internet-card").is_visible()
-    page.goto(f"{url}/system")
+    # the location is detected on the Voice and language page
+    page.goto(f"{url}/voice")
     page.wait_for_load_state("networkidle")
-    assert page.locator("#language").count() == 0
     assert page.locator("#location-card").is_visible()
 
 

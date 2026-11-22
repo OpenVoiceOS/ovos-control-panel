@@ -1,0 +1,76 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-phal-plugin-system>=1.0.0,<2",
+ "id": "system",
+ "path": "/system",
+ "title": "system.title",
+ "group": "device",
+ "order": 10,
+ "icon": "controlpanel.svg",
+ "messages": [
+  "system.ssh.status",
+  "system.ssh.enable",
+  "system.ssh.disable",
+  "system.factory.reset"
+ ],
+ "blocks": [
+  {
+   "type": "text",
+   "text": "system.intro"
+  },
+  {
+   "type": "status",
+   "heading": "system.ssh.title",
+   "query": "system.ssh.status",
+   "refresh": 10,
+   "rows": [
+    {
+     "text": "system.ssh.on",
+     "when": "enabled"
+    },
+    {
+     "text": "system.ssh.off",
+     "when": "!enabled"
+    }
+   ],
+   "actions": [
+    {
+     "label": "system.ssh.turnOn",
+     "send": "system.ssh.enable",
+     "answer": false,
+     "when": "!enabled",
+     "confirm": "system.ssh.confirmOn"
+    },
+    {
+     "label": "system.ssh.turnOff",
+     "send": "system.ssh.disable",
+     "answer": false,
+     "when": "enabled",
+     "confirm": "system.ssh.confirmOff"
+    }
+   ]
+  },
+  {
+   "type": "text",
+   "text": "system.ssh.hint"
+  },
+  {
+   "type": "text",
+   "heading": "system.factory.title",
+   "text": "system.factory.warn"
+  },
+  {
+   "type": "actions",
+   "actions": [
+    {
+     "label": "system.factory.button",
+     "send": "system.factory.reset",
+     "answer": false,
+     "confirm": "system.factory.typePrompt",
+     "confirm_text": "RESET",
+     "done": "system.factory.sent"
+    }
+   ]
+  }
+ ]
+}
