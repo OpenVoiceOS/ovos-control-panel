@@ -1,0 +1,9 @@
+{
+ "ttsServer.title": "Stemmeserver",
+ "ttsServer.intro": "Stemmen laves på en server: teksten i hvert svar sendes dertil, og lyden kommer tilbage. Uden egne servere bruges OpenVoiceOS' offentlige servere.",
+ "ttsServer.host": "Dine egne servere, én pr. linje",
+ "ttsServer.host.hint": "Lad feltet stå tomt for at bruge de offentlige servere.",
+ "ttsServer.timeout": "Vent på svar (sekunder)",
+ "ttsServer.verify": "Tjek serverens certifikat",
+ "ttsServer.verify.hint": "Slå det kun fra for en server, du tester med."
+}

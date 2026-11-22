@@ -1,0 +1,49 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-stt-plugin-server>=0.1.0,<1",
+ "id": "stt-server",
+ "path": "/stt-server",
+ "title": "sttServer.title",
+ "group": "voice",
+ "order": 41,
+ "bus": "ovos.stt-server.",
+ "blocks": [
+  {
+   "type": "text",
+   "text": "sttServer.intro"
+  },
+  {
+   "type": "module",
+   "kind": "stt"
+  },
+  {
+   "type": "form",
+   "save": {
+    "config": "stt.ovos-stt-plugin-server"
+   },
+   "fields": [
+    {
+     "name": "urls",
+     "label": "sttServer.urls",
+     "type": "lines",
+     "hint": "sttServer.urls.hint"
+    },
+    {
+     "name": "timeout",
+     "label": "sttServer.timeout",
+     "type": "number",
+     "min": 1,
+     "max": 60,
+     "default": 5
+    },
+    {
+     "name": "verify_ssl",
+     "label": "sttServer.verify",
+     "type": "checkbox",
+     "default": true,
+     "hint": "sttServer.verify.hint"
+    }
+   ]
+  }
+ ]
+}

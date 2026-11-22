@@ -1,0 +1,9 @@
+{
+ "sttServer.title": "Talegenkendelsesserver",
+ "sttServer.intro": "Det, du siger, genkendes på en server: lyden sendes dertil, og teksten kommer tilbage. Uden egne servere bruges OpenVoiceOS' offentlige servere.",
+ "sttServer.urls": "Dine egne servere, én adresse pr. linje",
+ "sttServer.urls.hint": "Hele adressen, fx https://stt.example.org/stt. Lad feltet stå tomt for at bruge de offentlige servere.",
+ "sttServer.timeout": "Vent på svar (sekunder)",
+ "sttServer.verify": "Tjek serverens certifikat",
+ "sttServer.verify.hint": "Slå det kun fra for en server, du tester med."
+}

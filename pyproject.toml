@@ -112,7 +112,8 @@ include = ["ovos_webui*"]
 # "static/*" is one level deep and misses static/i18n/*.json, so the wheel
 # shipped the pages and none of their translations. The pages carry data-i18n
 # attributes and fetch those files at runtime.
-ovos_webui = ["static/*", "static/**/*", "pages/*/*.html", "pages/*/*.svg", "pages/*/i18n/*.json"]
+ovos_webui = ["static/*", "static/**/*", "pages/*/*.html", "pages/*/*.svg", "pages/*/i18n/*.json",
+              "bundled/*/*.json", "bundled/*/*.svg", "bundled/*/locale/*/*.json"]
 
 [tool.pytest.ini_options]
 

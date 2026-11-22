@@ -184,5 +184,15 @@
  "common.upload.kind": "It can take: {accept}",
  "common.upload.big": "The file is larger than {mb} MB.",
  "common.upload.busy": "Sending …",
- "common.all": "All"
+ "common.all": "All",
+ "page.byPanel": "described by the control panel",
+ "module.tts.title": "The voice",
+ "module.stt.title": "Speech recognition",
+ "module.active": "This is the one in use.",
+ "module.fallback": "This is the fallback, used when the one in use fails.",
+ "module.unused": "This is not in use.",
+ "module.use": "Use this",
+ "module.useFallback": "Use as fallback",
+ "module.test": "Hear it",
+ "module.test.sentence": "Hello, this is how I sound."
 }

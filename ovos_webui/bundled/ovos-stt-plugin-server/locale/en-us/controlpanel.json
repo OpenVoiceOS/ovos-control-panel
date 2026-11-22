@@ -1,0 +1,9 @@
+{
+ "sttServer.title": "Speech recognition server",
+ "sttServer.intro": "What you say is recognised on a server: the sound is sent there and the text comes back. With no servers of your own the public OpenVoiceOS servers are used.",
+ "sttServer.urls": "Your own servers, one address per line",
+ "sttServer.urls.hint": "The whole address, such as https://stt.example.org/stt. Leave empty to use the public servers.",
+ "sttServer.timeout": "Wait for an answer (seconds)",
+ "sttServer.verify": "Check the servers' certificates",
+ "sttServer.verify.hint": "Only turn this off for a server you test with."
+}

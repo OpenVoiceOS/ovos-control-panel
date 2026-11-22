@@ -1,0 +1,49 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-tts-plugin-server>=0.0.6a1,<1",
+ "id": "tts-server",
+ "path": "/tts-server",
+ "title": "ttsServer.title",
+ "group": "voice",
+ "order": 40,
+ "bus": "ovos.tts-server.",
+ "blocks": [
+  {
+   "type": "text",
+   "text": "ttsServer.intro"
+  },
+  {
+   "type": "module",
+   "kind": "tts"
+  },
+  {
+   "type": "form",
+   "save": {
+    "config": "tts.ovos-tts-plugin-server"
+   },
+   "fields": [
+    {
+     "name": "host",
+     "label": "ttsServer.host",
+     "type": "lines",
+     "hint": "ttsServer.host.hint"
+    },
+    {
+     "name": "tts_timeout",
+     "label": "ttsServer.timeout",
+     "type": "number",
+     "min": 1,
+     "max": 60,
+     "default": 5
+    },
+    {
+     "name": "verify_ssl",
+     "label": "ttsServer.verify",
+     "type": "checkbox",
+     "default": true,
+     "hint": "ttsServer.verify.hint"
+    }
+   ]
+  }
+ ]
+}

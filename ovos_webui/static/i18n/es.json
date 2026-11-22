@@ -184,5 +184,15 @@
  "common.upload.kind": "Acepta: {accept}",
  "common.upload.big": "El archivo pesa más de {mb} MB.",
  "common.upload.busy": "Enviando …",
- "common.all": "Todos"
+ "common.all": "Todos",
+ "page.byPanel": "descrito por el panel de control",
+ "module.tts.title": "La voz",
+ "module.stt.title": "Reconocimiento de voz",
+ "module.active": "Es la que está en uso.",
+ "module.fallback": "Es la de reserva, se usa si falla la que está en uso.",
+ "module.unused": "No está en uso.",
+ "module.use": "Usar esta",
+ "module.useFallback": "Usar como reserva",
+ "module.test": "Escucharla",
+ "module.test.sentence": "Hola, así es como sueno."
 }

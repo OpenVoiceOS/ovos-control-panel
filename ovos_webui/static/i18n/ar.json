@@ -184,5 +184,15 @@
  "common.upload.kind": "يقبل: {accept}",
  "common.upload.big": "الملف أكبر من {mb} ميغابايت.",
  "common.upload.busy": "جارٍ الإرسال …",
- "common.all": "الكل"
+ "common.all": "الكل",
+ "page.byPanel": "وصفته لوحة التحكم",
+ "module.tts.title": "الصوت",
+ "module.stt.title": "التعرّف على الكلام",
+ "module.active": "هذا هو المستخدم.",
+ "module.fallback": "هذا هو الاحتياطي، ويُستخدم إذا فشل المستخدم.",
+ "module.unused": "هذا غير مستخدم.",
+ "module.use": "استخدم هذا",
+ "module.useFallback": "استخدمه احتياطيًا",
+ "module.test": "استمع إليه",
+ "module.test.sentence": "مرحبًا، هكذا يبدو صوتي."
 }

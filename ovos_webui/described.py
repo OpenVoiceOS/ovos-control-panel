@@ -31,7 +31,7 @@ MAX_STRINGS = 256 * 1024
 MAX_ICON = 16 * 1024
 #: The blocks this panel draws. A block of another type is drawn as "this
 #: needs a newer control panel", and the rest of the page still works.
-BLOCKS = frozenset({"text", "status", "list", "actions", "form", "choice", "upload"})
+BLOCKS = frozenset({"text", "status", "list", "actions", "form", "choice", "upload", "module"})
 FIELD_TYPES = frozenset({"text", "password", "url", "number", "slider", "checkbox", "select", "lines"})
 _URL_RE = re.compile(r"^https?://[^\s/]+\S*$")
 #: A page's messages start with its own prefix, never with one of these.
@@ -75,6 +75,8 @@ class Found:
     module: str
     root: Path
     data: dict
+    #: described by the panel, for a package that has no description of its own
+    by_panel: bool = False
 
 
 # ── finding the files ────────────────────────────────────────────────────────
@@ -148,10 +150,90 @@ def discover() -> list[Found]:
                 data = DescribedError(f"{FILE} is not JSON: {e}")
             out.append(Found(name, dist.version or "?", top, root, data))
             break
+        else:
+            found = _bundled(name, dist.version or "", _tops(dist))
+            if found is not None:
+                out.append(found)
     return out
 
 
+#: Descriptions the panel brings for packages that have none of their own:
+#: bundled/<package name>/controlpanel.json, with its locale/ and icon.
+BUNDLED = Path(__file__).resolve().parent / "bundled"
+
+
+def _bundled(name: str, version: str, tops: list[str]) -> Found | None:
+    """The panel's description of ``name``, if it has one for this version.
+    The file says what it is for: ``"for": "ovos-skill-weather>=1.0,<2"``.
+    A version it was not written for gets no page, rather than one that
+    writes the wrong keys."""
+    from packaging.requirements import InvalidRequirement, Requirement
+    from packaging.utils import canonicalize_name
+    from packaging.version import InvalidVersion
+
+    root = BUNDLED / canonicalize_name(name)
+    path = root / FILE
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        req = Requirement(str(data.get("for") or ""))
+    except (OSError, ValueError, InvalidRequirement) as e:
+        LOG.warning("the panel's description of %s cannot be used: %s", name, e)
+        return None
+    if canonicalize_name(req.name) != canonicalize_name(name):
+        LOG.warning("the panel's description of %s is for %s", name, req.name)
+        return None
+    try:
+        if req.specifier and not req.specifier.contains(version, prereleases=True):
+            LOG.info("the panel's description of %s is for %s, not %s", name, req.specifier, version)
+            return None
+    except InvalidVersion:
+        return None
+    return Found(name, version or "?", tops[0] if tops else "", root, data, by_panel=True)
+
+
 # ── checking a file ──────────────────────────────────────────────────────────
+#: Where a plugin's own settings are in mycroft.conf, by its entry point's group
+_CONFIG_PLACES = {"opm.tts": "tts", "mycroft.plugin.tts": "tts", "opm.stt": "stt",
+                  "mycroft.plugin.stt": "stt", "opm.phal": "PHAL", "opm.phal.admin": "PHAL"}
+
+
+def config_roots(package: str) -> list[str]:
+    """A package's own places in mycroft.conf: PHAL.<package>, and the
+    section its plugins read: tts.<module>, stt.<module>, PHAL.<name>.
+    Never the choice of module itself (tts.module), only the plugin's own."""
+    roots = ["PHAL." + package]
+    try:
+        eps = metadata.distribution(package).entry_points
+    except Exception:  # noqa: BLE001 - only the default then
+        return roots
+    for ep in eps:
+        place = _CONFIG_PLACES.get(ep.group)
+        if place and _CONFIG_RE.match(f"{place}.{ep.name}"):
+            roots.append(f"{place}.{ep.name}")
+    return list(dict.fromkeys(roots))
+
+
+#: The kinds of plugin a page can make the one in use (a "module" block)
+MODULE_KINDS = {"tts": ("opm.tts", "mycroft.plugin.tts"), "stt": ("opm.stt", "mycroft.plugin.stt")}
+
+
+def plugin_modules(package: str) -> dict[str, list[str]]:
+    """The TTS and STT modules a package brings, by kind: their entry point
+    names, which are what mycroft.conf calls them (tts.module)."""
+    out: dict[str, list[str]] = {}
+    try:
+        eps = metadata.distribution(package).entry_points
+    except Exception:  # noqa: BLE001 - none then
+        return out
+    for kind, groups in MODULE_KINDS.items():
+        names = sorted({ep.name for ep in eps if ep.group in groups and _CONFIG_RE.match(ep.name)})
+        if names:
+            out[kind] = names
+    return out
+
+
 def is_key(raw: Any) -> bool:
     """Whether a text is a label's key (``books.title``)."""
     return isinstance(raw, str) and bool(_KEY_RE.match(raw))
@@ -377,11 +459,11 @@ class _Checker:
             save = raw.get("save") or {}
             if save.get("config"):
                 path = save["config"]
-                own = "PHAL." + self.package
+                roots = getattr(self, "config_roots", None) or ["PHAL." + self.package]
                 if not isinstance(path, str) or not _CONFIG_RE.match(path) \
-                        or not (path == own or path.startswith(own + ".")):
+                        or not any(path == own or path.startswith(own + ".") for own in roots):
                     raise DescribedError(f"{where}: a form saves in the package's own place in "
-                                         f"mycroft.conf ({own}), not {path!r}")
+                                         f"mycroft.conf ({', '.join(roots)}), not {path!r}")
                 out["config"] = path
                 if save.get("reload"):
                     out["reload"] = self.message(save["reload"], where)
@@ -398,6 +480,18 @@ class _Checker:
             else:
                 raise DescribedError(f"{where}: a form saves with send, config or settings")
             self.refs[ref + ".form"] = {"kind": "form", "block": out}
+        if kind == "module":
+            # the panel's own part: whether this plugin is the one in use, to
+            # make it so, and to hear it; nothing of it comes from the file
+            mkind = raw.get("kind")
+            if mkind not in MODULE_KINDS:
+                raise DescribedError(f"{where}: kind is one of {sorted(MODULE_KINDS)}")
+            names = (getattr(self, "modules", None) or {}).get(mkind) or []
+            if len(names) != 1:
+                raise DescribedError(f"{where}: the package brings no {mkind} plugin, or more than one")
+            out["kind"] = mkind
+            out["module"] = names[0]
+            self.refs[ref + ".module"] = {"kind": "module", "block": out}
         if kind == "upload":
             out["send"] = self.message(raw.get("send"), where)
             accept = raw.get("accept") or []
@@ -433,11 +527,14 @@ class _Checker:
         return out
 
 
-def check(data: Any, package: str, skill_id: str | None = None) -> tuple[dict, dict[str, dict]]:
+def check(data: Any, package: str, skill_id: str | None = None,
+          config_roots: list[str] | None = None,
+          modules: dict[str, list[str]] | None = None) -> tuple[dict, dict[str, dict]]:
     """Check a file; return the page as the browser gets it, and the
     declarations the bus bridge goes by (ref -> what it may send).
     ``skill_id`` is the skill the package registers, if it is a skill: a
-    form may then save in that skill's settings.json."""
+    form may then save in that skill's settings.json. ``config_roots`` are
+    the package's own places in mycroft.conf (PHAL.<package> by default)."""
     if isinstance(data, Exception):
         raise DescribedError(str(data))
     if not isinstance(data, dict):
@@ -447,6 +544,8 @@ def check(data: Any, package: str, skill_id: str | None = None) -> tuple[dict, d
                              f"this panel draws {sorted(VERSIONS)}")
     checker = _Checker(data, package)
     checker.skill_id = skill_id
+    checker.config_roots = config_roots
+    checker.modules = modules or {}
     blocks = data.get("blocks")
     if not isinstance(blocks, list) or not blocks:
         raise DescribedError("blocks must be a list of blocks")
@@ -812,6 +911,52 @@ def routes_for(pid: str, refs: dict[str, dict]):
                     raise HTTPException(400, str(e)) from None
                 return {"ok": True}
             return _ask(r, block["send"], values)
+
+        def module_decl(ref: str) -> dict:
+            decl = refs.get(ref)
+            if decl is None or decl["kind"] != "module":
+                raise HTTPException(400, "that part is not a plugin to use")
+            return decl["block"]
+
+        @r.api.get(base + "/module")
+        def module_read(ref: str) -> dict[str, Any]:
+            block = module_decl(ref)
+            section = r.config.user_or_merged([block["kind"]]) or {}
+            return {"module": block["module"],
+                    "active": section.get("module") == block["module"],
+                    "fallback": section.get("fallback_module") == block["module"]}
+
+        @r.privileged.post(base + "/module")
+        def module_use(body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
+            block = module_decl(str(body.get("ref", "")))
+            role = body.get("as")
+            if role not in ("module", "fallback_module"):
+                raise HTTPException(400, "as is module or fallback_module")
+
+            def change(user: dict) -> None:
+                user.setdefault(block["kind"], {})[role] = block["module"]
+
+            r.config.mutate(change, bus=r.bus())
+            return module_read(str(body["ref"]))
+
+        @r.privileged.post(base + "/module/test")
+        def module_test(body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
+            block = module_decl(str(body.get("ref", "")))
+            if block["kind"] != "tts":
+                raise HTTPException(400, "only a voice can be heard")
+            if (r.config.user_or_merged([block["kind"], "module"]) or "") != block["module"]:
+                # what is said is said with the voice in use
+                raise HTTPException(409, "it is not the voice in use")
+            try:
+                text = _text(body.get("text") or "", 200).strip()
+                lang = _text(body.get("lang") or "", 20)
+            except DescribedError as e:
+                raise bad(e) from None
+            if not text:
+                raise HTTPException(400, "nothing to say")
+            from ovos_bus_client.message import Message
+            r.need_bus().emit(Message("speak", {"utterance": text, "lang": lang}))
+            return {"ok": True}
 
         async def upload(request: Request) -> dict[str, Any]:
             from starlette.concurrency import run_in_threadpool

@@ -108,8 +108,9 @@ prefix every message of the page starts with.
 | `status` | `query`, `text` (a label with `{field}` from the answer) and/or `rows` (`label`, `value` with `{field}` or `text` a label, `when`, and `empty`, the label shown when the value is empty; a row without a `label` is a note across the card), `show` (a field that must be true), `actions`, `refresh` (seconds). |
 | `list` | `query`, `items` (the answer's list), `key` (a row's id), `title` (`{field}`), `meta` (a label with `{field}`), `empty`, `split` (`by` a true/false field into two lists, each with a heading), `filter` (`by` a field, `label`, and `all`, the label for no filter: a choice of that field's values above the list, made in the browser), `rename` (`field`, `send`, `when`, `max_length`, `label` for its button), `actions` (one per row), `refresh`, `heading`. |
 | `actions` | `actions`: buttons. |
-| `form` | `fields` and `save`: `{"config": "PHAL.<package>", "reload": "<message>"}` writes in the plugin's own place in `mycroft.conf` and asks it to read it again; `{"send": "<message>"}` with a `query` sends the values to the skill; `{"settings": true}` reads and writes the skill's own `settings.json` (only the page of a package that registers one skill), merged over what is there so keys the form has not are kept, and the skill reads them as `self.settings`. |
+| `form` | `fields` and `save`: `{"config": "PHAL.<package>", "reload": "<message>"}` writes in the plugin's own place in `mycroft.conf` and asks it to read it again (a plugin's own places are `PHAL.<package>` and the section its entry points name: `tts.<module>`, `stt.<module>`, `PHAL.<name>`; never the choice of module itself); `{"send": "<message>"}` with a `query` sends the values to the skill; `{"settings": true}` reads and writes the skill's own `settings.json` (only the page of a package that registers one skill), merged over what is there so keys the form has not are kept, and the skill reads them as `self.settings`. |
 | `choice` | `param` and `options`: tabs whose value goes with every query on the page. |
+| `module` | `kind`: `tts` or `stt`, for a page of a package that brings one such plugin. The panel's own part: whether this plugin is the one in use or the fallback, buttons to make it so (`tts.module`, `tts.fallback_module`; needs the token), and for a voice in use, a sentence to hear it. Nothing of it comes from the file. |
 | `upload` | `send`, `accept` (the file endings it takes: `[".pdf", ".txt"]`), `max_mb` (1 to 64, default 10) and a `field` (`name`, `label`, `max_length`) sent along, such as a title. The file goes to the skill in parts of 512 KB, each a message with `upload` (one id for all the parts), `name`, `part` (from 0), `parts`, `data` (base64) and the field; the answer to the last part is the answer. An upload always needs the token. |
 
 An action is `{"label", "send"}`, with `data` it always sends (a test sound),
@@ -600,3 +601,24 @@ The core pages above cannot be taken over. Until a page has moved, its
 3. The rest of the pages, then `webui.pages`, `webui.groups` and
    `webui.branding`.
 4. The first page from outside the panel, as a data page in an Emkay skill.
+
+
+## Pages the panel describes
+
+For a skill or plugin with no `controlpanel.json` of its own, the panel can
+bring one: `ovos_webui/bundled/<package>/controlpanel.json`, with its
+`locale/` and icon. It is the same format with the same checks, and it says
+which versions it was written for:
+
+```json
+{"controlpanel": 1, "for": "ovos-skill-weather>=1.0,<2", "id": "weather", ...}
+```
+
+The order is: the package's own file, then the panel's for that version, then
+nothing (a skill's settingsmeta is still on the Skills page). A version the
+file was not written for gets no page rather than one that writes the wrong
+keys. The page says at its foot that the panel described it, so it is clear
+who to tell about a mistake. Such a page only does what the package already
+does: a form to the skill's `settings.json` or the plugin's own place in
+`mycroft.conf`, and bus messages the package already answers. Each one should
+also go to the package as a pull request, so it can leave the panel.
