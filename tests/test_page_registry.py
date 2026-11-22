@@ -90,13 +90,13 @@ def test_a_second_page_with_the_same_id_is_left_out():
 def test_a_plugin_page_takes_the_place_of_the_panels_own(plugin_first):
     """How a page moves into the plugin that does the work: the plugin brings
     a page with the same id, and the panel's copy steps aside."""
-    theirs = _EP("network", _desc(id="network", path="/network",
-                                  title={"key": "nav.network", "label": "Network"}))
+    theirs = _EP("sound", _desc(id="sound", path="/sound",
+                                title={"key": "nav.sound", "label": "Send over sound"}))
     eps = [theirs] + _own() if plugin_first else _own() + [theirs]
     reg = pages.load(eps)
-    page = reg.by_id()["network"]
+    page = reg.by_id()["sound"]
     assert page.package == "ovos-skill-guardian" and page.builtin is False
-    assert reg.by_path()["/network"] is page
+    assert reg.by_path()["/sound"] is page
     assert reg.problems == []
     assert len(reg.pages) == len(pages.BUILTIN)
 
@@ -105,14 +105,6 @@ def test_a_core_page_cannot_be_taken_over():
     reg = pages.load(_own() + [_EP("skills", _desc(id="skills", path="/emkay/skills"))])
     assert reg.by_id()["skills"].builtin is True
     assert "already has the id" in reg.problems[0]["error"]
-
-
-def test_network_leaves_a_device_without_its_plugins():
-    reg = pages.load(_own())
-    found = pages.needs(reg, have={"ovos-control-panel": "1"})["needs"]
-    assert found["network"]["met"] is False
-    found = pages.needs(reg, have={"ovos-phal-plugin-connectivity-events": "1"})["needs"]
-    assert found["network"]["met"] is True, "the internet check alone is worth the page"
 
 
 def test_a_page_can_bring_its_own_group():

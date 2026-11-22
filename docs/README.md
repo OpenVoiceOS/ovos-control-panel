@@ -41,7 +41,7 @@ panel runs apart from the assistant, it cannot tell, so every page shows.
 | Setup | Walks a fresh device through language, plugins and a first question. | [setup.md](setup.md) |
 | Try it | Sends a typed question through the device, the way a spoken one would go. | [tryit.md](tryit.md) |
 | Device | Volume, microphone mute, restart and reboot. | [controls.md](controls.md) |
-| Network | Whether the device is online, and the Wi-Fi networks near it. | [network.md](network.md) |
+| Network | Whether the device is online, and the Wi-Fi networks near it; comes with the ovos-control-panel-network extension. | [network.md](network.md) |
 | Voice and language | The wake word, the voice, the language and the location. | [voice-settings.md](voice-settings.md) |
 | Skills | The skills on the device, their details and settings, and new ones to install. | [skills.md](skills.md) |
 | Backup | Downloads a copy of your settings, and puts a copy back. | [backup-restore.md](backup-restore.md) |

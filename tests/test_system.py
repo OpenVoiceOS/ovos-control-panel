@@ -1,28 +1,11 @@
-"""Connectivity and IP-geolocation, and the location route on the Voice and
-language page. SSH and the factory reset are a page the panel brings for
+"""IP-geolocation, and the location route on the Voice and language page. SSH and the factory reset are a page the panel brings for
 ovos-PHAL-plugin-system (tests/test_described.py).
 
-Bus messages exercised here, verified against ovos-PHAL-plugin-connectivity-events
-and ovos-PHAL-plugin-ipgeo:
+Bus messages exercised here, verified against ovos-PHAL-plugin-ipgeo:
 
-* ``ovos.PHAL.internet_check`` -> ``mycroft.internet.state`` /
-  ``mycroft.network.state`` (each {"state": "connected"|"disconnected"})
 * ``ovos.ipgeo.update`` -> ``ovos.ipgeo.update.response``
   ({"location": {...}} or {"error": True})
 """
-
-
-def _connectivity_bus(*, internet="connected", network="connected", answer=True):
-    from ovos_bus_client.message import Message
-    from ovos_utils.fakebus import FakeBus
-
-    bus = FakeBus()
-    if answer:
-        def on_check(m):
-            bus.emit(Message("mycroft.internet.state", {"state": internet}, m.context))
-            bus.emit(Message("mycroft.network.state", {"state": network}, m.context))
-        bus.on("ovos.PHAL.internet_check", on_check)
-    return bus
 
 
 def _ipgeo_bus(*, location=None, error=False, answer=True):
@@ -40,24 +23,6 @@ def _ipgeo_bus(*, location=None, error=False, answer=True):
 
 
 # ── SSH status ────────────────────────────────────────────────────────────────
-def test_connectivity_parses_both_states():
-    from ovos_webui import system
-    r = system.connectivity(_connectivity_bus(internet="connected", network="connected"))
-    assert r == {"internet": "connected", "network": "connected"}
-
-    r = system.connectivity(_connectivity_bus(internet="disconnected", network="disconnected"))
-    assert r == {"internet": "disconnected", "network": "disconnected"}
-
-
-def test_connectivity_timeout_reports_unknown():
-    from ovos_utils.fakebus import FakeBus
-    from ovos_webui import system
-
-    system.DEFAULT_TIMEOUT = 0.3
-    assert system.connectivity(FakeBus()) == {"internet": None, "network": None}
-    system.DEFAULT_TIMEOUT = 5.0
-
-
 # ── detect location ──────────────────────────────────────────────────────────
 def test_detect_location_emits_ipgeo_update_and_parses_location():
     from ovos_webui import system

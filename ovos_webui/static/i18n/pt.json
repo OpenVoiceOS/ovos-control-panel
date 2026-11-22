@@ -103,7 +103,6 @@
  "plugins.job.finished.pre": "Concluído. ",
  "plugins.job.finished.link": "Reinicie os serviços do OVOS",
  "plugins.job.finished.post": " para carregar a alteração. ",
- "nav.network": "Rede",
  "nav.sound": "Enviar por som",
  "nav.servers": "Servidores",
  "nav.voice": "Voz e língua",
