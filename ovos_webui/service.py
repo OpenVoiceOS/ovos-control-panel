@@ -42,7 +42,7 @@ from fastapi.responses import (
 from ovos_utils.log import LOG
 from pydantic import BaseModel, Field
 
-from ovos_webui import branding, configio, described, health, installer, pypi, recommends, setupguide, voicecfg
+from ovos_webui import branding, configio, described, framing, health, installer, pypi, recommends, setupguide, voicecfg
 from ovos_webui import pages as page_registry
 from ovos_webui.auth import (
     COOKIE_NAME,
@@ -696,6 +696,15 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         """Which page needs are met, so the menu can leave out what cannot work."""
         return page_registry.needs(registry)
 
+    def _distribution_problems() -> list[str]:
+        """What the About page should name from webui.absent_services and
+        webui.frame_ancestors: names and origins the panel could not use."""
+        try:
+            webui = configio.section("webui")
+        except Exception:  # noqa: BLE001
+            return []
+        return health.absent_services(webui)[1] + framing.read(webui)[1]
+
     def _setup_guide() -> dict[str, Any]:
         """The Setup guide's steps, as webui.setup says now (setupguide.py)."""
         try:
@@ -719,7 +728,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
                                core=p.id in page_registry.CORE, origin=page_registry.origin(p))
                           for p in registry.pages],
                 "problems": list(registry.problems),
-                "settings": prefs.problems + _setup_guide()["problems"],
+                "settings": prefs.problems + _setup_guide()["problems"] + _distribution_problems(),
                 "branding": {"name": brand["name"], "warnings": branding.warnings(brand)}}
 
     @privileged.post("/pages/{page_id}/enabled")
@@ -843,7 +852,12 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         # so no referrer leaves this origin.
         response.headers.setdefault("Referrer-Policy", "same-origin")
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        response.headers.setdefault("X-Frame-Options", "DENY")
+        # Nobody may frame the panel, unless the distribution says who may
+        # (webui.frame_ancestors, framing.py); then the CSP below says who,
+        # and X-Frame-Options, which can only say "nobody", is left out.
+        framers = framing.allowed_now()
+        if not framers:
+            response.headers.setdefault("X-Frame-Options", "DENY")
         # The Send-over-sound page loads ggwave (data-over-sound). Its Emscripten
         # glue registers JS<->wasm types with new Function(), which a browser only
         # runs under 'unsafe-eval'. Confine that one relaxation to that page; every
@@ -858,7 +872,8 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
             "Content-Security-Policy",
             "default-src 'self'; " + script_src +
             "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
-            "connect-src 'self'; form-action 'self'; frame-ancestors 'none'")
+            "connect-src 'self'; form-action 'self'; "
+            + framing.policy(framers, request.headers.get("host", "")))
         return response
 
     # A page may take uploads on routes of its own (its "uploads"), up to

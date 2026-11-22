@@ -344,6 +344,28 @@ or the device decides:
   way. Larger text helps people who see less well, so a distribution should
   think twice before taking the button away.
 
+### What the device leaves out, and who may frame the panel
+
+Two more settings describe the device itself:
+
+```json
+{"webui": {"absent_services": ["audio"], "frame_ancestors": ["self"]}}
+```
+
+- `absent_services` names OpenVoiceOS services the device does not run on
+  purpose, such as a house server whose ears and voice are on other devices.
+  They are not asked, not listed and not counted against "healthy", and the
+  Dashboard says they are left out on purpose. A service that is meant to run
+  and stops answering still shows.
+- `frame_ancestors` says who may show the panel inside a page of their own.
+  Without it nobody may (`frame-ancestors 'none'` and
+  `X-Frame-Options: DENY`). `"self"` is the panel's own host on any port;
+  an origin (`https://name`, with `:port` or `:*`) names another. No
+  wildcards in names.
+
+A name or an origin the panel cannot use is skipped and named on the About
+page.
+
 ### A distribution's own recommendations
 
 Setup and the Plugins page recommend plugins for the device's language from

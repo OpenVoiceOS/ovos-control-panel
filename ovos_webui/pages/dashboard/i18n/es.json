@@ -43,5 +43,6 @@
  "dash.mysetup.wake": "Palabra de activación",
  "dash.mysetup.stt": "Voz a texto",
  "dash.mysetup.tts": "Voz",
- "dash.mysetup.lang": "Idioma"
+ "dash.mysetup.lang": "Idioma",
+ "dash.absent": "No está en este dispositivo, a propósito: {names}."
 }

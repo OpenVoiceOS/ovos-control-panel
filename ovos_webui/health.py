@@ -70,16 +70,52 @@ def bus_reachable(bus) -> bool:
     return buswait.is_connected(bus)
 
 
-def snapshot(bus, timeout: float = DEFAULT_TIMEOUT) -> dict[str, Any]:
-    """Return the health of the bus and of every known service."""
+#: The services a device must have for it to read healthy, unless it leaves
+#: one out on purpose (webui.absent_services).
+ESSENTIAL = ("skills", "intents", "audio")
+
+
+def absent_services(webui: dict[str, Any] | None = None) -> tuple[list[str], list[str]]:
+    """The services this device leaves out on purpose, and the problems.
+
+    ``webui.absent_services`` names them (``["audio"]`` for a house server
+    whose ears and voice are elsewhere). They are not asked, not listed and
+    not counted against "healthy". A name that is not a service is a problem,
+    for the About page.
+    """
+    if webui is None:
+        try:
+            from ovos_webui import configio
+            webui = configio.section("webui")
+        except Exception:  # noqa: BLE001 - a broken config leaves nothing out
+            webui = {}
+    raw = (webui or {}).get("absent_services")
+    if raw is None:
+        return [], []
+    if not isinstance(raw, list):
+        return [], ["webui.absent_services: a list of service names"]
+    known = {s["name"] for s in SERVICES}
+    names = [n for n in raw if isinstance(n, str) and n in known]
+    problems = [f"webui.absent_services: no service called {n!r}" for n in raw
+                if not (isinstance(n, str) and n in known)]
+    return names, problems
+
+
+def snapshot(bus, timeout: float = DEFAULT_TIMEOUT, absent: list[str] | None = None) -> dict[str, Any]:
+    """Return the health of the bus and of every known service, but those
+    the device leaves out on purpose (``absent``, by default
+    webui.absent_services)."""
+    if absent is None:
+        absent, _ = absent_services()
+    wanted = [s for s in SERVICES if s["name"] not in absent]
     reachable = bus_reachable(bus)
     services = []
     if reachable:
         # Every probe waits for a reply, so asking one service after another
         # would make the page take one timeout per service. Ask all of them at
         # the same time instead: the whole check then costs one timeout.
-        with ThreadPoolExecutor(max_workers=len(SERVICES)) as pool:
-            futures = [pool.submit(probe, bus, s["name"], timeout) for s in SERVICES]
+        with ThreadPoolExecutor(max_workers=max(1, len(wanted))) as pool:
+            futures = [pool.submit(probe, bus, s["name"], timeout) for s in wanted]
             answers = []
             for future in futures:
                 try:
@@ -87,8 +123,8 @@ def snapshot(bus, timeout: float = DEFAULT_TIMEOUT) -> dict[str, Any]:
                 except Exception:  # noqa: BLE001 - a stuck probe is "no answer"
                     answers.append({"alive": None, "ready": None})
     else:
-        answers = [{"alive": None, "ready": None} for _ in SERVICES]
-    for spec, answer in zip(SERVICES, answers):
+        answers = [{"alive": None, "ready": None} for _ in wanted]
+    for spec, answer in zip(wanted, answers):
         entry = dict(spec)
         entry.update(answer)
         entry["state"] = _state(entry)
@@ -100,7 +136,9 @@ def snapshot(bus, timeout: float = DEFAULT_TIMEOUT) -> dict[str, Any]:
         # {skills, intents, audio}), so /api/health and the UI never disagree
         # about whether the device is healthy.
         "healthy": reachable and all(s["state"] == "ready" for s in services
-                                     if s["name"] in ("skills", "intents", "audio")),
+                                     if s["name"] in ESSENTIAL),
+        # left out on purpose, so the page can say so rather than leave a gap
+        "absent": [{"name": s["name"], "label": s["label"]} for s in SERVICES if s["name"] in absent],
     }
 
 

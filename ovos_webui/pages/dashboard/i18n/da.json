@@ -43,5 +43,6 @@
  "dash.mysetup.wake": "Wake word",
  "dash.mysetup.stt": "Tale til tekst",
  "dash.mysetup.tts": "Stemme",
- "dash.mysetup.lang": "Sprog"
+ "dash.mysetup.lang": "Sprog",
+ "dash.absent": "Findes ikke på denne enhed, med vilje: {names}."
 }
