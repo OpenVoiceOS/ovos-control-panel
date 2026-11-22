@@ -1,4 +1,5 @@
-"""The page registry: how pages from any package are found and checked."""
+"""The page registry: how Python pages are found and checked (the panel's
+own; the tests also load pages as if another package brought them)."""
 import types
 
 import pytest
@@ -51,12 +52,6 @@ def test_a_page_from_another_package_joins_the_menu():
     assert page.package == "ovos-skill-guardian" and page.builtin is False
     assert any(p["id"] == "guardian" for p in reg.nav()["pages"])
     assert reg.problems == []
-
-
-def test_without_its_own_entry_points_the_panel_reads_its_pages_directly():
-    """A source tree that was never installed has no entry points."""
-    reg = pages.load([_EP("guardian", _desc())])
-    assert len(reg.pages) == len(pages.BUILTIN) + 1
 
 
 @pytest.mark.parametrize("bad, why", [
@@ -211,7 +206,7 @@ def guardian_app(guardian_pkg, monkeypatch, bus):
 
     from ovos_webui.service import create_app
     eps = _own() + [_guardian(guardian_pkg)]
-    monkeypatch.setattr(pages, "_entry_points", lambda: eps)
+    monkeypatch.setattr(pages, "_own_pages", lambda: eps)
     app = create_app(bus=bus, host="127.0.0.1", token=None, connect_bus=False)
     with TestClient(app, base_url="http://127.0.0.1:8500") as c:
         yield c
@@ -362,7 +357,7 @@ def test_a_page_may_take_larger_uploads_on_routes_it_names(guardian_pkg, monkeyp
     from ovos_webui.service import create_app
     eps = _own() + [_guardian(guardian_pkg, routes=_upload_routes,
                               uploads={"/api/guardian/upload": 3 * 1024 * 1024})]
-    monkeypatch.setattr(pages, "_entry_points", lambda: eps)
+    monkeypatch.setattr(pages, "_own_pages", lambda: eps)
     app = create_app(bus=bus, host="127.0.0.1", token=None, connect_bus=False)
     blob = b"x" * (2 * 1024 * 1024)
     with TestClient(app, base_url="http://127.0.0.1:8500",

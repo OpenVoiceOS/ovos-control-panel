@@ -1,11 +1,11 @@
 """The page registry: every page in the menu, wherever it comes from.
 
-A page is described by a dict (see ``docs/pages.md``) and registered under the
-``opm.control_panel.page`` entry point group. The panel's own pages are
-registered the same way, by this package, so a page can later move to another
-package without changing how it is found.
+The panel's own pages are Python modules in this package (:data:`BUILTIN`),
+each with a ``PAGE`` description (see ``docs/pages.md``). Every other
+package describes its page in a ``controlpanel.json`` (see
+:mod:`ovos_webui.described`); the panel draws it.
 
-:func:`load` reads the group once and returns a :class:`Registry`: the pages
+:func:`load` reads them once and returns a :class:`Registry`: the pages
 that loaded, the menu groups, and the problems with the ones that did not. A
 broken page is left out and named; it never stops the panel from starting.
 """
@@ -26,7 +26,6 @@ from ovos_webui import described
 
 LOG = logging.getLogger(__name__)
 
-ENTRY_POINT = "opm.control_panel.page"
 #: The versions of the page contract this panel can load.
 API_VERSIONS = frozenset({1})
 
@@ -446,12 +445,20 @@ def parse(desc: Any, module: str, package: str, version: str, builtin: bool) -> 
 
 
 # ── finding the pages ────────────────────────────────────────────────────────
-def _entry_points() -> list:
-    try:
-        return list(metadata.entry_points(group=ENTRY_POINT))
-    except Exception as e:  # noqa: BLE001 - broken metadata must not stop the panel
-        LOG.warning("could not read the %s entry points: %s", ENTRY_POINT, e)
-        return []
+class _Own:
+    """One of the panel's own pages, as a source to load."""
+
+    def __init__(self, name: str):
+        self.name = name.replace("_", "-")
+        self.value = f"{__name__}.{name}:PAGE"
+        self.dist = None
+
+    def load(self):
+        return importlib.import_module(self.value.split(":", 1)[0]).PAGE
+
+
+def _own_pages() -> list:
+    return [_Own(name) for name in BUILTIN]
 
 
 def _own_version() -> str:
@@ -475,26 +482,16 @@ def _asset_version() -> str:
 
 
 def _sources(eps: list | None) -> list[tuple[str, Callable[[], Any], str, str, str]]:
-    """(name, loader, module, package, version) for every page to load."""
-    eps = _entry_points() if eps is None else eps
+    """(name, loader, module, package, version) for every Python page: the
+    panel's own, or ``eps`` (tests)."""
+    eps = _own_pages() if eps is None else eps
     found = []
-    own = False
     for ep in eps:
         dist = getattr(ep, "dist", None)
-        package = getattr(dist, "name", None) or "?"
-        version = getattr(dist, "version", None) or "?"
-        if package.lower() == OWN_DIST:
-            own = True
+        package = getattr(dist, "name", None) or OWN_DIST
+        version = getattr(dist, "version", None) or _own_version()
         module = ep.value.split(":", 1)[0].strip()
         found.append((ep.name, ep.load, module, package, version))
-    if not own:
-        # A source tree that was never installed: its entry points are not
-        # known, so its own pages are read straight from this package.
-        for name in BUILTIN:
-            module = f"{__name__}.{name}"
-            found.append((name.replace("_", "-"),
-                          (lambda m=module: importlib.import_module(m).PAGE),
-                          module, OWN_DIST, _own_version()))
     return found
 
 
@@ -606,7 +603,7 @@ def parse_described(found: Any, package: str, version: str) -> tuple[Page, list]
 
 
 def load(eps: list | None = None, files: list | None = None) -> Registry:
-    """Load every registered page. ``eps`` replaces the entry points and
+    """Load every page. ``eps`` replaces the panel's own Python pages and
     ``files`` the controlpanel.json files found (tests); with ``eps`` given
     and no ``files``, none are looked for."""
     reg = Registry(groups=[dict(g) for g in GROUPS])
