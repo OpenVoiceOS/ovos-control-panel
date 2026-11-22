@@ -46,6 +46,7 @@
     </div>
     <div id="settings-part">
     <h3 data-i18n="skills.settings.title">Settings</h3>
+    <p class="card" id="ownpage" hidden><span data-i18n="skills.ownPage">It has a page of its own in the menu:</span> <a id="ownpage-link" href="#"></a></p>
     <p class="hint" id="nosettings" hidden data-i18n="skills.noSettings">This skill has no settings to change.</p>
     <div id="editor" role="region" aria-labelledby="detail-title" hidden>
       <div class="card" id="form"></div>
@@ -369,6 +370,23 @@ OvosWebUI.ready(function () {
     el("detail-nopkg").hidden = !!s.package;
   }
 
+  // a skill with a page of its own: say so where its settings are
+  function showOwnPage(pkg) {
+    var page = null;
+    try {
+      var menu = JSON.parse(document.getElementById("ovos-nav").textContent);
+      var want = String(pkg || "").toLowerCase().replace(/_/g, "-");
+      page = (menu.pages || []).filter(function (p) {
+        return want && String(p.package || "").toLowerCase().replace(/_/g, "-") === want;
+      })[0] || null;
+    } catch (e) { page = null; }
+    el("ownpage").hidden = !page;
+    if (page) {
+      el("ownpage-link").href = page.path;
+      el("ownpage-link").textContent = t(page.key, page.label);
+    }
+  }
+
   function openSkill(id, focus) {
     var s = find(id);
     if (!s) { return; }
@@ -389,6 +407,7 @@ OvosWebUI.ready(function () {
     showInfo(s.package, false);
     el("editor").hidden = true;
     el("enable-card").hidden = true;
+    showOwnPage(s.package);
     el("nosettings").hidden = !!s.skill_id;
     if (s.skill_id) {
       load(s.skill_id);

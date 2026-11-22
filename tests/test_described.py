@@ -506,3 +506,14 @@ def test_the_voices_code_runs_and_finds_nothing_for_an_unknown_plugin():
     done = subprocess.run([sys.executable, "-c", described._VOICES_CODE, "ovos-tts-plugin-none"],
                           capture_output=True, text=True, timeout=60)
     assert done.returncode == 0 and json.loads(done.stdout) == {}
+
+
+def test_the_menu_says_which_package_an_added_page_is_from(tmp_path):
+    """So the Skills page can point to a skill's own page."""
+    root = tmp_path / "ovos_phal_plugin_demo"
+    root.mkdir()
+    found = described.Found("ovos-phal-plugin-demo", "1.0", "ovos_phal_plugin_demo", root, PAGE)
+    reg = pages.load([], files=[found])
+    demo = next(p for p in reg.nav()["pages"] if p["id"] == "demo")
+    assert demo["package"] == "ovos-phal-plugin-demo"
+    assert all("package" not in p for p in reg.nav()["pages"] if p["id"] != "demo"), "the panel's own say nothing"

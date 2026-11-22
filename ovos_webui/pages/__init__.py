@@ -117,8 +117,12 @@ class Page:
 
     def nav(self) -> dict[str, Any]:
         """What the browser's menu needs to know about the page."""
-        return {"id": self.id, "path": self.path, "key": self.key, "label": self.label,
-                "group": self.group, "icon": self.icon}
+        out = {"id": self.id, "path": self.path, "key": self.key, "label": self.label,
+               "group": self.group, "icon": self.icon}
+        if not self.builtin and self.package:
+            # so the Skills page can point to a skill's own page
+            out["package"] = self.package
+        return out
 
     def about(self) -> dict[str, Any]:
         """What the About page lists about the page."""

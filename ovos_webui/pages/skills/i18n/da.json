@@ -65,5 +65,6 @@
  "skills.info.failed": "Detaljerne kunne ikke hentes.",
  "skills.by": "Af",
  "skills.version": "version",
- "skills.released": "udgivet"
+ "skills.released": "udgivet",
+ "skills.ownPage": "Den har sin egen side i menuen:"
 }
