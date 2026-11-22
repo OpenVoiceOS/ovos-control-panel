@@ -196,12 +196,45 @@ def _local_info(dist: metadata.Distribution, lang: str) -> dict[str, Any]:
     out.update(_links(urls, meta.get("Home-page")))
     files = [str(f) for f in (dist.files or [])]
     chosen = pick_skill_json(files, lang)
+    raw = None
     if chosen:
         try:
-            out.update(_from_skill_json(Path(dist.locate_file(chosen)).read_bytes()))
+            raw = Path(dist.locate_file(chosen)).read_bytes()
         except OSError:
             pass
+    if raw is None:
+        raw = _skill_json_beside_code(dist, lang)
+    if raw is not None:
+        out.update(_from_skill_json(raw))
     return out
+
+
+def _skill_json_beside_code(dist: metadata.Distribution, lang: str) -> bytes | None:
+    """The skill.json next to the skill's code, for an install whose file list
+    does not name it: an editable install (pip install -e) lists only its
+    hook. The code is found as Python would find it, without importing it."""
+    import importlib.util
+
+    tops = {ep.value.split(":")[0].split(".")[0] for ep in dist.entry_points
+            if ep.group in SKILL_GROUPS}
+    for top in sorted(t for t in tops if t.isidentifier()):
+        try:
+            spec = importlib.util.find_spec(top)
+        except (ImportError, ValueError):
+            continue
+        for folder in (spec.submodule_search_locations or []) if spec else []:
+            locale = Path(folder) / "locale"
+            if not locale.is_dir():
+                continue
+            paths = [f"locale/{d.name}/skill.json" for d in locale.iterdir()
+                     if (d / "skill.json").is_file()]
+            chosen = pick_skill_json(paths, lang)
+            if chosen:
+                try:
+                    return (Path(folder) / chosen).read_bytes()
+                except OSError:
+                    return None
+    return None
 
 
 def _cache_dir() -> Path:
