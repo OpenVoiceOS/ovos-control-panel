@@ -71,6 +71,26 @@ An error is an HTTP status with `{"detail": ...}`: `400` for a value the
 file does not allow, `403` without the token, `504` when the skill did not
 answer, and the skill's own `{"error": ...}` as `400` with its text or label.
 
+### The Setup guide
+
+`GET /api/setup/guide` gives the steps of the device's Setup guide, as the
+distribution chose them ([webui.setup](setup.md#a-distributions-own-guide)):
+
+```json
+{"custom": true, "intro": {"key": "house.setup.intro", "label": "..."},
+ "steps": [{"id": "language"},
+           {"id": "house", "heading": "Devices in the house", "heading_key": "house.heading",
+            "page": {"id": "house", "blocks": [...], "en": {...}}},
+           {"id": "tryit"}],
+ "problems": []}
+```
+
+A step with a `page` is a described page: draw its blocks as above, and ask
+and act on them under `/api/cp/<id>/`. The other ids are the panel's own steps
+(`token`, `language`, `voice`, `speak`, `tryit`, `wake`); draw your own for
+those you have, and skip the rest. `custom` is false when the device has no
+guide of its own.
+
 ### A skill's settings
 
 A skill with only a `settingsmeta.json` has no page, but its settings form is

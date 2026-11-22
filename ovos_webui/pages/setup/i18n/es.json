@@ -1,6 +1,7 @@
 {
  "hdr.setup": "Configurar este dispositivo",
  "setup.intro": "Seis pasos breves hacen que un dispositivo nuevo empiece a hablar. Todo esto se puede cambiar más tarde en las páginas de Ajustes y Complementos.",
+ "setup.intro.custom": "Unos pocos pasos breves ponen en marcha este dispositivo. Todo esto se puede cambiar más tarde.",
  "setup.step1.title": "2. Su idioma",
  "setup.lang.label": "Idioma",
  "setup.save": "Guardar",

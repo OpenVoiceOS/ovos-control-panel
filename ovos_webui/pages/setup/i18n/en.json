@@ -1,6 +1,7 @@
 {
  "hdr.setup": "Set up this device",
  "setup.intro": "Six short steps get a fresh device talking. Everything here can be changed later on the Settings and Plugins pages.",
+ "setup.intro.custom": "A few short steps get this device going. Everything here can be changed later.",
  "setup.step1.title": "2. Your language",
  "setup.lang.label": "Language",
  "setup.save": "Save",

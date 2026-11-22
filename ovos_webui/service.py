@@ -42,7 +42,7 @@ from fastapi.responses import (
 from ovos_utils.log import LOG
 from pydantic import BaseModel, Field
 
-from ovos_webui import branding, configio, described, health, installer, pypi, recommends, voicecfg
+from ovos_webui import branding, configio, described, health, installer, pypi, recommends, setupguide, voicecfg
 from ovos_webui import pages as page_registry
 from ovos_webui.auth import (
     COOKIE_NAME,
@@ -696,6 +696,20 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
         """Which page needs are met, so the menu can leave out what cannot work."""
         return page_registry.needs(registry)
 
+    def _setup_guide() -> dict[str, Any]:
+        """The Setup guide's steps, as webui.setup says now (setupguide.py)."""
+        try:
+            setup = configio.section("webui").get("setup")
+        except Exception:  # noqa: BLE001 - a broken config must not stop the guide
+            setup = None
+        return setupguide.guide(setup, registry, _prefs().disabled)
+
+    @api.get("/setup/guide")
+    def api_setup_guide() -> dict[str, Any]:
+        """The steps of the Setup guide: the panel's own, or the ones the
+        distribution chose, with any described page among them."""
+        return _setup_guide()
+
     @api.get("/pages")
     def api_pages() -> dict[str, Any]:
         """Every page in the menu, where it comes from, and the ones left out."""
@@ -705,7 +719,7 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
                                core=p.id in page_registry.CORE, origin=page_registry.origin(p))
                           for p in registry.pages],
                 "problems": list(registry.problems),
-                "settings": prefs.problems,
+                "settings": prefs.problems + _setup_guide()["problems"],
                 "branding": {"name": brand["name"], "warnings": branding.warnings(brand)}}
 
     @privileged.post("/pages/{page_id}/enabled")
