@@ -497,6 +497,20 @@ def test_a_package_that_names_itself_with_underscores_is_found(tmp_path, monkeyp
     assert found.package == "ovos-skill-weather" and found.by_panel
 
 
+def test_a_package_the_panel_has_a_page_for_is_found_whatever_its_name(tmp_path, monkeypatch):
+    """ovos-PHAL-sensors is named like neither a skill nor a plugin."""
+    from types import SimpleNamespace as NS
+    root = tmp_path / "bundled" / "ovos-phal-sensors"
+    root.mkdir(parents=True)
+    (root / "controlpanel.json").write_text(json.dumps(dict(SHELF, **{"for": "ovos-phal-sensors"})),
+                                            encoding="utf-8")
+    monkeypatch.setattr(described, "BUNDLED", tmp_path / "bundled")
+    dists = [NS(metadata={"Name": name}, version="1.0", files=[], entry_points=[], read_text=lambda n: "")
+             for name in ("ovos-PHAL-sensors", "requests")]
+    monkeypatch.setattr(described.metadata, "distributions", lambda: dists)
+    assert [f.package for f in described.discover()] == ["ovos-phal-sensors"]
+
+
 def test_a_voice_field_is_only_for_a_tts_plugin():
     page = {"controlpanel": 1, "id": "v", "bus": "ovos.v.", "blocks": [{"type": "form", "save": {"settings": True},
             "fields": [{"name": "voice", "label": "v.voice", "type": "select", "voices": True}]}]}
@@ -637,3 +651,35 @@ def test_the_wallpaper_page_lists_text_and_sends_what_gets_no_answer(bus, monkey
         assert c.post("/api/cp/wallpaper/act", json={"ref": "b4.a0", "key": "/home/me/sea.jpg"}).status_code == 200
     assert seen == ["ovos.wallpaper.manager.change.wallpaper",
                     ("ovos.wallpaper.manager.set.wallpaper", {"url": "/home/me/sea.jpg"})]
+
+
+def test_a_list_that_listens_keeps_the_latest_of_each_key(bus, monkeypatch):
+    from ovos_bus_client.message import Message
+    root = described.BUNDLED / "ovos-phal-sensors"
+    data = json.loads((root / "controlpanel.json").read_text(encoding="utf-8"))
+    found = described.Found("ovos-PHAL-sensors", "0.1.1a1", "ovos_PHAL_sensors", root, data, by_panel=True)
+    monkeypatch.setattr(described, "discover", lambda: [found])
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
+    with TestClient(app, base_url="http://127.0.0.1:8500", headers={"sec-fetch-site": "same-origin",
+                                                                    "Authorization": "Bearer s3cret-token"}) as c:
+        assert c.post("/api/cp/sensors/query", json={"ref": "b1"}).json() == {"items": []}
+        for state in (21.5, 22.0):
+            bus.emit(Message("ovos.phal.sensor", {"sensor_id": "pi_cpu_temp", "device_name": "pi",
+                                                  "name": "cpu_temp", "state": state,
+                                                  "attributes": {"unit_of_measurement": "°C"}}))
+        bus.emit(Message("ovos.phal.binary_sensor", {"sensor_id": "pi_charging", "state": True}))
+        bus.emit(Message("ovos.phal.sensor", {"state": 1}))  # no key: left out
+        readings = c.post("/api/cp/sensors/query", json={"ref": "b1"}).json()["items"]
+        onoff = c.post("/api/cp/sensors/query", json={"ref": "b2"}).json()["items"]
+    assert [(r["sensor_id"], r["state"]) for r in readings] == [("pi_cpu_temp", 22.0)]
+    assert [r["sensor_id"] for r in onoff] == ["pi_charging"] and "heard" in onoff[0]
+
+
+def test_a_list_listens_only_to_the_pages_own_messages():
+    page = {"controlpanel": 1, "id": "s", "bus": "ovos.s.", "blocks": [
+        {"type": "list", "listen": ["ovos.phal.sensor"], "key": "id"}]}
+    with pytest.raises(described.DescribedError, match="not one of the page's messages"):
+        checked(page, "ovos-phal-plugin-s")
+    page["blocks"][0]["listen"] = ["ovos.s.reading"]
+    out, refs = checked(page, "ovos-phal-plugin-s")
+    assert out["blocks"][0]["items"] == "items" and refs["b0"]["kind"] == "query"

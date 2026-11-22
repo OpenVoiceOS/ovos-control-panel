@@ -138,7 +138,6 @@
  "text.large": "large",
  "text.xlarge": "largest",
  "transformers.confirmSave": "Save these changes? The current settings are kept as a backup.",
- "nav.sensors": "Sensors",
  "nav.advanced": "Advanced",
  "nav.group.voice": "Voice",
  "nav.group.understanding": "Understanding",

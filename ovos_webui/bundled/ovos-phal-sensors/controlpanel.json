@@ -1,0 +1,42 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-phal-sensors>=0.0.0a1,<1",
+ "id": "sensors",
+ "path": "/sensors",
+ "title": "sensors.title",
+ "group": "device",
+ "order": 20,
+ "icon": "controlpanel.svg",
+ "messages": [
+  "ovos.phal.sensor",
+  "ovos.phal.binary_sensor"
+ ],
+ "blocks": [
+  {
+   "type": "text",
+   "text": "sensors.intro"
+  },
+  {
+   "type": "list",
+   "heading": "sensors.readings",
+   "listen": [
+    "ovos.phal.sensor"
+   ],
+   "key": "sensor_id",
+   "title": "{device_name} · {name}",
+   "text": "{state} {attributes.unit_of_measurement}",
+   "empty": "sensors.none"
+  },
+  {
+   "type": "list",
+   "heading": "sensors.onoff",
+   "listen": [
+    "ovos.phal.binary_sensor"
+   ],
+   "key": "sensor_id",
+   "title": "{device_name} · {name}",
+   "text": "{state@sensors.state}",
+   "empty": "sensors.noOnoff"
+  }
+ ]
+}

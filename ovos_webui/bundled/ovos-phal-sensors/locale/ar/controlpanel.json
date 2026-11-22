@@ -1,8 +1,12 @@
 {
- "hdr.sensors": "المستشعرات",
+ "sensors.title": "المستشعرات",
  "sensors.intro": "قراءات حيّة من مستشعرات الجهاز — الحرارة وحِمل المعالج والبطارية وأي شيء آخر تُبلغ عنه إضافة مستشعرات. يُرسل الجهاز قراءة كلما تغيّر مستشعر، فتظهر القيم وتتحدّث من تلقاء نفسها. يحتاج هذا إلى إضافة ovos-PHAL-sensors.",
  "sensors.none": "لا مستشعرات بعد. ثبّت ovos-PHAL-sensors على الجهاز، أو انتظر أول قراءة.",
- "sensors.on": "تشغيل",
- "sensors.off": "إيقاف",
- "sensors.updated": "تتحدّث من تلقاء نفسها عندما يُبلغ الجهاز."
+ "sensors.readings": "القراءات",
+ "sensors.onoff": "تشغيل أو إيقاف",
+ "sensors.noOnoff": "لا مستشعرات تشغيل وإيقاف.",
+ "sensors.state.true": "تشغيل",
+ "sensors.state.false": "إيقاف",
+ "sensors.state.on": "تشغيل",
+ "sensors.state.off": "إيقاف"
 }

@@ -1,8 +1,12 @@
 {
- "hdr.sensors": "Sensores",
+ "sensors.title": "Sensores",
  "sensors.intro": "Leituras ao vivo dos sensores do dispositivo — temperatura, carga do processador, bateria, e o que mais um plugin de sensores reportar. O dispositivo envia uma leitura sempre que um sensor muda, por isso os valores preenchem-se e atualizam-se sozinhos. Isto precisa do plugin ovos-PHAL-sensors.",
  "sensors.none": "Ainda nenhum sensor. Instale o ovos-PHAL-sensors no dispositivo, ou aguarde a primeira leitura.",
- "sensors.on": "ligado",
- "sensors.off": "desligado",
- "sensors.updated": "Atualiza-se sozinho à medida que o dispositivo reporta."
+ "sensors.readings": "Leituras",
+ "sensors.onoff": "Ligado ou desligado",
+ "sensors.noOnoff": "Nenhum sensor de ligar e desligar.",
+ "sensors.state.true": "ligado",
+ "sensors.state.false": "desligado",
+ "sensors.state.on": "ligado",
+ "sensors.state.off": "desligado"
 }

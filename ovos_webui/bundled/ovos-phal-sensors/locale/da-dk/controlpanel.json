@@ -1,8 +1,12 @@
 {
- "hdr.sensors": "Sensorer",
+ "sensors.title": "Sensorer",
  "sensors.intro": "Aktuelle målinger fra enhedens sensorer — temperatur, CPU-belastning, batteri og alt andet, et sensor-plugin rapporterer. Enheden sender en måling, hver gang en sensor ændrer sig, så værdierne dukker op og opdateres af sig selv. Det kræver pluginnet ovos-PHAL-sensors.",
  "sensors.none": "Ingen sensorer endnu. Installér ovos-PHAL-sensors på enheden, eller vent på den første måling.",
- "sensors.on": "tændt",
- "sensors.off": "slukket",
- "sensors.updated": "Opdateres af sig selv, når enheden rapporterer."
+ "sensors.readings": "Målinger",
+ "sensors.onoff": "Tændt eller slukket",
+ "sensors.noOnoff": "Ingen tænd/sluk-sensorer.",
+ "sensors.state.true": "tændt",
+ "sensors.state.false": "slukket",
+ "sensors.state.on": "tændt",
+ "sensors.state.off": "slukket"
 }
