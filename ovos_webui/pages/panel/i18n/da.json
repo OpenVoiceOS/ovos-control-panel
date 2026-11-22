@@ -49,5 +49,14 @@
  "panel.uploads.hint": "Den største fil, en side må lægge på enheden, fx en film eller en sang på siden Medier. En enhed, der aldrig skal rumme film, kan nøjes med mindre.",
  "panel.uploads.max": "Største fil (MB)",
  "panel.uploads.default": "Det er standarden.",
- "panel.uploads.bad": "Skriv et helt antal MB, mindst 1."
+ "panel.uploads.bad": "Skriv et helt antal MB, mindst 1.",
+ "panel.stores.title": "Butikker",
+ "panel.stores.hint": "En butik er en liste over skills og plugins, som nogen har tjekket til en slags enhed. Hver butik, du tilføjer her, bliver et valg under Vis på siderne Skills og Plugins, ved siden af OVOS-udgivelsen og alt på PyPI. Panelet kommer uden butikker.",
+ "panel.stores.none": "Ingen butikker endnu.",
+ "panel.stores.name": "Navn",
+ "panel.stores.url": "Adressen på dens liste (https://…)",
+ "panel.stores.add": "Tilføj",
+ "panel.stores.up": "Op",
+ "panel.stores.remove": "Fjern",
+ "panel.stores.bad": "Giv butikken et navn og en adresse, der starter med https://."
 }

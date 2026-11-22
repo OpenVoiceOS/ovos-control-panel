@@ -205,5 +205,10 @@
  "release.unknown": "Não foi possível ler a versão do OVOS, por isso é mostrado tudo o que há no PyPI.",
  "release.allWarn": "É mostrado tudo o que há no PyPI e nada está verificado: nem se funciona com as versões deste dispositivo, nem se alguém ainda o mantém. O instalador continua a verificar as versões antes de instalar.",
  "release.onlyNote": "Só o que faz parte da versão do OVOS que este dispositivo segue",
- "release.onlyNoteEnd": ", e o que está instalado."
+ "release.onlyNoteEnd": ", e o que está instalado.",
+ "store.option": "Loja",
+ "store.unreachable": "Não foi possível contactar a loja.",
+ "store.from": "O que a loja tem:",
+ "store.note": "Alguém os verificou para um tipo de dispositivo; o instalador continua a verificar as versões antes de instalar.",
+ "store.works": "funciona segundo a loja"
 }

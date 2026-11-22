@@ -49,5 +49,14 @@
  "panel.uploads.hint": "The largest file a page may put on the device, such as a film or a song on the Media page. A device that is never meant to hold films can take less.",
  "panel.uploads.max": "Largest file (MB)",
  "panel.uploads.default": "This is the default.",
- "panel.uploads.bad": "Give a whole number of MB, at least 1."
+ "panel.uploads.bad": "Give a whole number of MB, at least 1.",
+ "panel.stores.title": "Stores",
+ "panel.stores.hint": "A store is a list of skills and plugins that someone has checked for a kind of device. Each store you add here is a choice under Show on the Skills and Plugins pages, beside the OVOS release and everything on PyPI. The panel comes with none.",
+ "panel.stores.none": "No stores yet.",
+ "panel.stores.name": "Name",
+ "panel.stores.url": "Address of its list (https://…)",
+ "panel.stores.add": "Add",
+ "panel.stores.up": "Up",
+ "panel.stores.remove": "Remove",
+ "panel.stores.bad": "Give the store a name, and an address that starts with https://."
 }

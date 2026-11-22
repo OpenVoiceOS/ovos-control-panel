@@ -393,6 +393,13 @@ The name, the logo and the colours are public, like `app.css`, because the
 sign in page wears them too.
 A theme plugin can come later if a distribution needs more than this.
 
+### Stores
+
+`webui.stores` is a list of `{"name": ..., "url": ...}`: lists of skills and
+plugins someone has checked, offered under **Show** on the Skills and Plugins
+pages (see [skills.md](skills.md#stores)). A distribution sets its own here;
+the panel has none. Only https addresses are read, at most eight stores.
+
 ### The largest file
 
 `webui.max_upload_mb` is the largest file, in MB, that a page may put on the

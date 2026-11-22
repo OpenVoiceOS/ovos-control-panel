@@ -49,7 +49,7 @@
  "skills.noPackage": "No se encontró el paquete del que viene esta habilidad, así que no se puede actualizar ni eliminar aquí.",
  "skills.noSettings": "Esta habilidad no tiene ajustes que cambiar.",
  "skills.settings.title": "Ajustes",
- "skills.find.intro": "Habilidades publicadas en PyPI que funcionan en OpenVoiceOS. Una nueva habilidad funciona después de reiniciar los servicios de OVOS.",
+ "skills.find.intro": "Habilidades que funcionan en OpenVoiceOS. En Mostrar, elige dónde buscar: la versión de OVOS, una tienda o todo lo de PyPI. Una habilidad nueva funciona cuando se reinician los servicios de OVOS.",
  "skills.find.label": "Buscar",
  "skills.find.placeholder": "por ejemplo: tiempo, chistes, home assistant",
  "skills.find.button": "Buscar",

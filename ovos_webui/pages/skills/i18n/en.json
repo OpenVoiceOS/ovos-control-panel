@@ -49,7 +49,7 @@
  "skills.noPackage": "The package this skill comes from could not be found, so it can't be updated or removed here.",
  "skills.noSettings": "This skill has no settings to change.",
  "skills.settings.title": "Settings",
- "skills.find.intro": "Skills published on PyPI that load in OpenVoiceOS. Installing one takes effect after the OVOS services restart.",
+ "skills.find.intro": "Skills that load in OpenVoiceOS. Under Show, choose where to look: the OVOS release, a store, or everything on PyPI. A new skill works once the OVOS services have restarted.",
  "skills.find.label": "Search",
  "skills.find.placeholder": "for example: weather, jokes, home assistant",
  "skills.find.button": "Search",

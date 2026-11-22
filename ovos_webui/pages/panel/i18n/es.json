@@ -49,5 +49,14 @@
  "panel.uploads.hint": "El archivo más grande que una página puede guardar en el dispositivo, como una película o una canción en la página Medios. Un dispositivo que nunca guardará películas puede aceptar menos.",
  "panel.uploads.max": "Archivo más grande (MB)",
  "panel.uploads.default": "Es el valor predeterminado.",
- "panel.uploads.bad": "Indica un número entero de MB, al menos 1."
+ "panel.uploads.bad": "Indica un número entero de MB, al menos 1.",
+ "panel.stores.title": "Tiendas",
+ "panel.stores.hint": "Una tienda es una lista de habilidades y complementos que alguien ha comprobado para un tipo de dispositivo. Cada tienda que añadas aquí es una opción en Mostrar en las páginas Habilidades y Complementos, junto a la versión de OVOS y todo lo de PyPI. El panel no trae ninguna.",
+ "panel.stores.none": "Todavía no hay tiendas.",
+ "panel.stores.name": "Nombre",
+ "panel.stores.url": "Dirección de su lista (https://…)",
+ "panel.stores.add": "Añadir",
+ "panel.stores.up": "Subir",
+ "panel.stores.remove": "Quitar",
+ "panel.stores.bad": "Dale un nombre a la tienda y una dirección que empiece por https://."
 }

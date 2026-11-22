@@ -383,7 +383,8 @@ def _installed_skill(name: str) -> bool:
 
 
 def search(query: str = "", kind: str = "", refresh: bool = False,
-           limit: int = 200, only_release: bool = False) -> dict[str, Any]:
+           limit: int = 200, only_release: bool = False, store: int | None = None,
+           lang: str = "") -> dict[str, Any]:
     """Return the packages that match ``query`` and ``kind``.
 
     Installed packages are listed first, so a user sees what they already have
@@ -391,7 +392,13 @@ def search(query: str = "", kind: str = "", refresh: bool = False,
     follows (:mod:`ovos_webui.release`). Each says ``in_release``: true, false,
     or None when the release could not be read. ``only_release`` leaves out
     what is not in it; installed packages are always listed.
+
+    ``store`` searches one of the stores set on the Control panel page
+    (:mod:`ovos_webui.stores`, by its place in the list) instead of PyPI: only
+    what that store lists, with its texts in ``lang``.
     """
+    if store is not None:
+        return _search_store(query, kind, refresh, limit, store, lang)
     from packaging.utils import canonicalize_name
 
     from ovos_webui import release
@@ -439,6 +446,51 @@ def search(query: str = "", kind: str = "", refresh: bool = False,
         "offline": bool(data.get("offline")),
         "error": data.get("error"),
         "release": {"name": rel["name"], "source": rel["source"], "known": held is not None},
+    }
+
+
+def _search_store(query: str, kind: str, refresh: bool, limit: int, n: int,
+                  lang: str) -> dict[str, Any]:
+    from packaging.utils import canonicalize_name
+
+    from ovos_webui import release, stores
+    chosen = stores.configured()
+    if not 0 <= n < len(chosen):
+        raise LookupError("there is no such store")
+    found, error = stores.packages(chosen[n]["url"], refresh=refresh)
+    rel = release.packages(refresh=refresh)
+    held = rel["packages"]
+    have = installed_versions()
+    query = (query or "").strip().lower()
+    results = []
+    for entry in found or []:
+        if kind and entry["kind"] != kind:
+            continue
+        words = stores.text(entry, lang)
+        hay = " ".join([entry["package"], words["name"], words["description"]]).lower()
+        if query and query not in hay:
+            continue
+        name = entry["package"]
+        results.append({
+            "name": name,
+            "kind": entry["kind"],
+            "installed": name in have,
+            "version": have.get(name),
+            "in_release": None if held is None else canonicalize_name(name) in held,
+            "store": {"name": words["name"], "description": words["description"],
+                      "examples": words["examples"], "works": entry.get("works")},
+        })
+    results.sort(key=lambda r: (not r["installed"], r["name"]))
+    return {
+        "results": results[:limit],
+        "total": len(results),
+        "kinds": sorted({e["kind"] for e in found or []}),
+        "cache_age": None,
+        "stale": bool(error and found is not None),
+        "offline": found is None,
+        "error": error,
+        "release": {"name": rel["name"], "source": rel["source"], "known": held is not None},
+        "from_store": {"name": chosen[n]["name"], "url": chosen[n]["url"]},
     }
 
 

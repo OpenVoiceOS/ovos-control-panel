@@ -45,6 +45,19 @@
     <div class="msg" id="msg-rec" role="status" aria-live="polite" hidden></div>
   </div>
 
+  <h2 data-i18n="panel.stores.title">Stores</h2>
+  <div class="card">
+    <p class="hint" data-i18n="panel.stores.hint">A store is a list of skills and plugins that someone has checked for a kind of device. Each store you add here is a choice under Show on the Skills and Plugins pages, beside the OVOS release and everything on PyPI. The panel comes with none.</p>
+    <ul class="plain" id="stores-list"></ul>
+    <p class="hint" id="stores-none" data-i18n="panel.stores.none">No stores yet.</p>
+    <label><span data-i18n="panel.stores.name">Name</span>
+      <input type="text" id="store-name" maxlength="60" autocomplete="off"></label>
+    <label><span data-i18n="panel.stores.url">Address of its list (https://…)</span>
+      <input type="url" id="store-url" maxlength="500" autocomplete="off" spellcheck="false" placeholder="https://"></label>
+    <div class="row"><button id="store-add" data-i18n="panel.stores.add">Add</button></div>
+    <div class="msg" id="msg-stores" role="status" aria-live="polite" hidden></div>
+  </div>
+
   <h2 data-i18n="panel.uploads.title">Uploads</h2>
   <div class="card">
     <p class="hint" data-i18n="panel.uploads.hint">The largest file a page may put on the device, such as a film or a song on the Media page. A device that is never meant to hold films can take less.</p>
@@ -155,6 +168,59 @@ OvosWebUI.ready(function () {
       .catch(function (e) { OvosWebUI.say("msg-rec", e.message, true); });
   });
   api("/api/panel/recommends").then(showRec).catch(function (e) { OvosWebUI.say("msg-rec", e.message, true); });
+
+  // ── stores: lists someone has checked, offered under Show ───────────────
+  var storesNow = [];
+  function showStores(r) {
+    storesNow = r.stores || [];
+    var list = el("stores-list");
+    list.textContent = "";
+    el("stores-none").hidden = storesNow.length > 0;
+    storesNow.forEach(function (s, i) {
+      var li = document.createElement("li");
+      var label = document.createElement("span");
+      label.textContent = s.name + " ";
+      var url = document.createElement("code");
+      url.textContent = s.url;
+      li.appendChild(label);
+      li.appendChild(url);
+      function move(by, key) {
+        var b = document.createElement("button");
+        b.className = "secondary";
+        b.textContent = t(key);
+        b.addEventListener("click", function () {
+          var next = storesNow.slice();
+          if (by === 0) { next.splice(i, 1); } else {
+            var j = i + by;
+            if (j < 0 || j >= next.length) { return; }
+            var x = next[i]; next[i] = next[j]; next[j] = x;
+          }
+          saveStores(next, t("panel.rec.saved", "Saved."));
+        });
+        li.appendChild(document.createTextNode(" "));
+        li.appendChild(b);
+      }
+      if (i > 0) { move(-1, "panel.stores.up"); }
+      move(0, "panel.stores.remove");
+      list.appendChild(li);
+    });
+  }
+  function saveStores(next, done) {
+    return api("/api/panel/stores", {method: "POST", headers: json, body: JSON.stringify({stores: next})})
+      .then(function (r) { showStores(r); OvosWebUI.say("msg-stores", done); })
+      .catch(function (e) { OvosWebUI.say("msg-stores", e.message, true); });
+  }
+  el("store-add").addEventListener("click", function () {
+    var name = el("store-name").value.trim(), url = el("store-url").value.trim();
+    if (!name || url.indexOf("https://") !== 0) {
+      OvosWebUI.say("msg-stores", t("panel.stores.bad", "Give the store a name, and an address that starts with https://."), true);
+      return;
+    }
+    saveStores(storesNow.concat([{name: name, url: url}]), t("panel.rec.saved", "Saved.")).then(function () {
+      el("store-name").value = ""; el("store-url").value = "";
+    });
+  });
+  api("/api/panel/stores").then(showStores).catch(function (e) { OvosWebUI.say("msg-stores", e.message, true); });
 
   // ── the largest file a page may put on the device ──────────────────────
   function showUploads(r) {

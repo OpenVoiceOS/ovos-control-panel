@@ -560,10 +560,21 @@ def create_app(bus=None, host: str = "127.0.0.1", token: str | None = None,
     # worker pool — it just reads the cache.
     @api.get("/plugins/search")
     def api_plugin_search(q: str = "", kind: str = "", refresh: bool = False,
-                          release: bool = False) -> dict[str, Any]:
-        if len(q) > 100 or len(kind) > 50:
+                          release: bool = False, store: int | None = None,
+                          lang: str = "") -> dict[str, Any]:
+        if len(q) > 100 or len(kind) > 50 or len(lang) > 20:
             raise HTTPException(400, "the search is too long")
-        return pypi.search(query=q, kind=kind, refresh=refresh, only_release=release)
+        try:
+            return pypi.search(query=q, kind=kind, refresh=refresh, only_release=release,
+                               store=store, lang=lang)
+        except LookupError as err:
+            raise HTTPException(404, str(err)) from None
+
+    @api.get("/stores")
+    def api_stores() -> dict[str, Any]:
+        """The stores set on the Control panel page, for the search's Show."""
+        from ovos_webui import stores
+        return {"stores": [{"name": s["name"]} for s in stores.configured()]}
 
     @api.get("/plugins/details/{package}")
     def api_plugin_details(package: str) -> dict[str, Any]:

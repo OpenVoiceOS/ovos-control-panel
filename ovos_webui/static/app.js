@@ -626,6 +626,35 @@
       ? '<span class="badge ready">' + esc(t("release.in", "in the OVOS release") + releaseName(rel)) + "</span>"
       : '<span class="badge na">' + esc(t("release.not", "not checked")) + "</span>";
   }
+  // The stores set on the Control panel page, as choices under Show
+  // (value "store:<n>"), after the OVOS release and before all of PyPI.
+  function addStores(select) {
+    return api("/api/stores").then(function (r) {
+      var all = select.querySelector('option[value="all"]');
+      (r.stores || []).forEach(function (s, i) {
+        var o = document.createElement("option");
+        o.value = "store:" + i;
+        o.textContent = t("store.option", "Store") + ": " + s.name;
+        select.insertBefore(o, all);
+      });
+    }).catch(function () { /* no stores, then */ });
+  }
+  // What a Show choice adds to /api/plugins/search
+  function showQuery(value) {
+    if (value === "release") { return "&release=true"; }
+    if (value.indexOf("store:") === 0) {
+      return "&store=" + encodeURIComponent(value.slice(6)) + "&lang=" + encodeURIComponent(document.documentElement.lang || "");
+    }
+    return "";
+  }
+  function storeNote(node, r) {
+    var text = r.offline
+      ? t("store.unreachable", "The store could not be reached.") + (r.error ? " (" + r.error + ")" : "")
+      : t("store.from", "What the store lists:") + " " + r.from_store.name + ". "
+        + t("store.note", "Someone has checked these for a kind of device; the installer still checks the versions before it installs.");
+    node.textContent = text;
+    node.hidden = false;
+  }
   function releaseNote(node, rel, onlyRelease) {
     var text = "";
     if (rel && !rel.known) {
@@ -643,6 +672,7 @@
   window.OvosWebUI = {
     api: api, el: el, say: say, sayHtml: sayHtml, esc: esc, t: t, applyI18n: applyI18n,
     releaseBadge: releaseBadge, releaseNote: releaseNote,
+    addStores: addStores, showQuery: showQuery, storeNote: storeNote,
     fmtDateTime: fmtDateTime,
     ready: function (fn) {
       document.addEventListener("DOMContentLoaded", function () {

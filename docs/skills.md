@@ -85,6 +85,26 @@ When OpenVoiceOS moves a package into or out of its release, the page follows
 by itself. If the file cannot be read, everything is shown and the page says
 why. The file is read again every six hours.
 
+### Stores
+
+A store is a list of skills and plugins that someone has checked for a kind
+of device: a distribution's own (Emkay's store lists what works in Emkay), or
+a catalogue you trust. Add one on the **Control panel** page under **Stores**,
+with a name and the https address of its list; each becomes a choice under
+**Show**, between the OVOS release and everything on PyPI, in the order you
+set. The panel comes with none.
+
+- Its results show the store's own name, description and examples, in your
+  language when the store has them, and **found working by the store** when
+  it says so.
+- What the store says is archived, broken or not on PyPI is not shown, nor
+  anything the panel would not take as an OVOS package.
+- Each result still says whether it is in the OVOS release, and the installer
+  still checks the versions before it installs.
+- Two list formats are read: the Emkay store's and
+  ovos-klondike-mercantile's (the same two as ovos-skill-store). A list is read
+  again every six hours; a store that cannot be reached says so.
+
 Installing a skill changes the software on the device, so it **always needs a
 token**. See [security.md](security.md). The skills service rescans about every
 thirty seconds and loads a newly installed skill on its own.

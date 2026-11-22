@@ -205,5 +205,10 @@
  "release.unknown": "OVOS-udgivelsen kunne ikke læses, så alt på PyPI vises.",
  "release.allWarn": "Alt på PyPI vises, og intet af det er kontrolleret: hverken om det virker med enhedens versioner, eller om nogen stadig vedligeholder det. Installeren tjekker stadig versionerne, før den installerer.",
  "release.onlyNote": "Kun det, der hører til den OVOS-udgivelse, enheden følger",
- "release.onlyNoteEnd": ", og det, der er installeret."
+ "release.onlyNoteEnd": ", og det, der er installeret.",
+ "store.option": "Butik",
+ "store.unreachable": "Butikken kunne ikke nås.",
+ "store.from": "Det, butikken har:",
+ "store.note": "Nogen har tjekket dem til en slags enhed; installeren tjekker stadig versionerne, før den installerer.",
+ "store.works": "virker ifølge butikken"
 }
