@@ -49,7 +49,7 @@
  "skills.noPackage": "تعذّر العثور على الحزمة التي تأتي منها هذه المهارة، لذا لا يمكن تحديثها أو إزالتها من هنا.",
  "skills.noSettings": "ليس لهذه المهارة إعدادات لتغييرها.",
  "skills.settings.title": "الإعدادات",
- "skills.find.intro": "مهارات منشورة على PyPI تعمل في OpenVoiceOS. تعمل المهارة الجديدة بعد إعادة تشغيل خدمات OVOS.",
+ "skills.find.intro": "مهارات تعمل في OpenVoiceOS. اختر في «عرض» أين تبحث: إصدار OVOS، أو متجر، أو كل ما في PyPI. تعمل المهارة الجديدة بعد إعادة تشغيل خدمات OVOS.",
  "skills.find.label": "بحث",
  "skills.find.placeholder": "مثلاً: الطقس، النكات، home assistant",
  "skills.find.button": "ابحث",

@@ -49,7 +49,7 @@
  "skills.noPackage": "Não foi encontrado o pacote de onde vem esta skill, por isso não pode ser atualizada nem removida aqui.",
  "skills.noSettings": "Esta skill não tem definições para mudar.",
  "skills.settings.title": "Definições",
- "skills.find.intro": "Skills publicadas no PyPI que funcionam no OpenVoiceOS. Uma skill nova passa a funcionar depois de os serviços do OVOS reiniciarem.",
+ "skills.find.intro": "Skills que funcionam no OpenVoiceOS. Em Mostrar, escolha onde procurar: a versão do OVOS, uma loja ou tudo o que há no PyPI. Uma skill nova funciona depois de os serviços do OVOS reiniciarem.",
  "skills.find.label": "Procurar",
  "skills.find.placeholder": "por exemplo: tempo, piadas, home assistant",
  "skills.find.button": "Procurar",

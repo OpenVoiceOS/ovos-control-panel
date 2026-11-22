@@ -49,7 +49,7 @@
  "skills.noPackage": "Pakken, som denne skill kommer fra, kunne ikke findes, så den kan ikke opdateres eller fjernes her.",
  "skills.noSettings": "Denne skill har ingen indstillinger at ændre.",
  "skills.settings.title": "Indstillinger",
- "skills.find.intro": "Skills, der er udgivet på PyPI og kan køre i OpenVoiceOS. En ny skill virker, når OVOS-tjenesterne er genstartet.",
+ "skills.find.intro": "Skills, der kan køre i OpenVoiceOS. Vælg under Vis, hvor der skal søges: OVOS-udgivelsen, en butik eller alt på PyPI. En ny skill virker, når OVOS-tjenesterne er genstartet.",
  "skills.find.label": "Søg",
  "skills.find.placeholder": "for eksempel: vejr, vittigheder, home assistant",
  "skills.find.button": "Søg",
