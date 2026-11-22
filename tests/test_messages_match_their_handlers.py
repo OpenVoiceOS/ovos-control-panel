@@ -11,11 +11,10 @@ import threading
 import pytest
 from ovos_utils.fakebus import FakeBus
 
-from ovos_webui import mark1, media, system
+from ovos_webui import media, system
 
 #: Every topic these tests care about, so one bus can watch them all.
 WATCHED = ("mycroft.volume.set", "mycroft.volume.set.gui",
-           "enclosure.mouth.display", "enclosure.mouth.viseme_list",
            "ovos.ipgeo.update")
 
 
@@ -56,39 +55,6 @@ def test_the_media_volume_is_sent_as_the_fraction_both_plugins_expect(sent):
     assert message.data["percent"] == pytest.approx(0.4)
 
 
-def test_the_faceplate_drawing_sends_a_string_the_plugin_can_lower(sent):
-    """ovos-PHAL-plugin-mk1 does `clear_previous.lower() == "true"`, so a bool
-    raises there and nothing is drawn, whichever way the box is ticked."""
-    bus, seen = sent
-    grid = [[0] * 32 for _ in range(8)]
-    mark1.display_grid(bus, grid, x=0, y=0, clear=True)
-
-    value = _find(seen, "enclosure.mouth.display").data["clearPrev"]
-    assert isinstance(value, str), f"clearPrev must be a string, got {type(value).__name__}"
-    assert value.lower() == "true"
-
-    seen.clear()
-    mark1.display_grid(bus, grid, x=0, y=0, clear=False)
-    assert _find(seen, "enclosure.mouth.display").data["clearPrev"].lower() == "false"
-
-
-def test_a_viseme_is_dated_now_so_the_plugin_does_not_skip_it(sent):
-    """The plugin writes a viseme only while `time.time() < start + end`, so a
-    start of 0 puts every viseme in the past and none is ever shown."""
-    import time
-
-    bus, seen = sent
-    mark1.mouth_viseme(bus, 3)
-
-    data = _find(seen, "enclosure.mouth.viseme_list").data
-    assert data["start"] > time.time() - 60, (
-        "start is a timestamp, not an offset; the plugin skips anything already past"
-    )
-    (code, end), = data["visemes"]
-    # the plugin concatenates the code onto "mouth.viseme="
-    assert isinstance(code, str), f"the viseme code must be a string, got {type(code).__name__}"
-    assert code == "3"
-    assert data["start"] + end > time.time(), "the viseme is over before it is drawn"
 
 
 def test_detecting_the_location_asks_to_replace_the_old_one(sent, monkeypatch):

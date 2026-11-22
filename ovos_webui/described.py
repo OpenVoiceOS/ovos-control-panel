@@ -590,9 +590,17 @@ class _Checker:
                 out["settings"] = self.skill_id
             elif save.get("send"):
                 out["send"] = self.message(save["send"], where)
-                out["query"] = self.message(raw.get("query"), where)
+                if save.get("answer") is False:
+                    # sent and done (text for the Mark-1 mouth): nothing to
+                    # read, so the form starts from its defaults
+                    out["answer"] = False
+                else:
+                    out["query"] = self.message(raw.get("query"), where)
             else:
                 raise DescribedError(f"{where}: a form saves with send, config or settings")
+            if save.get("label") is not None:
+                # what the form's button says, where "Save" would be wrong
+                out["button"] = _label(save["label"], where)["key"]
             self.refs[ref + ".form"] = {"kind": "form", "block": out}
         if kind == "module":
             # the panel's own part: whether this plugin is the one in use, to
@@ -1033,8 +1041,10 @@ def routes_for(pid: str, refs: dict[str, dict]):
                 values = r.config.user_or_merged(block["config"].split(".")) or {}
             elif "settings" in block:
                 values = _read_settings(block["settings"])
-            else:
+            elif "query" in block:
                 values = _ask(r, block["query"], {})
+            else:
+                values = {}
             out = {}
             for f in block["fields"]:
                 value = _get_in(values, [f["name"]])
@@ -1096,6 +1106,10 @@ def routes_for(pid: str, refs: dict[str, dict]):
                     skillsio.write_settings(skill_id, values)
                 except skillsio.SkillSettingsError as e:
                     raise HTTPException(400, str(e)) from None
+                return {"ok": True}
+            if block.get("answer") is False:
+                from ovos_bus_client.message import Message
+                r.need_bus().emit(Message(block["send"], values))
                 return {"ok": True}
             return _ask(r, block["send"], values)
 

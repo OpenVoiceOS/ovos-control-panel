@@ -62,7 +62,7 @@ panel runs apart from the assistant, it cannot tell, so every page shows.
 | | Media | Shows what is playing and controls playback and volume. | [media.md](media.md) |
 | Screen | Apps | Launches and closes desktop applications on a device with a screen. | [apps.md](apps.md) |
 | | Wallpaper | Sets the background on a device with a screen, from a collection or by address. | [wallpaper.md](wallpaper.md) |
-| | Mark-1 faceplate | Controls the Mark-1's eyes and mouth, draws an image for the mouth, and previews it in the browser. | [mark1.md](mark1.md) |
+| | Mark-1 faceplate | Lights the Mark-1's eyes and puts text on its mouth; the editors come with the ovos-control-panel-mark1 extension. | [mark1.md](mark1.md) |
 | Maintenance | Plugins | Finds OVOS plugins and installs or removes them; updates and the release channel. | [plugins.md](plugins.md), [updates.md](updates.md) |
 | | Settings | Changes your layer of `mycroft.conf`, as a form or as raw JSON or YAML. | [configuration.md](configuration.md) |
 | | Send over sound | Sends Wi-Fi credentials, installs, or commands to a nearby device by playing a sound. | [send-over-sound.md](send-over-sound.md) |

@@ -23,9 +23,9 @@ def _menu(client, path="/about"):
 # ── webui.pages and webui.groups ──────────────────────────────────────────────
 def test_prefs_reads_and_checks_the_settings():
     p = pages.prefs({
-        "pages": {"disabled": ["mark1", "about", 3], "move": {"media": {"group": "screen", "order": 5}}},
+        "pages": {"disabled": ["personas", "about", 3], "move": {"media": {"group": "screen", "order": 5}}},
         "groups": {"order": ["screen", "voice"], "rename": {"device": {"label": "Hardware"}, "x": {}}}})
-    assert p.disabled == {"mark1"}
+    assert p.disabled == {"personas"}
     assert p.move == {"media": {"group": "screen", "order": 5}}
     assert p.group_order == ["screen", "voice"]
     assert p.rename["device"]["label"] == "Hardware"
@@ -39,10 +39,10 @@ def test_nothing_set_means_the_menu_as_it_ships():
 
 def test_the_menu_follows_the_settings():
     nav = REG.nav(pages.prefs({
-        "pages": {"disabled": ["mark1"], "move": {"media": {"group": "screen", "order": 5}}},
+        "pages": {"disabled": ["personas"], "move": {"media": {"group": "screen", "order": 5}}},
         "groups": {"order": ["screen"], "rename": {"device": {"label": "Hardware"}}}}))
     ids = [p["id"] for p in nav["pages"]]
-    assert "mark1" not in ids
+    assert "personas" not in ids
     media = [p for p in nav["pages"] if p["id"] == "media"][0]
     assert media["group"] == "screen"
     screen = [p["id"] for p in nav["pages"] if p["group"] == "screen"]
@@ -69,9 +69,9 @@ def test_a_core_page_cannot_be_turned_off(client):
 
 
 def test_a_change_shows_on_the_next_page_load(client):
-    assert "mark1" in [p["id"] for p in _menu(client)["pages"]]
-    _set_webui({"pages": {"disabled": ["mark1"]}})
-    assert "mark1" not in [p["id"] for p in _menu(client)["pages"]]
+    assert "personas" in [p["id"] for p in _menu(client)["pages"]]
+    _set_webui({"pages": {"disabled": ["personas"]}})
+    assert "personas" not in [p["id"] for p in _menu(client)["pages"]]
 
 
 # ── webui.branding ───────────────────────────────────────────────────────────
@@ -158,11 +158,11 @@ def test_a_page_is_turned_off_and_on_from_the_panel(token_client):
     c = token_client
     c.headers["Authorization"] = "Bearer s3cret-token"
     conf = configio.user_config_path()
-    assert c.post("/api/pages/mark1/enabled", json={"enabled": False}).json()["enabled"] is False
-    assert _json.loads(conf.read_text())["webui"]["pages"]["disabled"] == ["mark1"]
-    assert c.get("/mark1").status_code == 404
-    assert next(p for p in c.get("/api/pages").json()["pages"] if p["id"] == "mark1")["disabled"]
-    c.post("/api/pages/mark1/enabled", json={"enabled": True})
+    assert c.post("/api/pages/personas/enabled", json={"enabled": False}).json()["enabled"] is False
+    assert _json.loads(conf.read_text())["webui"]["pages"]["disabled"] == ["personas"]
+    assert c.get("/personas").status_code == 404
+    assert next(p for p in c.get("/api/pages").json()["pages"] if p["id"] == "personas")["disabled"]
+    c.post("/api/pages/personas/enabled", json={"enabled": True})
     assert "disabled" not in _json.loads(conf.read_text())["webui"]["pages"]
     assert c.post("/api/pages/about/enabled", json={"enabled": False}).status_code == 400
     assert c.post("/api/pages/nope/enabled", json={"enabled": False}).status_code == 404

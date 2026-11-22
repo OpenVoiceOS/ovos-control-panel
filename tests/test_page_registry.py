@@ -445,3 +445,33 @@ def test_the_shell_links_its_assets_by_version():
     html = pages.render(reg.by_id()["about"], reg.nav_json())
     assert f'/static/app.js?v={__version__}.' in html and f'/static/app.css?v={__version__}.' in html
     assert pages._asset_version() in html, "a change to the files is fetched too"
+
+
+def test_an_extensions_page_joins_the_menu_from_its_entry_point(monkeypatch):
+    """A panel extension registers a Python page; the panel's own entry
+    points, if an old install still has them, are not read twice."""
+    theirs = _EP("guardian", _desc())
+    stale = _EP("about", {}, OWN)
+    monkeypatch.setattr(pages.metadata, "entry_points", lambda group: [theirs, stale])
+    reg = pages.load()
+    assert reg.by_path()["/emkay/guardian"].package == "ovos-skill-guardian"
+    assert reg.problems == []
+
+
+def test_an_extensions_page_takes_the_place_of_one_the_panel_describes(monkeypatch, tmp_path):
+    """The panel's plain Mark-1 page steps aside for the extension's editors."""
+    import json
+    from ovos_webui import described
+    root = described.BUNDLED / "ovos-phal-plugin-mk1"
+    data = json.loads((root / "controlpanel.json").read_text(encoding="utf-8"))
+    plain = described.Found("ovos-phal-plugin-mk1", "0.2.0a2", "ovos_phal_plugin_mk1", root, data, by_panel=True)
+    editors = _EP("mark1", _desc(id="mark1", path="/mark1", group="screen",
+                                 title={"key": "nav.mark1", "label": "Mark-1"}),
+                  types.SimpleNamespace(name="ovos-control-panel-mark1", version="0.1.0"))
+    for files in ([plain],):
+        reg = pages.load(_own() + [editors], files=files)
+        page = reg.by_id()["mark1"]
+        assert page.package == "ovos-control-panel-mark1" and page.described is None
+        assert reg.problems == []
+    reg = pages.load(_own(), files=[plain])
+    assert reg.by_id()["mark1"].by_panel
