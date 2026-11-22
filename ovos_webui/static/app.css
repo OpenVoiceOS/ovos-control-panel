@@ -935,3 +935,8 @@ html.i18n-wait body { visibility: hidden; }
 .cp-range output { min-width: 3.5rem; text-align: end; font-variant-numeric: tabular-nums; }
 #cp-page label > span:first-child { display: block; margin-bottom: 0.3rem; }
 #cp-page label.check > span:first-child { display: inline; margin: 0; }
+
+/* a described page's qr block: the code dark on light, whatever the theme */
+.cp-qr { display: grid; justify-items: start; gap: 0.5rem; margin-top: 0.75rem; }
+.cp-qr[hidden] { display: none; }
+.cp-qr canvas { width: min(240px, 70vw); height: auto; image-rendering: pixelated; border-radius: 8px; }

@@ -33,7 +33,7 @@ MAX_STRINGS = 256 * 1024
 MAX_ICON = 16 * 1024
 #: The blocks this panel draws. A block of another type is drawn as "this
 #: needs a newer control panel", and the rest of the page still works.
-BLOCKS = frozenset({"text", "status", "list", "actions", "form", "choice", "upload", "module", "provider"})
+BLOCKS = frozenset({"text", "status", "list", "actions", "form", "choice", "upload", "module", "provider", "qr"})
 FIELD_TYPES = frozenset({"text", "password", "url", "number", "slider", "checkbox", "select", "lines"})
 _URL_RE = re.compile(r"^https?://[^\s/]+\S*$")
 #: A page's messages start with its own prefix, never with one of these.
@@ -669,6 +669,22 @@ class _Checker:
                 act["ref"] = f"{ref}.a{j}"
                 out["actions"].append(act)
                 self.refs[act["ref"]] = {"kind": "action", "block": out, **act}
+        if kind == "qr":
+            # a button; the answer's field drawn as a QR code in the browser,
+            # never shown as text (a pairing link, a one-time code)
+            act = self.action(raw.get("action"), f"{where}, action", row=False)
+            if act.get("download") or act.get("answer") is False:
+                raise DescribedError(f"{where}: a qr block's action sends a message and reads its answer")
+            act["ref"] = f"{ref}.a0"
+            out["action"] = act
+            self.refs[act["ref"]] = {"kind": "action", "block": out, **act}
+            out["field"] = _path(raw.get("field", "url"), where)
+            if raw.get("expires") is not None:
+                # a field of the answer: seconds until the code no longer works
+                out["expires"] = _field_name(raw["expires"], where)
+            for extra in ("text", "note"):
+                if raw.get(extra) is not None:
+                    out[extra] = _label(raw[extra], where)
         if kind == "form":
             fields = raw.get("fields") or []
             if not isinstance(fields, list) or not fields:

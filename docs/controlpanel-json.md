@@ -197,6 +197,28 @@ The panel's own part: whether this plugin is the voice or the listener in use,
 or the fallback, buttons to make it so, and for a voice in use, a sentence to
 hear it. Nothing of it comes from the file.
 
+### qr
+
+A button, and a field of its answer drawn as a QR code: a link for pairing a
+device, a one-time code to scan with a phone.
+
+```json
+{"type": "qr", "heading": "house.add", "text": "house.add.intro",
+ "action": {"label": "house.add.button", "send": "ovos.house.pair"},
+ "field": "url", "expires": "seconds", "note": "house.add.note"}
+```
+
+| Key | |
+| --- | --- |
+| `action` | The [button](#actions). Its answer holds the code. It needs the token unless it says `"privileged": false`. |
+| `field` | The field of the answer to draw, text of up to 2000 characters. Default `url`. |
+| `expires` | A field of the answer: seconds until the code stops working. The code goes from the page then. |
+| `text` | A label above the button. |
+| `note` | A label under the code, with values from the answer: "Scan it within {minutes} minutes". |
+
+The code is drawn in the browser by the panel itself; it is never shown as
+text, sent anywhere else or kept, so a code that is a secret stays one.
+
 ### provider
 
 No keys but `heading`, on the page of a package that brings one media

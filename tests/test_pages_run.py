@@ -313,6 +313,50 @@ def test_without_a_choice_the_setup_guide_is_as_it_was(signed_in_page):
     assert page.locator("[data-i18n='setup.intro']").inner_text().startswith("Six")
 
 
+def test_a_qr_block_draws_its_answer_as_a_code_and_never_as_text(signed_in_page):
+    """A qr block: the button's answer drawn on a canvas, the secret in it
+    nowhere in the page's text, a note with values, and gone when it expires."""
+    page, url = signed_in_page
+    thrown = []
+    page.on("pageerror", lambda err: thrown.append(str(err)))
+    from ovos_webui import described
+    desc, _ = described.check({
+        "controlpanel": 1, "id": "house", "bus": "ovos.house.",
+        "blocks": [{"type": "qr", "action": {"label": {"key": "house.show", "en": "Show the code"},
+                                             "send": "ovos.house.pair"},
+                    "field": "url", "expires": "seconds",
+                    "note": {"key": "house.note", "en": "Within {minutes} minutes"}}]}, "ovos-phal-plugin-house")
+    desc["en"] = {"house.show": "Show the code", "house.note": "Within {minutes} minutes"}
+    answer = {"url": "https://house.local/pair#t=TOPSECRET", "seconds": 2, "minutes": 10}
+    page.route("**/api/cp/house/act", lambda r: r.fulfill(
+        status=200, content_type="application/json", body=json.dumps(answer)))
+    try:
+        page.goto(f"{url}/about")
+        page.wait_for_load_state("networkidle")
+        page.evaluate("""desc => new Promise(done => {
+            const root = document.createElement('div'); root.id = 'qr-root';
+            document.querySelector('main').append(root);
+            const s = document.createElement('script'); s.src = '/static/described.js';
+            s.onload = () => { OvosWebUI.drawDescribed(root, desc); done(); };
+            document.body.append(s);
+        })""", desc)
+        page.locator("#qr-root button").click()
+        page.wait_for_selector("#qr-root .cp-qr:not([hidden]) canvas")
+        dark = page.evaluate("""() => {
+            const c = document.querySelector('#qr-root canvas');
+            const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+            let n = 0; for (let i = 0; i < d.length; i += 4) { if (d[i] < 128) n++; }
+            return [c.width, n];
+        }""")
+        assert dark[0] >= 100 and dark[1] > 500, f"no code drawn: {dark}"
+        assert "TOPSECRET" not in page.content(), "the code is drawn, never written"
+        assert page.locator("#qr-root .cp-qr .hint").inner_text() == "Within 10 minutes"
+        page.wait_for_selector("#qr-root .cp-qr[hidden]", state="attached", timeout=5000)
+        assert not thrown, thrown
+    finally:
+        page.unroute("**/api/cp/house/act")
+
+
 def test_hidden_means_hidden_whatever_the_element_is(signed_in_page):
     """`hidden` is an attribute, not a class, and any rule that sets
     `display` outranks the browser's default for it.

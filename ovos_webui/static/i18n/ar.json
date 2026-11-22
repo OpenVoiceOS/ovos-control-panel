@@ -174,6 +174,7 @@
  "common.noanswer": "لم تُجب المهارة أو الإضافة. هل هي قيد التشغيل؟",
  "common.needed": "املأ: {fields}",
  "common.nofile": "لم يحمل الرد أي ملف.",
+ "common.noqr": "لم يحمل الرد أي رمز لعرضه.",
  "common.upload.pick": "اختر ملفًا أولًا.",
  "common.upload.kind": "يقبل: {accept}",
  "common.upload.big": "الملف أكبر من {mb} ميغابايت.",
