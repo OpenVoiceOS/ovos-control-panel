@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a85](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a85) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a84...0.0.1a85)
+
+**Merged pull requests:**
+
+- System leaves the core: a page the panel brings for the system plugin [\#168](https://github.com/OpenVoiceOS/ovos-control-panel/pull/168) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a84](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a84) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a83...0.0.1a84)
@@ -491,7 +499,6 @@
 - fix: re-subscribe the live feeds after a bus reconnect [\#50](https://github.com/OpenVoiceOS/ovos-control-panel/pull/50) ([JarbasAl](https://github.com/JarbasAl))
 - feat: show the device's setup at a glance on the Dashboard [\#49](https://github.com/OpenVoiceOS/ovos-control-panel/pull/49) ([JarbasAl](https://github.com/JarbasAl))
 - feat: undo the last settings change [\#48](https://github.com/OpenVoiceOS/ovos-control-panel/pull/48) ([JarbasAl](https://github.com/JarbasAl))
-- test: catch pages that use an undefined i18n key [\#47](https://github.com/OpenVoiceOS/ovos-control-panel/pull/47) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
