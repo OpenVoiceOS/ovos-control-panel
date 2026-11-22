@@ -410,7 +410,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
     page, url = signed_in_page
     needs = {"colocated": True, "needs": {
         k: {"met": False, "suggest": "pkg-" + k}
-        for k in ("network",)}}
+        for k in ("translate",)}}
 
     def answer(route):
         route.fulfill(status=200, content_type="application/json", body=json.dumps(needs))
@@ -421,17 +421,17 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs.v2'); "
                       "localStorage.setItem('ovos-nav-open', JSON.stringify(['advanced', 'library', 'voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
         page.reload()
-        page.wait_for_function("() => document.querySelector('nav a[href=\"/network\"]').hidden")
+        page.wait_for_function("() => document.querySelector('nav a[href=\"/translate\"]').hidden")
         shown = _visible_nav(page)
-        assert "/network" not in shown and "/voice" in shown
+        assert "/translate" not in shown and "/voice" in shown
         assert not page.locator('nav .nav-group[data-group="screen"]').is_visible()
 
-        page.goto(f"{url}/network")
+        page.goto(f"{url}/translate")
         note = page.locator("#needs-note")
         note.wait_for()
-        assert "pkg-network" in note.inner_text()
+        assert "pkg-translate" in note.inner_text()
         assert note.locator('a[href="/plugins"]').count() == 1
-        assert "/network" in _visible_nav(page), "the page you are on stays in the menu"
+        assert "/translate" in _visible_nav(page), "the page you are on stays in the menu"
     finally:
         page.unroute("**/api/nav/needs")
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs.v2'); "
@@ -440,7 +440,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
 
 def test_a_panel_apart_from_the_device_hides_no_page(signed_in_page):
     page, url = signed_in_page
-    needs = {"colocated": False, "needs": {"network": {"met": False, "suggest": "x"}}}
+    needs = {"colocated": False, "needs": {"translate": {"met": False, "suggest": "x"}}}
     page.route("**/api/nav/needs", lambda r: r.fulfill(
         status=200, content_type="application/json", body=json.dumps(needs)))
     try:
@@ -449,7 +449,7 @@ def test_a_panel_apart_from_the_device_hides_no_page(signed_in_page):
                       "localStorage.setItem('ovos-nav-open', JSON.stringify(['advanced', 'library', 'voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
         page.reload()
         page.wait_for_load_state("networkidle")
-        assert "/network" in _visible_nav(page)
+        assert "/translate" in _visible_nav(page)
     finally:
         page.unroute("**/api/nav/needs")
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs.v2'); "
@@ -626,12 +626,8 @@ def test_all_voice_settings_shows_everything(signed_in_page):
     assert page.locator('nav a[aria-current="page"]').get_attribute("href") == "/voice-all"
 
 
-def test_the_internet_status_moved_to_network(signed_in_page):
+def test_the_location_is_detected_on_the_voice_page(signed_in_page):
     page, url = signed_in_page
-    page.goto(f"{url}/network")
-    page.wait_for_load_state("networkidle")
-    assert page.locator("#internet-card").is_visible()
-    # the location is detected on the Voice and language page
     page.goto(f"{url}/voice")
     page.wait_for_load_state("networkidle")
     assert page.locator("#location-card").is_visible()

@@ -4,7 +4,7 @@ SSH access and a factory reset, from the `ovos-PHAL-plugin-system` plugin.
 These are the controls you reach for when setting up or troubleshooting a
 device. The device's location is detected on the
 [Voice and language](voice-settings.md#location) page, and the internet
-status is on the [Network](network.md) page.
+status comes with the [Network](network.md) extension.
 
 ## What it needs
 

@@ -1,19 +1,34 @@
-"""Which pages the device can use, so the menu can leave the rest out."""
+"""Which pages the device can use, so the menu can leave the rest out.
+
+The panel's own pages need nothing; the pages that need a plugin come with it
+or with an extension. So these use one such page: Wi-Fi, as the network
+extension describes it."""
+import types
+
 from ovos_webui import pages
 
+from tests.test_page_registry import _EP, _desc, _own
+
 ON_DEVICE = {"ovos-core": "2.1.1", "ovos-phal-plugin-system": "1.0.0"}
-REG = pages.load()
+WIFI = _EP("network", _desc(id="network", path="/network", group="everyday",
+                            title={"key": "nav.network", "label": "Network"},
+                            needs=["ovos-PHAL-plugin-network-manager",
+                                   "ovos-PHAL-plugin-connectivity-events"]),
+           types.SimpleNamespace(name="ovos-control-panel-network", version="0.1.0"))
+REG = pages.load(_own() + [WIFI])
 
 
 def test_a_page_is_usable_with_any_of_its_packages():
     out = pages.needs(REG, ON_DEVICE)
     assert out["colocated"] is True
     assert out["needs"]["network"]["met"] is False
+    out = pages.needs(REG, dict(ON_DEVICE, **{"ovos-phal-plugin-connectivity-events": "0.1"}))
+    assert out["needs"]["network"]["met"] is True, "the internet check alone is worth the page"
 
 
 def test_package_names_are_matched_case_insensitively():
     # installed_versions() lowercases; the pages keep PyPI's own spelling
-    out = pages.needs(REG, dict(ON_DEVICE, **{"ovos-phal-plugin-connectivity-events": "0.1"}))
+    out = pages.needs(REG, dict(ON_DEVICE, **{"ovos-phal-plugin-network-manager": "1.0"}))
     assert out["needs"]["network"]["met"] is True
 
 
@@ -24,8 +39,8 @@ def test_a_panel_running_apart_from_the_assistant_hides_nothing():
 
 
 def test_only_pages_with_needs_are_reported():
-    out = pages.needs(REG, ON_DEVICE)
-    assert set(out["needs"]) == {"network"}
+    assert set(pages.needs(REG, ON_DEVICE)["needs"]) == {"network"}
+    assert pages.needs(pages.load(_own()), ON_DEVICE)["needs"] == {}, "the panel's own need nothing"
 
 
 def test_the_route_answers(client):
@@ -33,7 +48,7 @@ def test_the_route_answers(client):
     assert r.status_code == 200
     body = r.json()
     assert set(body) == {"colocated", "needs"}
-    assert set(body["needs"]) == {p.id for p in REG.pages if p.needs}
+    assert set(body["needs"]) == {p.id for p in pages.load().pages if p.needs}
 
 
 def test_the_route_needs_a_session(token_client):

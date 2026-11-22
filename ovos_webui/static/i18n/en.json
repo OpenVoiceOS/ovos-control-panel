@@ -103,7 +103,6 @@
  "plugins.job.finished.pre": "Finished. ",
  "plugins.job.finished.link": "Restart the OVOS services",
  "plugins.job.finished.post": " to load the change. ",
- "nav.network": "Network",
  "nav.sound": "Send over sound",
  "nav.servers": "Servers",
  "nav.voice": "Voice and language",

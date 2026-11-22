@@ -33,14 +33,14 @@ CAPABILITIES: dict[str, dict[str, Any]] = {
         "plugins": ["ovos-phal-plugin-system", "ovos-PHAL-plugin-system"],
         "admin": False,
         "label": "System",
-        "hint": "SSH, factory reset, and the device language, from the System page.",
+        "hint": "SSH and a factory reset, from the System page.",
     },
     "network": {
         "plugins": ["ovos-phal-plugin-network-manager", "ovos-PHAL-plugin-network-manager"],
         "admin": True,
         "label": "Wi-Fi setup",
-        "hint": "Scan for and join Wi-Fi networks from the Network page. Needs "
-                "this plugin, which runs with the admin service.",
+        "hint": "Scan for and join Wi-Fi networks, with the ovos-control-panel-network "
+                "extension. Needs this plugin, which runs with the admin service.",
     },
     # Not a PHAL plugin — it is an audio transformer plugin that listens for
     # ggwave sound. It still fits this table: one package, no admin service,

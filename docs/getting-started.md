@@ -22,7 +22,7 @@ example `http://ovos.local:8500/`, or its numeric IP address. On the device
 itself, `http://127.0.0.1:8500/` always works.
 
 If the device is not on your Wi-Fi yet, join it from the [Network](network.md)
-page once you can reach the device. A device with no screen or keyboard can be
+page (an extension) once you can reach the device. A device with no screen or keyboard can be
 told the Wi-Fi another way: play the credentials to it as a sound from the
 [Send over sound](send-over-sound.md) page.
 

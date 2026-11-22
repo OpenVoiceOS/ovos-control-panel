@@ -70,7 +70,7 @@ MAX_STRINGS = 256 * 1024
 #: The panel's own pages, in menu order. Used when the panel runs from a
 #: source tree that was never installed, so its entry points are not known.
 BUILTIN = (
-    "dashboard", "setup", "tryit", "controls", "network", "voice", "skills", "backup",
+    "dashboard", "setup", "tryit", "controls", "voice", "skills", "backup",
     "about", "voice_all", "servers", "translate", "intents", "transformers", "personas",
     "plugins", "settings", "panel",
     "sound",

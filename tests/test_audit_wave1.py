@@ -6,8 +6,6 @@ Each test fails against the unfixed code and passes after the fix:
 - VolumeBody accepted a JSON bool as 1% (pydantic int coercion).
 - network._act accepted a failure reply naming a *different* network.
 """
-import threading
-import time
 
 import pytest
 from pydantic import ValidationError
@@ -46,44 +44,3 @@ def test_volume_bodies_reject_a_bool_percent():
         assert model(percent=50).percent == 50
         with pytest.raises(ValidationError):
             model(percent=True)
-
-
-def test_network_ignores_a_failure_naming_a_different_network():
-    from ovos_bus_client.message import Message
-    from ovos_utils.fakebus import FakeBus
-    import ovos_webui.network as network
-
-    bus = FakeBus()
-
-    def on_forget(_m):
-        def fire():
-            time.sleep(0.15)  # an unrelated failure lands during our wait
-            bus.emit(Message("ovos.phal.nm.forget.failure",
-                             {"connection_name": "SOMEONE-ELSE"}, {}))
-        threading.Thread(target=fire, daemon=True).start()
-
-    bus.on("ovos.phal.nm.forget", on_forget)
-    orig = network.QUERY_TIMEOUT
-    network.QUERY_TIMEOUT = 1.0  # keep the timeout path fast
-    try:
-        res = network.forget(bus, "target-ssid")
-    finally:
-        network.QUERY_TIMEOUT = orig
-    # The mismatched failure must NOT resolve us — we time out instead.
-    assert res["ok"] is False
-    assert "did not answer" in res["error"]
-
-
-def test_network_still_accepts_a_keyless_failure():
-    # The real plugin sends forget.failure with no payload; that must still
-    # resolve the request (there is nothing to correlate on) — a control.
-    from ovos_bus_client.message import Message
-    from ovos_utils.fakebus import FakeBus
-    import ovos_webui.network as network
-
-    bus = FakeBus()
-    bus.on("ovos.phal.nm.forget",
-           lambda m: bus.emit(Message("ovos.phal.nm.forget.failure", {}, {})))
-    res = network.forget(bus, "target-ssid")
-    assert res["ok"] is False
-    assert "could not do that" in res["error"]

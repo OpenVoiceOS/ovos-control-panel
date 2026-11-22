@@ -1,15 +1,9 @@
-"""Connectivity and IP-geolocation over the message bus.
+"""Detecting the device's location by its IP, for the Voice and language page.
 
 SSH and the factory reset are a page the panel brings for
-``ovos-PHAL-plugin-system`` (``bundled/ovos-phal-plugin-system``). What is left
-here uses the message types ``ovos-PHAL-plugin-connectivity-events`` and
-``ovos-PHAL-plugin-ipgeo`` already register:
-
-* ``ovos.PHAL.internet_check`` drives ``ovos-PHAL-plugin-connectivity-events``
-  to answer on ``mycroft.internet.state`` and ``mycroft.network.state``
-  (each ``{"state": "connected"|"disconnected"}``) — see ``update_state`` in
-  that plugin. Both come back for a single check, so both reply topics are
-  listened for and their states merged into one result.
+``ovos-PHAL-plugin-system`` (``bundled/ovos-phal-plugin-system``), and the
+internet check is the ovos-control-panel-network extension's. What is left
+here uses the message types ``ovos-PHAL-plugin-ipgeo`` already registers:
 
 * ``ovos.ipgeo.update`` drives ``ovos-PHAL-plugin-ipgeo`` to geolocate the
   device by its public IP. It writes the result into the *assistant layer*
@@ -42,57 +36,6 @@ def _msg(msg_type: str, data: dict[str, Any] | None = None):
     from ovos_bus_client.message import Message
 
     return Message(msg_type, data or {}, {"source": "ovos-webui"})
-
-
-# ── connectivity ─────────────────────────────────────────────────────────────
-def connectivity(bus) -> dict[str, Any]:
-    """Report ``{"internet": "connected"|"disconnected"|None, "network": ...}``.
-
-    Drives ``ovos-PHAL-plugin-connectivity-events`` with ``ovos.PHAL.internet_check``
-    and listens for both ``mycroft.internet.state`` and ``mycroft.network.state``,
-    since a single check answers on both topics. A value stays ``None`` when
-    its topic never answered inside the timeout.
-    """
-    import threading
-
-    from ovos_webui import buswait
-
-    if not buswait.is_connected(bus):
-        return {"internet": None, "network": None}
-
-    def run():
-        from ovos_bus_client.message import Message
-
-        got = threading.Event()
-        box: dict[str, Any] = {}
-
-        def make(key):
-            def handler(message):
-                box[key] = (message.data or {}).get("state")
-                if "internet" in box and "network" in box:
-                    got.set()
-            return handler
-
-        h_internet = make("internet")
-        h_network = make("network")
-        bus.on("mycroft.internet.state", h_internet)
-        bus.on("mycroft.network.state", h_network)
-        try:
-            bus.emit(Message("ovos.PHAL.internet_check", {},
-                             {"source": "ovos-webui"}))
-            got.wait(DEFAULT_TIMEOUT)
-        finally:
-            try:
-                bus.remove("mycroft.internet.state", h_internet)
-                bus.remove("mycroft.network.state", h_network)
-            except Exception:  # noqa: BLE001 # pragma: no cover
-                pass
-        return {"internet": box.get("internet"), "network": box.get("network")}
-
-    result = buswait.call(run, timeout=DEFAULT_TIMEOUT + 1.0, default=None)
-    if result is None:
-        return {"internet": None, "network": None}
-    return result
 
 
 # ── detect location by IP ───────────────────────────────────────────────────
