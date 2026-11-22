@@ -306,8 +306,12 @@ class _Checker:
             for r in rows:
                 if not isinstance(r, dict):
                     continue
-                row = {"label": _label(r.get("label"), where), "value": str(r.get("value", ""))[:300],
-                       "when": _when(r.get("when"), where)}
+                row = {"value": str(r.get("value", ""))[:300], "when": _when(r.get("when"), where)}
+                # a row without a label is a note across the card
+                if r.get("label") is not None:
+                    row["label"] = _label(r["label"], where)
+                elif r.get("text") is None and not row["value"]:
+                    raise DescribedError(f"{where}: a row has a label, or is a note with a text")
                 # a label for the value (a hint), and one for when it is empty
                 for extra in ("text", "empty"):
                     if r.get(extra) is not None:

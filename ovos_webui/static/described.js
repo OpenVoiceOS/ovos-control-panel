@@ -187,11 +187,17 @@ OvosWebUI.ready(function () {
           rows.innerHTML = "";
           (block.rows || []).forEach(function (r) {
             if (!holds(r.when, data)) { return; }
-            var dt = document.createElement("dt"), dd = document.createElement("dd");
-            dt.textContent = t(r.label);
+            var dd = document.createElement("dd");
             var value = r.text ? fill(t(r.text), data) : fill(r.value, data);
             dd.textContent = value || (r.empty ? t(r.empty) : "");
-            rows.appendChild(dt); rows.appendChild(dd);
+            if (r.label) {
+              var dt = document.createElement("dt");
+              dt.textContent = t(r.label);
+              rows.appendChild(dt);
+            } else {
+              dd.className = "cp-note";
+            }
+            rows.appendChild(dd);
           });
           row.innerHTML = "";
           (block.actions || []).forEach(function (a) {

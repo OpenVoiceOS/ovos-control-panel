@@ -215,3 +215,15 @@ def test_a_text_can_be_numbered_steps():
     page["blocks"][0]["steps"] = []
     with pytest.raises(described.DescribedError, match="steps"):
         checked(page, "ovos-skill-s")
+
+
+def test_a_status_row_without_a_label_is_a_note():
+    page = {"controlpanel": 1, "id": "n", "bus": "ovos.n.", "blocks": [
+        {"type": "status", "query": "ovos.n.status",
+         "rows": [{"text": "n.hint", "when": "server"}, {"label": "n.state", "value": "{state}"}]}]}
+    out, _ = checked(page, "ovos-skill-n")
+    note, row = out["blocks"][0]["rows"]
+    assert "label" not in note and note["text"] == {"key": "n.hint"} and row["label"] == {"key": "n.state"}
+    page["blocks"][0]["rows"] = [{"when": "x"}]
+    with pytest.raises(described.DescribedError, match="note"):
+        checked(page, "ovos-skill-n")
