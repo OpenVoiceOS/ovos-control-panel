@@ -1,0 +1,8 @@
+{
+ "piper.title": "Voz Piper",
+ "piper.intro": "O Piper cria a voz no próprio dispositivo: nada do que lhe é respondido sai dele. Na primeira vez que uma voz é usada, é descarregada.",
+ "piper.voice": "Voz",
+ "piper.voice.hint": "default escolhe a voz própria do idioma. Outra voz pelo nome, como pt_PT-tugão-medium.",
+ "piper.cuda": "Usar a placa gráfica (CUDA)",
+ "piper.cuda.hint": "Apenas num dispositivo com placa gráfica NVIDIA e onnxruntime-gpu."
+}
