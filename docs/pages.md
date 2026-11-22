@@ -98,7 +98,7 @@ itself: `common.save`, `common.delete`, `common.play`, `common.stop`,
 ```
 
 The page around the blocks: `id`, `title`, `group` (default `everyday`),
-`groups`, `order`, `icon` (an SVG in the package), `path` (default
+`groups` (each with a `title` that may be a label), `order`, `icon` (an SVG in the package), `path` (default
 `/<id>`), `heading`, `needs` (default: the package itself) and `bus`, the
 prefix every message of the page starts with.
 

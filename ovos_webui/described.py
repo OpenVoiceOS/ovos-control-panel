@@ -147,6 +147,11 @@ def discover() -> list[Found]:
 
 
 # ── checking a file ──────────────────────────────────────────────────────────
+def is_key(raw: Any) -> bool:
+    """Whether a text is a label's key (``books.title``)."""
+    return isinstance(raw, str) and bool(_KEY_RE.match(raw))
+
+
 def _label(raw: Any, where: str) -> dict[str, str]:
     """A label is a key, or a key with its English text."""
     if isinstance(raw, str) and _KEY_RE.match(raw):

@@ -227,3 +227,15 @@ def test_a_status_row_without_a_label_is_a_note():
     page["blocks"][0]["rows"] = [{"when": "x"}]
     with pytest.raises(described.DescribedError, match="note"):
         checked(page, "ovos-skill-n")
+
+
+def test_a_described_page_brings_a_group_named_by_a_label(tmp_path):
+    root = tmp_path / "ovos_skill_books"
+    (root / "locale" / "en-US").mkdir(parents=True)
+    (root / "locale" / "en-US" / "controlpanel.json").write_text('{"nav.group.shelf": "Shelf"}', encoding="utf-8")
+    page = {"controlpanel": 1, "id": "shelf", "title": {"key": "shelf.title", "en": "Shelf"}, "bus": "ovos.shelf.",
+            "group": "shelf", "groups": [{"id": "shelf", "title": "nav.group.shelf", "order": 5, "level": "everyday"}],
+            "blocks": [{"type": "text", "text": "shelf.intro"}]}
+    found = described.Found("ovos-skill-books", "1.0", "ovos_skill_books", root, page)
+    _, groups = pages.parse_described(found, "ovos-skill-books", "1.0")
+    assert groups == [{"id": "shelf", "key": "nav.group.shelf", "label": "Shelf", "order": 5, "level": "everyday"}]

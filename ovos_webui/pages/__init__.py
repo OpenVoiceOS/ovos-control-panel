@@ -533,18 +533,23 @@ def parse_described(found: Any, package: str, version: str) -> tuple[Page, list]
     needs = data.get("needs") or [package]
     if isinstance(needs, str) or not all(isinstance(n, str) and n for n in needs):
         raise PageError("needs must be a list of package names")
+    strings = described.strings(found.root)
+    english = described.english(page_data, strings)
     groups = []
     for raw in data.get("groups") or ():
         if not isinstance(raw, dict) or not _ID_RE.match(str(raw.get("id", ""))):
             raise PageError(f"not a group definition: {raw!r}")
-        gkey, glabel = _title(raw.get("title"))
+        gtitle = raw.get("title")
+        if isinstance(gtitle, str) and described.is_key(gtitle):
+            # a label, in English from the package's strings
+            gkey, glabel = gtitle, english.get(gtitle) or (strings.get("en") or {}).get(gtitle) or raw["id"]
+        else:
+            gkey, glabel = _title(gtitle)
         level = raw.get("level", "advanced")
         if level not in ("everyday", "advanced"):
             raise PageError(f"a group level is everyday or advanced, not {level!r}")
         groups.append({"id": raw["id"], "key": gkey, "label": glabel,
                        "order": int(raw.get("order", 100)), "level": level})
-    strings = described.strings(found.root)
-    english = described.english(page_data, strings)
     label = english.get(title["key"]) or title.get("en") or pid
     page_data["en"] = english
     body = json.dumps(page_data, ensure_ascii=False).replace("</", "<\\/")
