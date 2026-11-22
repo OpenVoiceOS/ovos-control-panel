@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.1a91](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a91) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a90...0.0.1a91)
+
+**Merged pull requests:**
+
+- Skills and plugins: show what is in the OVOS release, or everything on PyPI [\#180](https://github.com/OpenVoiceOS/ovos-control-panel/pull/180) ([andlo](https://github.com/andlo))
+- A distribution can say which services its device leaves out, and who may frame the panel [\#179](https://github.com/OpenVoiceOS/ovos-control-panel/pull/179) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a90](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a90) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a89...0.0.1a90)
@@ -532,8 +541,6 @@
 
 - fix: run the build tests, which have never started [\#60](https://github.com/OpenVoiceOS/ovos-control-panel/pull/60) ([JarbasAl](https://github.com/JarbasAl))
 - fix: clear ruff lint errors so the lint check can pass [\#56](https://github.com/OpenVoiceOS/ovos-control-panel/pull/56) ([JarbasAl](https://github.com/JarbasAl))
-- fix: install the transformer plugins the tests require [\#55](https://github.com/OpenVoiceOS/ovos-control-panel/pull/55) ([JarbasAl](https://github.com/JarbasAl))
-- feat: add Portuguese and Spanish UI locales [\#54](https://github.com/OpenVoiceOS/ovos-control-panel/pull/54) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
