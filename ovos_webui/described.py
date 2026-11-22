@@ -42,7 +42,7 @@ RESERVED_BUS = ("mycroft.", "ovos.skills.", "ovos.skill.", "ovos.common_play.", 
 _BUS_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*(\.[a-z0-9_-]+)*\.$")
 _MSG_RE = re.compile(r"^[a-z0-9][a-z0-9_.:-]{0,127}$")
 _KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
-_FIELD_RE = re.compile(r"^[a-z_][a-z0-9_]{0,63}$")
+_FIELD_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,63}$")
 #: a field in an answer, maybe nested: "ports.outputs"
 _PATH_RE = re.compile(r"^[a-z_][a-z0-9_]{0,63}(\.[a-z_][a-z0-9_]{0,63}){0,3}$")
 MAX_DATA = 4096

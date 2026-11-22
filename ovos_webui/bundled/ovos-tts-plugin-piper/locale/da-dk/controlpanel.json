@@ -4,5 +4,7 @@
  "piper.voice": "Stemme",
  "piper.voice.hint": "default vælger sprogets egen stemme. En anden stemme ved sit navn, fx da_DK-talesyntese-medium eller en_GB-alan-low.",
  "piper.cuda": "Brug grafikkortet (CUDA)",
- "piper.cuda.hint": "Kun på en enhed med et NVIDIA-grafikkort og onnxruntime-gpu."
+ "piper.cuda.hint": "Kun på en enhed med et NVIDIA-grafikkort og onnxruntime-gpu.",
+ "piper.speed": "Hvor langsomt den taler",
+ "piper.speed.hint": "1 er stemmens eget tempo; lavere er hurtigere, højere er langsommere."
 }

@@ -4,5 +4,7 @@
  "piper.voice": "Voz",
  "piper.voice.hint": "default elige la voz propia del idioma. Otra voz por su nombre, como es_ES-davefx-medium.",
  "piper.cuda": "Usar la tarjeta gráfica (CUDA)",
- "piper.cuda.hint": "Solo en un dispositivo con tarjeta gráfica NVIDIA y onnxruntime-gpu."
+ "piper.cuda.hint": "Solo en un dispositivo con tarjeta gráfica NVIDIA y onnxruntime-gpu.",
+ "piper.speed": "Lo despacio que habla",
+ "piper.speed.hint": "1 es el ritmo propio de la voz; menos es más rápido, más es más lento."
 }
