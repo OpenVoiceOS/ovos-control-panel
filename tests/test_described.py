@@ -447,3 +447,14 @@ def test_a_plugin_is_made_the_one_in_use_and_heard(bus, monkeypatch, tmp_path):
     import time
     time.sleep(0.2)
     assert said == [{"utterance": "Hej", "lang": "da-DK"}]
+
+
+def test_a_package_that_names_itself_with_underscores_is_found(tmp_path, monkeypatch):
+    """Some wheels say Name: ovos_tts_plugin_server; it is the same package."""
+    from types import SimpleNamespace as NS
+    _bundle(tmp_path, monkeypatch, dict(SHELF, **{"for": "ovos-skill-weather"}))
+    dist = NS(metadata={"Name": "ovos_skill_weather"}, version="1.0", files=[], entry_points=[],
+              read_text=lambda name: "")
+    monkeypatch.setattr(described.metadata, "distributions", lambda: [dist])
+    [found] = described.discover()
+    assert found.package == "ovos-skill-weather" and found.by_panel

@@ -130,11 +130,13 @@ def discover() -> list[Found]:
     except Exception as e:  # noqa: BLE001 - broken metadata must not stop the panel
         LOG.warning("could not read the installed packages: %s", e)
         return out
+    from packaging.utils import canonicalize_name
     for dist in dists:
-        name = (dist.metadata.get("Name") or "").strip()
-        if not name or name.lower() in seen or classify(name) is None:
+        # a wheel may name itself ovos_tts_plugin_server: the same package
+        name = canonicalize_name((dist.metadata.get("Name") or "").strip())
+        if not name or name in seen or classify(name) is None:
             continue
-        seen.add(name.lower())
+        seen.add(name)
         for top in _tops(dist):
             root = _package_dir(top)
             path = root / FILE if root else None
