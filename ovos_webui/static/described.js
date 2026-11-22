@@ -286,11 +286,15 @@ OvosWebUI.ready(function () {
         });
         if (acts.children.length) { li.appendChild(acts); }
         // a picture from the page's own pictures folder, beside the row
-        var file = block.picture && item[block.picture];
-        if (typeof file === "string" && /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}$/.test(file)) {
-          var img = document.createElement("img");
-          img.src = "/pages/" + encodeURIComponent(page.id) + "/" + encodeURIComponent(file);
-          img.alt = "";
+        // (a row without one keeps the place, so the rows line up)
+        if (block.picture) {
+          var file = item[block.picture];
+          var img = document.createElement(typeof file === "string"
+            && /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}$/.test(file) ? "img" : "span");
+          if (img.tagName === "IMG") {
+            img.src = "/pages/" + encodeURIComponent(page.id) + "/" + encodeURIComponent(file);
+            img.alt = "";
+          }
           img.className = "cp-picture";
           var body = document.createElement("div");
           body.className = "cp-row-body";
