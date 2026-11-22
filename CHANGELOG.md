@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a99](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a99) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a98...0.0.1a99)
+
+**Merged pull requests:**
+
+- Sign in with a session, not the token in the cookie [\#188](https://github.com/OpenVoiceOS/ovos-control-panel/pull/188) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a98](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a98) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a97...0.0.1a98)
@@ -537,10 +545,6 @@
 ## [0.0.1a33](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a33) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a32...0.0.1a33)
-
-**Merged pull requests:**
-
-- chore: record the alpha set the panel is built against [\#64](https://github.com/OpenVoiceOS/ovos-control-panel/pull/64) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a32](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a32) (2026-08-26)
 
