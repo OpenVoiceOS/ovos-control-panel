@@ -1,6 +1,7 @@
 """Every library the panel imports is one it says it needs, so a clean
 install (a python:slim image, say) starts."""
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -25,8 +26,10 @@ def imported():
 
 
 def test_every_library_imported_is_a_dependency():
-    import tomllib
-    deps = tomllib.loads((ROOT.parent / "pyproject.toml").read_text())["project"]["dependencies"]
+    # pyproject's dependencies list, read without tomllib (Python 3.11+)
+    text = (ROOT.parent / "pyproject.toml").read_text()
+    block = re.search(r"^dependencies = \[(.*?)^\]", text, re.S | re.M).group(1)
+    deps = re.findall(r'^\s*"([^"]+)"', block, re.M)
     declared = {d.split("[")[0].split(">")[0].split("=")[0].split("<")[0].strip().lower().replace("_", "-")
                 for d in deps}
     third = {n for n in imported() if n not in sys.stdlib_module_names and n != "ovos_webui"}
