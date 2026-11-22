@@ -448,4 +448,5 @@ def test_the_shell_links_its_assets_by_version():
     from ovos_webui.version import __version__
     reg = pages.load(_own())
     html = pages.render(reg.by_id()["about"], reg.nav_json())
-    assert f'/static/app.js?v={__version__}' in html and f'/static/app.css?v={__version__}' in html
+    assert f'/static/app.js?v={__version__}.' in html and f'/static/app.css?v={__version__}.' in html
+    assert pages._asset_version() in html, "a change to the files is fetched too"

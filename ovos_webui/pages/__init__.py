@@ -12,11 +12,13 @@ broken page is left out and named; it never stops the panel from starting.
 from __future__ import annotations
 
 import base64
+import functools
 import importlib
 import json
 import logging
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from importlib import metadata, resources
 from typing import Any, Callable
 
@@ -439,6 +441,21 @@ def _own_version() -> str:
     return __version__
 
 
+@functools.lru_cache(maxsize=1)
+def _asset_version() -> str:
+    """The version in the asset links: the panel's version and a short mark
+    of its static files, so a change to them is fetched even when the
+    version number stays the same (a checkout, a test build)."""
+    import hashlib
+    static = Path(__file__).resolve().parent.parent / "static"
+    h = hashlib.sha1()
+    for f in sorted(static.rglob("*")):
+        if f.is_file():
+            st = f.stat()
+            h.update(f"{f.relative_to(static)}:{st.st_size}:{int(st.st_mtime)}".encode())
+    return f"{_own_version()}.{h.hexdigest()[:8]}"
+
+
 def _sources(eps: list | None) -> list[tuple[str, Callable[[], Any], str, str, str]]:
     """(name, loader, module, package, version) for every page to load."""
     eps = _entry_points() if eps is None else eps
@@ -759,7 +776,7 @@ def render(page: Page, nav_json: str, brand: dict[str, Any] | None = None) -> st
                  # the version in the asset links, so a browser fetches the
                  # new stylesheet and script after an update instead of
                  # running an old script against new pages
-                 "v": _esc(_own_version()),
+                 "v": _esc(_asset_version()),
                  "html_attrs": branding.html_attrs(branding.appearance())}
         out = _shell()
         for name, value in parts.items():
