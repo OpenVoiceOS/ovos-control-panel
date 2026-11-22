@@ -118,6 +118,11 @@ settingsmeta, so settingsmeta stays the plain OVOS standard. The form, with the
 texts chosen, is also in `GET /api/skills/<skill_id>?lang=<lang>` as `form`, so
 another user interface can draw the same.
 
+A skill with a [page of its own](pages.md) can describe its settings there
+instead, with a `form` that saves `{"settings": true}`: the same
+`settings.json`, with what that format adds (web addresses, required fields,
+limits, fields shown only when another is set).
+
 A key that the form does not cover stays in the file. The page names those keys,
 and you can edit them with **Edit as JSON**. Keys that start with an underscore
 are internal, and the page leaves them alone.

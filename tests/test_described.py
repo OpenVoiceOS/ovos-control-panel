@@ -287,3 +287,45 @@ def test_a_list_can_have_a_filter():
     page["blocks"][0]["filter"] = {"by": "Who!", "label": "f.who"}
     with pytest.raises(described.DescribedError):
         checked(page, "ovos-skill-f")
+
+
+SHELF = {"controlpanel": 1, "id": "shelf", "title": {"key": "shelf.title", "en": "Shelf"}, "bus": "ovos.shelf.",
+         "blocks": [{"type": "form", "save": {"settings": True}, "fields": [
+             {"name": "url", "label": "shelf.url", "type": "url", "required": True},
+             {"name": "token", "label": "shelf.token", "type": "password"},
+             {"name": "hours", "label": "shelf.hours", "type": "number", "min": 1, "max": 24, "default": 6}]}]}
+
+
+def test_only_a_skills_page_saves_in_its_settings():
+    with pytest.raises(described.DescribedError, match="one skill"):
+        described.check(SHELF, "ovos-phal-plugin-shelf")
+    page, refs = described.check(SHELF, "ovos-skill-shelf", skill_id="ovos-skill-shelf.me")
+    assert refs["b0.form"]["block"]["settings"] == "ovos-skill-shelf.me"
+    bad = json.loads(json.dumps(SHELF))
+    bad["blocks"][0]["save"] = {"settings": "ovos-skill-other.them"}
+    with pytest.raises(described.DescribedError, match="settings is true"):
+        described.check(bad, "ovos-skill-shelf", skill_id="ovos-skill-shelf.me")
+
+
+def test_a_form_saves_in_the_skills_settings_json(bus, monkeypatch, tmp_path):
+    from ovos_webui import skillsio
+    root = tmp_path / "ovos_skill_shelf"
+    root.mkdir()
+    found = described.Found("ovos-skill-shelf", "1.0", "ovos_skill_shelf", root, SHELF)
+    monkeypatch.setattr(described, "discover", lambda: [found])
+    monkeypatch.setattr(pages, "_own_skill_id", lambda package: "ovos-skill-shelf.me")
+    skillsio.write_settings("ovos-skill-shelf.me", {"token": "old", "counter": 7})
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
+    with TestClient(app, base_url="http://127.0.0.1:8500",
+                    headers={"sec-fetch-site": "same-origin"}) as c:
+        assert c.post("/api/cp/shelf/form", json={"ref": "b0.form", "values": {"url": "https://x.org"}}
+                      ).status_code in (401, 403), "it needs the token"
+        c.headers["Authorization"] = "Bearer s3cret-token"
+        read = c.get("/api/cp/shelf/form", params={"ref": "b0.form"}).json()["values"]
+        assert read == {"token": {"set": True}, "hours": 6}, "a password is never sent"
+        assert c.post("/api/cp/shelf/form", json={"ref": "b0.form", "values": {"hours": 3}}).status_code == 400
+        ok = c.post("/api/cp/shelf/form", json={"ref": "b0.form",
+                                                "values": {"url": "https://x.org", "token": "", "hours": 3}})
+        assert ok.json() == {"ok": True}
+    assert skillsio.read_settings("ovos-skill-shelf.me") == \
+        {"token": "old", "counter": 7, "url": "https://x.org", "hours": 3}, "the rest is kept"

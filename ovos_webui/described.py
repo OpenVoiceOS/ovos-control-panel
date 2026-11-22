@@ -385,11 +385,18 @@ class _Checker:
                 out["config"] = path
                 if save.get("reload"):
                     out["reload"] = self.message(save["reload"], where)
+            elif save.get("settings"):
+                if save["settings"] is not True:
+                    raise DescribedError(f"{where}: settings is true")
+                if not getattr(self, "skill_id", None):
+                    raise DescribedError(f"{where}: only the page of a package with one skill saves "
+                                         "in that skill's settings")
+                out["settings"] = self.skill_id
             elif save.get("send"):
                 out["send"] = self.message(save["send"], where)
                 out["query"] = self.message(raw.get("query"), where)
             else:
-                raise DescribedError(f"{where}: a form saves with send or config")
+                raise DescribedError(f"{where}: a form saves with send, config or settings")
             self.refs[ref + ".form"] = {"kind": "form", "block": out}
         if kind == "upload":
             out["send"] = self.message(raw.get("send"), where)
@@ -426,9 +433,11 @@ class _Checker:
         return out
 
 
-def check(data: Any, package: str) -> tuple[dict, dict[str, dict]]:
+def check(data: Any, package: str, skill_id: str | None = None) -> tuple[dict, dict[str, dict]]:
     """Check a file; return the page as the browser gets it, and the
-    declarations the bus bridge goes by (ref -> what it may send)."""
+    declarations the bus bridge goes by (ref -> what it may send).
+    ``skill_id`` is the skill the package registers, if it is a skill: a
+    form may then save in that skill's settings.json."""
     if isinstance(data, Exception):
         raise DescribedError(str(data))
     if not isinstance(data, dict):
@@ -437,6 +446,7 @@ def check(data: Any, package: str) -> tuple[dict, dict[str, dict]]:
         raise DescribedError(f"written for format {data.get('controlpanel')!r}; "
                              f"this panel draws {sorted(VERSIONS)}")
     checker = _Checker(data, package)
+    checker.skill_id = skill_id
     blocks = data.get("blocks")
     if not isinstance(blocks, list) or not blocks:
         raise DescribedError("blocks must be a list of blocks")
@@ -735,6 +745,8 @@ def routes_for(pid: str, refs: dict[str, dict]):
             block = decl["block"]
             if "config" in block:
                 values = r.config.user_or_merged(block["config"].split(".")) or {}
+            elif "settings" in block:
+                values = _read_settings(block["settings"])
             else:
                 values = _ask(r, block["query"], {})
             out = {}
@@ -786,6 +798,19 @@ def routes_for(pid: str, refs: dict[str, dict]):
                     except HTTPException:
                         pass    # saved; the plugin reads it when it starts
                 return {"ok": True}
+            if "settings" in block:
+                skill_id = block["settings"]
+                lacking = missing(decl, values, _read_settings(skill_id))
+                if lacking:
+                    raise HTTPException(400, ", ".join(lacking) + " is needed")
+                from ovos_webui import skillsio
+                try:
+                    # merged over what is there, read again right before
+                    # writing: keys the form has not are kept
+                    skillsio.write_settings(skill_id, values)
+                except skillsio.SkillSettingsError as e:
+                    raise HTTPException(400, str(e)) from None
+                return {"ok": True}
             return _ask(r, block["send"], values)
 
         async def upload(request: Request) -> dict[str, Any]:
@@ -817,6 +842,15 @@ def routes_for(pid: str, refs: dict[str, dict]):
         r.privileged.post(base + "/upload")(upload)
 
     return add
+
+
+def _read_settings(skill_id: str) -> dict:
+    """A skill's settings.json; nothing when it cannot be read."""
+    from ovos_webui import skillsio
+    try:
+        return skillsio.read_settings(skill_id)
+    except (skillsio.SkillSettingsError, ValueError):
+        return {}
 
 
 def upload_name(name: str) -> str:
