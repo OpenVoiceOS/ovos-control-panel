@@ -2,9 +2,10 @@
  "piper.title": "Voz Piper",
  "piper.intro": "Piper crea la voz en el propio dispositivo: nada de lo que se te responde sale de él. La primera vez que se usa una voz, se descarga.",
  "piper.voice": "Voz",
- "piper.voice.hint": "default elige la voz propia del idioma. Otra voz por su nombre, como es_ES-davefx-medium.",
+ "piper.voice.hint": "Las voces que Piper tiene para tu idioma. La primera vez que se usa una, se descarga.",
  "piper.cuda": "Usar la tarjeta gráfica (CUDA)",
  "piper.cuda.hint": "Solo en un dispositivo con tarjeta gráfica NVIDIA y onnxruntime-gpu.",
  "piper.speed": "Lo despacio que habla",
- "piper.speed.hint": "1 es el ritmo propio de la voz; menos es más rápido, más es más lento."
+ "piper.speed.hint": "1 es el ritmo propio de la voz; menos es más rápido, más es más lento.",
+ "piper.voice.default": "La voz propia del idioma"
 }
