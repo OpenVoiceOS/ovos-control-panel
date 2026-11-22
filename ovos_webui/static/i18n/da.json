@@ -184,5 +184,15 @@
  "common.upload.kind": "Den kan tage: {accept}",
  "common.upload.big": "Filen er større end {mb} MB.",
  "common.upload.busy": "Sender …",
- "common.all": "Alle"
+ "common.all": "Alle",
+ "page.byPanel": "beskrevet af kontrolpanelet",
+ "module.tts.title": "Stemmen",
+ "module.stt.title": "Talegenkendelse",
+ "module.active": "Den er i brug.",
+ "module.fallback": "Den er reserve og bruges, hvis den i brug fejler.",
+ "module.unused": "Den er ikke i brug.",
+ "module.use": "Brug denne",
+ "module.useFallback": "Brug som reserve",
+ "module.test": "Hør den",
+ "module.test.sentence": "Hej, sådan lyder jeg."
 }

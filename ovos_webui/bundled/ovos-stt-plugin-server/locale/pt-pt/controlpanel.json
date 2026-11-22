@@ -1,0 +1,9 @@
+{
+ "sttServer.title": "Servidor de reconhecimento de voz",
+ "sttServer.intro": "O que diz é reconhecido num servidor: o som é enviado para lá e o texto volta. Sem servidores próprios são usados os servidores públicos do OpenVoiceOS.",
+ "sttServer.urls": "Os seus próprios servidores, um endereço por linha",
+ "sttServer.urls.hint": "O endereço completo, como https://stt.example.org/stt. Deixe vazio para usar os servidores públicos.",
+ "sttServer.timeout": "Esperar pela resposta (segundos)",
+ "sttServer.verify": "Verificar os certificados dos servidores",
+ "sttServer.verify.hint": "Desligue apenas para um servidor de testes."
+}

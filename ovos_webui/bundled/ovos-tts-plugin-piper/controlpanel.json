@@ -1,0 +1,53 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-tts-plugin-piper>=0.2.0,<1",
+ "id": "piper",
+ "path": "/piper",
+ "title": "piper.title",
+ "group": "voice",
+ "order": 42,
+ "bus": "ovos.piper.",
+ "blocks": [
+  {
+   "type": "text",
+   "text": "piper.intro"
+  },
+  {
+   "type": "module",
+   "kind": "tts"
+  },
+  {
+   "type": "form",
+   "save": {
+    "config": "tts.ovos-tts-plugin-piper"
+   },
+   "fields": [
+    {
+     "name": "voice",
+     "label": "piper.voice",
+     "type": "text",
+     "default": "default",
+     "max_length": 100,
+     "hint": "piper.voice.hint"
+    },
+    {
+     "name": "length-scale",
+     "label": "piper.speed",
+     "type": "slider",
+     "min": 0.5,
+     "max": 2,
+     "step": 0.1,
+     "default": 1,
+     "hint": "piper.speed.hint"
+    },
+    {
+     "name": "use_cuda",
+     "label": "piper.cuda",
+     "type": "checkbox",
+     "default": false,
+     "hint": "piper.cuda.hint"
+    }
+   ]
+  }
+ ]
+}

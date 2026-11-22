@@ -1,0 +1,9 @@
+{
+ "ttsServer.title": "Servidor de voz",
+ "ttsServer.intro": "A voz é criada num servidor: o texto de cada resposta é enviado para lá e o som volta. Sem servidores próprios são usados os servidores públicos do OpenVoiceOS.",
+ "ttsServer.host": "Os seus próprios servidores, um por linha",
+ "ttsServer.host.hint": "Deixe vazio para usar os servidores públicos.",
+ "ttsServer.timeout": "Esperar pela resposta (segundos)",
+ "ttsServer.verify": "Verificar os certificados dos servidores",
+ "ttsServer.verify.hint": "Desligue apenas para um servidor de testes."
+}

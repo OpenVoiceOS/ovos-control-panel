@@ -28,7 +28,16 @@ OvosWebUI.ready(function () {
     "common.upload.kind": "It can take: {accept}",
     "common.upload.big": "The file is larger than {mb} MB.",
     "common.upload.busy": "Sending …",
-    "common.all": "All"
+    "common.all": "All",
+    "module.tts.title": "The voice",
+    "module.stt.title": "Speech recognition",
+    "module.active": "This is the one in use.",
+    "module.fallback": "This is the fallback, used when the one in use fails.",
+    "module.unused": "This is not in use.",
+    "module.use": "Use this",
+    "module.useFallback": "Use as fallback",
+    "module.test": "Hear it",
+    "module.test.sentence": "Hello, this is how I sound."
   };
   // What the server says, in the words of the page: its known answers have
   // keys here, and a skill may answer with a key of its own page.
@@ -352,6 +361,46 @@ OvosWebUI.ready(function () {
       if (block.refresh) { setInterval(load, block.refresh * 1000); }
       return holder;
     },
+    module: function (block) {
+      // whether this plugin is the one in use, to make it so, and to hear it
+      var card = section({heading: block.heading || ("module." + block.kind + ".title")});
+      var line = document.createElement("p");
+      card.appendChild(line);
+      var row = document.createElement("div");
+      row.className = "row";
+      card.appendChild(row);
+      var msg = msgEl(card);
+      var ref = block.ref + ".module";
+      function show(state) {
+        line.textContent = t(state.active ? "module.active" : state.fallback ? "module.fallback" : "module.unused");
+        row.innerHTML = "";
+        if (!state.active) {
+          row.appendChild(button({label: "module.use"}, function () { use("module"); }));
+        }
+        if (!state.active && !state.fallback) {
+          row.appendChild(button({label: "module.useFallback", secondary: true}, function () { use("fallback_module"); }));
+        }
+        if (state.active && block.kind === "tts") {
+          row.appendChild(button({label: "module.test", secondary: true}, function () {
+            post("/module/test", {ref: ref, text: t("module.test.sentence"), lang: document.documentElement.lang || ""})
+              .then(function () { say(msg, t("common.done")); })
+              .catch(function (e) { say(msg, why(e), true); });
+          }));
+        }
+      }
+      function use(role) {
+        post("/module", {ref: ref, as: role})
+          .then(function (state) { show(state); say(msg, t("common.done")); })
+          .catch(function (e) { say(msg, why(e), true); });
+      }
+      function load() {
+        return OvosWebUI.api(base + "/module?ref=" + encodeURIComponent(ref)).then(show)
+          .catch(function (e) { say(msg, why(e), true); });
+      }
+      refreshers.push(load);
+      load();
+      return card;
+    },
     upload: function (block) {
       var card = section(block);
       var file = document.createElement("input");
@@ -512,7 +561,7 @@ OvosWebUI.ready(function () {
           if (v === undefined) { return; }
           if (f.type === "checkbox") { input.checked = "on" in f ? !same(v, f.off) : !!v; }
           else if (f.type === "password") { input.placeholder = v.set ? t("common.password_set") : ""; inputs[name].set = !!v.set; }
-          else if (f.type === "lines") { input.value = (v || []).join("\n"); }
+          else if (f.type === "lines") { input.value = (Array.isArray(v) ? v : (v ? [String(v)] : [])).join("\n"); }
           else { input.value = v; input.dataset.want = v; }
           if (input.cpShow) { input.cpShow(); }
         });

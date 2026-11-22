@@ -112,6 +112,8 @@ class Page:
     #: what the bus bridge may send for it (ref -> declaration).
     described: dict | None = None
     refs: dict = field(default_factory=dict)
+    #: described by the panel, for a package that has no description of its own
+    by_panel: bool = False
 
     def nav(self) -> dict[str, Any]:
         """What the browser's menu needs to know about the page."""
@@ -532,7 +534,9 @@ def parse_described(found: Any, package: str, version: str) -> tuple[Page, list]
     """Check a controlpanel.json and turn it into a :class:`Page`."""
     data = found.data
     try:
-        page_data, refs = described.check(data, package, skill_id=_own_skill_id(package))
+        page_data, refs = described.check(data, package, skill_id=_own_skill_id(package),
+                                          config_roots=described.config_roots(package),
+                                          modules=described.plugin_modules(package))
     except described.DescribedError as e:
         raise PageError(str(e)) from e
     pid = data.get("id")
@@ -587,7 +591,7 @@ def parse_described(found: Any, package: str, version: str) -> tuple[Page, list]
                 builtin=False, heading_key=heading["key"],
                 heading=english.get(heading["key"]) or heading.get("en") or label,
                 fragment=True, strings=strings, module=found.module,
-                described=page_data, refs=refs,
+                described=page_data, refs=refs, by_panel=bool(getattr(found, "by_panel", False)),
                 routes=described.routes_for(pid, refs),
                 # an upload's body may be as large as its block says
                 uploads={f"/api/cp/{pid}/upload": max(b["max_mb"] for b in page_data["blocks"]
@@ -782,8 +786,10 @@ def _origin_html(page: Page) -> str:
         return ""
     name = f'<span class="page-origin-name">{_esc(found["name"])}</span> · ' if found["name"] else ""
     pkg = _esc(found["package"] + (" " + found["version"] if found["version"] else ""))
+    by = (' · <span class="page-origin-by" data-i18n="page.byPanel">described by the control panel</span>'
+          if page.by_panel else "")
     return (f'\n<p class="page-origin" data-package="{_esc(found["package"])}">'
-            f'<span data-i18n="page.from">From</span> {name}<span class="page-origin-pkg">{pkg}</span></p>')
+            f'<span data-i18n="page.from">From</span> {name}<span class="page-origin-pkg">{pkg}</span>{by}</p>')
 
 
 def render(page: Page, nav_json: str, brand: dict[str, Any] | None = None) -> str:

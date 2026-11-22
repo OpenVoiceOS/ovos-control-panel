@@ -184,5 +184,15 @@
  "common.upload.kind": "Aceita: {accept}",
  "common.upload.big": "O ficheiro tem mais de {mb} MB.",
  "common.upload.busy": "A enviar …",
- "common.all": "Todos"
+ "common.all": "Todos",
+ "page.byPanel": "descrito pelo painel de controlo",
+ "module.tts.title": "A voz",
+ "module.stt.title": "Reconhecimento de voz",
+ "module.active": "É a que está em uso.",
+ "module.fallback": "É a de reserva, usada se a que está em uso falhar.",
+ "module.unused": "Não está em uso.",
+ "module.use": "Usar esta",
+ "module.useFallback": "Usar como reserva",
+ "module.test": "Ouvir",
+ "module.test.sentence": "Olá, é assim que eu soo."
 }

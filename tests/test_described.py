@@ -1,6 +1,7 @@
 """Pages described in controlpanel.json: the file is checked, and the bus
 bridge sends only what the file declares."""
 import base64
+import re
 import json
 
 import pytest
@@ -329,3 +330,131 @@ def test_a_form_saves_in_the_skills_settings_json(bus, monkeypatch, tmp_path):
         assert ok.json() == {"ok": True}
     assert skillsio.read_settings("ovos-skill-shelf.me") == \
         {"token": "old", "counter": 7, "url": "https://x.org", "hours": 3}, "the rest is kept"
+
+
+def _bundle(tmp_path, monkeypatch, data):
+    root = tmp_path / "bundled" / "ovos-skill-weather"
+    (root / "locale" / "da-dk").mkdir(parents=True)
+    (root / "controlpanel.json").write_text(json.dumps(data), encoding="utf-8")
+    monkeypatch.setattr(described, "BUNDLED", tmp_path / "bundled")
+    return root
+
+
+def test_the_panel_brings_a_page_for_the_versions_it_was_written_for(tmp_path, monkeypatch):
+    page = dict(SHELF, id="weather", **{"for": "ovos-skill-weather>=1.0,<2"})
+    _bundle(tmp_path, monkeypatch, page)
+    found = described._bundled("OVOS_Skill_Weather", "1.4.2a3", ["ovos_skill_weather"])
+    assert found is not None and found.by_panel and found.package == "OVOS_Skill_Weather"
+    assert described._bundled("ovos-skill-weather", "2.0.0", []) is None, "not written for 2.x"
+    assert described._bundled("ovos-skill-other", "1.0", []) is None
+
+
+@pytest.mark.parametrize("target", ["", "ovos-skill-other>=1", "not a requirement !"])
+def test_a_page_the_panel_brings_must_say_what_it_is_for(tmp_path, monkeypatch, target):
+    _bundle(tmp_path, monkeypatch, dict(SHELF, **{"for": target}))
+    assert described._bundled("ovos-skill-weather", "1.0", []) is None
+
+
+def test_a_page_the_panel_brings_says_so_at_its_foot(tmp_path, monkeypatch):
+    root = _bundle(tmp_path, monkeypatch, dict(SHELF, **{"for": "ovos-skill-weather"}))
+    monkeypatch.setattr(pages, "_own_skill_id", lambda package: "ovos-skill-weather.openvoiceos")
+    found = described.Found("ovos-skill-weather", "1.0", "ovos_skill_weather", root, SHELF, by_panel=True)
+    page, _ = pages.parse_described(found, "ovos-skill-weather", "1.0")
+    assert page.by_panel
+    monkeypatch.setattr(pages, "origin", lambda p, lang=None: {"package": p.package, "version": "1.0",
+                                                                "name": "Weather", "icon": None})
+    assert 'data-i18n="page.byPanel"' in pages._origin_html(page)
+    page.by_panel = False
+    assert "byPanel" not in pages._origin_html(page)
+
+
+def test_a_plugin_saves_in_its_own_section_and_no_other(monkeypatch):
+    from types import SimpleNamespace as NS
+    eps = [NS(group="opm.tts", name="ovos-tts-plugin-server"), NS(group="opm.skill", name="x.y"),
+           NS(group="opm.phal", name="ovos-phal-plugin-x")]
+    monkeypatch.setattr(described.metadata, "distribution", lambda name: NS(entry_points=eps))
+    roots = described.config_roots("ovos-tts-plugin-server")
+    assert roots == ["PHAL.ovos-tts-plugin-server", "tts.ovos-tts-plugin-server", "PHAL.ovos-phal-plugin-x"]
+
+    def form(path):
+        return {"controlpanel": 1, "id": "t", "bus": "ovos.t.", "blocks": [
+            {"type": "form", "save": {"config": path}, "fields": [{"name": "host", "label": "t.host"}]}]}
+    described.check(form("tts.ovos-tts-plugin-server"), "ovos-tts-plugin-server", config_roots=roots)
+    for bad in ("tts", "tts.module", "tts.ovos-tts-plugin-piper", "stt.ovos-tts-plugin-server"):
+        with pytest.raises(described.DescribedError, match="own place"):
+            described.check(form(bad), "ovos-tts-plugin-server", config_roots=roots)
+
+
+@pytest.mark.parametrize("folder", sorted(p.name for p in described.BUNDLED.iterdir() if p.is_dir()))
+def test_every_page_the_panel_brings_is_sound(folder):
+    """Each bundled page passes the checks for its package's own places, says
+    what it is for, and has the same strings in every language."""
+    from packaging.requirements import Requirement
+    root = described.BUNDLED / folder
+    data = json.loads((root / described.FILE).read_text(encoding="utf-8"))
+    assert Requirement(data["for"]).name == folder
+    kind = folder.split("-")[1]          # ovos-tts-plugin-server -> tts
+    roots = ["PHAL." + folder] + ([f"{kind}.{folder}"] if kind in ("tts", "stt") else [])
+    modules = {kind: [folder]} if kind in ("tts", "stt") else {}
+    described.check(data, folder, config_roots=roots, modules=modules)
+    found = described.strings(root)
+    assert "en" in found and "da" in found
+    keys = set(found["en"])
+    assert all(set(table) == keys for table in found.values()), "the same strings in every language"
+    used = set(re.findall(r'"([a-z][\w]*\.[\w.]+)"', (root / described.FILE).read_text()))
+    assert {k for k in used if not k.startswith(("common.", "ovos."))} <= keys
+
+
+
+VOICE = {"controlpanel": 1, "id": "voice-x", "title": {"key": "x.title", "en": "X"}, "bus": "ovos.voice-x.",
+         "blocks": [{"type": "module", "kind": "tts"}]}
+
+
+def test_a_module_block_is_only_for_a_plugin_of_that_kind():
+    with pytest.raises(described.DescribedError, match="no tts plugin"):
+        described.check(VOICE, "ovos-skill-x")
+    with pytest.raises(described.DescribedError, match="kind"):
+        described.check(dict(VOICE, blocks=[{"type": "module", "kind": "ww"}]), "x", modules={"tts": ["x"]})
+    page, refs = described.check(VOICE, "ovos-tts-plugin-x", modules={"tts": ["ovos-tts-plugin-x"]})
+    assert refs["b0.module"]["block"]["module"] == "ovos-tts-plugin-x"
+
+
+def test_a_plugin_is_made_the_one_in_use_and_heard(bus, monkeypatch, tmp_path):
+    root = tmp_path / "ovos_tts_plugin_x"
+    root.mkdir()
+    found = described.Found("ovos-tts-plugin-x", "1.0", "ovos_tts_plugin_x", root, VOICE)
+    monkeypatch.setattr(described, "discover", lambda: [found])
+    monkeypatch.setattr(described, "plugin_modules", lambda package: {"tts": ["ovos-tts-plugin-x"]})
+    said = []
+    bus.on("speak", lambda m: said.append(dict(m.data)))
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
+    with TestClient(app, base_url="http://127.0.0.1:8500",
+                    headers={"sec-fetch-site": "same-origin"}) as c:
+        assert c.post("/api/cp/voice-x/module", json={"ref": "b0.module", "as": "module"}
+                      ).status_code in (401, 403), "it needs the token"
+        c.headers["Authorization"] = "Bearer s3cret-token"
+        state = c.get("/api/cp/voice-x/module", params={"ref": "b0.module"}).json()
+        assert state["active"] is False
+        hear = {"ref": "b0.module", "text": "Hej", "lang": "da-DK"}
+        assert c.post("/api/cp/voice-x/module/test", json=hear).status_code == 409, "not the voice in use"
+        assert c.post("/api/cp/voice-x/module", json={"ref": "b0.module", "as": "tts.module"}).status_code == 400
+        state = c.post("/api/cp/voice-x/module", json={"ref": "b0.module", "as": "fallback_module"}).json()
+        assert state["fallback"] is True and state["active"] is False
+        state = c.post("/api/cp/voice-x/module", json={"ref": "b0.module", "as": "module"}).json()
+        assert state["active"] is True
+        assert c.post("/api/cp/voice-x/module/test", json=hear).json() == {"ok": True}
+        assert c.post("/api/cp/voice-x/module/test", json=dict(hear, text="x" * 300)).status_code == 400
+    import time
+    time.sleep(0.2)
+    assert said == [{"utterance": "Hej", "lang": "da-DK"}]
+
+
+def test_a_package_that_names_itself_with_underscores_is_found(tmp_path, monkeypatch):
+    """Some wheels say Name: ovos_tts_plugin_server; it is the same package."""
+    from types import SimpleNamespace as NS
+    _bundle(tmp_path, monkeypatch, dict(SHELF, **{"for": "ovos-skill-weather"}))
+    dist = NS(metadata={"Name": "ovos_skill_weather"}, version="1.0", files=[], entry_points=[],
+              read_text=lambda name: "")
+    monkeypatch.setattr(described.metadata, "distributions", lambda: [dist])
+    [found] = described.discover()
+    assert found.package == "ovos-skill-weather" and found.by_panel
