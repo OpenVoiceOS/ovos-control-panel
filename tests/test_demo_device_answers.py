@@ -148,7 +148,8 @@ def test_active_skills_are_plain_ids(demo):
 def test_every_answer_names_a_topic_the_panel_asks_about(demo):
     """An answer to a topic nothing sends is dead weight in the picture."""
     root = Path(demo.__file__).resolve().parent.parent / "ovos_webui"
+    # the panel's Python, and the pages it brings, ask about them
     source = "\n".join(p.read_text(encoding="utf-8")
-                       for p in root.glob("*.py"))
+                       for p in [*root.glob("*.py"), *root.glob("bundled/*/controlpanel.json")])
     unused = [topic for topic in demo.ANSWERS if topic not in source]
     assert unused == [], f"nothing in the panel sends {unused}"

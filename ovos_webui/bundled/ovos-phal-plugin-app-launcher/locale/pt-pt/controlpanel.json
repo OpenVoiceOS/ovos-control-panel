@@ -1,0 +1,7 @@
+{
+ "apps.title": "Aplicações",
+ "apps.intro": "Inicie e feche as aplicações de ambiente de trabalho que um dispositivo com ecrã conhece. Isto precisa do plugin app-launcher no dispositivo; sem ele, a lista fica vazia.",
+ "apps.launch": "Iniciar",
+ "apps.close": "Fechar",
+ "apps.none": "Nenhuma aplicação. O plugin app-launcher está instalado no dispositivo?"
+}

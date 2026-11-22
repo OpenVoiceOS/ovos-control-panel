@@ -1,0 +1,7 @@
+{
+ "apps.title": "Apps",
+ "apps.intro": "Launch and close the desktop applications a device with a screen knows about. This needs the app-launcher plugin on the device; without it the list stays empty.",
+ "apps.launch": "Launch",
+ "apps.close": "Close",
+ "apps.none": "No applications. Is the app-launcher plugin installed on the device?"
+}
