@@ -93,6 +93,31 @@ its fields. When it does, the page shows a form with a label for each field.
 When it does not, the page builds a form from the values already in
 `settings.json`, with `ovos_workshop.settings.settings2meta`, and says so.
 
+The form shows settingsmeta's sections with their names as headings, text,
+number, password, checkbox and select fields (options as
+`"Label|value;Label|value"`), and `label` fields as notes. A password is never
+shown: an empty field keeps the one there is.
+
+### Settings in your language
+
+settingsmeta has one text per field, usually in English. A skill can give the
+texts in other languages in `locale/<lang>/controlpanel.json`, the same file a
+[described page](pages.md) uses, by the field's name:
+
+```json
+{
+  "settings.section.Radio": "Radio",
+  "settings.station": "Radiostation",
+  "settings.station.hint": "Som stationen selv kalder sig",
+  "settings.quality.option.320": "Høj"
+}
+```
+
+The page uses the reader's language, then English, then the text in
+settingsmeta, so settingsmeta stays the plain OVOS standard. The form, with the
+texts chosen, is also in `GET /api/skills/<skill_id>?lang=<lang>` as `form`, so
+another user interface can draw the same.
+
 A key that the form does not cover stays in the file. The page names those keys,
 and you can edit them with **Edit as JSON**. Keys that start with an underscore
 are internal, and the page leaves them alone.

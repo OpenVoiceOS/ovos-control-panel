@@ -1520,15 +1520,20 @@ def test_the_old_abilities_address_lands_on_skills(signed_in_page):
 
 def test_a_skill_with_settings_opens_its_settings_and_switch(signed_in_page, make_skill):
     page, url = signed_in_page
-    make_skill("ovos-skill-hello-world.openvoiceos", {"greeting": "hi"},
+    make_skill("ovos-skill-hello-world.openvoiceos", {"greeting": "hi", "key": "s3cret", "mood": "glad"},
                meta={"skillMetadata": {"sections": [{"name": "General", "fields": [
-                   {"name": "greeting", "type": "text", "label": "Greeting", "value": ""}]}]}})
+                   {"name": "greeting", "type": "text", "label": "Greeting", "value": ""},
+                   {"name": "mood", "type": "select", "label": "Mood", "options": "Sad|sad;Glad|glad"},
+                   {"name": "key", "type": "password", "label": "Key"}]}]}})
     page.goto(f"{url}/")
     page.goto(f"{url}/skills#ovos-skill-hello-world.openvoiceos")
     page.wait_for_selector("#detail:not([hidden])")
     assert page.locator("#detail-slug").inner_text() == "ovos-skill-hello-world"
     page.wait_for_selector("#editor:not([hidden])")
     assert page.locator('#form input[name="greeting"]').input_value() == "hi"
+    assert page.locator("#form h4").inner_text() == "General"
+    assert page.locator('#form select[name="mood"]').input_value() == "glad"
+    assert page.locator('#form input[name="key"]').input_value() == "", "a password is never shown"
     assert not page.locator("#nosettings").is_visible()
     page.wait_for_selector("#enable-card:not([hidden])")
     assert page.locator("#enable-toggle").inner_text()

@@ -204,3 +204,85 @@ def parse_settings_text(text: str) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise SkillSettingsError("settings must be a mapping")
     return data
+
+
+# ── settingsmeta as a form, in the reader's language ──────────────────────────
+#: settingsmeta field types and what the form shows for them
+_FIELD_TYPES = {"text": "text", "email": "text", "password": "password", "checkbox": "checkbox",
+                "number": "number", "select": "select", "label": "note"}
+
+
+def _options(raw: Any) -> list[tuple[str, str]]:
+    """settingsmeta's options: ``"Label|value;Label|value"``, or a list of
+    such pairs or of ``{"label", "value"}``."""
+    out: list[tuple[str, str]] = []
+    items = raw.split(";") if isinstance(raw, str) else raw if isinstance(raw, list) else []
+    for item in items:
+        if isinstance(item, dict):
+            label, value = item.get("label"), item.get("value")
+        elif isinstance(item, (list, tuple)) and len(item) == 2:
+            label, value = item
+        elif isinstance(item, str) and item.strip():
+            label, _, value = item.partition("|")
+            value = value if _ else label
+        else:
+            continue
+        out.append((str(label).strip(), str(value).strip()))
+    return out
+
+
+def settings_form(skill_id: str, lang: str = "en") -> dict[str, Any]:
+    """The skill's settingsmeta as a form in ``lang``: its sections with a
+    heading and fields, each with a type, a label, a hint and its options.
+
+    The texts come from the skill's own ``locale/<lang>/controlpanel.json`` by
+    the field's name (``settings.<field>``, ``settings.<field>.hint``,
+    ``settings.<field>.option.<value>``, ``settings.section.<name>``): the
+    reader's language, then English, then the text in settingsmeta. So
+    settingsmeta stays the plain OVOS standard, and any user interface can
+    draw the form it returns."""
+    from ovos_webui import described
+
+    validate_skill_id(skill_id)
+    meta = settings_meta(skill_id)
+    src = _skill_source_dir(skill_id)
+    found = described.strings(src) if src is not None else {}
+    base = (lang or "en").replace("_", "-").lower().split("-")[0]
+    tables = [found.get(base) or {}, found.get("en") or {}]
+
+    def text(key: str, fallback: str | None) -> str | None:
+        for table in tables:
+            if table.get(key):
+                return table[key]
+        return fallback
+
+    sections = []
+    for s in ((meta or {}).get("skillMetadata") or {}).get("sections") or []:
+        if not isinstance(s, dict):
+            continue
+        name = str(s.get("name") or "")
+        fields = []
+        for f in s.get("fields") or []:
+            if not isinstance(f, dict):
+                continue
+            kind = _FIELD_TYPES.get(str(f.get("type") or "text"), "text")
+            fname = str(f.get("name") or "")
+            if kind == "note":
+                key = "settings." + fname if fname else None
+                label = (text(key, None) if key else None) or str(f.get("label") or "")
+                fields.append({"type": "note", "label": label})
+                continue
+            if not fname:
+                continue
+            field = {"name": fname, "type": kind,
+                     "label": text("settings." + fname, str(f.get("label") or fname)),
+                     "hint": text(f"settings.{fname}.hint", None),
+                     "default": f.get("value")}
+            if kind == "select":
+                field["options"] = [{"value": v, "label": text(f"settings.{fname}.option.{v}", label)}
+                                    for label, v in _options(f.get("options"))]
+            fields.append(field)
+        if fields:
+            sections.append({"heading": text("settings.section." + name, name) if name else None,
+                             "fields": fields})
+    return {"sections": sections, "translated": bool(found)}

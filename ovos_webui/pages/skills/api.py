@@ -23,12 +23,14 @@ def routes(r) -> None:
         return {"skills": skillsio.list_skills()}
 
     @r.api.get("/skills/{skill_id}")
-    def api_skill_get(skill_id: str) -> dict[str, Any]:
+    def api_skill_get(skill_id: str, lang: str = "en") -> dict[str, Any]:
         try:
             return {
                 "skill_id": skill_id,
                 "settings": skillsio.read_settings(skill_id),
                 "meta": skillsio.settings_meta(skill_id),
+                # the same, as a form in the reader's language
+                "form": skillsio.settings_form(skill_id, lang),
                 "generated_meta": skillsio.find_settingsmeta(skill_id) is None,
                 "path": str(skillsio.settings_path(skill_id)),
             }
