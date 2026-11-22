@@ -349,6 +349,8 @@ class _Checker:
                                  "when": _when(rename.get("when"), where),
                                  "max_length": min(int(rename.get("max_length", 120)), 300),
                                  "privileged": bool(rename.get("privileged", True))}
+                if rename.get("label") is not None:
+                    out["rename"]["label"] = _label(rename["label"], where)
                 self.refs[ref + ".rename"] = {"kind": "rename", "block": out, **out["rename"]}
         if kind in ("status", "list", "actions"):
             actions = raw.get("actions") or []

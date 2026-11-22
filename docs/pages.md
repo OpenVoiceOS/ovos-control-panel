@@ -106,7 +106,7 @@ prefix every message of the page starts with.
 |---|---|
 | `text` | `text`: a label, and/or `steps`: labels shown as numbered steps. |
 | `status` | `query`, `text` (a label with `{field}` from the answer) and/or `rows` (`label`, `value` with `{field}` or `text` a label, `when`, and `empty`, the label shown when the value is empty; a row without a `label` is a note across the card), `show` (a field that must be true), `actions`, `refresh` (seconds). |
-| `list` | `query`, `items` (the answer's list), `key` (a row's id), `title` (`{field}`), `meta` (a label with `{field}`), `empty`, `split` (`by` a true/false field into two lists, each with a heading), `rename` (`field`, `send`, `when`, `max_length`), `actions` (one per row), `refresh`, `heading`. |
+| `list` | `query`, `items` (the answer's list), `key` (a row's id), `title` (`{field}`), `meta` (a label with `{field}`), `empty`, `split` (`by` a true/false field into two lists, each with a heading), `rename` (`field`, `send`, `when`, `max_length`, `label` for its button), `actions` (one per row), `refresh`, `heading`. |
 | `actions` | `actions`: buttons. |
 | `form` | `fields` and `save`: `{"config": "PHAL.<package>", "reload": "<message>"}` writes in the plugin's own place in `mycroft.conf` and asks it to read it again; `{"send": "<message>"}` with a `query` sends the values to the skill. |
 | `choice` | `param` and `options`: tabs whose value goes with every query on the page. |

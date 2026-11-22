@@ -244,7 +244,7 @@ OvosWebUI.ready(function () {
           input.type = "text"; input.maxLength = block.rename.max_length; input.value = item[block.rename.field] || title;
           input.setAttribute("aria-label", t("common.name"));
           r.appendChild(input);
-          r.appendChild(button({label: "common.rename", secondary: true}, function () {
+          r.appendChild(button({label: block.rename.label || "common.rename", secondary: true}, function () {
             post(block.rename.privileged ? "/act" : "/act-open",
                  {ref: block.ref + ".rename", key: key, value: input.value.trim(), params: params})
               .then(function () { say(msgId, t("common.saved")); load(); })
