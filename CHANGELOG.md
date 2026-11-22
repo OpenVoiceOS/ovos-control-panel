@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a95](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a95) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a94...0.0.1a95)
+
+**Merged pull requests:**
+
+- Docs: the menu as it is now [\#185](https://github.com/OpenVoiceOS/ovos-control-panel/pull/185) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a94](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a94) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a93...0.0.1a94)
@@ -549,10 +557,6 @@
 ## [0.0.1a26](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a26) (2026-08-25)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a25...0.0.1a26)
-
-**Merged pull requests:**
-
-- fix: run the build tests, which have never started [\#60](https://github.com/OpenVoiceOS/ovos-control-panel/pull/60) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
