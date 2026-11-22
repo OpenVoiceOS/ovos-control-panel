@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a80](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a80) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a79...0.0.1a80)
+
+**Merged pull requests:**
+
+- feat: the Skills page points to a skill's own page [\#157](https://github.com/OpenVoiceOS/ovos-control-panel/pull/157) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a79](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a79) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a78...0.0.1a79)
@@ -457,7 +465,6 @@
 - feat: sensors page — live readings from the device's sensors [\#39](https://github.com/OpenVoiceOS/ovos-control-panel/pull/39) ([JarbasAl](https://github.com/JarbasAl))
 - fix: confirm before saving on the Transformers page [\#38](https://github.com/OpenVoiceOS/ovos-control-panel/pull/38) ([JarbasAl](https://github.com/JarbasAl))
 - feat: configurable package index for self-hosters [\#37](https://github.com/OpenVoiceOS/ovos-control-panel/pull/37) ([JarbasAl](https://github.com/JarbasAl))
-- feat: larger-text toggle for low-vision and elderly users [\#36](https://github.com/OpenVoiceOS/ovos-control-panel/pull/36) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
