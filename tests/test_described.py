@@ -421,6 +421,19 @@ def test_a_plugin_saves_in_its_own_section_and_no_other(monkeypatch):
             described.check(form(bad), "ovos-tts-plugin-server", config_roots=roots)
 
 
+def test_a_transformer_saves_in_its_service_section(monkeypatch):
+    from types import SimpleNamespace as NS
+    name = "ovos-audio-transformer-plugin-overheard-manners"
+    eps = [NS(group="opm.transformer.audio", name=name)]
+    monkeypatch.setattr(described.metadata, "distribution", lambda n: NS(entry_points=eps))
+    roots = described.config_roots(name)
+    assert roots == ["PHAL." + name, "audio_transformers." + name]
+    page = {"controlpanel": 1, "id": "t", "bus": "ovos.t.", "blocks": [
+        {"type": "form", "save": {"config": "audio_transformers." + name},
+         "fields": [{"name": "enabled", "label": "t.on", "type": "checkbox"}]}]}
+    described.check(page, name, config_roots=roots)
+
+
 @pytest.mark.parametrize("folder", sorted(p.name for p in described.BUNDLED.iterdir() if p.is_dir()))
 def test_every_page_the_panel_brings_is_sound(folder):
     """Each bundled page passes the checks for its package's own places, says

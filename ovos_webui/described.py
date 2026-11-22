@@ -207,12 +207,19 @@ def _bundled(name: str, version: str, tops: list[str]) -> Found | None:
 # ── checking a file ──────────────────────────────────────────────────────────
 #: Where a plugin's own settings are in mycroft.conf, by its entry point's group
 _CONFIG_PLACES = {"opm.tts": "tts", "mycroft.plugin.tts": "tts", "opm.stt": "stt",
-                  "mycroft.plugin.stt": "stt", "opm.phal": "PHAL", "opm.phal.admin": "PHAL"}
+                  "mycroft.plugin.stt": "stt", "opm.phal": "PHAL", "opm.phal.admin": "PHAL",
+                  # transformers: the section their service loads them from (OPM's transformer_services)
+                  "opm.transformer.audio": "audio_transformers", "neon.plugin.audio": "audio_transformers",
+                  "opm.transformer.text": "utterance_transformers", "neon.plugin.text": "utterance_transformers",
+                  "opm.transformer.metadata": "metadata_transformers",
+                  "neon.plugin.metadata": "metadata_transformers",
+                  "opm.transformer.dialog": "dialog_transformers", "opm.transformer.tts": "tts_transformers"}
 
 
 def config_roots(package: str) -> list[str]:
     """A package's own places in mycroft.conf: PHAL.<package>, and the
-    section its plugins read: tts.<module>, stt.<module>, PHAL.<name>.
+    section its plugins read: tts.<module>, stt.<module>, PHAL.<name>,
+    audio_transformers.<name> and the other transformer sections.
     Never the choice of module itself (tts.module), only the plugin's own."""
     roots = ["PHAL." + package]
     try:
