@@ -204,5 +204,10 @@
  "release.unknown": "The OVOS release could not be read, so everything on PyPI is shown.",
  "release.allWarn": "Everything on PyPI is shown, and none of it is checked: not whether it works with this device's versions, nor whether anyone still looks after it. The installer still checks the versions before it installs.",
  "release.onlyNote": "Only what belongs to the OVOS release this device follows",
- "release.onlyNoteEnd": ", and what is installed."
+ "release.onlyNoteEnd": ", and what is installed.",
+ "store.option": "Store",
+ "store.unreachable": "The store could not be reached.",
+ "store.from": "What the store lists:",
+ "store.note": "Someone has checked these for a kind of device; the installer still checks the versions before it installs.",
+ "store.works": "found working by the store"
 }

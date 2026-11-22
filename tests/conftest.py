@@ -60,16 +60,20 @@ def clean_sandbox():
 
 @pytest.fixture(autouse=True)
 def no_release_file(monkeypatch):
-    """The OVOS release file is never fetched in a test: it reads as offline
-    unless a test gives it a file of its own."""
+    """The OVOS release file and the stores are never fetched in a test: they
+    read as offline unless a test gives them something of its own."""
     from ovos_webui import release
 
     def offline(src):
         raise OSError("not fetched in tests")
+    from ovos_webui import stores
     release.clear()
+    stores.clear()
     monkeypatch.setattr(release, "_read", offline)
+    monkeypatch.setattr(stores, "_read", offline)
     yield
     release.clear()
+    stores.clear()
 
 
 @pytest.fixture(autouse=True)

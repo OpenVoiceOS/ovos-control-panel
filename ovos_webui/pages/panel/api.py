@@ -24,6 +24,11 @@ class RecommendsBody(BaseModel):
     path: str = Field("", max_length=300)
 
 
+class StoresBody(BaseModel):
+    """The stores, in the order they are offered; empty for none."""
+    stores: list[dict[str, Any]] = Field(default_factory=list, max_length=8)
+
+
 class UploadsBody(BaseModel):
     """The largest file a page may keep on the device, in MB; 0 takes the
     setting out of your layer again."""
@@ -146,3 +151,26 @@ def routes(r) -> None:
                 webui.pop("max_upload_mb", None)
         configio.mutate(change, bus=r.bus())
         return _uploads()
+
+    @r.api.get("/panel/stores")
+    def api_stores_read() -> dict[str, Any]:
+        from ovos_webui import stores
+        return {"stores": stores.configured()}
+
+    @r.privileged.post("/panel/stores")
+    def api_stores_set(body: StoresBody) -> dict[str, Any]:
+        from ovos_webui import stores
+        try:
+            chosen = stores.check(body.stores)
+        except ValueError as err:
+            raise HTTPException(400, str(err)) from None
+
+        def change(user: dict) -> None:
+            webui = user.setdefault("webui", {})
+            if chosen:
+                webui["stores"] = chosen
+            else:
+                webui.pop("stores", None)
+        configio.mutate(change, bus=r.bus())
+        stores.clear()
+        return {"stores": stores.configured()}

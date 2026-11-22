@@ -49,5 +49,14 @@
  "panel.uploads.hint": "O maior ficheiro que uma página pode guardar no dispositivo, como um filme ou uma canção na página Multimédia. Um dispositivo que nunca vai guardar filmes pode aceitar menos.",
  "panel.uploads.max": "Maior ficheiro (MB)",
  "panel.uploads.default": "É o valor predefinido.",
- "panel.uploads.bad": "Indique um número inteiro de MB, pelo menos 1."
+ "panel.uploads.bad": "Indique um número inteiro de MB, pelo menos 1.",
+ "panel.stores.title": "Lojas",
+ "panel.stores.hint": "Uma loja é uma lista de skills e plugins que alguém verificou para um tipo de dispositivo. Cada loja que adicionar aqui é uma opção em Mostrar nas páginas Skills e Plugins, ao lado da versão do OVOS e de tudo o que há no PyPI. O painel não traz nenhuma.",
+ "panel.stores.none": "Ainda não há lojas.",
+ "panel.stores.name": "Nome",
+ "panel.stores.url": "Endereço da sua lista (https://…)",
+ "panel.stores.add": "Adicionar",
+ "panel.stores.up": "Subir",
+ "panel.stores.remove": "Remover",
+ "panel.stores.bad": "Dê um nome à loja e um endereço que comece por https://."
 }

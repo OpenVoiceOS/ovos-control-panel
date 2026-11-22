@@ -96,8 +96,11 @@ OvosWebUI.ready(function () {
       ? '<button class="secondary" data-remove="' + esc(r.name) + '" aria-label="' + esc(OvosWebUI.t("plugins.button.remove", "Remove") + " " + r.name) + '">' + OvosWebUI.t("plugins.button.remove", "Remove") + '</button>'
       : '<button class="secondary" data-add="' + esc(r.name) + '" aria-label="' + esc(OvosWebUI.t("plugins.button.install", "Install") + " " + r.name) + '">' + OvosWebUI.t("plugins.button.install", "Install") + '</button>';
     var icon = "/static/icons/" + (KIND_ICONS[r.kind] || "plugin") + ".svg";
+    var info = r.store || {};
+    if (info.works) { state += ' <span class="badge ready">' + esc(OvosWebUI.t("store.works", "found working by the store")) + "</span>"; }
     return '<div class="card result" data-pkg="' + esc(r.name) + '"><div class="result-head">'
-      + '<img class="skill-icon" alt="" src="' + icon + '"><strong>' + esc(prettyName(r.name)) + "</strong> " + state + "</div>"
+      + '<img class="skill-icon" alt="" src="' + icon + '"><strong>' + esc(info.name || prettyName(r.name)) + "</strong> " + state + "</div>"
+      + (info.description ? '<p>' + esc(info.description) + "</p>" : "")
       + '<p class="hint">' + esc(plainLabel(r.kind, kindLabels))
       + '<code class="slug">' + esc(r.name) + "</code></p>"
       + '<p class="hint result-by" hidden></p><p class="result-desc" hidden></p>'
@@ -180,11 +183,12 @@ OvosWebUI.ready(function () {
     var url = "/api/plugins/search?q=" + encodeURIComponent(el("q").value)
       + "&kind=" + encodeURIComponent(el("kind").value)
       + (refresh ? "&refresh=true" : "")
-      + (el("from").value === "release" ? "&release=true" : "");
+      + OvosWebUI.showQuery(el("from").value);
     return api(url).then(function (r) {
       fillKinds(r.kinds);
       lastRelease = r.release;
-      OvosWebUI.releaseNote(el("from-note"), r.release, el("from").value === "release");
+      if (r.from_store) { OvosWebUI.storeNote(el("from-note"), r); }
+      else { OvosWebUI.releaseNote(el("from-note"), r.release, el("from").value === "release"); }
       // skills have their own page; this one is for everything else
       var plugins = r.results.filter(function (x) { return x.kind !== "skill"; });
       var shown = plugins.slice(0, MAX_RESULTS);
@@ -260,6 +264,7 @@ OvosWebUI.ready(function () {
   }
 
   el("go").addEventListener("click", function () { triggerSearch(false); });
+  OvosWebUI.addStores(el("from"));
   el("from").addEventListener("change", function () {
     if (el("q").value.trim() || el("kind").value) { triggerSearch(false); }
   });

@@ -570,14 +570,16 @@ OvosWebUI.ready(function () {
   function enrich(card) {
     var pkg = card.getAttribute("data-pkg");
     return api("/api/skillinfo/" + encodeURIComponent(pkg)).then(function (i) {
-      if (i.title) { card.querySelector(".result-title").textContent = i.title; }
+      // a store's own texts, in the reader's language, are kept
+      var fromStore = card.hasAttribute("data-store");
+      if (i.title && !fromStore) { card.querySelector(".result-title").textContent = i.title; }
       if (i.author) {
         var by = card.querySelector(".result-by");
         by.textContent = t("skills.by", "By") + " " + i.author;
         by.hidden = false;
       }
       var what = i.description || i.summary;
-      if (what) {
+      if (what && !fromStore) {
         var desc = card.querySelector(".result-desc");
         desc.textContent = what.length > 200 ? what.slice(0, 197) + "…" : what;
         desc.hidden = false;
@@ -602,9 +604,10 @@ OvosWebUI.ready(function () {
     searching = true;
     el("go").disabled = true;
     el("results").innerHTML = '<div class="card">' + esc(t("plugins.searching", "Searching…")) + "</div>";
-    var onlyRelease = el("from").value === "release";
-    return api("/api/plugins/search?kind=skill&q=" + encodeURIComponent(q) + (onlyRelease ? "&release=true" : "")).then(function (r) {
-      OvosWebUI.releaseNote(el("from-note"), r.release, onlyRelease);
+    var from = el("from").value, onlyRelease = from === "release";
+    return api("/api/plugins/search?kind=skill&q=" + encodeURIComponent(q) + OvosWebUI.showQuery(from)).then(function (r) {
+      if (r.from_store) { OvosWebUI.storeNote(el("from-note"), r); }
+      else { OvosWebUI.releaseNote(el("from-note"), r.release, onlyRelease); }
       var shown = r.results.slice(0, 60);
       el("cacheinfo").textContent = r.offline
         ? t("plugins.offline", "PyPI could not be reached, so only the plugins already installed are listed.")
@@ -618,13 +621,20 @@ OvosWebUI.ready(function () {
           ? '<button class="secondary" data-open="' + esc(p.name) + '">' + esc(t("skills.open", "Open")) + "</button>"
           : '<button class="secondary" data-add="' + esc(p.name) + '" aria-label="'
             + esc(t("plugins.button.install", "Install") + " " + p.name) + '">' + esc(t("plugins.button.install", "Install")) + "</button>";
-        var title = '<span class="result-title">' + esc(prettyPackage(p.name)) + "</span>";
+        var info = p.store || {};
+        if (p.store && p.store.works) {
+          state += ' <span class="badge ready">' + esc(t("store.works", "found working by the store")) + "</span>";
+        }
+        var title = '<span class="result-title">' + esc(info.name || prettyPackage(p.name)) + "</span>";
         if (!p.installed) {
           title = '<button class="linklike" data-preview="' + esc(p.name) + '">' + title + "</button>";
         }
-        return '<div class="card result" data-pkg="' + esc(p.name) + '">'
+        return '<div class="card result" data-pkg="' + esc(p.name) + '"' + (p.store ? " data-store" : "") + ">"
           + '<div class="result-head"><img class="skill-icon" alt="" src="' + GENERIC_ICON + '"><strong>' + title + "</strong> " + state + "</div>"
-          + '<p class="hint result-by" hidden></p><p class="result-desc" hidden></p>'
+          + '<p class="hint result-by" hidden></p><p class="result-desc"' + (info.description ? "" : " hidden") + ">"
+          + esc(info.description || "") + "</p>"
+          + (info.examples && info.examples.length ? '<p class="hint">' + info.examples.slice(0, 3).map(function (x) {
+            return "“" + esc(x) + "”"; }).join(" · ") + "</p>" : "")
           + '<code class="slug">' + esc(p.name) + "</code>"
           + '<div class="row">' + action + "</div></div>";
       }).join("") : '<div class="card">' + esc(t("plugins.nothingMatched", "Nothing matched.")) + "</div>";
@@ -652,6 +662,7 @@ OvosWebUI.ready(function () {
   }
   el("go").addEventListener("click", search);
   el("from").addEventListener("change", function () { if (el("q").value.trim()) { search(); } });
+  OvosWebUI.addStores(el("from"));
   el("q").addEventListener("keydown", function (e) { if (e.key === "Enter") { search(); } });
   el("filter").addEventListener("input", renderList);
 
