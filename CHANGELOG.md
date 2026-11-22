@@ -1,8 +1,20 @@
 # Changelog
 
+## [0.0.1a77](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a77) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a76...0.0.1a77)
+
+**Merged pull requests:**
+
+- feat: a described form can save in the skill's own settings.json [\#154](https://github.com/OpenVoiceOS/ovos-control-panel/pull/154) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a76](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a76) (2026-11-22)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a74...0.0.1a76)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a75...0.0.1a76)
+
+## [0.0.1a75](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a75) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a74...0.0.1a75)
 
 **Merged pull requests:**
 
@@ -432,7 +444,6 @@
 - feat: larger-text toggle for low-vision and elderly users [\#36](https://github.com/OpenVoiceOS/ovos-control-panel/pull/36) ([JarbasAl](https://github.com/JarbasAl))
 - feat: Simple mode — hide advanced pages for everyday use [\#35](https://github.com/OpenVoiceOS/ovos-control-panel/pull/35) ([JarbasAl](https://github.com/JarbasAl))
 - fix: audit a11y defects \(pipeline focus, wallpaper labels\) + security doc accuracy [\#34](https://github.com/OpenVoiceOS/ovos-control-panel/pull/34) ([JarbasAl](https://github.com/JarbasAl))
-- feat: wallpaper — set the background, browse the collection, auto-rotate [\#33](https://github.com/OpenVoiceOS/ovos-control-panel/pull/33) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
