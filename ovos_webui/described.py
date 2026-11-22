@@ -282,6 +282,9 @@ def plugin_voices(module: str, version: str, lang: str) -> list[dict[str, str]]:
         if code.replace("_", "-").lower().split("-")[0] != base:
             continue
         for cfg in _VOICES[key][code]:
+            if isinstance(cfg, dict) and "voice" not in cfg and len(cfg) == 1 \
+                    and isinstance(next(iter(cfg.values())), dict):
+                cfg = next(iter(cfg.values()))      # Piper: {"alan-low": {"voice": "alan-low", ...}}
             voice = cfg.get("voice") if isinstance(cfg, dict) else None
             if not isinstance(voice, str) or not voice or voice in seen or len(voice) > 200:
                 continue

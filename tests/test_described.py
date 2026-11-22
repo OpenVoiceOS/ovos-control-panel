@@ -475,7 +475,7 @@ def test_a_plugins_voices_are_read_in_a_process_of_their_own(monkeypatch):
     calls = []
     configs = {"da-DK": [{"voice": "da_DK-talesyntese-medium", "display_name": "Talesyntese"}],
                "da": [{"voice": "da_DK-talesyntese-medium"}, {"voice": "da-other", "meta": {"display_name": "Anden"}}],
-               "en-GB": [{"voice": "alan-low"}], "sv": [{"voice": "sv"}]}
+               "en-GB": [{"alan-low": {"voice": "alan-low", "offline": True}}], "sv": [{"voice": "sv"}]}
 
     def run(cmd, **kw):
         calls.append(cmd)
