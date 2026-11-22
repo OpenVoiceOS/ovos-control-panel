@@ -128,11 +128,27 @@ def _package_dir(top: str) -> Path | None:
     return None
 
 
+def own_packages() -> set[str]:
+    """A distribution's own packages that bring pages, though not named like
+    an OVOS skill or plugin (``webui.pages.packages``: ``["emkay-home"]``)."""
+    from packaging.utils import canonicalize_name
+    try:
+        from ovos_webui import configio
+        raw = (configio.section("webui").get("pages") or {}).get("packages") or []
+    except Exception:  # noqa: BLE001 - a broken config adds nothing
+        return set()
+    if not isinstance(raw, list):
+        return set()
+    return {canonicalize_name(n) for n in raw if isinstance(n, str) and n.strip()}
+
+
 def discover() -> list[Found]:
-    """Every ``controlpanel.json`` in an installed OVOS package."""
+    """Every ``controlpanel.json`` in an installed OVOS package, and in the
+    distribution's own packages (:func:`own_packages`)."""
     from ovos_webui.pypi import classify
     out: list[Found] = []
     seen: set[str] = set()
+    own = own_packages()
     try:
         dists = list(metadata.distributions())
     except Exception as e:  # noqa: BLE001 - broken metadata must not stop the panel
@@ -144,7 +160,8 @@ def discover() -> list[Found]:
         name = canonicalize_name((dist.metadata.get("Name") or "").strip())
         # an OVOS package by its name, or one the panel brings a page for
         # (ovos-PHAL-sensors is named like neither a skill nor a plugin)
-        if not name or name in seen or (classify(name) is None and not (BUNDLED / name).is_dir()):
+        if not name or name in seen or (classify(name) is None and not (BUNDLED / name).is_dir()
+                                         and name not in own):
             continue
         seen.add(name)
         for top in _tops(dist):

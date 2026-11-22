@@ -287,6 +287,10 @@ the user can change them in their own layer, as with the rest of OVOS.
   its routes answer 404.
 - `pages.move` puts a page in another group, or at another place in its group
   (`group`, `order`, or both).
+- `pages.packages` names a distribution's own packages that bring a
+  `controlpanel.json`, though they are not named like an OVOS skill or plugin
+  (`["emkay-home"]`). The panel otherwise only looks in packages named the
+  OVOS way.
 - `groups.order` lists advanced groups to show first, in that order; the rest
   follow in their usual order. `groups.rename` gives a group another `label`,
   shown as written in every language (add a `key` to translate it).
