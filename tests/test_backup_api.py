@@ -177,3 +177,13 @@ def test_restore_refuses_a_bomb(client):
 def test_restore_without_a_file_field(client):
     r = client.post("/api/restore", files={"other": ("b", b"x", "application/gzip")})
     assert r.status_code == 400
+
+
+def test_a_skills_backup_says_which_skill(client, make_skill):
+    from ovos_webui import skillsio
+    make_skill("ovos-skill-jokes.openvoiceos", {"a": 1})
+    skillsio.write_settings("ovos-skill-jokes.openvoiceos", {"a": 2})
+    found = client.get("/api/backups").json()["backups"]
+    mine = [b for b in found if b["file"] == "settings.json"]
+    assert mine and mine[0]["skill"] == "ovos-skill-jokes.openvoiceos"
+    assert all(b["skill"] is None for b in found if b["file"] != "settings.json")

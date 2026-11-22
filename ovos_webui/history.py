@@ -65,6 +65,17 @@ def roots() -> list[Path]:
     return out
 
 
+def _skill_of(target: Path) -> str | None:
+    """The skill id, when ``target`` is a skill's settings.json."""
+    from ovos_webui.skillsio import skills_root
+    try:
+        if target.name == "settings.json" and target.parent.parent.resolve() == skills_root().resolve():
+            return target.parent.name
+    except OSError:
+        pass
+    return None
+
+
 def _describe(bak: Path, root: Path) -> dict[str, Any] | None:
     match = _BAK_RE.match(bak.name)
     if not match:
@@ -78,6 +89,8 @@ def _describe(bak: Path, root: Path) -> dict[str, Any] | None:
     target = bak.parent.parent / match.group("name")
     return {
         "id": bak.relative_to(root).as_posix(),
+        #: the skill whose settings.json this is, so the list can say so
+        "skill": _skill_of(target),
         "root": root.name,
         "file": match.group("name"),
         "target": str(target),

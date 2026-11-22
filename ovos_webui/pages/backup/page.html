@@ -47,10 +47,12 @@ OvosWebUI.ready(function () {
         return;
       }
       el("history").innerHTML = "<ul class='plain rowlist'>" + r.backups.slice(0, 20).map(function (b) {
-        return "<li><strong>" + esc(b.file) + "</strong> "
+        // a skill's settings.json is named by its skill, so they can be told apart
+        var what = b.skill ? b.skill + " · " + b.file : b.file;
+        return "<li><strong>" + esc(what) + "</strong> "
           + "<span class='when' title='" + esc(b.stamp) + "'>" + esc(niceStamp(b.stamp)) + "</span> "
           + '<button class="secondary" data-show="' + esc(b.id) + '" aria-label="'
-          + esc(t("backup.view_button", "Look at it") + " " + b.file + " " + niceStamp(b.stamp)) + '">'
+          + esc(t("backup.view_button", "Look at it") + " " + what + " " + niceStamp(b.stamp)) + '">'
           + esc(t("backup.view_button", "Look at it")) + "</button>"
           + '<code class="slug">' + esc(b.target) + "</code></li>";
       }).join("") + "</ul>"
