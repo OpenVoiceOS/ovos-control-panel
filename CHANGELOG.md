@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a93](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a93) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a92...0.0.1a93)
+
+**Merged pull requests:**
+
+- Stores: lists someone has checked, offered under Show on Skills and Plugins [\#183](https://github.com/OpenVoiceOS/ovos-control-panel/pull/183) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a92](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a92) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a91...0.0.1a92)
@@ -525,10 +533,6 @@
 ## [0.0.1a28](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a28) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a27...0.0.1a28)
-
-**Merged pull requests:**
-
-- fix: keep translated sentences whole and stop mislabelling the reload buttons [\#58](https://github.com/OpenVoiceOS/ovos-control-panel/pull/58) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a27](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a27) (2026-08-25)
 
