@@ -207,14 +207,14 @@ def _bundled(name: str, version: str, tops: list[str]) -> Found | None:
 # ── checking a file ──────────────────────────────────────────────────────────
 #: Where a plugin's own settings are in mycroft.conf, by its entry point's group
 _CONFIG_PLACES = {"opm.tts": "tts", "mycroft.plugin.tts": "tts", "opm.stt": "stt",
-                  "mycroft.plugin.stt": "stt", "opm.phal": "PHAL", "opm.phal.admin": "PHAL",
-                  # transformers: the section their service loads them from (OPM's transformer_services)
-                  "opm.transformer.audio": "audio_transformers", "neon.plugin.audio": "audio_transformers",
-                  "opm.transformer.text": "utterance_transformers", "neon.plugin.text": "utterance_transformers",
-                  "opm.transformer.metadata": "metadata_transformers",
-                  "neon.plugin.metadata": "metadata_transformers",
-                  "opm.transformer.dialog": "dialog_transformers", "opm.transformer.tts": "tts_transformers"}
+                  "mycroft.plugin.stt": "stt", "opm.phal": "PHAL", "opm.phal.admin": "PHAL"}
 
+
+def _transformer_places() -> dict[str, str]:
+    """A transformer's own place is the section its service loads it from:
+    the same table the Transformers page orders them by (transformcfg)."""
+    from ovos_webui.transformcfg import CHAINS
+    return {group: section for section, chain in CHAINS.items() for group in chain["groups"]}
 
 def config_roots(package: str) -> list[str]:
     """A package's own places in mycroft.conf: PHAL.<package>, and the
@@ -226,8 +226,9 @@ def config_roots(package: str) -> list[str]:
         eps = metadata.distribution(package).entry_points
     except Exception:  # noqa: BLE001 - only the default then
         return roots
+    places = dict(_CONFIG_PLACES, **_transformer_places())
     for ep in eps:
-        place = _CONFIG_PLACES.get(ep.group)
+        place = places.get(ep.group)
         if place and _CONFIG_RE.match(f"{place}.{ep.name}"):
             roots.append(f"{place}.{ep.name}")
     return list(dict.fromkeys(roots))

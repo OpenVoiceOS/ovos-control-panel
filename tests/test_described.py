@@ -434,6 +434,17 @@ def test_a_transformer_saves_in_its_service_section(monkeypatch):
     described.check(page, name, config_roots=roots)
 
 
+@pytest.mark.parametrize("group, section", [
+    ("opm.transformer.text", "utterance_transformers"), ("neon.plugin.text", "utterance_transformers"),
+    ("opm.transformer.metadata", "metadata_transformers"), ("opm.transformer.intent", "intent_transformers"),
+    ("opm.transformer.dialog", "dialog_transformers"), ("opm.transformer.tts", "tts_transformers")])
+def test_every_transformer_saves_where_the_transformers_page_orders_it(monkeypatch, group, section):
+    from types import SimpleNamespace as NS
+    monkeypatch.setattr(described.metadata, "distribution",
+                        lambda n: NS(entry_points=[NS(group=group, name="my-transformer")]))
+    assert described.config_roots("my-pkg")[-1] == section + ".my-transformer"
+
+
 @pytest.mark.parametrize("folder", sorted(p.name for p in described.BUNDLED.iterdir() if p.is_dir()))
 def test_every_page_the_panel_brings_is_sound(folder):
     """Each bundled page passes the checks for its package's own places, says
