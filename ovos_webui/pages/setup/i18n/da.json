@@ -1,6 +1,7 @@
 {
  "hdr.setup": "Sæt denne enhed op",
  "setup.intro": "Seks korte trin får en ny enhed til at tale. Alt her kan ændres senere på siderne Indstillinger og Plugins.",
+ "setup.intro.custom": "Nogle få korte trin får enheden i gang. Alt her kan ændres senere.",
  "setup.step1.title": "2. Dit sprog",
  "setup.lang.label": "Sprog",
  "setup.save": "Gem",

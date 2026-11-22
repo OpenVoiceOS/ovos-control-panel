@@ -260,6 +260,59 @@ def test_the_setup_page_counts_its_own_steps(signed_in_page):
     assert said == numbered, (
         f"the intro says {said} steps and the page has {numbered}: {intro!r}"
     )
+def test_a_distributions_setup_guide_has_its_steps_in_its_order(signed_in_page):
+    """webui.setup: the panel's own steps it chose, in its order and numbered
+    so, the ones it left out hidden, and a described page drawn as a step."""
+    page, url = signed_in_page
+    thrown = []
+    page.on("pageerror", lambda err: thrown.append(str(err)))
+    from ovos_webui import described
+    desc, _ = described.check({
+        "controlpanel": 1, "id": "house", "bus": "ovos.house.",
+        "blocks": [{"type": "list", "query": "ovos.house.devices", "items": "devices",
+                    "title": "{name}"}]}, "ovos-phal-plugin-house")
+    desc["en"] = {}
+    guide = {"custom": True, "problems": [],
+             "intro": {"key": "house.setup.intro", "label": "Two steps and the house is ready."},
+             "steps": [{"id": "language"},
+                       {"id": "house", "page": desc, "heading": "Devices in the house",
+                        "heading_key": "house.heading"},
+                       {"id": "tryit"}]}
+    page.route("**/api/setup/guide", lambda r: r.fulfill(
+        status=200, content_type="application/json", body=json.dumps(guide)))
+    page.route("**/api/cp/house/query", lambda r: r.fulfill(
+        status=200, content_type="application/json",
+        body=json.dumps({"devices": [{"id": "k", "name": "Kitchen"}]})))
+    try:
+        page.goto(f"{url}/setup")
+        page.wait_for_selector("section[data-step=house] .cp-list li")
+        headings = page.evaluate("""() => [...document.querySelectorAll("section.setup-step")]
+            .filter(s => !s.hidden).map(s => s.querySelector("h2").textContent.trim())""")
+        assert len(headings) == 3, headings
+        assert headings[0].startswith("1. ") and "language" in headings[0].lower()
+        assert headings[1] == "2. Devices in the house"
+        assert headings[2].startswith("3. ")
+        for left_out in ("token", "voice", "speak", "wake"):
+            assert page.locator(f"section[data-step={left_out}]").is_hidden(), left_out
+        assert "Kitchen" in page.locator("section[data-step=house]").inner_text()
+        assert page.locator("#setup-intro").inner_text() == "Two steps and the house is ready."
+        assert not thrown, thrown
+    finally:
+        page.unroute("**/api/setup/guide")
+        page.unroute("**/api/cp/house/query")
+
+
+def test_without_a_choice_the_setup_guide_is_as_it_was(signed_in_page):
+    page, url = signed_in_page
+    page.goto(f"{url}/setup")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(300)
+    shown = page.evaluate("""() => [...document.querySelectorAll("section.setup-step")]
+        .filter(s => !s.hidden).map(s => s.dataset.step)""")
+    assert shown == ["token", "language", "voice", "speak", "tryit", "wake"]
+    assert page.locator("[data-i18n='setup.intro']").inner_text().startswith("Six")
+
+
 def test_hidden_means_hidden_whatever_the_element_is(signed_in_page):
     """`hidden` is an attribute, not a class, and any rule that sets
     `display` outranks the browser's default for it.

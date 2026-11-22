@@ -291,6 +291,10 @@ the user can change them in their own layer, as with the rest of OVOS.
   follow in their usual order. `groups.rename` gives a group another `label`,
   shown as written in every language (add a `key` to translate it).
 
+The Setup guide is chosen the same way, in `webui.setup`: which of the
+panel's steps, in which order, and described pages as steps of their own. See
+[A distribution's own guide](setup.md#a-distributions-own-guide).
+
 The core pages cannot be disabled. A setting the panel cannot use is skipped
 and named on the About page, which also lists the pages that are turned off.
 A change shows on the next page load: the panel reads the user's layer again
