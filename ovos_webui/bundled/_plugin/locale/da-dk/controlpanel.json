@@ -1,4 +1,5 @@
 {
  "plugin.tts.intro": "Denne stemme har ingen side selv, så panelet viser det, alle stemmer har. Har den andre indstillinger, hører de til i dens egen del af mycroft.conf, på siden Indstillinger.",
- "plugin.stt.intro": "Denne lytter har ingen side selv, så panelet viser det, alle lyttere har. Har den andre indstillinger, hører de til i dens egen del af mycroft.conf, på siden Indstillinger."
+ "plugin.stt.intro": "Denne lytter har ingen side selv, så panelet viser det, alle lyttere har. Har den andre indstillinger, hører de til i dens egen del af mycroft.conf, på siden Indstillinger.",
+ "plugin.provider.intro": "En medieudbyder: et sted, assistenten søger, når du beder den afspille noget. Den har ingen side selv, så panelet viser, om den er slået til. Har den indstillinger, hører de til i media_providers i mycroft.conf, på siden Indstillinger."
 }

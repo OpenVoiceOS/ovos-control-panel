@@ -188,5 +188,12 @@
  "module.use": "Usar esta",
  "module.useFallback": "Usar como reserva",
  "module.test": "Escucharla",
- "module.test.sentence": "Hola, así es como sueno."
+ "module.test.sentence": "Hola, así es como sueno.",
+ "provider.title": "El proveedor",
+ "provider.on": "Está activado: el asistente busca en él cuando le pides algo para reproducir.",
+ "provider.off": "Está desactivado: el asistente no busca en él.",
+ "provider.allOff": "Todos los proveedores de medios están desactivados en la configuración del pipeline OCP, así que no se busca en ninguno.",
+ "provider.turnOn": "Activar",
+ "provider.turnOff": "Desactivar",
+ "provider.restart": "El asistente aplica el cambio cuando vuelve a arrancar."
 }

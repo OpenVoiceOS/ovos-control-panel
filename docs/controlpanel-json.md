@@ -159,7 +159,7 @@ Asks once, and shows the answer.
 
 | `save` | |
 | --- | --- |
-| `{"config": "PHAL.<package>", "reload": "<message>"}` | Writes in the plugin's own place in `mycroft.conf`, then sends `reload` with `{"config": <the section as saved>}`. A plugin's own places are `PHAL.<package>` and the section its entry points name: `tts.<module>`, `stt.<module>`, `PHAL.<name>`, and for a transformer the section its service loads it from (`audio_transformers.<name>`, `utterance_transformers.<name>`, `metadata_transformers.<name>`, `intent_transformers.<name>`, `dialog_transformers.<name>`, `tts_transformers.<name>`). Never the choice of module itself. |
+| `{"config": "PHAL.<package>", "reload": "<message>"}` | Writes in the plugin's own place in `mycroft.conf`, then sends `reload` with `{"config": <the section as saved>}`. A plugin's own places are `PHAL.<package>` and the section its entry points name: `tts.<module>`, `stt.<module>`, `PHAL.<name>`, and for a transformer the section its service loads it from (`audio_transformers.<name>`, `utterance_transformers.<name>`, `metadata_transformers.<name>`, `intent_transformers.<name>`, `dialog_transformers.<name>`, `tts_transformers.<name>`), and for a media provider `media_providers.<name>`. Never the choice of module itself. |
 | `{"settings": true}` | Reads and writes the skill's own `settings.json`, merged over what is there so keys the form has not are kept; the skill reads them as `self.settings`. Only for a package that registers one skill. |
 | `{"send": "<message>"}` | Sends the values to the skill; `query` reads them. |
 | `{"send": "<message>", "answer": false}` | Sends the values, and no answer comes; there is nothing to read, so the form starts from its defaults (text for the Mark-1 mouth). |
@@ -196,6 +196,22 @@ answer. An upload always needs the token.
 The panel's own part: whether this plugin is the voice or the listener in use,
 or the fallback, buttons to make it so, and for a voice in use, a sentence to
 hear it. Nothing of it comes from the file.
+
+### provider
+
+No keys but `heading`, on the page of a package that brings one media
+provider (an `opm.media.provider` entry point).
+
+The panel's own part: whether the assistant searches this provider when asked
+to play something, and a button to turn it on or off (`"enabled": false` in its
+settings). The assistant picks the change up when it starts again. When the
+OCP pipeline has all providers turned off, the part says so.
+
+A provider's settings are `media_providers.<name>`. The OCP pipeline reads
+them from its own section, `intents.ovos-ocp-pipeline-plugin.media_providers`,
+when that exists, and from the top-level `media_providers` when not. A page
+always says `media_providers.<name>`; the panel reads and writes it where the
+pipeline will look.
 
 ## Actions
 
@@ -302,6 +318,9 @@ it.
 
 A TTS or STT plugin that nobody describes still gets a page, in the Voice
 group: a line saying what it is, and the [module](#module) block for its kind.
+So does a media provider, in the Library group, with the
+[provider](#provider) block (`ovos-media-provider-youtube` is "Youtube" at
+`/media-youtube`).
 Nothing on it needs to know the plugin's settings, so it is right for every
 version. The page's id and title come from the package's name
 (`ovos-tts-plugin-edge-tts` is "Edge TTS" at `/edge-tts`). A package that

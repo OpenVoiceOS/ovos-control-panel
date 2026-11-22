@@ -829,5 +829,86 @@ def test_discover_makes_that_page_only_when_nobody_describes_the_plugin(tmp_path
 def test_the_plugin_page_strings_are_the_same_in_every_language():
     found = described.strings(described.PLUGIN_PAGE)
     keys = set(found["en"])
-    assert keys == {"plugin.tts.intro", "plugin.stt.intro"}
+    assert keys == {"plugin.tts.intro", "plugin.stt.intro", "plugin.provider.intro"}
     assert all(set(t) == keys for t in found.values()) and len(found) >= 5
+
+
+# ── media providers ──────────────────────────────────────────────────────────
+PIPE = ["intents", "ovos-ocp-pipeline-plugin", "media_providers"]
+
+
+def test_a_media_providers_own_place_and_its_page(monkeypatch):
+    from types import SimpleNamespace as NS
+    name = "ovos-media-provider-youtube"
+    monkeypatch.setattr(described.metadata, "distribution",
+                        lambda n: NS(entry_points=[NS(group="opm.media.provider", name="youtube")]))
+    assert described.config_roots(name) == ["PHAL." + name, "media_providers.youtube"]
+    assert described.plugin_modules(name) == {"provider": ["youtube"]}
+    found = described.plugin_page(name, "1.0", ["top"])
+    assert found.data["id"] == "media-youtube" and found.data["title"]["en"] == "Youtube"
+    page, _ = pages.parse_described(found, name, "1.0")
+    assert page.group == "library" and page.by_panel
+    assert [b["type"] for b in page.described["blocks"]] == ["text", "provider"]
+    assert page.described["blocks"][1]["provider"] == "youtube"
+    for lang in ("en", "da", "es", "pt", "ar"):
+        assert page.strings[lang]["plugin.provider.intro"]
+
+
+def test_a_provider_block_is_only_for_a_package_with_one_provider():
+    page = {"controlpanel": 1, "id": "p", "bus": "ovos.p.", "blocks": [{"type": "provider"}]}
+    for modules in ({}, {"tts": ["x"]}, {"provider": ["a", "b"]}):
+        with pytest.raises(described.DescribedError, match="media provider"):
+            described.check(page, "x", modules=modules)
+    _, refs = described.check(page, "x", modules={"provider": ["local"]})
+    assert refs["b0.provider"]["block"]["provider"] == "local"
+
+
+def test_the_providers_settings_are_where_the_pipeline_reads_them(monkeypatch):
+    assert described.providers_place({}) == ["media_providers"]
+    assert described.providers_place({"intents": {"ovos-ocp-pipeline-plugin": {}}}) == ["media_providers"]
+    own = {"intents": {"ovos-ocp-pipeline-plugin": {"media_providers": {}}}}
+    assert described.providers_place(own) == PIPE
+    from ovos_webui import configio
+    monkeypatch.setattr(configio, "read_merged_config", lambda: own)
+    assert described.config_path("media_providers.local") == PIPE + ["local"]
+    assert described.config_path("tts.ovos-tts-plugin-x") == ["tts", "ovos-tts-plugin-x"]
+
+
+@pytest.mark.parametrize("pipeline_has_its_own", [False, True])
+def test_a_provider_is_turned_off_and_on_where_the_pipeline_reads_it(tmp_path, bus, monkeypatch, pipeline_has_its_own):
+    from ovos_webui import configio
+    from ovos_webui.fsutils import atomic_write
+    start = {"intents": {"ovos-ocp-pipeline-plugin": {"media_providers": {}}}} if pipeline_has_its_own else {}
+    atomic_write(configio.user_config_path(), json.dumps(start))
+    monkeypatch.setattr(configio, "read_merged_config", configio.read_user_config)
+    place = PIPE if pipeline_has_its_own else ["media_providers"]
+    page = {"controlpanel": 1, "id": "media-local", "title": {"key": "x.t", "en": "Local"}, "bus": "ovos.media-local.",
+            "blocks": [{"type": "provider"},
+                       {"type": "form", "save": {"config": "media_providers.local"},
+                        "fields": [{"name": "max_results", "label": "x.n", "type": "number", "min": 1, "max": 50}]}]}
+    root = tmp_path / "pkg"
+    root.mkdir()
+    found = described.Found("ovos-media-provider-local", "1.0", "pkg", root, page)
+    monkeypatch.setattr(described, "discover", lambda: [found])
+    monkeypatch.setattr(described, "plugin_modules", lambda package: {"provider": ["local"]})
+    monkeypatch.setattr(described, "config_roots",
+                        lambda package: ["PHAL." + package, "media_providers.local"])
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
+    with TestClient(app, base_url="http://127.0.0.1:8500",
+                    headers={"sec-fetch-site": "same-origin"}) as c:
+        ref = {"ref": "b0.provider"}
+        assert c.post("/api/cp/media-local/provider", json=dict(ref, enabled=False)).status_code == 401
+        c.headers["Authorization"] = "Bearer s3cret-token"
+        assert c.get("/api/cp/media-local/provider", params=ref).json() == \
+            {"provider": "local", "enabled": True, "all_off": False}
+        assert c.post("/api/cp/media-local/provider", json=dict(ref, enabled="no")).status_code == 400
+        assert c.post("/api/cp/media-local/provider", json=dict(ref, enabled=False)).json()["enabled"] is False
+        assert configio.get_in(configio.read_user_config(), place + ["local"]) == {"enabled": False}
+        assert c.post("/api/cp/media-local/provider", json=dict(ref, enabled=True)).json()["enabled"] is True
+        assert configio.get_in(configio.read_user_config(), place + ["local"]) is None, "on is the default"
+        assert c.post("/api/cp/media-local/form", json={"ref": "b1.form", "values": {"max_results": 7}}).json() == {"ok": True}
+        assert configio.get_in(configio.read_user_config(), place + ["local", "max_results"]) == 7
+        assert c.get("/api/cp/media-local/form", params={"ref": "b1.form"}).json() == {"values": {"max_results": 7}}
+        if pipeline_has_its_own:
+            configio.mutate(lambda u: u["intents"]["ovos-ocp-pipeline-plugin"]["media_providers"].update(enabled=False))
+            assert c.get("/api/cp/media-local/provider", params=ref).json()["all_off"] is True

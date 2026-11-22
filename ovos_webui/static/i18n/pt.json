@@ -188,5 +188,12 @@
  "module.use": "Usar esta",
  "module.useFallback": "Usar como reserva",
  "module.test": "Ouvir",
- "module.test.sentence": "Olá, é assim que eu soo."
+ "module.test.sentence": "Olá, é assim que eu soo.",
+ "provider.title": "O fornecedor",
+ "provider.on": "Está ligado: o assistente procura nele quando pede algo para reproduzir.",
+ "provider.off": "Está desligado: o assistente não procura nele.",
+ "provider.allOff": "Todos os fornecedores de conteúdos estão desligados na configuração do pipeline OCP, por isso não se procura em nenhum.",
+ "provider.turnOn": "Ligar",
+ "provider.turnOff": "Desligar",
+ "provider.restart": "O assistente aplica a alteração quando voltar a arrancar."
 }

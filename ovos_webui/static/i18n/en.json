@@ -188,5 +188,12 @@
  "module.use": "Use this",
  "module.useFallback": "Use as fallback",
  "module.test": "Hear it",
- "module.test.sentence": "Hello, this is how I sound."
+ "module.test.sentence": "Hello, this is how I sound.",
+ "provider.title": "The provider",
+ "provider.on": "It is on: the assistant searches it when you ask for something to play.",
+ "provider.off": "It is off: the assistant does not search it.",
+ "provider.allOff": "All media providers are turned off in the OCP pipeline's configuration, so none is searched.",
+ "provider.turnOn": "Turn on",
+ "provider.turnOff": "Turn off",
+ "provider.restart": "The assistant picks a change up when it starts again."
 }

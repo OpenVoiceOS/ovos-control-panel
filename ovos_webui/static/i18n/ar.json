@@ -188,5 +188,12 @@
  "module.use": "استخدم هذا",
  "module.useFallback": "استخدمه احتياطيًا",
  "module.test": "استمع إليه",
- "module.test.sentence": "مرحبًا، هكذا يبدو صوتي."
+ "module.test.sentence": "مرحبًا، هكذا يبدو صوتي.",
+ "provider.title": "المزوّد",
+ "provider.on": "مفعّل: يبحث فيه المساعد عندما تطلب تشغيل شيء.",
+ "provider.off": "معطّل: لا يبحث فيه المساعد.",
+ "provider.allOff": "كل مزوّدي الوسائط معطّلون في إعدادات مسار OCP، لذا لا يُبحث في أيٍّ منهم.",
+ "provider.turnOn": "تفعيل",
+ "provider.turnOff": "تعطيل",
+ "provider.restart": "يأخذ المساعد التغيير عندما يبدأ من جديد."
 }

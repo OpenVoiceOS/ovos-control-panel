@@ -38,7 +38,14 @@
       "module.use": "Use this",
       "module.useFallback": "Use as fallback",
       "module.test": "Hear it",
-      "module.test.sentence": "Hello, this is how I sound."
+      "module.test.sentence": "Hello, this is how I sound.",
+      "provider.title": "The provider",
+      "provider.on": "It is on: the assistant searches it when you ask for something to play.",
+      "provider.off": "It is off: the assistant does not search it.",
+      "provider.allOff": "All media providers are turned off in the OCP pipeline's configuration, so none is searched.",
+      "provider.turnOn": "Turn on",
+      "provider.turnOff": "Turn off",
+      "provider.restart": "The assistant picks a change up when it starts again."
     };
     // What the server says, in the words of the page: its known answers have
     // keys here, and a skill may answer with a key of its own page.
@@ -431,6 +438,39 @@
         }
         function load() {
           return OvosWebUI.api(base + "/module?ref=" + encodeURIComponent(ref)).then(show)
+            .catch(function (e) { say(msg, why(e), true); });
+        }
+        refreshers.push(load);
+        load();
+        return card;
+      },
+      provider: function (block) {
+        // whether the assistant searches this media provider, and a switch
+        var card = section({heading: block.heading || "provider.title"});
+        var line = document.createElement("p");
+        card.appendChild(line);
+        var note = document.createElement("p");
+        note.className = "hint";
+        card.appendChild(note);
+        var row = document.createElement("div");
+        row.className = "row";
+        card.appendChild(row);
+        var msg = msgEl(card);
+        var ref = block.ref + ".provider";
+        function show(state) {
+          line.textContent = t(state.enabled ? "provider.on" : "provider.off");
+          note.textContent = state.all_off ? t("provider.allOff") : "";
+          note.hidden = !state.all_off;
+          row.innerHTML = "";
+          row.appendChild(button({label: state.enabled ? "provider.turnOff" : "provider.turnOn",
+                                  secondary: state.enabled}, function () {
+            post("/provider", {ref: ref, enabled: !state.enabled})
+              .then(function (next) { show(next); say(msg, t("provider.restart")); })
+              .catch(function (e) { say(msg, why(e), true); });
+          }));
+        }
+        function load() {
+          return OvosWebUI.api(base + "/provider?ref=" + encodeURIComponent(ref)).then(show)
             .catch(function (e) { say(msg, why(e), true); });
         }
         refreshers.push(load);

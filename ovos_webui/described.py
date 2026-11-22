@@ -33,7 +33,7 @@ MAX_STRINGS = 256 * 1024
 MAX_ICON = 16 * 1024
 #: The blocks this panel draws. A block of another type is drawn as "this
 #: needs a newer control panel", and the rest of the page still works.
-BLOCKS = frozenset({"text", "status", "list", "actions", "form", "choice", "upload", "module"})
+BLOCKS = frozenset({"text", "status", "list", "actions", "form", "choice", "upload", "module", "provider"})
 FIELD_TYPES = frozenset({"text", "password", "url", "number", "slider", "checkbox", "select", "lines"})
 _URL_RE = re.compile(r"^https?://[^\s/]+\S*$")
 #: A page's messages start with its own prefix, never with one of these.
@@ -218,6 +218,8 @@ def plugin_page(name: str, version: str, tops: list[str]) -> Found | None:
     in use or the fallback, buttons to make it so, and for a voice a sentence
     to hear it), and nothing that needs to know its settings."""
     modules = plugin_modules(name)
+    if len(modules.get("provider") or ()) == 1 and not any(modules.get(k) for k in MODULE_KINDS):
+        return _provider_page(name, version, tops)
     kinds = [k for k in MODULE_KINDS if len(modules.get(k) or ()) == 1]
     if not kinds or any(len(modules.get(k) or ()) > 1 for k in MODULE_KINDS):
         return None
@@ -227,7 +229,7 @@ def plugin_page(name: str, version: str, tops: list[str]) -> Found | None:
     for k in MODULE_KINDS:
         slug = slug.removeprefix(f"{k}-plugin-").removeprefix(f"plugin-{k}-")
     words = [w for w in slug.split("-") if w]
-    label = " ".join(w.upper() if w in MODULE_KINDS else w[:1].upper() + w[1:] for w in words) or name
+    label = _label_for(slug) or name
     pid = slug if any(k in words for k in kinds) else f"{slug}-{kinds[0]}"
     pid = re.sub(r"[^a-z0-9-]", "-", pid.lower()).strip("-")[:60] or "plugin"
     blocks: list[dict] = []
@@ -239,10 +241,59 @@ def plugin_page(name: str, version: str, tops: list[str]) -> Found | None:
     return Found(name, version or "?", tops[0] if tops else "", PLUGIN_PAGE, data, by_panel=True)
 
 
+def _label_for(slug: str) -> str:
+    words = [w for w in slug.split("-") if w]
+    return " ".join(w.upper() if w in MODULE_KINDS else w[:1].upper() + w[1:] for w in words)
+
+
+def _provider_page(name: str, version: str, tops: list[str]) -> Found:
+    """A media provider's page: whether the assistant searches it, and a
+    switch; in the Library group, beside Media."""
+    slug = name
+    for p in _PREFIXES:
+        slug = slug.removeprefix(p)
+    slug = slug.removeprefix("media-provider-").removeprefix("provider-")
+    pid = re.sub(r"[^a-z0-9-]", "-", ("media-" + slug).lower()).strip("-")[:60]
+    data = {"controlpanel": 1, "id": pid, "path": "/" + pid,
+            "title": {"key": f"plugin.{pid}.title", "en": _label_for(slug) or name},
+            "group": "library", "order": 20, "bus": f"ovos.{pid}.",
+            "blocks": [{"type": "text", "text": "plugin.provider.intro"}, {"type": "provider"}]}
+    return Found(name, version or "?", tops[0] if tops else "", PLUGIN_PAGE, data, by_panel=True)
+
+
 # ── checking a file ──────────────────────────────────────────────────────────
 #: Where a plugin's own settings are in mycroft.conf, by its entry point's group
 _CONFIG_PLACES = {"opm.tts": "tts", "mycroft.plugin.tts": "tts", "opm.stt": "stt",
-                  "mycroft.plugin.stt": "stt", "opm.phal": "PHAL", "opm.phal.admin": "PHAL"}
+                  "mycroft.plugin.stt": "stt", "opm.phal": "PHAL", "opm.phal.admin": "PHAL",
+                  "opm.media.provider": "media_providers"}
+#: A media provider's entry point group
+PROVIDER_GROUP = "opm.media.provider"
+#: The OCP pipeline's own media_providers, which it reads instead of the
+#: top-level one when it has it
+PIPELINE_PROVIDERS = ["intents", "ovos-ocp-pipeline-plugin", "media_providers"]
+
+
+def providers_place(config: dict | None = None) -> list[str]:
+    """Where the media providers' settings are read from: the OCP pipeline
+    hands them its own ``media_providers`` when it has one, and otherwise
+    the plugin manager reads the top-level ``media_providers``. A page says
+    ``media_providers.<name>``; the panel reads and writes it here."""
+    if config is None:
+        from ovos_webui import configio
+        config = configio.read_merged_config()
+    node: Any = config
+    for key in PIPELINE_PROVIDERS:
+        node = node.get(key) if isinstance(node, dict) else None
+    return list(PIPELINE_PROVIDERS) if isinstance(node, dict) else ["media_providers"]
+
+
+def config_path(path: str) -> list[str]:
+    """A page's place in mycroft.conf as keys, with ``media_providers.``
+    moved to where the providers' settings are read from."""
+    keys = path.split(".")
+    if keys[0] == "media_providers":
+        return providers_place() + keys[1:]
+    return keys
 
 
 def _transformer_places() -> dict[str, str]:
@@ -275,13 +326,14 @@ MODULE_KINDS = {"tts": ("opm.tts", "mycroft.plugin.tts"), "stt": ("opm.stt", "my
 
 def plugin_modules(package: str) -> dict[str, list[str]]:
     """The TTS and STT modules a package brings, by kind: their entry point
-    names, which are what mycroft.conf calls them (tts.module)."""
+    names, which are what mycroft.conf calls them (tts.module); and under
+    ``provider`` the media providers it brings (media_providers.<name>)."""
     out: dict[str, list[str]] = {}
     try:
         eps = metadata.distribution(package).entry_points
     except Exception:  # noqa: BLE001 - none then
         return out
-    for kind, groups in MODULE_KINDS.items():
+    for kind, groups in dict(MODULE_KINDS, provider=(PROVIDER_GROUP,)).items():
         names = sorted({ep.name for ep in eps if ep.group in groups and _CONFIG_RE.match(ep.name)})
         if names:
             out[kind] = names
@@ -666,6 +718,14 @@ class _Checker:
             out["kind"] = mkind
             out["module"] = names[0]
             self.refs[ref + ".module"] = {"kind": "module", "block": out}
+        if kind == "provider":
+            # the panel's own part: whether the assistant searches this media
+            # provider, and a switch; nothing of it comes from the file
+            names = (getattr(self, "modules", None) or {}).get("provider") or []
+            if len(names) != 1:
+                raise DescribedError(f"{where}: the package brings no media provider, or more than one")
+            out["provider"] = names[0]
+            self.refs[ref + ".provider"] = {"kind": "provider", "block": out}
         if kind == "upload":
             out["send"] = self.message(raw.get("send"), where)
             accept = raw.get("accept") or []
@@ -1100,7 +1160,7 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
                 raise HTTPException(400, "that part is not a form")
             block = decl["block"]
             if "config" in block:
-                values = r.config.user_or_merged(block["config"].split(".")) or {}
+                values = r.config.user_or_merged(config_path(block["config"])) or {}
             elif "settings" in block:
                 values = _read_settings(block["settings"])
             elif "query" in block:
@@ -1129,7 +1189,7 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
                 raise bad(e) from None
             block = decl["block"]
             if "config" in block:
-                path = block["config"].split(".")
+                path = config_path(block["config"])
                 lacking = missing(decl, values, r.config.user_or_merged(path))
                 if lacking:
                     raise HTTPException(400, ", ".join(lacking) + " is needed")
@@ -1234,6 +1294,48 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
             from ovos_bus_client.message import Message
             r.need_bus().emit(Message("speak", {"utterance": text, "lang": lang}))
             return {"ok": True}
+
+        def provider_decl(ref: str) -> dict:
+            decl = refs.get(ref)
+            if decl is None or decl["kind"] != "provider":
+                raise HTTPException(400, "that part is not a media provider")
+            return decl["block"]
+
+        @r.api.get(base + "/provider")
+        def provider_read(ref: str) -> dict[str, Any]:
+            block = provider_decl(ref)
+            place = providers_place()
+            mine = r.config.user_or_merged(place + [block["provider"]]) or {}
+            every = r.config.user_or_merged(place) or {}
+            return {"provider": block["provider"],
+                    "enabled": not (isinstance(mine, dict) and mine.get("enabled") is False),
+                    # the pipeline's own off-switch for all of them
+                    "all_off": place == PIPELINE_PROVIDERS and isinstance(every, dict)
+                    and every.get("enabled") is False}
+
+        @r.privileged.post(base + "/provider")
+        def provider_set(body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
+            block = provider_decl(str(body.get("ref", "")))
+            on = body.get("enabled")
+            if not isinstance(on, bool):
+                raise HTTPException(400, "enabled is true or false")
+            place = providers_place()
+
+            def change(user: dict) -> None:
+                node = user
+                for key in place:
+                    node = node.setdefault(key, {})
+                mine = node.setdefault(block["provider"], {})
+                if on:
+                    # on is the default: the file says only that it was off
+                    mine.pop("enabled", None)
+                    if not mine:
+                        node.pop(block["provider"], None)
+                else:
+                    mine["enabled"] = False
+
+            r.config.mutate(change, bus=r.bus())
+            return provider_read(str(body["ref"]))
 
         async def upload(request: Request) -> dict[str, Any]:
             from starlette.concurrency import run_in_threadpool
