@@ -191,11 +191,16 @@ answer. An upload always needs the token.
 
 | Key | |
 | --- | --- |
-| `kind` | `tts` or `stt`, on the page of a package that brings one such plugin. |
+| `kind` | `tts`, `stt` or `ww`, on the page of a package that brings one such plugin. |
 
 The panel's own part: whether this plugin is the voice or the listener in use,
 or the fallback, buttons to make it so, and for a voice in use, a sentence to
 hear it. Nothing of it comes from the file.
+
+For a wake word plugin (`ww`) it lists the wake words that use it (the named
+entries in `hotwords` whose `module` is the plugin), says which is the wake
+word in use (`listener.wake_word`), and has a button to make another of them
+the wake word: the same choice as on the Voice page, seen from the plugin.
 
 ### qr
 
@@ -339,7 +344,7 @@ nothing. A version the file was not written for gets no page rather than one
 that writes the wrong keys. The page says at its foot that the panel described
 it.
 
-A TTS or STT plugin that nobody describes still gets a page, in the Voice
+A TTS, STT or wake word plugin that nobody describes still gets a page, in the Voice
 group: a line saying what it is, and the [module](#module) block for its kind.
 So does a media provider, in the Library group, with the
 [provider](#provider) block (`ovos-media-provider-youtube` is "Youtube" at

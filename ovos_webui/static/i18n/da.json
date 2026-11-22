@@ -210,5 +210,9 @@
  "store.unreachable": "Butikken kunne ikke nås.",
  "store.from": "Det, butikken har:",
  "store.note": "Nogen har tjekket dem til en slags enhed; installeren tjekker stadig versionerne, før den installerer.",
- "store.works": "virker ifølge butikken"
+ "store.works": "virker ifølge butikken",
+ "module.ww.title": "Wake ordet",
+ "module.ww.none": "Intet wake ord bruger dette plugin endnu. Et wake ord tilføjes under hotwords i konfigurationen, på siden Indstillinger.",
+ "module.ww.inUse": "i brug",
+ "module.ww.use": "Brug som wake ord"
 }

@@ -210,5 +210,9 @@
  "store.unreachable": "No se pudo contactar con la tienda.",
  "store.from": "Lo que tiene la tienda:",
  "store.note": "Alguien los ha comprobado para un tipo de dispositivo; el instalador sigue comprobando las versiones antes de instalar.",
- "store.works": "funciona según la tienda"
+ "store.works": "funciona según la tienda",
+ "module.ww.title": "La palabra de activación",
+ "module.ww.none": "Ninguna palabra de activación usa este complemento todavía. Se añade en hotwords en la configuración, en la página Ajustes.",
+ "module.ww.inUse": "en uso",
+ "module.ww.use": "Usar como palabra de activación"
 }

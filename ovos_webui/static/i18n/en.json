@@ -210,5 +210,9 @@
  "store.unreachable": "The store could not be reached.",
  "store.from": "What the store lists:",
  "store.note": "Someone has checked these for a kind of device; the installer still checks the versions before it installs.",
- "store.works": "found working by the store"
+ "store.works": "found working by the store",
+ "module.ww.title": "The wake word",
+ "module.ww.none": "No wake word uses this plugin yet. A wake word is added under hotwords in the configuration, on the Settings page.",
+ "module.ww.inUse": "in use",
+ "module.ww.use": "Use as the wake word"
 }

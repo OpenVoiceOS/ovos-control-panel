@@ -338,7 +338,8 @@ def config_roots(package: str) -> list[str]:
 
 
 #: The kinds of plugin a page can make the one in use (a "module" block)
-MODULE_KINDS = {"tts": ("opm.tts", "mycroft.plugin.tts"), "stt": ("opm.stt", "mycroft.plugin.stt")}
+MODULE_KINDS = {"tts": ("opm.tts", "mycroft.plugin.tts"), "stt": ("opm.stt", "mycroft.plugin.stt"),
+                "ww": ("opm.wake_word", "mycroft.plugin.wake_word")}
 
 
 def plugin_modules(package: str) -> dict[str, list[str]]:
@@ -1304,9 +1305,22 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
                 raise HTTPException(400, "that part is not a plugin to use")
             return decl["block"]
 
+        def wake_words(module: str) -> dict[str, Any]:
+            """The wake words (named entries in hotwords) that this plugin
+            hears, and which of them is the one in use."""
+            hotwords = r.config.user_or_merged(["hotwords"]) or {}
+            current = r.config.user_or_merged(["listener", "wake_word"]) or ""
+            words = sorted(name for name, spec in (hotwords.items() if isinstance(hotwords, dict) else [])
+                           if isinstance(spec, dict) and spec.get("module") == module
+                           and spec.get("active", True) is not False)
+            return {"module": module, "words": [{"name": w, "active": w == current} for w in words],
+                    "active": current in words}
+
         @r.api.get(base + "/module")
         def module_read(ref: str) -> dict[str, Any]:
             block = module_decl(ref)
+            if block["kind"] == "ww":
+                return wake_words(block["module"])
             section = r.config.user_or_merged([block["kind"]]) or {}
             return {"module": block["module"],
                     "active": section.get("module") == block["module"],
@@ -1316,6 +1330,18 @@ def routes_for(pid: str, refs: dict[str, dict], page: dict | None = None,
         def module_use(body: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
             block = module_decl(str(body.get("ref", "")))
             role = body.get("as")
+            if block["kind"] == "ww":
+                # the wake word is chosen among the words that use this plugin,
+                # as on the Voice page; nothing else is written
+                word = body.get("word")
+                if role != "wake_word" or word not in {w["name"] for w in wake_words(block["module"])["words"]}:
+                    raise HTTPException(400, "as is wake_word, with one of the words this plugin hears")
+
+                def use_word(user: dict) -> None:
+                    user.setdefault("listener", {})["wake_word"] = word
+
+                r.config.mutate(use_word, bus=r.bus())
+                return module_read(str(body["ref"]))
             if role not in ("module", "fallback_module"):
                 raise HTTPException(400, "as is module or fallback_module")
 

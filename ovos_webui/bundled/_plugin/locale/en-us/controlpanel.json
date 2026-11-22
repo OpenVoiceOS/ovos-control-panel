@@ -1,5 +1,6 @@
 {
  "plugin.tts.intro": "This voice brings no page of its own, so the panel shows what every voice has. Any other settings it has go in its own section of mycroft.conf, on the Settings page.",
  "plugin.stt.intro": "This listener brings no page of its own, so the panel shows what every listener has. Any other settings it has go in its own section of mycroft.conf, on the Settings page.",
- "plugin.provider.intro": "A media provider: a place the assistant searches when you ask it to play something. It brings no page of its own, so the panel shows whether it is on. Any settings it has go in media_providers in mycroft.conf, on the Settings page."
+ "plugin.provider.intro": "A media provider: a place the assistant searches when you ask it to play something. It brings no page of its own, so the panel shows whether it is on. Any settings it has go in media_providers in mycroft.conf, on the Settings page.",
+ "plugin.ww.intro": "This wake word plugin brings no page of its own, so the panel shows the wake words that use it and which one is in use."
 }

@@ -210,5 +210,9 @@
  "store.unreachable": "Não foi possível contactar a loja.",
  "store.from": "O que a loja tem:",
  "store.note": "Alguém os verificou para um tipo de dispositivo; o instalador continua a verificar as versões antes de instalar.",
- "store.works": "funciona segundo a loja"
+ "store.works": "funciona segundo a loja",
+ "module.ww.title": "A palavra de ativação",
+ "module.ww.none": "Nenhuma palavra de ativação usa este plugin ainda. Adiciona-se em hotwords na configuração, na página Definições.",
+ "module.ww.inUse": "em uso",
+ "module.ww.use": "Usar como palavra de ativação"
 }
