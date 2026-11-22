@@ -445,7 +445,8 @@ def test_every_transformer_saves_where_the_transformers_page_orders_it(monkeypat
     assert described.config_roots("my-pkg")[-1] == section + ".my-transformer"
 
 
-@pytest.mark.parametrize("folder", sorted(p.name for p in described.BUNDLED.iterdir() if p.is_dir()))
+@pytest.mark.parametrize("folder", sorted(p.name for p in described.BUNDLED.iterdir()
+                                          if (p / described.FILE).is_file()))
 def test_every_page_the_panel_brings_is_sound(folder):
     """Each bundled page passes the checks for its package's own places, says
     what it is for, and has the same strings in every language."""
@@ -762,3 +763,71 @@ def test_the_system_page_the_panel_brings_reads_ssh_and_resets_only_on_its_word(
     reset = page["blocks"][4]["actions"][0]
     assert reset["confirm_text"] == "RESET" and reset["done"]["key"] == "system.factory.sent"
     assert seen == ["system.ssh.enable"], "the reset is never sent without the typed word"
+
+
+# ── a page for a voice or listener plugin that has none ─────────────────────
+@pytest.mark.parametrize("name,modules,pid,label", [
+    ("ovos-tts-plugin-edge-tts", {"tts": ["ovos-tts-plugin-edge-tts"]}, "edge-tts", "Edge TTS"),
+    ("ovos-stt-plugin-fasterwhisper", {"stt": ["ovos-stt-plugin-fasterwhisper"]},
+     "fasterwhisper-stt", "Fasterwhisper"),
+    ("neon-tts-plugin-coqui", {"tts": ["coqui"]}, "coqui-tts", "Coqui"),
+])
+def test_a_plugin_with_no_page_gets_the_one_every_plugin_of_its_kind_has(monkeypatch, name, modules, pid, label):
+    monkeypatch.setattr(described, "plugin_modules", lambda package: modules)
+    found = described.plugin_page(name, "1.0", ["top"])
+    assert found.by_panel and found.root == described.PLUGIN_PAGE
+    assert found.data["id"] == pid and found.data["title"]["en"] == label
+    page, groups = pages.parse_described(found, name, "1.0")
+    assert page.id == pid and page.group == "voice" and page.by_panel and page.label == label
+    kinds = [b["kind"] for b in page.described["blocks"] if b["type"] == "module"]
+    assert kinds == list(modules)
+    kind = kinds[0]
+    for lang in ("en", "da", "es", "pt", "ar"):
+        assert page.strings[lang][f"plugin.{kind}.intro"]
+
+
+def test_only_a_plugin_with_one_voice_or_listener_gets_that_page(monkeypatch):
+    for modules in ({}, {"tts": ["a", "b"]}, {"tts": ["a"], "stt": ["b", "c"]}):
+        monkeypatch.setattr(described, "plugin_modules", lambda package: modules)
+        assert described.plugin_page("ovos-tts-plugin-x", "1.0", []) is None, modules
+    monkeypatch.setattr(described, "plugin_modules", lambda package: {"tts": ["a"], "stt": ["b"]})
+    both = described.plugin_page("ovos-plugin-both", "1.0", [])
+    assert [b.get("kind") for b in both.data["blocks"] if b["type"] == "module"] == ["tts", "stt"]
+
+
+class _Dist:
+    """An installed package, as importlib.metadata shows it, with no files."""
+
+    def __init__(self, name):
+        self.metadata = {"Name": name}
+        self.version = "1.0"
+        self.entry_points = []
+        self.files = []
+
+    def read_text(self, name):
+        return None
+
+
+def test_discover_makes_that_page_only_when_nobody_describes_the_plugin(tmp_path, monkeypatch):
+    """A package's own file, then the panel's, then the page every plugin of
+    its kind has."""
+    from importlib import metadata
+    bundled = tmp_path / "bundled"
+    (bundled / "ovos-tts-plugin-known").mkdir(parents=True)
+    (bundled / "ovos-tts-plugin-known" / described.FILE).write_text(json.dumps(
+        dict(VOICE, **{"for": "ovos-tts-plugin-known>=1,<2"})), encoding="utf-8")
+    monkeypatch.setattr(described, "BUNDLED", bundled)
+    monkeypatch.setattr(metadata, "distributions",
+                        lambda: [_Dist("ovos-tts-plugin-known"), _Dist("ovos-tts-plugin-new")])
+    monkeypatch.setattr(described, "plugin_modules", lambda package: {"tts": [package]})
+    found = {f.package: f for f in described.discover()}
+    assert found["ovos-tts-plugin-known"].data["id"] == "voice-x", "the panel's own description"
+    assert found["ovos-tts-plugin-new"].root == described.PLUGIN_PAGE
+    assert found["ovos-tts-plugin-new"].data["id"] == "new-tts"
+
+
+def test_the_plugin_page_strings_are_the_same_in_every_language():
+    found = described.strings(described.PLUGIN_PAGE)
+    keys = set(found["en"])
+    assert keys == {"plugin.tts.intro", "plugin.stt.intro"}
+    assert all(set(t) == keys for t in found.values()) and len(found) >= 5

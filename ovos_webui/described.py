@@ -163,7 +163,8 @@ def discover() -> list[Found]:
             out.append(Found(name, dist.version or "?", top, root, data))
             break
         else:
-            found = _bundled(name, dist.version or "", _tops(dist))
+            found = _bundled(name, dist.version or "", _tops(dist)) \
+                or plugin_page(name, dist.version or "", _tops(dist))
             if found is not None:
                 out.append(found)
     return out
@@ -203,6 +204,39 @@ def _bundled(name: str, version: str, tops: list[str]) -> Found | None:
     except InvalidVersion:
         return None
     return Found(name, version or "?", tops[0] if tops else "", root, data, by_panel=True)
+
+
+#: The strings of the page the panel makes for a voice or listener plugin
+#: that has no description at all
+PLUGIN_PAGE = BUNDLED / "_plugin"
+_PREFIXES = ("ovos-", "neon-", "mycroft-")
+
+
+def plugin_page(name: str, version: str, tops: list[str]) -> Found | None:
+    """A page for a TTS or STT plugin with no description of its own and none
+    from the panel: what every plugin of its kind has (whether it is the one
+    in use or the fallback, buttons to make it so, and for a voice a sentence
+    to hear it), and nothing that needs to know its settings."""
+    modules = plugin_modules(name)
+    kinds = [k for k in MODULE_KINDS if len(modules.get(k) or ()) == 1]
+    if not kinds or any(len(modules.get(k) or ()) > 1 for k in MODULE_KINDS):
+        return None
+    slug = name
+    for p in _PREFIXES:
+        slug = slug.removeprefix(p)
+    for k in MODULE_KINDS:
+        slug = slug.removeprefix(f"{k}-plugin-").removeprefix(f"plugin-{k}-")
+    words = [w for w in slug.split("-") if w]
+    label = " ".join(w.upper() if w in MODULE_KINDS else w[:1].upper() + w[1:] for w in words) or name
+    pid = slug if any(k in words for k in kinds) else f"{slug}-{kinds[0]}"
+    pid = re.sub(r"[^a-z0-9-]", "-", pid.lower()).strip("-")[:60] or "plugin"
+    blocks: list[dict] = []
+    for k in kinds:
+        blocks += [{"type": "text", "text": f"plugin.{k}.intro"}, {"type": "module", "kind": k}]
+    data = {"controlpanel": 1, "id": pid, "path": "/" + pid,
+            "title": {"key": f"plugin.{pid}.title", "en": label},
+            "group": "voice", "order": 90, "bus": f"ovos.{pid}.", "blocks": blocks}
+    return Found(name, version or "?", tops[0] if tops else "", PLUGIN_PAGE, data, by_panel=True)
 
 
 # ── checking a file ──────────────────────────────────────────────────────────

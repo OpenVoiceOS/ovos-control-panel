@@ -1,0 +1,4 @@
+{
+ "plugin.tts.intro": "Denne stemme har ingen side selv, så panelet viser det, alle stemmer har. Har den andre indstillinger, hører de til i dens egen del af mycroft.conf, på siden Indstillinger.",
+ "plugin.stt.intro": "Denne lytter har ingen side selv, så panelet viser det, alle lyttere har. Har den andre indstillinger, hører de til i dens egen del af mycroft.conf, på siden Indstillinger."
+}

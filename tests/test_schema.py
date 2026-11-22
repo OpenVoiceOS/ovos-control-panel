@@ -70,3 +70,8 @@ def test_a_group_title_is_a_key_or_a_key_with_its_english():
     assert errors(page) == []
     page["groups"][0]["title"] = "nav.group.music"
     assert errors(page) == []
+
+
+def test_the_page_the_panel_makes_for_a_plugin_passes(monkeypatch):
+    monkeypatch.setattr(described, "plugin_modules", lambda package: {"tts": [package]})
+    assert errors(described.plugin_page("ovos-tts-plugin-x", "1.0", []).data) == []

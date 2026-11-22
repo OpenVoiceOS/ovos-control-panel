@@ -1,0 +1,4 @@
+{
+ "plugin.tts.intro": "Esta voz não traz página própria, por isso o painel mostra o que todas as vozes têm. As outras definições, se as tiver, ficam na sua própria secção do mycroft.conf, na página Definições.",
+ "plugin.stt.intro": "Este reconhecedor não traz página própria, por isso o painel mostra o que todos têm. As outras definições, se as tiver, ficam na sua própria secção do mycroft.conf, na página Definições."
+}

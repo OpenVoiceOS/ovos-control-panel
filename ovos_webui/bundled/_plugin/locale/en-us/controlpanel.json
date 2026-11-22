@@ -1,0 +1,4 @@
+{
+ "plugin.tts.intro": "This voice brings no page of its own, so the panel shows what every voice has. Any other settings it has go in its own section of mycroft.conf, on the Settings page.",
+ "plugin.stt.intro": "This listener brings no page of its own, so the panel shows what every listener has. Any other settings it has go in its own section of mycroft.conf, on the Settings page."
+}
