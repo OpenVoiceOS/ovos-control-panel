@@ -27,6 +27,7 @@ matter of moving a folder.
 ## Contents
 
 - [Two kinds of page](#two-kinds-of-page)
+- [Pages described in a file](#pages-described-in-a-file)
 - [Registering a page](#registering-a-page)
 - [The page description](#the-page-description)
 - [The menu](#the-menu)
@@ -53,6 +54,120 @@ matter of moving a folder.
 A data page is the normal case. A skill or a PHAL plugin can ship one without
 adding a single dependency, because the page is only files, and everything it
 does goes over the message bus that the plugin already listens to.
+
+## Pages described in a file
+
+A skill or plugin can describe its page in `controlpanel.json` instead of
+bringing HTML and Python. The panel draws it and talks to the skill over the
+bus, sending only what the file declares. This is the way new pages should
+be made; HTML pages (below) stay for what does not fit.
+
+The file sits at the root of the package, next to `skill.json`. The panel
+finds it in the installed OVOS packages without importing them, so no code
+from the package runs in the panel. Its strings go in
+`locale/<lang>/controlpanel.json` (`da-DK` or `da`), next to the skill's
+other locale files; a label can also carry its English text in the file
+(`{"key": "midi.title", "en": "MIDI"}`). The panel has the common words
+itself: `common.save`, `common.delete`, `common.play`, `common.stop`,
+`common.download`, `common.rename`, `common.sure` and more.
+
+```json
+{
+  "controlpanel": 1,
+  "id": "jamband",
+  "title": "jamband.title",
+  "group": "music",
+  "order": 10,
+  "icon": "controlpanel.svg",
+  "bus": "ovos.jamband.",
+  "blocks": [
+    {"type": "text", "text": "jamband.intro"},
+    {"type": "status", "query": "ovos.jamband.jams.list", "show": "playing",
+     "text": "jamband.playing", "actions": [{"label": "common.stop", "send": "ovos.jamband.stop"}]},
+    {"type": "list", "query": "ovos.jamband.jams.list", "items": "jams", "key": "id",
+     "title": "{name}", "meta": "jamband.meta", "empty": "jamband.none",
+     "split": {"by": "bundled", "false": "jamband.mine.title", "true": "jamband.skill.title"},
+     "rename": {"field": "name", "send": "ovos.jamband.jams.rename", "when": "!bundled"},
+     "actions": [
+       {"label": "common.play", "send": "ovos.jamband.jams.play"},
+       {"label": "jamband.midi", "download": "ovos.jamband.jams.midi",
+        "file": {"data": "midi", "name": "{name}.mid", "type": "audio/midi"}},
+       {"label": "common.delete", "send": "ovos.jamband.jams.delete", "when": "!bundled"}]}
+  ]
+}
+```
+
+The page around the blocks: `id`, `title`, `group` (default `everyday`),
+`groups` (each with a `title` that may be a label), `order`, `icon` (an SVG in the package), `path` (default
+`/<id>`), `heading`, `needs` (default: the package itself) and `bus`, the
+prefix every message of the page starts with.
+
+| Block | Fields |
+|---|---|
+| `text` | `text`: a label, and/or `steps`: labels shown as numbered steps. |
+| `status` | `query`, `text` (a label with `{field}` from the answer) and/or `rows` (`label`, `value` with `{field}` or `text` a label, `when`, and `empty`, the label shown when the value is empty; a row without a `label` is a note across the card), `show` (a field that must be true), `actions`, `refresh` (seconds). |
+| `list` | `query`, `items` (the answer's list), `key` (a row's id), `title` (`{field}`), `meta` (a label with `{field}`), `empty`, `split` (`by` a true/false field into two lists, each with a heading), `rename` (`field`, `send`, `when`, `max_length`, `label` for its button), `actions` (one per row), `refresh`, `heading`. |
+| `actions` | `actions`: buttons. |
+| `form` | `fields` and `save`: `{"config": "PHAL.<package>", "reload": "<message>"}` writes in the plugin's own place in `mycroft.conf` and asks it to read it again; `{"send": "<message>"}` with a `query` sends the values to the skill. |
+| `choice` | `param` and `options`: tabs whose value goes with every query on the page. |
+| `upload` | `send`, `accept` (the file endings it takes: `[".pdf", ".txt"]`), `max_mb` (1 to 64, default 10) and a `field` (`name`, `label`, `max_length`) sent along, such as a title. The file goes to the skill in parts of 512 KB, each a message with `upload` (one id for all the parts), `name`, `part` (from 0), `parts`, `data` (base64) and the field; the answer to the last part is the answer. An upload always needs the token. |
+
+An action is `{"label", "send"}`, with `data` it always sends (a test sound),
+or a download, `{"label", "download", "file":
+{"data": <answer field, base64>, "name": "{name}.mid", "type": <media type>}}`,
+with `when` (`"field"` or `"!field"` on the row) and `confirm` (a label).
+A field is `{"name", "label", "type"}`, the type one of `text`, `password`,
+`url` (http:// or https://), `number`, `slider`, `checkbox`, `select`
+(`options`, or `options_from` a query) and `lines`, with `required`, `hint`, `min`, `max`, `step` and `max_length`.
+A field can have a `default` (a value equal to it is left out of
+`mycroft.conf`, so the file says only what was changed), `show_when`
+(`{"synth": "port"}`: shown only for that value of another field), and a
+checkbox `on` and `off` values for a setting that is not true or false
+(`"on": ["*"], "off": []`). A form saved in `mycroft.conf` sends its
+`reload` message with the section as saved (`{"config": {...}}`).
+
+In `{field}` a field can be nested (`{ports.outputs}`), a list is joined with
+commas, a value can be shown as a date (`{saved:date}`) or a date and time
+(`{last:time}`), both in seconds since 1970, or as a label
+(`{engine@midi.engine}` shows the label `midi.engine.fluidsynth`, or nothing
+when there is no such label; the label can hold the answer's values too).
+
+A skill that answers with `{"error": ...}` can give a label of its page
+(`"jamband.err.gone"`), shown in the reader's language; other text is shown
+as it is.
+
+A block this panel does not know is shown as "this part needs a newer control
+panel"; the rest of the page still works.
+
+### What a described page can and cannot do
+
+- **No code.** The file is data; a file that does not follow the format is
+  left out and named on the About page.
+- **Only its own messages.** Every message starts with the page's `bus`
+  prefix, and a prefix of OVOS's own (`mycroft.`, `ovos.skills.`,
+  `ovos.phal.`, `system.`, `recognizer_loop:` and more) is refused.
+- **Only the data it declared.** A request names a part of the page; the
+  panel takes the message from the file and sends only a row's key, a
+  rename's text, a choice from its options, or a form's fields, each checked
+  against its type and length.
+- **Changes need the token.** An action or a rename is privileged unless it
+  says `"privileged": false`; a form always is. A download is a read unless
+  it says otherwise.
+- **Destructive actions ask.** A message with delete, remove, forget, reset,
+  wipe or erase in it gets a confirmation if the file gives none.
+- **A form writes only in the plugin's own place** in `mycroft.conf`
+  (`PHAL.<package>`). A password is never sent back to the browser; an empty
+  one keeps what is there.
+- **Uploads** take only the file endings and the size the file says, need the
+  token, and reach the skill as a bare file name (no folders) in parts the bus
+  can carry; where the file is kept is the skill's to decide.
+- **Downloads** are only of a short list of types (MIDI, audio, PDF, plain
+  text, JSON, CSV, images, EPUB), always as attachments.
+- **Values are text.** What the skill answers is put on the page as text,
+  never as HTML.
+
+A package that has both a described page and an HTML page with the same id
+keeps the described one.
 
 ## Registering a page
 

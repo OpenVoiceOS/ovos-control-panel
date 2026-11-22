@@ -12,13 +12,17 @@ broken page is left out and named; it never stops the panel from starting.
 from __future__ import annotations
 
 import base64
+import functools
 import importlib
 import json
 import logging
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from importlib import metadata, resources
 from typing import Any, Callable
+
+from ovos_webui import described
 
 LOG = logging.getLogger(__name__)
 
@@ -104,6 +108,10 @@ class Page:
     uploads: dict[str, int] = field(default_factory=dict)
     #: The module the page was described in (ovos_skill_documents.panel).
     module: str = ""
+    #: A page described in controlpanel.json: what the browser draws, and
+    #: what the bus bridge may send for it (ref -> declaration).
+    described: dict | None = None
+    refs: dict = field(default_factory=dict)
 
     def nav(self) -> dict[str, Any]:
         """What the browser's menu needs to know about the page."""
@@ -133,6 +141,7 @@ class Registry:
     def drop(self, page: Page, error: str) -> None:
         """Leave a page out after it loaded, with the reason."""
         self.pages = [p for p in self.pages if p is not page]
+        self._strings_mark = None
         self.problems.append({"page": page.id, "package": page.package, "error": error})
         LOG.warning("page %s from %s left out: %s", page.id, page.package, error)
 
@@ -192,7 +201,18 @@ class Registry:
         used = {x[3]["group"] for x in shown}
         ordered = sorted((g for g in groups.values() if g["id"] in used),
                          key=lambda g: (rank[g["id"]], g["id"]))
-        return {"groups": ordered, "pages": [x[3] for x in shown], "langs": self.langs()}
+        return {"groups": ordered, "pages": [x[3] for x in shown], "langs": self.langs(),
+                "strings": self.strings_mark()}
+
+    def strings_mark(self) -> str:
+        """A short mark of the pages' strings: the browser keeps the strings
+        it read until this changes (a page updated with new words)."""
+        if getattr(self, "_strings_mark", None) is None:
+            import hashlib
+            text = json.dumps([[p.id, p.version, p.strings] for p in self.pages],
+                              sort_keys=True, ensure_ascii=False, default=str)
+            self._strings_mark = hashlib.sha1(text.encode()).hexdigest()[:10]
+        return self._strings_mark
 
     def langs(self) -> list[str]:
         """Every language there are strings for: the panel's and the pages'."""
@@ -433,6 +453,21 @@ def _own_version() -> str:
     return __version__
 
 
+@functools.lru_cache(maxsize=1)
+def _asset_version() -> str:
+    """The version in the asset links: the panel's version and a short mark
+    of its static files, so a change to them is fetched even when the
+    version number stays the same (a checkout, a test build)."""
+    import hashlib
+    static = Path(__file__).resolve().parent.parent / "static"
+    h = hashlib.sha1()
+    for f in sorted(static.rglob("*")):
+        if f.is_file():
+            st = f.stat()
+            h.update(f"{f.relative_to(static)}:{st.st_size}:{int(st.st_mtime)}".encode())
+    return f"{_own_version()}.{h.hexdigest()[:8]}"
+
+
 def _sources(eps: list | None) -> list[tuple[str, Callable[[], Any], str, str, str]]:
     """(name, loader, module, package, version) for every page to load."""
     eps = _entry_points() if eps is None else eps
@@ -457,6 +492,11 @@ def _sources(eps: list | None) -> list[tuple[str, Callable[[], Any], str, str, s
     return found
 
 
+def _replaces(new: Page, old: Page) -> bool:
+    """A package that has both kinds of page keeps the described one."""
+    return new.package == old.package and new.described is not None and old.described is None
+
+
 def _takes_over(new: Page, old: Page) -> bool:
     """Whether ``new`` replaces ``old``: a page from another package with the
     id of one of the panel's own pages that are not core. That is how a page
@@ -466,19 +506,109 @@ def _takes_over(new: Page, old: Page) -> bool:
     return old.builtin and not new.builtin and old.id not in CORE
 
 
-def load(eps: list | None = None) -> Registry:
-    """Load every registered page. ``eps`` replaces the entry points (tests)."""
+def _described_sources(found: list) -> list:
+    """The pages described in controlpanel.json files, as sources."""
+    out = []
+    for f in found:
+        out.append((f"{f.package} ({described.FILE})", (lambda f=f: f), f.module, f.package, f.version))
+    return out
+
+
+def parse_described(found: Any, package: str, version: str) -> tuple[Page, list]:
+    """Check a controlpanel.json and turn it into a :class:`Page`."""
+    data = found.data
+    try:
+        page_data, refs = described.check(data, package)
+    except described.DescribedError as e:
+        raise PageError(str(e)) from e
+    pid = data.get("id")
+    if not isinstance(pid, str) or not _ID_RE.match(pid):
+        raise PageError(f"not a page id: {pid!r}")
+    path = data.get("path") or "/" + pid
+    if not isinstance(path, str) or not _PATH_RE.match(path) or "//" in path \
+            or (len(path) > 1 and path.endswith("/")):
+        raise PageError(f"not a page path: {path!r}")
+    if any(path == r or path.startswith(r + "/") for r in RESERVED):
+        raise PageError(f"{path} belongs to the panel itself")
+    try:
+        title = described._label(data.get("title"), "title")  # noqa: SLF001
+        heading = described._label(data["heading"], "heading") if data.get("heading") else title  # noqa: SLF001
+        icon = described.icon(found.root, data.get("icon"))
+    except described.DescribedError as e:
+        raise PageError(str(e)) from e
+    group = data.get("group", "everyday")
+    if not isinstance(group, str) or not _ID_RE.match(group):
+        raise PageError(f"not a group: {group!r}")
+    order = data.get("order", 100)
+    if not isinstance(order, int) or isinstance(order, bool):
+        raise PageError("the order must be a whole number")
+    needs = data.get("needs") or [package]
+    if isinstance(needs, str) or not all(isinstance(n, str) and n for n in needs):
+        raise PageError("needs must be a list of package names")
+    strings = described.strings(found.root)
+    english = described.english(page_data, strings)
+    groups = []
+    for raw in data.get("groups") or ():
+        if not isinstance(raw, dict) or not _ID_RE.match(str(raw.get("id", ""))):
+            raise PageError(f"not a group definition: {raw!r}")
+        gtitle = raw.get("title")
+        if isinstance(gtitle, str) and described.is_key(gtitle):
+            # a label, in English from the package's strings
+            gkey, glabel = gtitle, english.get(gtitle) or (strings.get("en") or {}).get(gtitle) or raw["id"]
+        else:
+            gkey, glabel = _title(gtitle)
+        level = raw.get("level", "advanced")
+        if level not in ("everyday", "advanced"):
+            raise PageError(f"a group level is everyday or advanced, not {level!r}")
+        groups.append({"id": raw["id"], "key": gkey, "label": glabel,
+                       "order": int(raw.get("order", 100)), "level": level})
+    label = english.get(title["key"]) or title.get("en") or pid
+    page_data["en"] = english
+    body = json.dumps(page_data, ensure_ascii=False).replace("</", "<\\/")
+    html = (f'<div id="cp-page" data-page="{pid}"></div>\n'
+            f'<script type="application/json" id="cp-desc">{body}</script>\n'
+            '<script src="/static/described.js"></script>\n')
+    page = Page(id=pid, path=path, key=title["key"], label=label, group=group, order=order,
+                needs=tuple(needs), html=html, icon=icon, package=package, version=version,
+                builtin=False, heading_key=heading["key"],
+                heading=english.get(heading["key"]) or heading.get("en") or label,
+                fragment=True, strings=strings, module=found.module,
+                described=page_data, refs=refs,
+                routes=described.routes_for(pid, refs),
+                # an upload's body may be as large as its block says
+                uploads={f"/api/cp/{pid}/upload": max(b["max_mb"] for b in page_data["blocks"]
+                                                      if b["type"] == "upload") * 1024 * 1024 + 64 * 1024}
+                if any(b["type"] == "upload" for b in page_data["blocks"]) else {})
+    return page, groups
+
+
+def load(eps: list | None = None, files: list | None = None) -> Registry:
+    """Load every registered page. ``eps`` replaces the entry points and
+    ``files`` the controlpanel.json files found (tests); with ``eps`` given
+    and no ``files``, none are looked for."""
     reg = Registry(groups=[dict(g) for g in GROUPS])
     known_groups = {g["id"] for g in reg.groups}
     paths: dict[str, str] = {}
     ids: set[str] = set()
     loaded: list[tuple[Page, list]] = []
-    for name, loader, module, package, version in _sources(eps):
+    if files is None:
+        files = [] if eps is not None else described.discover()
+    for name, loader, module, package, version in _sources(eps) + _described_sources(files):
         builtin = package.lower() == OWN_DIST
         try:
-            page, groups = parse(loader(), module, package, version, builtin)
+            desc = loader()
+            if isinstance(desc, described.Found):
+                page, groups = parse_described(desc, package, version)
+            else:
+                page, groups = parse(desc, module, package, version, builtin)
             other = next((p for p, _ in loaded if p.id == page.id), None)
-            if other is not None and _takes_over(page, other):
+            if other is not None and _replaces(page, other):
+                loaded = [(p, g) for p, g in loaded if p is not other]
+                ids.discard(other.id)
+                paths.pop(other.path, None)
+            elif other is not None and _replaces(other, page):
+                continue
+            elif other is not None and _takes_over(page, other):
                 # the plugin that owns the hardware brings its own page:
                 # the panel's built-in one steps aside
                 LOG.info("page %s from %s takes the place of the panel's own", page.id, package)
@@ -667,7 +797,7 @@ def render(page: Page, nav_json: str, brand: dict[str, Any] | None = None) -> st
                  # the version in the asset links, so a browser fetches the
                  # new stylesheet and script after an update instead of
                  # running an old script against new pages
-                 "v": _esc(_own_version()),
+                 "v": _esc(_asset_version()),
                  "html_attrs": branding.html_attrs(branding.appearance())}
         out = _shell()
         for name, value in parts.items():

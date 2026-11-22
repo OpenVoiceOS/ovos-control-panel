@@ -1663,3 +1663,50 @@ def test_the_about_page_names_pages_other_packages_added(signed_in_page):
         assert "no group called nowhere" in page.locator("#pages-problem-list").inner_text()
     finally:
         page.unroute("**/api/pages")
+
+
+def test_a_described_page_draws_from_its_file(signed_in_page):
+    """described.js: a page from controlpanel.json is drawn, its rows show,
+    a row's actions follow their conditions, and nothing throws."""
+    page, url = signed_in_page
+    thrown = []
+    page.on("pageerror", lambda err: thrown.append(str(err)))
+    from ovos_webui import described
+    desc, _ = described.check({
+        "controlpanel": 1, "id": "demo", "bus": "ovos.demo.",
+        "blocks": [
+            {"type": "status", "query": "ovos.demo.list", "show": "playing",
+             "text": {"key": "demo.playing", "en": "Playing {playing}"},
+             "actions": [{"label": "common.stop", "send": "ovos.demo.stop"}]},
+            {"type": "list", "query": "ovos.demo.list", "items": "things", "key": "id", "title": "{name}",
+             "split": {"by": "fixed", "false": "demo.mine", "true": "demo.theirs"},
+             "rename": {"field": "name", "send": "ovos.demo.rename", "when": "!fixed"},
+             "actions": [{"label": "common.delete", "send": "ovos.demo.delete", "when": "!fixed"}]},
+            {"type": "sparkles"}]}, "ovos-skill-demo")
+    desc["en"] = {"demo.playing": "Playing {playing}"}
+    answer = {"playing": "Tune", "things": [{"id": "a", "name": "Mine", "fixed": False},
+                                            {"id": "b", "name": "<b>Theirs</b>", "fixed": True}]}
+    page.route("**/api/cp/demo/query", lambda r: r.fulfill(
+        status=200, content_type="application/json", body=json.dumps(answer)))
+    try:
+        page.goto(f"{url}/about")
+        page.wait_for_load_state("networkidle")
+        page.evaluate("""desc => {
+            const root = document.createElement('div'); root.id = 'cp-page';
+            const data = document.createElement('script'); data.type = 'application/json';
+            data.id = 'cp-desc'; data.textContent = JSON.stringify(desc);
+            document.querySelector('main').append(root, data);
+            const s = document.createElement('script'); s.src = '/static/described.js';
+            s.onload = () => document.dispatchEvent(new Event('DOMContentLoaded'));
+            document.body.append(s);
+        }""", desc)
+        page.wait_for_selector("#cp-page .cp-list li")
+        page.wait_for_timeout(300)
+        text = page.locator("#cp-page").inner_text()
+        assert "Playing Tune" in text and "<b>Theirs</b>" in text, "values are text, not HTML"
+        assert page.locator("#cp-page input[type=text]").count() == 1, "only my row can be renamed"
+        assert page.locator("#cp-page button.danger").count() == 1, "only my row can be deleted"
+        assert "newer control panel" in text
+        assert not thrown, thrown
+    finally:
+        page.unroute("**/api/cp/demo/query")
