@@ -16,6 +16,8 @@ import importlib.util
 import json
 import logging
 import re
+import threading
+import time
 from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path
@@ -51,6 +53,9 @@ MAX_DATA = 4096
 UPLOAD_PART = 512 * 1024
 #: the most messages a page the panel brings may name
 MAX_MESSAGES = 30
+#: what a listening list keeps: rows, and the size of a message
+MAX_HEARD_ROWS = 200
+MAX_HEARD = 8 * 1024
 MAX_UPLOAD_MB = 64
 _EXT_RE = re.compile(r"^\.[a-z0-9]{1,10}$")
 _LANG_DIR = re.compile(r"^[a-zA-Z]{2,3}([-_][a-zA-Z0-9]{2,8})?$")
@@ -472,8 +477,17 @@ class _Checker:
                 out["steps"] = [_label(x, f"{where}.steps") for x in steps]
             if raw.get("text") is not None or "steps" not in out:
                 out["text"] = _label(raw.get("text"), where)
-        if kind in ("status", "list"):
+        if kind == "list" and raw.get("listen") is not None and raw.get("query") is None:
+            # a plugin that only broadcasts (a sensor's reading): the panel
+            # listens and keeps the latest message of each row's key
+            heard = raw["listen"]
+            if not isinstance(heard, list) or not heard or len(heard) > 5:
+                raise DescribedError(f"{where}: listen is a list of up to 5 messages")
+            out["listen"] = [self.message(m, where) for m in heard]
+            out["refresh"] = 5
+        elif kind in ("status", "list"):
             out["query"] = self.message(raw.get("query"), where)
+        if kind in ("status", "list"):
             if raw.get("refresh") is not None:
                 out["refresh"] = max(2, min(int(raw["refresh"]), 3600))
         if kind == "status":
@@ -501,7 +515,8 @@ class _Checker:
             if "text" not in out and not out["rows"]:
                 raise DescribedError(f"{where}: a status has a text or rows")
         if kind == "list":
-            out["items"] = _path(raw.get("items", "items"), where)
+            # a listening list's rows are what the panel heard
+            out["items"] = "items" if "listen" in out else _path(raw.get("items", "items"), where)
             out["key"] = _field_name(raw.get("key", "id"), where)
             out["title"] = str(raw.get("title") or "{" + out["key"] + "}")[:200]
             if raw.get("meta") is not None:
@@ -615,7 +630,7 @@ class _Checker:
                               for o in options if isinstance(o, dict)]
             if not out["options"]:
                 raise DescribedError(f"{where}: a choice needs options")
-        if kind in ("status", "list", "form") and "query" in out:
+        if kind in ("status", "list", "form") and ("query" in out or "listen" in out):
             self.refs[ref] = {"kind": "query", "block": out}
         # a heading over the block ("title" for a list is its rows' title)
         heading = raw.get("heading", raw.get("title") if kind != "list" else None)
@@ -841,6 +856,47 @@ def missing(decl: dict, values: dict, existing: Any) -> list[str]:
 TIMEOUT = 10.0
 
 
+class Heard:
+    """The latest message of each row's key, for a list that listens: what
+    a plugin broadcasts and never answers (ovos-PHAL-sensors' readings)."""
+
+    def __init__(self, block: dict):
+        self.block = block
+        self.rows: dict[str, dict] = {}
+        self.lock = threading.Lock()
+        self.bus = None
+
+    def attach(self, bus) -> None:
+        # once per bus: a new bus after a reconnect is listened to again
+        if bus is None or bus is self.bus:
+            return
+        self.bus = bus
+        for msg_type in self.block["listen"]:
+            bus.on(msg_type, self.heard)
+
+    def heard(self, message) -> None:
+        data = getattr(message, "data", None)
+        if not isinstance(data, dict):
+            return
+        key = data.get(self.block["key"])
+        if not isinstance(key, (str, int)) or isinstance(key, bool) or len(str(key)) > 300:
+            return
+        try:
+            if len(json.dumps(data)) > MAX_HEARD:
+                return
+        except (TypeError, ValueError):
+            return
+        with self.lock:
+            if str(key) not in self.rows and len(self.rows) >= MAX_HEARD_ROWS:
+                return
+            self.rows[str(key)] = dict(data, heard=time.time())
+
+    def answer(self) -> dict:
+        with self.lock:
+            rows = [self.rows[k] for k in sorted(self.rows)]
+        return {"items": rows}
+
+
 def _ask(r, msg_type: str, data: dict) -> dict:
     from fastapi import HTTPException
     from ovos_bus_client.message import Message
@@ -886,6 +942,8 @@ def routes_for(pid: str, refs: dict[str, dict]):
             return {}
         return _ask(r, msg, data)
 
+    listening = [d for d in refs.values() if d["kind"] == "query" and "listen" in d["block"]]
+
     def add(r) -> None:
         base = f"/cp/{pid}"
 
@@ -895,6 +953,12 @@ def routes_for(pid: str, refs: dict[str, dict]):
             if decl is None or decl["kind"] not in ("query",) and not (
                     decl["kind"] == "form" and "query" in decl["block"]):
                 raise HTTPException(400, "that part asks for nothing")
+            if "listen" in decl["block"]:
+                # the first read of the page listens for all its lists
+                bus = r.need_bus()
+                for d in listening:
+                    d.setdefault("heard", Heard(d["block"])).attach(bus)
+                return decl["heard"].answer()
             try:
                 params = _params(decl, body.get("params"))
             except DescribedError as e:

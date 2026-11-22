@@ -123,6 +123,11 @@ with `when` (`"field"` or `"!field"` on the row) and `confirm` (a label).
 A message that gets no answer (the plugin acts and says nothing) is marked
 `"answer": false`: the panel sends it and is done. A list whose answer is a
 list of text (addresses, names) has rows with that text as their `key`.
+A plugin that only broadcasts (a sensor's readings) is not asked: a list with
+`listen` (up to five of the page's messages) instead of `query` has the
+latest message the panel heard of each `key`, with `heard`, when it came. The
+panel starts listening when the page is first read, keeps up to 200 rows and
+reads them again every five seconds.
 A field is `{"name", "label", "type"}`, the type one of `text`, `password`,
 `url` (http:// or https://), `number`, `slider`, `checkbox`, `select`
 (`options`, or `options_from` a query, or on a TTS plugin's page `"voices": true`: the voices the plugin itself lists for the reader's language, read in a process of their own so its code never runs in the panel) and `lines`, with `required`, `hint`, `min`, `max`, `step` and `max_length`.

@@ -53,13 +53,13 @@ def test_the_menu_follows_the_settings():
 
 
 def test_a_page_turned_off_answers_nothing(client):
-    assert client.get("/api/sensors").status_code != 404
-    _set_webui({"pages": {"disabled": ["sensors"]}})
-    assert client.get("/sensors").status_code == 404
-    assert client.get("/api/sensors").status_code == 404, "its routes go too"
-    assert "sensors" not in [p["id"] for p in _menu(client)["pages"]]
+    assert client.get("/api/personas").status_code != 404
+    _set_webui({"pages": {"disabled": ["personas"]}})
+    assert client.get("/personas").status_code == 404
+    assert client.get("/api/personas").status_code == 404, "its routes go too"
+    assert "personas" not in [p["id"] for p in _menu(client)["pages"]]
     listed = {p["id"]: p["disabled"] for p in client.get("/api/pages").json()["pages"]}
-    assert listed["sensors"] is True and listed["about"] is False
+    assert listed["personas"] is True and listed["about"] is False
 
 
 def test_a_core_page_cannot_be_turned_off(client):

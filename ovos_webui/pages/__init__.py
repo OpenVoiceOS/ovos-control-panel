@@ -67,7 +67,7 @@ MAX_STRINGS = 256 * 1024
 BUILTIN = (
     "dashboard", "setup", "tryit", "controls", "network", "voice", "skills", "backup",
     "about", "voice_all", "servers", "translate", "intents", "transformers", "personas",
-    "system", "sensors", "media", "mark1", "plugins", "settings", "panel",
+    "system", "media", "mark1", "plugins", "settings", "panel",
     "sound",
 )
 
