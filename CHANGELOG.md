@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a87](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a87) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a86...0.0.1a87)
+
+**Merged pull requests:**
+
+- Network leaves the core, for the ovos-control-panel-network extension [\#170](https://github.com/OpenVoiceOS/ovos-control-panel/pull/170) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a86](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a86) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a85...0.0.1a86)
@@ -505,7 +513,6 @@
 - feat: hear the current voice from the Voice page [\#52](https://github.com/OpenVoiceOS/ovos-control-panel/pull/52) ([JarbasAl](https://github.com/JarbasAl))
 - feat: cross-link the Voice and Transformers pages [\#51](https://github.com/OpenVoiceOS/ovos-control-panel/pull/51) ([JarbasAl](https://github.com/JarbasAl))
 - fix: re-subscribe the live feeds after a bus reconnect [\#50](https://github.com/OpenVoiceOS/ovos-control-panel/pull/50) ([JarbasAl](https://github.com/JarbasAl))
-- feat: show the device's setup at a glance on the Dashboard [\#49](https://github.com/OpenVoiceOS/ovos-control-panel/pull/49) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
