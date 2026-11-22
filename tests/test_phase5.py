@@ -164,7 +164,7 @@ def test_token_change_reissues_cookie(token_client):
                           json={"new": "brandnewtoken1", "current": "s3cret-token"},
                           headers=AUTH)
     assert r.status_code == 200
-    assert "ovos_webui_token" in r.headers.get("set-cookie", "")
+    assert "ovos_webui_session" in r.headers.get("set-cookie", "")
 
 
 def test_new_pages_render(client):
