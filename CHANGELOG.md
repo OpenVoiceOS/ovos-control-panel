@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.1a92](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a92) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a91...0.0.1a92)
+
+**Merged pull requests:**
+
+- A distribution can name its own packages that bring pages [\#182](https://github.com/OpenVoiceOS/ovos-control-panel/pull/182) ([andlo](https://github.com/andlo))
+- A qr block for described pages: a button, and its answer drawn as a QR code [\#181](https://github.com/OpenVoiceOS/ovos-control-panel/pull/181) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a91](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a91) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a90...0.0.1a91)
@@ -513,10 +522,6 @@
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a28...0.0.1a29)
 
-**Merged pull requests:**
-
-- fix: read the pipeline stages ovos-config ships instead of copying them [\#57](https://github.com/OpenVoiceOS/ovos-control-panel/pull/57) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [0.0.1a28](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a28) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a27...0.0.1a28)
@@ -540,7 +545,6 @@
 **Merged pull requests:**
 
 - fix: run the build tests, which have never started [\#60](https://github.com/OpenVoiceOS/ovos-control-panel/pull/60) ([JarbasAl](https://github.com/JarbasAl))
-- fix: clear ruff lint errors so the lint check can pass [\#56](https://github.com/OpenVoiceOS/ovos-control-panel/pull/56) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
