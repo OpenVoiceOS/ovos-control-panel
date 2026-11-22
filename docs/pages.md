@@ -120,6 +120,8 @@ An action is `{"label", "send"}`, with `data` it always sends (a test sound),
 or a download, `{"label", "download", "file":
 {"data": <answer field, base64>, "name": "{name}.mid", "type": <media type>}}`,
 with `when` (`"field"` or `"!field"` on the row) and `confirm` (a label).
+A message that gets no answer (the plugin acts and says nothing) is marked
+`"answer": false`: the panel sends it and is done.
 A field is `{"name", "label", "type"}`, the type one of `text`, `password`,
 `url` (http:// or https://), `number`, `slider`, `checkbox`, `select`
 (`options`, or `options_from` a query, or on a TTS plugin's page `"voices": true`: the voices the plugin itself lists for the reader's language, read in a process of their own so its code never runs in the panel) and `lines`, with `required`, `hint`, `min`, `max`, `step` and `max_length`.
@@ -149,7 +151,9 @@ panel"; the rest of the page still works.
   left out and named on the About page.
 - **Only its own messages.** Every message starts with the page's `bus`
   prefix, and a prefix of OVOS's own (`mycroft.`, `ovos.skills.`,
-  `ovos.phal.`, `system.`, `recognizer_loop:` and more) is refused.
+  `ovos.phal.`, `system.`, `recognizer_loop:` and more) is refused. Only a
+  page the panel brings may name other messages, one by one (see
+  [Pages the panel describes](#pages-the-panel-describes)).
 - **Only the data it declared.** A request names a part of the page; the
   panel takes the message from the file and sends only a row's key, a
   rename's text, a choice from its options, or a form's fields, each checked
@@ -621,3 +625,18 @@ who to tell about a mistake. Such a page only does what the package already
 does: a form to the skill's `settings.json` or the plugin's own place in
 `mycroft.conf`, and bus messages the package already answers. Each one should
 also go to the package as a pull request, so it can leave the panel.
+
+A plugin that has answered bus messages for years did not pick them under a
+prefix of the page's own; many are under OVOS' reserved ones (`ovos.phal.`,
+`enclosure.`). So a page the panel brings, and only such a page, may name the
+exact messages it uses, under any prefix:
+
+```json
+{"controlpanel": 1, "for": "ovos-phal-plugin-app-launcher>=0.0.1a1,<1", "id": "apps",
+ "messages": ["ovos.phal.app_launcher.list", "ovos.phal.app_launcher.launch",
+              "ovos.phal.app_launcher.close"], ...}
+```
+
+It is safe because the file is the panel's own, read in the panel's review: a
+package cannot name them for itself. `bus` is then not needed; with both, the
+page may use either.

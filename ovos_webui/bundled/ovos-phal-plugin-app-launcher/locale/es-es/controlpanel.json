@@ -1,0 +1,7 @@
+{
+ "apps.title": "Aplicaciones",
+ "apps.intro": "Abra y cierre las aplicaciones de escritorio que un dispositivo con pantalla conoce. Esto necesita el complemento app-launcher en el dispositivo; sin él, la lista queda vacía.",
+ "apps.launch": "Abrir",
+ "apps.close": "Cerrar",
+ "apps.none": "Ninguna aplicación. ¿Está instalado el complemento app-launcher en el dispositivo?"
+}

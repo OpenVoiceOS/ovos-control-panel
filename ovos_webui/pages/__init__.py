@@ -67,7 +67,7 @@ MAX_STRINGS = 256 * 1024
 BUILTIN = (
     "dashboard", "setup", "tryit", "controls", "network", "voice", "skills", "backup",
     "about", "voice_all", "servers", "translate", "intents", "transformers", "personas",
-    "system", "sensors", "media", "apps", "wallpaper", "mark1", "plugins", "settings", "panel",
+    "system", "sensors", "media", "wallpaper", "mark1", "plugins", "settings", "panel",
     "sound",
 )
 
@@ -537,7 +537,8 @@ def parse_described(found: Any, package: str, version: str) -> tuple[Page, list]
     try:
         page_data, refs = described.check(data, package, skill_id=_own_skill_id(package),
                                           config_roots=described.config_roots(package),
-                                          modules=described.plugin_modules(package))
+                                          modules=described.plugin_modules(package),
+                                          by_panel=bool(getattr(found, "by_panel", False)))
     except described.DescribedError as e:
         raise PageError(str(e)) from e
     pid = data.get("id")

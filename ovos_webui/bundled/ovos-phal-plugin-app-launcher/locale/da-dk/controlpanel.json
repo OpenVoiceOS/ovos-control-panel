@@ -1,0 +1,7 @@
+{
+ "apps.title": "Apps",
+ "apps.intro": "Start og luk de programmer, en enhed med skærm kender. Det kræver app-launcher-pluginnet på enheden; uden det forbliver listen tom.",
+ "apps.launch": "Start",
+ "apps.close": "Luk",
+ "apps.none": "Ingen programmer. Er app-launcher-pluginnet installeret på enheden?"
+}

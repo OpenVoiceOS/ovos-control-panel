@@ -1,0 +1,40 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-phal-plugin-app-launcher>=0.0.1a1,<1",
+ "id": "apps",
+ "path": "/apps",
+ "title": "apps.title",
+ "group": "screen",
+ "order": 10,
+ "icon": "controlpanel.svg",
+ "messages": [
+  "ovos.phal.app_launcher.list",
+  "ovos.phal.app_launcher.launch",
+  "ovos.phal.app_launcher.close"
+ ],
+ "blocks": [
+  {
+   "type": "text",
+   "text": "apps.intro"
+  },
+  {
+   "type": "list",
+   "query": "ovos.phal.app_launcher.list",
+   "items": "apps",
+   "key": "name",
+   "title": "{name}",
+   "text": "{exec}",
+   "empty": "apps.none",
+   "actions": [
+    {
+     "label": "apps.launch",
+     "send": "ovos.phal.app_launcher.launch"
+    },
+    {
+     "label": "apps.close",
+     "send": "ovos.phal.app_launcher.close"
+    }
+   ]
+  }
+ ]
+}

@@ -1352,7 +1352,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
     page, url = signed_in_page
     needs = {"colocated": True, "needs": {
         k: {"met": k in ("system", "media"), "suggest": "pkg-" + k}
-        for k in ("system", "sensors", "media", "apps", "wallpaper", "mark1")}}
+        for k in ("system", "sensors", "media", "wallpaper", "mark1")}}
 
     def answer(route):
         route.fulfill(status=200, content_type="application/json", body=json.dumps(needs))
@@ -1366,7 +1366,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
         page.wait_for_function("() => document.querySelector('nav a[href=\"/wallpaper\"]').hidden")
         shown = _visible_nav(page)
         assert "/system" in shown and "/media" in shown
-        assert not {"/sensors", "/apps", "/wallpaper", "/mark1"} & set(shown)
+        assert not {"/sensors", "/wallpaper", "/mark1"} & set(shown)
         assert not page.locator('nav .nav-group[data-group="screen"]').is_visible()
 
         page.goto(f"{url}/wallpaper")

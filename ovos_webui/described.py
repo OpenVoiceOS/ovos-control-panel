@@ -49,6 +49,8 @@ MAX_DATA = 4096
 #: An upload goes to the skill over the bus in parts of this size, so no
 #: message is larger than the bus takes; a file is at most MAX_UPLOAD_MB.
 UPLOAD_PART = 512 * 1024
+#: the most messages a page the panel brings may name
+MAX_MESSAGES = 30
 MAX_UPLOAD_MB = 64
 _EXT_RE = re.compile(r"^\.[a-z0-9]{1,10}$")
 _LANG_DIR = re.compile(r"^[a-zA-Z]{2,3}([-_][a-zA-Z0-9]{2,8})?$")
@@ -334,18 +336,36 @@ def _when(raw: Any, where: str) -> str | None:
 
 
 class _Checker:
-    def __init__(self, data: dict, package: str):
+    def __init__(self, data: dict, package: str, by_panel: bool = False):
         self.data = data
         self.package = package
+        # a page the panel brings may name the messages a plugin already
+        # answers, under any prefix (ovos.phal., enclosure.): the file is the
+        # panel's, read in its review, never a package's own
+        self.messages: frozenset[str] = frozenset()
+        named = data.get("messages")
+        if named is not None:
+            if not by_panel:
+                raise DescribedError("only a page the panel brings may name other messages")
+            if not isinstance(named, list) or not named or len(named) > MAX_MESSAGES \
+                    or not all(isinstance(m, str) and _MSG_RE.match(m) for m in named):
+                raise DescribedError(f"messages must be a list of up to {MAX_MESSAGES} message types")
+            self.messages = frozenset(named)
         self.prefix = data.get("bus")
+        if self.prefix is None and self.messages:
+            return
         if not isinstance(self.prefix, str) or not _BUS_RE.match(self.prefix) \
                 or self.prefix.startswith(RESERVED_BUS):
             raise DescribedError(f"bus must be the page's own prefix, like 'ovos.jamband.', "
                                  f"not {self.prefix!r}")
-        self.refs: dict[str, dict] = {}
+
+    refs: dict[str, dict]
 
     def message(self, raw: Any, where: str) -> str:
-        if not isinstance(raw, str) or not _MSG_RE.match(raw) or not raw.startswith(self.prefix):
+        if isinstance(raw, str) and raw in self.messages:
+            return raw
+        if not isinstance(raw, str) or not _MSG_RE.match(raw) or not self.prefix \
+                or not raw.startswith(self.prefix):
             raise DescribedError(f"{where}: {raw!r} is not one of the page's messages "
                                  f"(they start with {self.prefix})")
         return raw
@@ -366,6 +386,9 @@ class _Checker:
         else:
             out["send"] = self.message(raw.get("send"), where)
             out["privileged"] = bool(raw.get("privileged", True))
+            if raw.get("answer") is False:
+                # sent and done: the skill or plugin does not answer it
+                out["answer"] = False
             if raw.get("data") is not None:
                 # what the button always sends (a test sound, a choice)
                 if not isinstance(raw["data"], dict) or len(json.dumps(raw["data"])) > MAX_DATA:
@@ -603,12 +626,14 @@ class _Checker:
 
 def check(data: Any, package: str, skill_id: str | None = None,
           config_roots: list[str] | None = None,
-          modules: dict[str, list[str]] | None = None) -> tuple[dict, dict[str, dict]]:
+          modules: dict[str, list[str]] | None = None,
+          by_panel: bool = False) -> tuple[dict, dict[str, dict]]:
     """Check a file; return the page as the browser gets it, and the
     declarations the bus bridge goes by (ref -> what it may send).
     ``skill_id`` is the skill the package registers, if it is a skill: a
     form may then save in that skill's settings.json. ``config_roots`` are
-    the package's own places in mycroft.conf (PHAL.<package> by default)."""
+    the package's own places in mycroft.conf (PHAL.<package> by default).
+    ``by_panel``: the file is one the panel brings, which may name messages."""
     if isinstance(data, Exception):
         raise DescribedError(str(data))
     if not isinstance(data, dict):
@@ -616,7 +641,8 @@ def check(data: Any, package: str, skill_id: str | None = None,
     if data.get("controlpanel") not in VERSIONS:
         raise DescribedError(f"written for format {data.get('controlpanel')!r}; "
                              f"this panel draws {sorted(VERSIONS)}")
-    checker = _Checker(data, package)
+    checker = _Checker(data, package, by_panel)
+    checker.refs = {}
     checker.skill_id = skill_id
     checker.config_roots = config_roots
     checker.modules = modules or {}
@@ -854,6 +880,10 @@ def routes_for(pid: str, refs: dict[str, dict]):
             raise HTTPException(400, "that part is not an action")
         if decl.get("privileged", True) and not privileged:
             raise HTTPException(403, "this needs the access token")
+        if decl.get("answer") is False:
+            from ovos_bus_client.message import Message
+            r.need_bus().emit(Message(msg, data))
+            return {}
         return _ask(r, msg, data)
 
     def add(r) -> None:

@@ -432,12 +432,13 @@ def test_every_page_the_panel_brings_is_sound(folder):
     kind = folder.split("-")[1]          # ovos-tts-plugin-server -> tts
     roots = ["PHAL." + folder] + ([f"{kind}.{folder}"] if kind in ("tts", "stt") else [])
     modules = {kind: [folder]} if kind in ("tts", "stt") else {}
-    described.check(data, folder, config_roots=roots, modules=modules)
+    described.check(data, folder, config_roots=roots, modules=modules, by_panel=True)
     found = described.strings(root)
     assert "en" in found and "da" in found
     keys = set(found["en"])
     assert all(set(table) == keys for table in found.values()), "the same strings in every language"
     used = set(re.findall(r'"([a-z][\w]*\.[\w.]+)"', (root / described.FILE).read_text()))
+    used -= {data.get("icon")}
     assert {k for k in used if not k.startswith(("common.", "ovos."))} <= keys
 
 
@@ -553,3 +554,62 @@ def test_the_menu_says_which_package_an_added_page_is_from(tmp_path):
     demo = next(p for p in reg.nav()["pages"] if p["id"] == "demo")
     assert demo["package"] == "ovos-phal-plugin-demo"
     assert all("package" not in p for p in reg.nav()["pages"] if p["id"] != "demo"), "the panel's own say nothing"
+
+
+LAUNCHER = {"controlpanel": 1, "id": "apps", "title": "apps.title",
+            "messages": ["ovos.phal.app_launcher.list", "ovos.phal.app_launcher.launch"],
+            "blocks": [{"type": "list", "query": "ovos.phal.app_launcher.list", "items": "apps", "key": "name",
+                        "actions": [{"label": "apps.launch", "send": "ovos.phal.app_launcher.launch"}]}]}
+
+
+def test_only_a_page_the_panel_brings_may_name_other_messages():
+    with pytest.raises(described.DescribedError, match="only a page the panel brings"):
+        checked(LAUNCHER, "ovos-phal-plugin-app-launcher")
+    page, refs = described.check(json.loads(json.dumps(LAUNCHER)), "ovos-phal-plugin-app-launcher", by_panel=True)
+    assert refs["b0.a0"]["send"] == "ovos.phal.app_launcher.launch"
+    # still only the messages it names
+    bad = json.loads(json.dumps(LAUNCHER))
+    bad["blocks"][0]["actions"][0]["send"] = "ovos.phal.app_launcher.close"
+    with pytest.raises(described.DescribedError, match="not one of the page's messages"):
+        described.check(bad, "ovos-phal-plugin-app-launcher", by_panel=True)
+
+
+def test_a_button_that_gets_no_answer_is_sent_and_done(bus, monkeypatch, tmp_path):
+    page = {"controlpanel": 1, "id": "w", "title": "w.title", "bus": "ovos.w.", "blocks": [
+        {"type": "actions", "actions": [{"label": "w.next", "send": "ovos.w.next", "answer": False}]}]}
+    root = tmp_path / "ovos_phal_plugin_w"
+    root.mkdir()
+    found = described.Found("ovos-phal-plugin-w", "1.0", "ovos_phal_plugin_w", root, page)
+    monkeypatch.setattr(described, "discover", lambda: [found])
+    seen = []
+    bus.on("ovos.w.next", lambda m: seen.append(m.msg_type))
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
+    with TestClient(app, base_url="http://127.0.0.1:8500", headers={"sec-fetch-site": "same-origin",
+                                                                    "Authorization": "Bearer s3cret-token"}) as c:
+        got = c.post("/api/cp/w/act", json={"ref": "b0.a0"})
+    assert got.status_code == 200 and got.json() == {} and seen == ["ovos.w.next"]
+
+
+def test_the_apps_page_the_panel_brings_launches_by_name(bus, monkeypatch):
+    root = described.BUNDLED / "ovos-phal-plugin-app-launcher"
+    data = json.loads((root / "controlpanel.json").read_text(encoding="utf-8"))
+    found = described.Found("ovos-PHAL-plugin-app-launcher", "0.0.1a4", "ovos_phal_plugin_app_launcher",
+                            root, data, by_panel=True)
+    monkeypatch.setattr(described, "discover", lambda: [found])
+    seen = []
+
+    def answer(msg_type, data):
+        def handler(message):
+            seen.append((message.msg_type, dict(message.data)))
+            bus.emit(message.response(data))
+        bus.on(msg_type, handler)
+
+    answer("ovos.phal.app_launcher.list", {"apps": [{"name": "Firefox", "exec": "firefox"}]})
+    answer("ovos.phal.app_launcher.launch", {"name": "Firefox", "success": True})
+    app = create_app(bus=bus, host="0.0.0.0", token="s3cret-token", connect_bus=False)
+    with TestClient(app, base_url="http://127.0.0.1:8500", headers={"sec-fetch-site": "same-origin"}) as c:
+        assert c.post("/api/cp/apps/act", json={"ref": "b1.a0", "key": "Firefox"}).status_code in (401, 403)
+        c.headers["Authorization"] = "Bearer s3cret-token"
+        assert c.post("/api/cp/apps/query", json={"ref": "b1"}).json()["apps"][0]["name"] == "Firefox"
+        assert c.post("/api/cp/apps/act", json={"ref": "b1.a0", "key": "Firefox"}).status_code == 200
+    assert ("ovos.phal.app_launcher.launch", {"name": "Firefox"}) in seen
