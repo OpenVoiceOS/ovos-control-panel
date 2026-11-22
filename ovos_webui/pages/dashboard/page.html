@@ -6,6 +6,7 @@
   <div class="summary" id="summary" role="status" aria-live="polite" hidden></div>
   <div class="card" id="bus" role="status" data-i18n="dash.checking">Checking…</div>
   <div class="grid" id="services" aria-live="polite"></div>
+  <p class="hint" id="absent" hidden></p>
   <div class="row"><button id="refresh" data-i18n="dash.recheck">Check again</button></div>
   <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
 
@@ -121,6 +122,11 @@ OvosWebUI.ready(function () {
           + '<details class="tech"><summary data-i18n="dash.techname">' + esc(t("dash.techname", "Technical name")) + "</summary>"
           + "<code>mycroft." + esc(s.name) + ".is_ready</code></details></div>";
       }).join("");
+      // the parts this device leaves out on purpose (webui.absent_services)
+      var absent = (h.absent || []).map(function (s) { return t("service." + s.name + ".label", s.label); });
+      el("absent").hidden = !absent.length;
+      el("absent").textContent = absent.length
+        ? t("dash.absent", "Not on this device, on purpose: {names}.").replace("{names}", absent.join(", ")) : "";
     }).catch(function (e) { OvosWebUI.say("msg", e.message, true); });
   }
 

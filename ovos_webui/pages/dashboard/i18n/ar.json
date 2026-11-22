@@ -43,5 +43,6 @@
  "dash.mysetup.wake": "كلمة التنبيه",
  "dash.mysetup.stt": "تحويل الكلام إلى نص",
  "dash.mysetup.tts": "الصوت",
- "dash.mysetup.lang": "اللغة"
+ "dash.mysetup.lang": "اللغة",
+ "dash.absent": "غير موجود على هذا الجهاز عن قصد: {names}."
 }

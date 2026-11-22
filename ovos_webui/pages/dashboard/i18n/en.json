@@ -43,5 +43,6 @@
  "dash.mysetup.wake": "Wake word",
  "dash.mysetup.stt": "Speech to text",
  "dash.mysetup.tts": "Voice",
- "dash.mysetup.lang": "Language"
+ "dash.mysetup.lang": "Language",
+ "dash.absent": "Not on this device, on purpose: {names}."
 }

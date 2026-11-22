@@ -43,5 +43,6 @@
  "dash.mysetup.wake": "Palavra de despertar",
  "dash.mysetup.stt": "Fala para texto",
  "dash.mysetup.tts": "Voz",
- "dash.mysetup.lang": "Idioma"
+ "dash.mysetup.lang": "Idioma",
+ "dash.absent": "Não está neste dispositivo, de propósito: {names}."
 }
