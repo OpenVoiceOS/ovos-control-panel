@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a84](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a84) (2026-11-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a83...0.0.1a84)
+
+**Merged pull requests:**
+
+- fix: transformer plugins save their page settings in their own section [\#167](https://github.com/OpenVoiceOS/ovos-control-panel/pull/167) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a83](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a83) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a82...0.0.1a83)
@@ -484,7 +492,6 @@
 - feat: show the device's setup at a glance on the Dashboard [\#49](https://github.com/OpenVoiceOS/ovos-control-panel/pull/49) ([JarbasAl](https://github.com/JarbasAl))
 - feat: undo the last settings change [\#48](https://github.com/OpenVoiceOS/ovos-control-panel/pull/48) ([JarbasAl](https://github.com/JarbasAl))
 - test: catch pages that use an undefined i18n key [\#47](https://github.com/OpenVoiceOS/ovos-control-panel/pull/47) ([JarbasAl](https://github.com/JarbasAl))
-- feat: add a real wake-word test to setup [\#46](https://github.com/OpenVoiceOS/ovos-control-panel/pull/46) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a25](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a25) (2026-08-13)
 
