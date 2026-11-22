@@ -18,18 +18,27 @@ The control panel is a small shell. The shell does the sign in, the menu,
 the languages, the look and the safety checks. Everything you see in the menu
 is a **page**.
 
-A skill, a plugin or a package written only to extend the panel describes its
-page in a `controlpanel.json`, and the panel draws it: see
-[Pages described in a file](#pages-described-in-a-file). The panel's own pages
-are Python, in `ovos_webui/pages/`. A page moves out of the panel (the Mark-1
-page to the Mark-1 plugin, say) by becoming a `controlpanel.json`: in the
-plugin, or, until the plugin has one, in the panel's `bundled/` folder.
+There are two ways to give the panel a page:
+
+- **`controlpanel.json`, the normal way.** A skill or plugin describes its
+  settings, status, lists and buttons in a file, and the panel draws it: see
+  [Pages described in a file](#pages-described-in-a-file). It is data, no
+  code, so another user interface (Home Assistant, a phone app) can draw the
+  same file. Until a plugin brings one, the panel may bring one for it, in
+  its `bundled/` folder.
+- **A panel extension, for what a file cannot say.** A package written only
+  to add a richer page to this panel (the Mark-1 drawing editors and firmware
+  updates, in `ovos-control-panel-mark1`) registers a Python page: see
+  [Panel extensions](#panel-extensions). It runs code in the panel and shows
+  only here, so it is the exception.
+
+The panel's own pages are Python, in `ovos_webui/pages/`.
 
 ## Contents
 
 - [Two kinds of page](#two-kinds-of-page)
 - [Pages described in a file](#pages-described-in-a-file)
-- [The panel's own pages](#the-panels-own-pages)
+- [Panel extensions](#panel-extensions)
 - [The page description](#the-page-description)
 - [The menu](#the-menu)
 - [Languages](#languages)
@@ -183,20 +192,35 @@ panel"; the rest of the page still works.
 A package that has both a described page and an HTML page with the same id
 keeps the described one.
 
-## The panel's own pages
+## Panel extensions
 
 The panel's own pages are Python modules in `ovos_webui/pages/`, each listed
-in `BUILTIN` and each with a `PAGE` description. Other packages cannot add a
-Python page: they describe theirs in a `controlpanel.json`. (Before 0.0.1a82 a
-package could register one under the `opm.control_panel.page` entry point;
-the panel no longer reads it.)
+in `BUILTIN` and each with a `PAGE` description. A **panel extension** adds a
+page the same way: a package, installed beside the panel, that registers its
+page description under the `opm.control_panel.page` entry point group:
+
+```toml
+[project.entry-points."opm.control_panel.page"]
+mark1 = "ovos_control_panel_mark1:PAGE"
+```
+
+Use one only for what `controlpanel.json` cannot say: a drawing editor, a
+live preview, a flow of its own. An extension runs in the panel's process,
+needs the panel's web packages, and is drawn by no other user interface. A
+plugin's settings and buttons belong in its `controlpanel.json`. A package
+that has both keeps the described page.
+
+An extension's page with the same `id` as a page the panel describes for a
+plugin takes its place: the panel's plain Mark-1 page says the extension
+exists, and steps aside when it is installed.
 
 A page whose description is broken is left out and named in the log and on
 the About page. It never stops the panel from starting.
 
 ## The page description
 
-This is the description of one of the panel's own pages.
+This is the description of a Python page: one of the panel's own, or an
+extension's.
 
 ```python
 PAGE = {
@@ -302,7 +326,7 @@ own pages, which are numbered in tens so there is always room. Lowest first.
 | `voice` | 10 | How the device listens, speaks and translates | All voice settings 10, Servers 20, Translate 30 |
 | `understanding` | 20 | How it understands and who answers | Intents 10, Transformers 20, Personas 30 |
 | `device` | 30 | The hardware and what runs on it | System 10, Sensors 20 |
-| `screen` | 40 | A device with a screen: what it shows | Apps 10, Wallpaper 20, Mark-1 faceplate 30 |
+| `screen` | 40 | A device with a screen: what it shows | Apps 10, Wallpaper 20, Mark-1 faceplate 30 (pages the panel brings) |
 | `maintenance` | 50 | Keeping the panel and the device in shape | Plugins 10, Settings 20, Send over sound 30 |
 
 Some examples:
@@ -433,7 +457,7 @@ the user can change them in their own layer, as with the rest of OVOS.
 {
   "webui": {
     "pages": {
-      "disabled": ["mark1", "sound"],
+      "disabled": ["personas", "sound"],
       "move": {"emkay-guardian": {"group": "device", "order": 5}}
     },
     "groups": {

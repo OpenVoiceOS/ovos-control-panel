@@ -163,577 +163,6 @@ def test_the_page_script_runs(signed_in_page, route):
     assert not thrown, f"{route} threw on load: {thrown}"
 
 
-def test_the_mark1_face_actually_draws(signed_in_page):
-    """A canvas that stays blank is the shape the ordering bug took.
-
-    Asserting the script does not throw is not enough on its own: a drawing
-    that silently no-ops looks identical to a working one in every other test.
-    """
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(500)
-    lit = page.evaluate("""(() => {
-      const c = document.getElementById('mark1-canvas');
-      if (!c) { return -1; }
-      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-      let n = 0;
-      // Counted bright, not merely non-black: the unlit lamps are drawn dark
-      // grey and there are 256 of them, so anything counting "not the
-      // background" is cleared many times over by a face where nothing lights
-      // and nothing works.
-      for (let i = 0; i < d.length; i += 4) {
-        if (Math.max(d[i], d[i + 1], d[i + 2]) > 140) { n++; }
-      }
-      return n;
-    })()""")
-    assert lit > 500, f"the faceplate drew nothing lit ({lit} bright pixels)"
-
-
-def _canvas_signature(page):
-    """A cheap fingerprint of what the face is showing."""
-    return page.evaluate("""(() => {
-      const c = document.getElementById('mark1-canvas');
-      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-      let sum = 0;
-      for (let i = 0; i < d.length; i += 4) { sum += d[i] + d[i + 1] + d[i + 2]; }
-      return sum;
-    })()""")
-
-
-def test_capturing_and_replaying_a_frame_round_trips(signed_in_page):
-    """Draw, capture, clear, replay: the face must come back.
-
-    Driven entirely through the page's own controls and read off the canvas,
-    because the script runs inside a closure -- reaching into its variables
-    would test something the user cannot do.
-    """
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-
-    page.click("#preset-heart")
-    page.wait_for_timeout(100)
-    drawn = _canvas_signature(page)
-    page.click("#anim-capture")
-    assert page.locator("#anim-frames li").count() == 1
-
-    page.click("#mouth-clear")
-    page.wait_for_timeout(100)
-    cleared = _canvas_signature(page)
-    assert cleared < drawn, "clearing the mouth changed nothing on the canvas"
-
-    page.locator("#anim-frames li button").first.click()
-    page.wait_for_timeout(100)
-    assert _canvas_signature(page) == drawn, (
-        "replaying the frame did not restore the face"
-    )
-
-
-def test_a_frame_cannot_be_asked_to_hold_shorter_than_the_writer_accepts(
-        signed_in_page):
-    """Below 0.4s ovos-mark1-utils clamps the delay itself.
-
-    A shorter hold is not a faster animation. The `min`
-    attribute on the field is only form validation, and nothing here submits a
-    form, so this drives the field to an impossible value and reads back what
-    the export actually wrote.
-    """
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-    assert page.get_attribute("#anim-hold", "min") == "0.4"
-
-    page.click("#preset-smile")
-    page.click("#anim-capture")
-    page.fill("#anim-hold", "0.05")
-    with page.expect_download() as caught:
-        page.click("#anim-export")
-    exported = json.loads(Path(caught.value.path()).read_text())
-    assert exported["hold"] >= 0.4, (
-        f"exported an animation the faceplate would drop: {exported['hold']}"
-    )
-
-    # The ceiling is form validation too, and nothing here submits a form.
-    page.fill("#anim-hold", "9999")
-    with page.expect_download() as caught:
-        page.click("#anim-export")
-    exported = json.loads(Path(caught.value.path()).read_text())
-    assert exported["hold"] <= 10, (
-        f"exported a frame held for {exported['hold']}s"
-    )
-
-
-def test_a_removed_frame_leaves_the_rest_of_the_sequence(signed_in_page):
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-    for preset in ("#preset-heart", "#preset-note", "#preset-smile"):
-        page.click(preset)
-        page.click("#anim-capture")
-    assert page.locator("#anim-frames li").count() == 3
-    page.locator("#anim-frames li").nth(1).locator("button").nth(1).click()
-    assert page.locator("#anim-frames li").count() == 2
-    page.click("#anim-clear")
-    assert page.locator("#anim-frames li").count() == 0
-
-
-def test_clicking_one_eye_led_sends_a_request_the_route_accepts(signed_in_page):
-    """A body the browser stringifies to "[object Object]" is a 422.
-
-    `fetch` does not serialise a plain object and does not set a content type,
-    so a per-LED write that skipped `JSON.stringify` reached the route as text
-    and was rejected on every click. Nothing in the Python suite sees this: the
-    route is fine, the page is fine, only the pair is wrong.
-    """
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-
-    statuses = []
-    page.on("response", lambda r: statuses.append(r.status)
-            if "/api/mark1/eyes/pixel" in r.url else None)
-
-    # LED 0 sits at the top of the left ring. The eyes are drawn on the canvas,
-    # not built from elements, so the click has to land where the LED is.
-    box = page.locator("#mark1-canvas").bounding_box()
-    spot = page.evaluate("""(() => {
-      const c = document.getElementById("mark1-canvas");
-      const RING_R = 38, LED_R = 5.5, GAP = 20, CELL = 12;
-      const EYE_BOX = RING_R * 2 + LED_R * 2, MOUTH_W = 32 * CELL;
-      const FACE_H = Math.max(8 * CELL, EYE_BOX);
-      const PAD_X = Math.round((c.width - (EYE_BOX * 2 + GAP * 2 + MOUTH_W)) / 2);
-      const PAD_Y = Math.round((c.height - FACE_H) / 2);
-      return {x: PAD_X + EYE_BOX / 2, y: PAD_Y + FACE_H / 2 - RING_R,
-              w: c.width, h: c.height};
-    })()""")
-    page.mouse.click(box["x"] + spot["x"] * box["width"] / spot["w"],
-                     box["y"] + spot["y"] * box["height"] / spot["h"])
-    page.wait_for_timeout(500)
-
-    assert statuses, "clicking an LED sent nothing at all"
-    assert 422 not in statuses, (
-        f"the route rejected the per-LED body: {statuses}"
-    )
-
-
-def test_an_imported_animation_with_the_wrong_shape_is_refused(signed_in_page):
-    """A row of the wrong width plays as a face nobody drew."""
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-
-    good_grid = [[0] * 32 for _ in range(8)]
-    good_eyes = [[1, 2, 3] for _ in range(24)]
-    rejected = {
-        "a row narrower than the mouth": {
-            "grid": [[1, 1, 1, 1, 1]] * 8, "eyes": good_eyes},
-        "a cell that is not 0 or 1": {
-            "grid": [[7] * 32] + good_grid[1:], "eyes": good_eyes},
-        "an eye list of the wrong length": {
-            "grid": good_grid, "eyes": good_eyes[:5]},
-        "an eye that is not a colour": {
-            "grid": good_grid, "eyes": [None] * 24},
-        "an eye with the wrong number of channels": {
-            "grid": good_grid, "eyes": [[1, 2]] * 24},
-        "a channel outside 0-255": {
-            "grid": good_grid,
-            "eyes": [[999, 0, 0]] + good_eyes[1:]},
-    }
-    for why, frame in rejected.items():
-        page.set_input_files("#anim-import", files=[{
-            "name": "bad.json", "mimeType": "application/json",
-            "buffer": json.dumps(
-                {"version": 1, "hold": 0.4, "frames": [frame]}).encode()}])
-        page.wait_for_timeout(200)
-        assert page.locator("#anim-frames li").count() == 0, (
-            f"loaded a frame with {why}"
-        )
-
-    page.set_input_files("#anim-import", files=[{
-        "name": "good.json", "mimeType": "application/json",
-        "buffer": json.dumps({"version": 1, "hold": 0.4, "frames": [
-            {"grid": good_grid, "eyes": good_eyes}]}).encode()}])
-    page.wait_for_timeout(200)
-    assert page.locator("#anim-frames li").count() == 1, (
-        "refused a frame that is the right shape"
-    )
-
-    # A file that is partly usable must say what it dropped, or the editor
-    # quietly holds fewer frames than the file the reader just opened.
-    page.set_input_files("#anim-import", files=[{
-        "name": "mixed.json", "mimeType": "application/json",
-        "buffer": json.dumps({"version": 1, "hold": 0.4, "frames": [
-            {"grid": good_grid, "eyes": good_eyes},
-            {"grid": [[7] * 32] * 8, "eyes": good_eyes}]}).encode()}])
-    page.wait_for_timeout(200)
-    assert page.locator("#anim-frames li").count() == 1
-    said = page.locator("#msg-anim").inner_text()
-    assert "1" in said and "skipped" in said.lower(), (
-        f"loaded half a file without saying so: {said!r}"
-    )
-
-
-def test_the_python_export_carries_the_eyes_it_showed(signed_in_page):
-    """A frame is a mouth and two eyes; exporting half of it is a lie."""
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-
-    page.click("#preset-smile")
-    page.click("#anim-capture")
-    with page.expect_download() as caught:
-        page.click("#anim-export-py")
-    source = Path(caught.value.path()).read_text()
-
-    assert "enclosure.eyes.setpixel" in source, (
-        "the exported eyes never reach the faceplate"
-    )
-    table = source[source.index("EYES = ["):source.index("class PanelAnimation")]
-    colours = re.findall(r"\((\d+), (\d+), (\d+)\)", table)
-    assert len(colours) == 24, (
-        f"exported {len(colours)} eye pixels for one frame, not 24: {table}"
-    )
-    assert any(c != ("0", "0", "0") for c in colours), (
-        "every exported eye pixel is off, so the export lost the colours"
-    )
-    assert "frame.display(invert=True)" in source, (
-        "the export draws the mouth inverted against what the panel showed"
-    )
-
-
-def test_a_refused_frame_stops_the_animation(signed_in_page):
-    """`ok: false` arrives as HTTP 200, so only the body says it failed.
-
-    Walking on through a refusal and then announcing that the animation
-    finished is the exact failure this panel exists to stop: a control that
-    reports success and did nothing.
-    """
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-
-    posted = []
-
-    def refuse(route):
-        posted.append(route.request.url)
-        route.fulfill(status=200, content_type="application/json",
-                      body=json.dumps({"ok": False, "error": "no faceplate"}))
-
-    # Both halves of a frame, because a frame is a mouth and two eyes and
-    # either being refused has to stop the run.
-    page.route("**/api/mark1/display", refuse)
-    page.route("**/api/mark1/eyes/**", refuse)
-
-    for preset in ("#preset-heart", "#preset-note", "#preset-smile"):
-        page.click(preset)
-        page.click("#anim-capture")
-    page.click("#anim-send")
-    page.wait_for_timeout(2000)
-
-    displays = [u for u in posted if u.endswith("/display")]
-    assert len(displays) == 1, (
-        f"kept sending frames after the device refused one: {displays}"
-    )
-    said = page.locator("#msg-anim").inner_text()
-    assert "no faceplate" in said, f"did not report the refusal: {said!r}"
-
-
-def test_the_controls_send_even_when_no_device_could_be_confirmed(
-        signed_in_page):
-    """The probe cannot prove a Mark 1 is absent, so it must not disable them.
-
-    Nothing answers `enclosure.eyes.rgb.get` in this fixture, which is exactly
-    what a real Mark 1 running a plugin too old to reply looks like.
-    """
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(1500)
-
-    assert not page.locator("#gate").is_hidden(), (
-        "said nothing about being unable to confirm a device"
-    )
-
-    sent = []
-    page.on("request", lambda r: sent.append(r.url) if r.method == "POST" else None)
-    page.click("#preset-smile")
-    page.click("#mouth-send")
-    page.click("#eyes-on")
-    page.wait_for_timeout(700)
-
-    assert any("/api/mark1/display" in u for u in sent), (
-        "the drawing was never sent because the probe stayed silent"
-    )
-    assert any("/api/mark1/eyes" in u for u in sent), (
-        "the eye control was never sent because the probe stayed silent"
-    )
-
-
-def test_playing_an_animation_sends_the_eyes_it_showed(signed_in_page):
-    """A frame is a mouth and twenty-four LEDs; sending half of it is a lie.
-
-    The on-screen face animates from the frame directly, so eyes that never
-    reach the device look exactly like eyes that did -- an eyes-only animation
-    plays perfectly in the browser and does nothing on the hardware, with the
-    panel reporting that it finished.
-
-    Asserting on the exact writes, not merely that some request went out: the
-    interesting failures are a frame after the first being skipped, a diff
-    that compares one channel, and an index off by one. All three send
-    something.
-    """
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-
-    posts = []
-
-    def record(route):
-        request = route.request
-        posts.append((request.url.rsplit("/api/mark1", 1)[1],
-                      request.post_data_json))
-        route.fulfill(status=200, content_type="application/json",
-                      body=json.dumps({"ok": True}))
-
-    page.route("**/api/mark1/eyes/**", record)
-    page.route("**/api/mark1/display", record)
-
-    # Frame one: every LED the same colour, so one fill covers it.
-    page.click("#preset-smile")
-    page.eval_on_selector("#eyes-color", "el => { el.value = '#0a1400'; "
-                          "el.dispatchEvent(new Event('input', {bubbles: true})); }")
-    page.wait_for_timeout(150)
-    page.click("#anim-capture")
-
-    # Frame two: four LEDs changed, the other twenty untouched. One of them
-    # keeps frame one's red and changes only green, so a diff that compares a
-    # single channel drops it.
-    changed = {2: (255, 0, 0), 7: (0, 255, 0), 19: (0, 0, 255),
-               15: (10, 200, 0)}
-    page.evaluate(
-        """(changed) => {
-          const c = document.getElementById("mark1-canvas");
-          const RING_R = 38, LED_R = 5.5, GAP = 20, CELL = 12;
-          const EYE_BOX = RING_R * 2 + LED_R * 2, MOUTH_W = 32 * CELL;
-          const FACE_H = Math.max(8 * CELL, EYE_BOX);
-          const PAD_X = Math.round((c.width - (EYE_BOX * 2 + GAP * 2 + MOUTH_W)) / 2);
-          const PAD_Y = Math.round((c.height - FACE_H) / 2);
-          const MOUTH_X = PAD_X + EYE_BOX + GAP;
-          const rect = c.getBoundingClientRect();
-          const picker = document.getElementById("eyes-color");
-          for (const [idx, rgb] of Object.entries(changed)) {
-            const i = Number(idx);
-            const within = i % 12;
-            const angle = (within / 12) * Math.PI * 2 - Math.PI / 2;
-            const cx = i < 12 ? PAD_X + EYE_BOX / 2
-                              : MOUTH_X + MOUTH_W + GAP + EYE_BOX / 2;
-            const x = cx + Math.cos(angle) * RING_R;
-            const y = PAD_Y + FACE_H / 2 + Math.sin(angle) * RING_R;
-            // Set the value only. An "input" event repaints the whole ring,
-            // which would make every LED differ from the previous frame and
-            // hide exactly the diff this test is about.
-            picker.value = "#" + rgb.map(
-              v => v.toString(16).padStart(2, "0")).join("");
-            c.dispatchEvent(new PointerEvent("pointerdown", {
-              bubbles: true,
-              clientX: rect.left + x * rect.width / c.width,
-              clientY: rect.top + y * rect.height / c.height}));
-          }
-        }""", {str(k): list(v) for k, v in changed.items()})
-    page.wait_for_timeout(300)
-    page.click("#anim-capture")
-    assert page.locator("#anim-frames li").count() == 2
-
-    posts.clear()
-    page.click("#anim-send")
-    page.wait_for_timeout(3000)
-
-    fills = [body for path, body in posts if path == "/eyes/color"]
-    pixels = [body for path, body in posts if path == "/eyes/pixel"]
-    displays = [body for path, body in posts if path == "/display"]
-
-    assert len(displays) == 2, f"sent {len(displays)} mouths for two frames"
-    assert len(fills) == 1, (
-        f"a frame whose LEDs all match is one fill, not {len(fills)}: {fills}"
-    )
-    assert fills[0] == {"r": 10, "g": 20, "b": 0}, fills[0]
-    assert {p["idx"] for p in pixels} == set(changed), (
-        f"wrote {sorted(p['idx'] for p in pixels)}, expected {sorted(changed)}"
-    )
-    for post in pixels:
-        r, g, b = changed[post["idx"]]
-        assert (post["r"], post["g"], post["b"]) == (r, g, b), (
-            f"LED {post['idx']} was sent {post} instead of {(r, g, b)}"
-        )
-
-
-def test_toggling_away_and_back_does_not_stack_poll_chains(signed_in_page):
-    """The eye readback blocks for the probe timeout on a silent device.
-
-    Anything that starts a second chain while the first is still waiting
-    leaves both running, and each one hits a privileged route every 1.5s
-    forever. Switching tabs is the easy way to do it by accident.
-    """
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-
-    reads = []
-
-    def slow(route):
-        reads.append(route.request.url)
-        page.wait_for_timeout(1200)
-        route.fulfill(status=200, content_type="application/json",
-                      body=json.dumps({"ok": True, "pixels": [[1, 2, 3]] * 24}))
-
-    page.route("**/api/mark1/eyes", slow)
-    page.evaluate("() => { document.getElementById('live-row').hidden = false; }")
-    page.click("#live-toggle")
-    page.wait_for_timeout(200)
-
-    for _ in range(3):
-        page.evaluate("""() => {
-          Object.defineProperty(document, "hidden", {value: true, configurable: true});
-          document.dispatchEvent(new Event("visibilitychange"));
-          Object.defineProperty(document, "hidden", {value: false, configurable: true});
-          document.dispatchEvent(new Event("visibilitychange"));
-        }""")
-        page.wait_for_timeout(100)
-
-    reads.clear()
-    page.wait_for_timeout(4000)
-    page.click("#live-toggle")
-
-    # One chain reads about once per 1.2s request plus 1.5s wait. Several
-    # chains read several times as often.
-    assert len(reads) <= 3, (
-        f"visibility toggling started concurrent poll chains: {len(reads)} "
-        "reads in four seconds"
-    )
-
-
-def test_a_frame_that_rewrites_every_led_is_held_longer_than_the_floor(
-        signed_in_page):
-    """The floor is what the faceplate tolerates, not what the wire can carry.
-
-    Twenty-four eye writes plus a mouth, each about twenty bytes down a
-    9600-baud line, take longer than 0.4s to arrive. Sending the next frame on
-    the floor regardless grows the queue behind the serial port for as long as
-    the animation runs.
-    """
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-
-    at = []
-    page.route("**/api/mark1/display", lambda route: (
-        at.append(time.monotonic()),
-        route.fulfill(status=200, content_type="application/json",
-                      body=json.dumps({"ok": True}))))
-    page.route("**/api/mark1/eyes/**", lambda route: route.fulfill(
-        status=200, content_type="application/json",
-        body=json.dumps({"ok": True})))
-
-    # The heavy frame first: a frame's own hold is what delays the frame after
-    # it, so measuring the gap between the first two writes measures frame
-    # one. Every LED a different colour, so the diff cannot collapse to a
-    # single fill and all twenty-four are written.
-    page.evaluate("""() => {
-      const c = document.getElementById("mark1-canvas");
-      const RING_R = 38, LED_R = 5.5, GAP = 20, CELL = 12;
-      const EYE_BOX = RING_R * 2 + LED_R * 2, MOUTH_W = 32 * CELL;
-      const FACE_H = Math.max(8 * CELL, EYE_BOX);
-      const PAD_X = Math.round((c.width - (EYE_BOX * 2 + GAP * 2 + MOUTH_W)) / 2);
-      const PAD_Y = Math.round((c.height - FACE_H) / 2);
-      const MOUTH_X = PAD_X + EYE_BOX + GAP;
-      const rect = c.getBoundingClientRect();
-      const picker = document.getElementById("eyes-color");
-      for (let i = 0; i < 24; i++) {
-        const angle = ((i % 12) / 12) * Math.PI * 2 - Math.PI / 2;
-        const cx = i < 12 ? PAD_X + EYE_BOX / 2
-                          : MOUTH_X + MOUTH_W + GAP + EYE_BOX / 2;
-        picker.value = "#" + (0x201000 + i * 0x010101).toString(16).padStart(6, "0");
-        c.dispatchEvent(new PointerEvent("pointerdown", {
-          bubbles: true,
-          clientX: rect.left + (cx + Math.cos(angle) * RING_R) * rect.width / c.width,
-          clientY: rect.top + (PAD_Y + FACE_H / 2 + Math.sin(angle) * RING_R)
-                   * rect.height / c.height}));
-      }
-    }""")
-    page.wait_for_timeout(300)
-    page.click("#anim-capture")
-    page.eval_on_selector("#eyes-color", "el => { el.value = '#010203'; "
-                          "el.dispatchEvent(new Event('input', {bubbles: true})); }")
-    page.wait_for_timeout(150)
-    page.click("#anim-capture")
-    page.fill("#anim-hold", "0.4")
-
-    at.clear()
-    page.click("#anim-send")
-    page.wait_for_timeout(3000)
-
-    assert len(at) == 2, f"expected two frames, saw {len(at)}"
-    gap = at[1] - at[0]
-    # The mouth costs about 0.36s and each of the twenty-four eye writes about
-    # 0.022s, so this frame needs roughly 0.89s. The lower bound has to sit
-    # above the floor plus request overhead, or a hold that ignored the write
-    # count would clear it anyway; the upper bound is what stops the constant
-    # from being quietly doubled, which would halve every heavy animation's
-    # speed for no reason.
-    assert 0.8 < gap < 1.2, (
-        f"held a twenty-five-write frame for {gap:.2f}s; it needs about 0.89s "
-        "for its own writes to reach the board"
-    )
-
-
-def test_following_can_be_restarted_after_it_is_stopped(signed_in_page):
-    """Stopping mid-read must not leave the chain unable to start again.
-
-    The guard that stops a second chain from starting is a flag, and a flag
-    that nothing clears on the way out is a page that says it is following
-    and never reads anything again.
-    """
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-
-    reads = []
-
-    def answer(route):
-        reads.append(route.request.url)
-        route.fulfill(status=200, content_type="application/json",
-                      body=json.dumps({"ok": True, "pixels": [[1, 2, 3]] * 24}))
-
-    page.route("**/api/mark1/eyes", answer)
-    page.evaluate("() => { document.getElementById('live-row').hidden = false; }")
-
-    # Stopped between reads, not during one: an outstanding read would clear
-    # the guard on its way out and hide a guard that is never cleared.
-    page.click("#live-toggle")          # follow
-    page.wait_for_timeout(600)          # first read done, waiting for the next
-    page.click("#live-toggle")          # stop while idle
-    page.wait_for_timeout(200)
-
-    reads.clear()
-    page.click("#live-toggle")          # follow again
-    page.wait_for_timeout(1200)
-    page.click("#live-toggle")
-
-    assert reads, "following never read the device again after a stop"
-
-
 def test_every_page_in_the_nav_has_its_own_icon(signed_in_page):
     """A page added without an icon rule is a solid block in the rail.
 
@@ -940,7 +369,7 @@ def test_hidden_means_hidden_whatever_the_element_is(signed_in_page):
     means to be offering later is a page lying about what it can do.
     """
     page, url = signed_in_page
-    page.goto(f"{url}/mark1")
+    page.goto(f"{url}/media")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(300)
 
@@ -1036,92 +465,6 @@ def test_the_file_list_shows_the_merge_order(signed_in_page):
     assert items, "listed no configuration files"
     assert "packaged defaults" in items[0], items[0]
     assert "runtime change" in items[-1], items[-1]
-
-
-def test_clicking_between_two_lamps_still_draws_that_pixel(signed_in_page):
-    """The lamps are drawn smaller than their cells, so there is a gap
-    between them on screen. Hit-testing is by cell, not by lamp: a person
-    aiming at the corner of a pixel gets that pixel, not nothing.
-    """
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-
-    page.click("#mouth-clear")
-    page.wait_for_timeout(150)
-    before = _canvas_signature(page)
-
-    box = page.locator("#mark1-canvas").bounding_box()
-    spot = page.evaluate("""(() => {
-      const c = document.getElementById("mark1-canvas");
-      const RING_R = 38, LED_R = 5.5, GAP = 20, CELL = 12;
-      const EYE_BOX = RING_R * 2 + LED_R * 2, MOUTH_W = 32 * CELL;
-      const FACE_H = Math.max(8 * CELL, EYE_BOX);
-      const PAD_X = Math.round((c.width - (EYE_BOX * 2 + GAP * 2 + MOUTH_W)) / 2);
-      const PAD_Y = Math.round((c.height - FACE_H) / 2);
-      const MOUTH_X = PAD_X + EYE_BOX + GAP;
-      const MOUTH_Y = PAD_Y + Math.round((FACE_H - 8 * CELL) / 2);
-      // The very corner of the first cell: as far from that lamp's centre as
-      // a click can land while still being inside the pixel.
-      return {x: MOUTH_X + 1, y: MOUTH_Y + 1, w: c.width, h: c.height};
-    })()""")
-    page.mouse.click(box["x"] + spot["x"] * box["width"] / spot["w"],
-                     box["y"] + spot["y"] * box["height"] / spot["h"])
-    page.wait_for_timeout(200)
-
-    assert _canvas_signature(page) != before, (
-        "a click inside a pixel but between the lamps drew nothing"
-    )
-
-
-def test_the_mouth_is_round_lamps_that_stay_visible_unlit(signed_in_page):
-    """On the device every lamp in the grid is there in the plastic whether
-    it is lit or not, and the lamps are round.
-
-    Both halves matter and neither is visible to a test that only counts
-    pixels: square cells that fill their cell, or unlit lamps painted the
-    colour of the background, each make the display read as something other
-    than the one on the desk.
-    """
-    page, url = signed_in_page
-    page.goto(f"{url}/mark1")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-    page.click("#mouth-clear")
-    page.wait_for_timeout(200)
-
-    sampled = page.evaluate("""(() => {
-      const c = document.getElementById("mark1-canvas");
-      const g = c.getContext("2d");
-      const RING_R = 38, LED_R = 5.5, GAP = 20, CELL = 12;
-      const EYE_BOX = RING_R * 2 + LED_R * 2, MOUTH_W = 32 * CELL;
-      const FACE_H = Math.max(8 * CELL, EYE_BOX);
-      const PAD_X = Math.round((c.width - (EYE_BOX * 2 + GAP * 2 + MOUTH_W)) / 2);
-      const PAD_Y = Math.round((c.height - FACE_H) / 2);
-      const MOUTH_X = PAD_X + EYE_BOX + GAP;
-      const MOUTH_Y = PAD_Y + Math.round((FACE_H - 8 * CELL) / 2);
-      const at = (x, y) => {
-        const d = g.getImageData(Math.round(x), Math.round(y), 1, 1).data;
-        return Math.max(d[0], d[1], d[2]);
-      };
-      // The middle of a lamp, and the corner of the same cell.
-      const cell = (col, rowIndex) => ({
-        centre: at(MOUTH_X + col * CELL + CELL / 2, MOUTH_Y + rowIndex * CELL + CELL / 2),
-        corner: at(MOUTH_X + col * CELL + 1, MOUTH_Y + rowIndex * CELL + 1)
-      });
-      return {first: cell(0, 0), middle: cell(15, 4), last: cell(31, 7)};
-    })()""")
-
-    for where, sample in sampled.items():
-        assert sample["centre"] > 24, (
-            f"the unlit lamp at {where} is invisible against the faceplate "
-            f"({sample['centre']})"
-        )
-        assert sample["corner"] < sample["centre"] - 8, (
-            f"the lamp at {where} fills its cell corner to centre "
-            f"({sample['corner']} vs {sample['centre']}), so it is not round"
-        )
 
 
 def test_the_candidate_list_offers_the_other_matches(signed_in_page):
@@ -1290,7 +633,9 @@ def test_the_menu_groups_start_folded_and_open_one_at_a_time(signed_in_page):
     assert page.locator("#simple-toggle").count() == 0, "the header switch is gone"
     advanced = _fold(page, "advanced")
     assert advanced.is_visible() and advanced.get_attribute("aria-expanded") == "false"
-    assert page.locator("nav .nav-advanced .nav-sub button.nav-fold").count() == 5
+    # voice, understanding, device, maintenance: the screen group's pages
+    # come with their plugins, and the test device has none
+    assert page.locator("nav .nav-advanced .nav-sub button.nav-fold").count() == 4
     assert not _fold(page, "understanding").is_visible(), "Advanced folds its groups away"
     folded = _visible_nav(page)
     assert "/about" in folded and "/skills" in folded
@@ -1352,7 +697,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
     page, url = signed_in_page
     needs = {"colocated": True, "needs": {
         k: {"met": k in ("system", "media"), "suggest": "pkg-" + k}
-        for k in ("system", "media", "mark1")}}
+        for k in ("system", "media", "network")}}
 
     def answer(route):
         route.fulfill(status=200, content_type="application/json", body=json.dumps(needs))
@@ -1363,18 +708,18 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs.v2'); "
                       "localStorage.setItem('ovos-nav-open', JSON.stringify(['advanced', 'library', 'voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
         page.reload()
-        page.wait_for_function("() => document.querySelector('nav a[href=\"/mark1\"]').hidden")
+        page.wait_for_function("() => document.querySelector('nav a[href=\"/network\"]').hidden")
         shown = _visible_nav(page)
         assert "/system" in shown and "/media" in shown
-        assert "/mark1" not in shown
+        assert "/network" not in shown
         assert not page.locator('nav .nav-group[data-group="screen"]').is_visible()
 
-        page.goto(f"{url}/mark1")
+        page.goto(f"{url}/network")
         note = page.locator("#needs-note")
         note.wait_for()
-        assert "pkg-mark1" in note.inner_text()
+        assert "pkg-network" in note.inner_text()
         assert note.locator('a[href="/plugins"]').count() == 1
-        assert "/mark1" in _visible_nav(page), "the page you are on stays in the menu"
+        assert "/network" in _visible_nav(page), "the page you are on stays in the menu"
     finally:
         page.unroute("**/api/nav/needs")
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs.v2'); "
@@ -1383,7 +728,7 @@ def test_pages_the_device_cannot_use_leave_the_menu(signed_in_page):
 
 def test_a_panel_apart_from_the_device_hides_no_page(signed_in_page):
     page, url = signed_in_page
-    needs = {"colocated": False, "needs": {"mark1": {"met": False, "suggest": "x"}}}
+    needs = {"colocated": False, "needs": {"network": {"met": False, "suggest": "x"}}}
     page.route("**/api/nav/needs", lambda r: r.fulfill(
         status=200, content_type="application/json", body=json.dumps(needs)))
     try:
@@ -1392,7 +737,7 @@ def test_a_panel_apart_from_the_device_hides_no_page(signed_in_page):
                       "localStorage.setItem('ovos-nav-open', JSON.stringify(['advanced', 'library', 'voice', 'understanding', 'device', 'screen', 'maintenance'])); }")
         page.reload()
         page.wait_for_load_state("networkidle")
-        assert "/mark1" in _visible_nav(page)
+        assert "/network" in _visible_nav(page)
     finally:
         page.unroute("**/api/nav/needs")
         page.evaluate("() => { sessionStorage.removeItem('ovos-nav-needs.v2'); "
