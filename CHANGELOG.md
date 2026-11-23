@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a101](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a101) (2026-11-23)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a100...0.0.1a101)
+
+**Merged pull requests:**
+
+- Descriptions of the OCP media providers, until they bring their own [\#191](https://github.com/OpenVoiceOS/ovos-control-panel/pull/191) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a100](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a100) (2026-11-23)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a99...0.0.1a100)
@@ -541,10 +549,6 @@
 ## [0.0.1a34](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a34) (2026-08-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a33...0.0.1a34)
-
-**Merged pull requests:**
-
-- fix: put Setup in the navigation [\#66](https://github.com/OpenVoiceOS/ovos-control-panel/pull/66) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a33](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a33) (2026-08-26)
 
