@@ -136,7 +136,12 @@ header h1 {
   font-size: 1.2rem;
   font-weight: 750;
   letter-spacing: -0.01em;
-  flex: 0 0 auto;
+  /* may shrink and wrap: a long page title in a long language ("As
+   * definições do próprio painel de controlo") must not push the header
+   * wider than a phone */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 /* The theme control: a quiet icon button at the end of the header, never the
  * red primary weight. */
@@ -911,22 +916,27 @@ html.i18n-wait body { visibility: hidden; }
 
 /* A page described in controlpanel.json (described.js). */
 .cp-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; }
-.cp-list li { display: grid; gap: 0.35rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--line); }
+/* minmax(0, 1fr) and overflow-wrap: a path or address with no spaces
+ * (/usr/share/wallpapers/city-night.jpg) wraps instead of widening the
+ * row past a phone, in the largest text size too */
+.cp-list li { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line); }
 .cp-list li:last-child { border-bottom: 0; padding-bottom: 0; }
 .cp-list .row input { flex: 1 1 14rem; min-width: 0; }
 .cp-steps { margin: 0 0 0.25rem; padding-left: 1.4rem; color: var(--muted); line-height: 1.6; }
 .cp-steps li + li { margin-top: 0.25rem; }
 .cp-filter { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.75rem; color: var(--muted); }
 .cp-filter select { width: auto; }
-.cp-title { font-weight: 650; }
+.cp-title { font-weight: 650; overflow-wrap: anywhere; }
 .cp-meta { color: var(--muted); font-size: 0.9em; overflow-wrap: anywhere; }
 .cp-text { overflow-wrap: anywhere; }
-.cp-list li.cp-with-picture { grid-template-columns: 5rem 1fr; gap: 1rem; align-items: start; }
+.cp-list li.cp-with-picture { grid-template-columns: 5rem minmax(0, 1fr); gap: 1rem; align-items: start; }
 .cp-row-body { display: grid; gap: 0.35rem; min-width: 0; }
 .cp-picture { width: 5rem; height: 5rem; object-fit: contain; border-radius: var(--radius-sm); }
-@media (max-width: 30rem) { .cp-list li.cp-with-picture { grid-template-columns: 1fr; } }
+@media (max-width: 30rem) { .cp-list li.cp-with-picture { grid-template-columns: minmax(0, 1fr); } }
 #cp-page textarea { width: 100%; font-family: inherit; min-height: 6rem; }
-.cp-rows { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 1rem; margin: 0.5rem 0; }
+.cp-rows { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.3rem 1rem; margin: 0.5rem 0; }
+.cp-rows dd { overflow-wrap: anywhere; }
 .cp-rows dt { color: var(--muted); }
 .cp-rows dd { margin: 0; overflow-wrap: anywhere; }
 .cp-rows dd.cp-note { grid-column: 1 / -1; color: var(--muted); font-size: 0.95em; }

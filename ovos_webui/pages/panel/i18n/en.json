@@ -1,5 +1,5 @@
 {
- "panel.intro": "How the control panel itself looks and behaves: its name, colour and theme, where its recommendations come from, which added pages it shows, and the token that guards it.",
+ "panel.intro": "How the control panel itself looks and behaves: its name, colour and theme, where its recommendations come from, its stores, the largest file it takes, which added pages it shows, and the token that guards it.",
  "panel.look.title": "Appearance",
  "panel.look.name": "Name",
  "panel.look.accent": "Colour",
