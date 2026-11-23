@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a100](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a100) (2026-11-23)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a99...0.0.1a100)
+
+**Merged pull requests:**
+
+- Arabic for the pages the panel brings, and nothing wider than a phone [\#190](https://github.com/OpenVoiceOS/ovos-control-panel/pull/190) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a99](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a99) (2026-11-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a98...0.0.1a99)
@@ -529,10 +537,6 @@
 ## [0.0.1a35](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a35) (2026-09-01)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a34...0.0.1a35)
-
-**Merged pull requests:**
-
-- fix: send messages the receiving plugins can actually act on [\#65](https://github.com/OpenVoiceOS/ovos-control-panel/pull/65) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a34](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a34) (2026-08-26)
 
