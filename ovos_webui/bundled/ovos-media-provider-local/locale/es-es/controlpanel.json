@@ -1,0 +1,10 @@
+{
+ "provider_local.title": "Medios locales",
+ "provider_local.intro": "Tus propias canciones y películas, de carpetas del dispositivo y sus subcarpetas. Pon archivos ahí desde la página Medios o indica una carpeta o una unidad montada.",
+ "provider_local.settings": "Ajustes",
+ "provider_local.paths": "Carpetas, una por línea",
+ "provider_local.paths.hint": "Vacío: las carpetas Música y Vídeos del usuario.",
+ "provider_local.max_results": "Máximo de resultados por búsqueda",
+ "provider_local.min_confidence": "Cuánto debe coincidir un archivo",
+ "provider_local.min_confidence.hint": "Los archivos que coinciden menos quedan fuera."
+}

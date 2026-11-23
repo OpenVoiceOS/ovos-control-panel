@@ -1,0 +1,7 @@
+{
+ "provider_news.title": "Nyheder",
+ "provider_news.intro": "Nyhedsudsendelser fra public service-kanaler, som afspilles, når du beder om nyhederne.",
+ "provider_news.settings": "Indstillinger",
+ "provider_news.default_feed": "Dine nyheder",
+ "provider_news.default_feed.hint": "Navnet på en kilde, fx BBC, NPR, RTP eller DLF - Die Nachrichten. Tom: den sædvanlige for enhedens sprog."
+}

@@ -1,0 +1,6 @@
+{
+ "provider_spotify.title": "Spotify",
+ "provider_spotify.intro": "Musik fra Spotify. Det kræver en Spotify-konto, logget ind gennem Spotify-afspilningspluginnet.",
+ "provider_spotify.settings": "Indstillinger",
+ "provider_spotify.max_tracks": "Højst så mange sange fra et album eller en kunstner"
+}

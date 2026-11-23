@@ -1,0 +1,36 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-media-provider-somafm>=0.0.1a1,<0.1",
+ "id": "media-somafm",
+ "path": "/media-somafm",
+ "title": "provider_somafm.title",
+ "group": "library",
+ "order": 30,
+ "bus": "ovos.media-somafm.",
+ "blocks": [
+  {
+   "type": "text",
+   "text": "provider_somafm.intro"
+  },
+  {
+   "type": "provider"
+  },
+  {
+   "type": "form",
+   "heading": "provider_somafm.settings",
+   "save": {
+    "config": "media_providers.somafm"
+   },
+   "fields": [
+    {
+     "name": "max_results",
+     "type": "number",
+     "min": 1,
+     "max": 100,
+     "default": 10,
+     "label": "provider_somafm.max_results"
+    }
+   ]
+  }
+ ]
+}

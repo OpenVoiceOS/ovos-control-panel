@@ -1,0 +1,7 @@
+{
+ "provider_tunein.title": "TuneIn",
+ "provider_tunein.intro": "محطات راديو من كل أنحاء العالم، عبر TuneIn.",
+ "provider_tunein.settings": "الإعدادات",
+ "provider_tunein.enrich": "ابحث عن المزيد عن كل محطة",
+ "provider_tunein.enrich.hint": "النوع واللغة والبلد لكل محطة. يستغرق البحث وقتًا أطول."
+}

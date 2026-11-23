@@ -1,0 +1,6 @@
+{
+ "provider_spotify.title": "Spotify",
+ "provider_spotify.intro": "Música do Spotify. Precisa de uma conta Spotify, com sessão iniciada pelo plugin de reprodução do Spotify.",
+ "provider_spotify.settings": "Definições",
+ "provider_spotify.max_tracks": "Máximo de canções de um álbum ou artista"
+}

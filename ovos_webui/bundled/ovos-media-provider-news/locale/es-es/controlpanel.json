@@ -1,0 +1,7 @@
+{
+ "provider_news.title": "Noticias",
+ "provider_news.intro": "Boletines de noticias de emisoras públicas, para cuando pides las noticias.",
+ "provider_news.settings": "Ajustes",
+ "provider_news.default_feed": "Tus noticias",
+ "provider_news.default_feed.hint": "El nombre de una fuente, como BBC, NPR, RNE o DLF - Die Nachrichten. Vacío: la habitual para el idioma del dispositivo."
+}

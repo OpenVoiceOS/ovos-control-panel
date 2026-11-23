@@ -1,0 +1,35 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-media-provider-tunein>=0.0.1a1,<0.1",
+ "id": "media-tunein",
+ "path": "/media-tunein",
+ "title": "provider_tunein.title",
+ "group": "library",
+ "order": 31,
+ "bus": "ovos.media-tunein.",
+ "blocks": [
+  {
+   "type": "text",
+   "text": "provider_tunein.intro"
+  },
+  {
+   "type": "provider"
+  },
+  {
+   "type": "form",
+   "heading": "provider_tunein.settings",
+   "save": {
+    "config": "media_providers.tunein"
+   },
+   "fields": [
+    {
+     "name": "enrich",
+     "type": "checkbox",
+     "default": false,
+     "label": "provider_tunein.enrich",
+     "hint": "provider_tunein.enrich.hint"
+    }
+   ]
+  }
+ ]
+}

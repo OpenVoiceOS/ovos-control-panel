@@ -1,0 +1,7 @@
+{
+ "provider_tunein.title": "TuneIn",
+ "provider_tunein.intro": "Radiostationer fra hele verden, gennem TuneIn.",
+ "provider_tunein.settings": "Indstillinger",
+ "provider_tunein.enrich": "Slå mere op om hver station",
+ "provider_tunein.enrich.hint": "Genre, sprog og land for hver station, der findes. Søgninger tager længere tid."
+}

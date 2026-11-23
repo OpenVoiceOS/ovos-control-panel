@@ -1,0 +1,10 @@
+{
+ "provider_mass.title": "Music Assistant",
+ "provider_mass.intro": "Tu propia biblioteca musical en Music Assistant, con lo que reúne de tus servicios. Para reproducirla también hace falta el complemento de reproducción de Music Assistant.",
+ "provider_mass.settings": "Ajustes",
+ "provider_mass.url": "Dirección del servidor de Music Assistant",
+ "provider_mass.url.hint": "Como http://192.168.1.100:8095. Sin ella no se busca allí.",
+ "provider_mass.token": "Token de acceso",
+ "provider_mass.token.hint": "Music Assistant 2.11 y posteriores lo piden: créalo en Music Assistant en Ajustes, Usuarios.",
+ "provider_mass.max_results": "Máximo de resultados por búsqueda"
+}

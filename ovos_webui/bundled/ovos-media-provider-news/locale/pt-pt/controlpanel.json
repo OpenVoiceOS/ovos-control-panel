@@ -1,0 +1,7 @@
+{
+ "provider_news.title": "Notícias",
+ "provider_news.intro": "Noticiários de emissoras públicas, para quando pede as notícias.",
+ "provider_news.settings": "Definições",
+ "provider_news.default_feed": "As suas notícias",
+ "provider_news.default_feed.hint": "O nome de uma fonte, como BBC, NPR, RTP ou DLF - Die Nachrichten. Vazio: a habitual para a língua do dispositivo."
+}

@@ -1,0 +1,52 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-media-provider-local>=0.0.1a1,<0.1",
+ "id": "media-local",
+ "path": "/media-local",
+ "title": "provider_local.title",
+ "group": "library",
+ "order": 21,
+ "bus": "ovos.media-local.",
+ "blocks": [
+  {
+   "type": "text",
+   "text": "provider_local.intro"
+  },
+  {
+   "type": "provider"
+  },
+  {
+   "type": "form",
+   "heading": "provider_local.settings",
+   "save": {
+    "config": "media_providers.local"
+   },
+   "fields": [
+    {
+     "name": "paths",
+     "type": "lines",
+     "label": "provider_local.paths",
+     "hint": "provider_local.paths.hint"
+    },
+    {
+     "name": "max_results",
+     "type": "number",
+     "min": 1,
+     "max": 100,
+     "default": 10,
+     "label": "provider_local.max_results"
+    },
+    {
+     "name": "min_confidence",
+     "type": "slider",
+     "min": 0,
+     "max": 1,
+     "step": 0.05,
+     "default": 0.3,
+     "label": "provider_local.min_confidence",
+     "hint": "provider_local.min_confidence.hint"
+    }
+   ]
+  }
+ ]
+}

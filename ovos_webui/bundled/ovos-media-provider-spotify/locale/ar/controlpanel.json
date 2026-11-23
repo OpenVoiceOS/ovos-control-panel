@@ -1,0 +1,6 @@
+{
+ "provider_spotify.title": "Spotify",
+ "provider_spotify.intro": "موسيقى من Spotify. تحتاج إلى حساب Spotify مسجَّل الدخول عبر إضافة تشغيل Spotify.",
+ "provider_spotify.settings": "الإعدادات",
+ "provider_spotify.max_tracks": "أقصى عدد من الأغاني من ألبوم أو فنان"
+}

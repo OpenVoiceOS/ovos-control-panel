@@ -1,0 +1,35 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-media-provider-news>=0.0.1a1,<0.1",
+ "id": "media-news",
+ "path": "/media-news",
+ "title": "provider_news.title",
+ "group": "library",
+ "order": 33,
+ "bus": "ovos.media-news.",
+ "blocks": [
+  {
+   "type": "text",
+   "text": "provider_news.intro"
+  },
+  {
+   "type": "provider"
+  },
+  {
+   "type": "form",
+   "heading": "provider_news.settings",
+   "save": {
+    "config": "media_providers.news"
+   },
+   "fields": [
+    {
+     "name": "default_feed",
+     "type": "text",
+     "max_length": 80,
+     "label": "provider_news.default_feed",
+     "hint": "provider_news.default_feed.hint"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,7 @@
+{
+ "provider_bandcamp.title": "Bandcamp",
+ "provider_bandcamp.intro": "Álbumes y temas de Bandcamp, directamente de los artistas.",
+ "provider_bandcamp.settings": "Ajustes",
+ "provider_bandcamp.max_pages": "Páginas de resultados que se recorren",
+ "provider_bandcamp.max_pages.hint": "Más páginas encuentran más, pero cada búsqueda tarda más."
+}

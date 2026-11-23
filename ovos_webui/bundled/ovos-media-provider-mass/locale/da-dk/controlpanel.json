@@ -1,0 +1,10 @@
+{
+ "provider_mass.title": "Music Assistant",
+ "provider_mass.intro": "Dit eget musikbibliotek i Music Assistant, med det, den samler fra dine tjenester. Afspilning kræver også Music Assistant-afspilningspluginnet.",
+ "provider_mass.settings": "Indstillinger",
+ "provider_mass.url": "Adressen på Music Assistant-serveren",
+ "provider_mass.url.hint": "Fx http://192.168.1.100:8095. Uden den søges der ikke dér.",
+ "provider_mass.token": "Adgangstoken",
+ "provider_mass.token.hint": "Music Assistant 2.11 og nyere kræver et: lav det i Music Assistant under Indstillinger, Brugere.",
+ "provider_mass.max_results": "Højst så mange resultater pr. søgning"
+}

@@ -1,0 +1,10 @@
+{
+ "provider_local.title": "Conteúdos locais",
+ "provider_local.intro": "As suas canções e filmes, de pastas do dispositivo e das suas subpastas. Coloque lá ficheiros a partir da página Multimédia, ou indique uma pasta ou uma unidade montada.",
+ "provider_local.settings": "Definições",
+ "provider_local.paths": "Pastas, uma por linha",
+ "provider_local.paths.hint": "Vazio: as pastas Música e Vídeos do utilizador.",
+ "provider_local.max_results": "Máximo de resultados por pesquisa",
+ "provider_local.min_confidence": "Quanto um ficheiro tem de corresponder",
+ "provider_local.min_confidence.hint": "Os ficheiros que correspondem menos ficam de fora."
+}

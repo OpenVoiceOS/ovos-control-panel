@@ -1,0 +1,7 @@
+{
+ "provider_tunein.title": "TuneIn",
+ "provider_tunein.intro": "Radio stations from all over the world, through TuneIn.",
+ "provider_tunein.settings": "Settings",
+ "provider_tunein.enrich": "Look up more about each station",
+ "provider_tunein.enrich.hint": "Genre, language and country for each station found. Searches take longer."
+}

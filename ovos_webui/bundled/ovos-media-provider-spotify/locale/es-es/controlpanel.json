@@ -1,0 +1,6 @@
+{
+ "provider_spotify.title": "Spotify",
+ "provider_spotify.intro": "Música de Spotify. Necesita una cuenta de Spotify, iniciada mediante el complemento de reproducción de Spotify.",
+ "provider_spotify.settings": "Ajustes",
+ "provider_spotify.max_tracks": "Máximo de canciones de un álbum o artista"
+}

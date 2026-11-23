@@ -1,0 +1,36 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-media-provider-soundcloud>=0.0.1a1,<0.1",
+ "id": "media-soundcloud",
+ "path": "/media-soundcloud",
+ "title": "provider_soundcloud.title",
+ "group": "library",
+ "order": 42,
+ "bus": "ovos.media-soundcloud.",
+ "blocks": [
+  {
+   "type": "text",
+   "text": "provider_soundcloud.intro"
+  },
+  {
+   "type": "provider"
+  },
+  {
+   "type": "form",
+   "heading": "provider_soundcloud.settings",
+   "save": {
+    "config": "media_providers.soundcloud"
+   },
+   "fields": [
+    {
+     "name": "max_results",
+     "type": "number",
+     "min": 1,
+     "max": 100,
+     "default": 10,
+     "label": "provider_soundcloud.max_results"
+    }
+   ]
+  }
+ ]
+}

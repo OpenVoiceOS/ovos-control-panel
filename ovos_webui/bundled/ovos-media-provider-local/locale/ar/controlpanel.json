@@ -1,0 +1,10 @@
+{
+ "provider_local.title": "الوسائط المحلية",
+ "provider_local.intro": "أغانيك وأفلامك الخاصة، من مجلدات على الجهاز ومجلداتها الفرعية. ضع الملفات هناك من صفحة الوسائط، أو أشر إلى مجلد أو قرص مركَّب.",
+ "provider_local.settings": "الإعدادات",
+ "provider_local.paths": "المجلدات، واحد في كل سطر",
+ "provider_local.paths.hint": "فارغ: مجلدا الموسيقى والفيديو للمستخدم.",
+ "provider_local.max_results": "أقصى عدد من النتائج لكل بحث",
+ "provider_local.min_confidence": "مدى تطابق الملف المطلوب",
+ "provider_local.min_confidence.hint": "تُستبعد الملفات الأقل تطابقًا."
+}
