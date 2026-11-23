@@ -61,6 +61,7 @@ runs in the panel.
 | `groups` | no | Groups the page brings: `{"id", "title", "order", "level": "everyday" or "advanced"}`, the title a key or `{"key", "label"}` with its English text. The panel's own groups always win. |
 | `order` | no | The place in the group, lowest first. Default 100. |
 | `needs` | no | Packages that make the page work, any one enough. Default: the package itself. |
+| `provides` | no | The device controls the package gives, for the Device page: `volume`, `power`, `system`, `network`, `ggwave`. A PHAL plugin for other hardware (or a browser tab) that answers the same bus messages as the plugin the panel knows for it says so here, and the Device page counts it as installed. |
 | `icon` | no | The SVG, used as a mask so it takes the menu's colour. |
 | `pictures` | no | A folder in the package whose pictures are served under `/pages/<id>/`: PNG, JPEG, GIF, WebP and SVG, nothing else. A list can show them (`picture`). |
 | `bus` | yes, or `messages` | The prefix every message of the page starts with, ending in a dot: `ovos.jamband.`. |

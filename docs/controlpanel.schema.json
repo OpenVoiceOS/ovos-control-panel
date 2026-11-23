@@ -98,6 +98,19 @@
     "minLength": 1
    }
   },
+  "provides": {
+   "type": "array",
+   "items": {
+    "enum": [
+     "volume",
+     "power",
+     "system",
+     "network",
+     "ggwave"
+    ]
+   },
+   "description": "The device controls the package gives (the Device page)."
+  },
   "icon": {
    "type": "string"
   },
