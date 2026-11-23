@@ -19,7 +19,12 @@ def routes(r) -> None:
     # on ``privileged`` like the other device-changing routes.
     @r.privileged.get("/servers")
     def api_servers_get() -> dict[str, Any]:
-        return {kind: servers.get_servers(kind) for kind in servers.KINDS}
+        out = {kind: servers.get_servers(kind) for kind in servers.KINDS}
+        for kind, data in out.items():
+            if "error" not in data:
+                # the page leaves out a kind whose server plugin is not here
+                data["installed"] = servers.installed(kind, data)
+        return out
 
     @r.privileged.post("/servers/{kind}")
     def api_servers_set(kind: str, body: ServersBody) -> dict[str, Any]:

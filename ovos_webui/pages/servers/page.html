@@ -116,6 +116,8 @@ OvosWebUI.ready(function () {
     api("/api/servers").then(function (data) {
       ["stt", "tts", "translate"].forEach(function (kind) {
         var d = data[kind] || {};
+        // no server plugin for this kind on the device: nothing to point at
+        el("section-" + kind).hidden = d.installed === false;
         if (d.error) {
           OvosWebUI.say("msg-" + kind, d.error, true);
           state[kind] = [];

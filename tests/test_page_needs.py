@@ -1,7 +1,7 @@
 """Which pages the device can use, so the menu can leave the rest out.
 
-The panel's own pages need nothing; the pages that need a plugin come with it
-or with an extension. So these use one such page: Wi-Fi, as the network
+The panel's own pages need nothing but Personas (ovos-persona); the pages
+that need a plugin come with it or with an extension. So these use one such page: Wi-Fi, as the network
 extension describes it."""
 import types
 
@@ -39,8 +39,9 @@ def test_a_panel_running_apart_from_the_assistant_hides_nothing():
 
 
 def test_only_pages_with_needs_are_reported():
-    assert set(pages.needs(REG, ON_DEVICE)["needs"]) == {"network"}
-    assert pages.needs(pages.load(_own()), ON_DEVICE)["needs"] == {}, "the panel's own need nothing"
+    assert set(pages.needs(REG, ON_DEVICE)["needs"]) == {"network", "personas"}
+    assert set(pages.needs(pages.load(_own()), ON_DEVICE)["needs"]) == {"personas"}, \
+        "of the panel's own, only Personas needs a package"
 
 
 def test_the_route_answers(client):
