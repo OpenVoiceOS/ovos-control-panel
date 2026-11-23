@@ -175,6 +175,29 @@ def _translate_set(urls: list[str], bus=None) -> dict[str, Any]:
             "urls": urls, "write": result}
 
 
+def module_installed(module: str) -> bool | None:
+    """Whether a plugin of this name (its entry point, as mycroft.conf names
+    it) is installed; None when the panel runs apart from the assistant,
+    where its packages say nothing about the device's."""
+    from importlib import metadata
+
+    from ovos_webui import pages
+    if not pages.colocated():
+        return None
+    try:
+        return any(ep.name == module for ep in metadata.entry_points()
+                   if ep.group.startswith(("opm.", "mycroft.plugin.", "neon.plugin.")))
+    except Exception:  # noqa: BLE001 - unknown means: show the section
+        return None
+
+
+def installed(kind: str, data: dict[str, Any]) -> bool | None:
+    """Whether the plugin a kind's servers are for is installed (see
+    module_installed): for translate, the translation plugin."""
+    module = data.get("translation_module") if kind == "translate" else data.get("module")
+    return module_installed(module) if isinstance(module, str) and module else None
+
+
 def get_servers(kind: str) -> dict[str, Any]:
     """Return the currently configured server list for ``kind``.
 
