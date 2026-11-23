@@ -1,0 +1,10 @@
+{
+ "provider_local.title": "Lokale medier",
+ "provider_local.intro": "Dine egne sange og film, fra mapper på enheden og deres undermapper. Læg filer der fra siden Medier, eller peg på en mappe eller et monteret drev.",
+ "provider_local.settings": "Indstillinger",
+ "provider_local.paths": "Mapper, én pr. linje",
+ "provider_local.paths.hint": "Tom: brugerens mapper Musik og Videoer.",
+ "provider_local.max_results": "Højst så mange resultater pr. søgning",
+ "provider_local.min_confidence": "Hvor godt en fil skal passe",
+ "provider_local.min_confidence.hint": "Filer, der passer dårligere, udelades."
+}

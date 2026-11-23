@@ -457,6 +457,12 @@ def test_every_page_the_panel_brings_is_sound(folder):
     kind = folder.split("-")[1]          # ovos-tts-plugin-server -> tts
     roots = ["PHAL." + folder] + ([f"{kind}.{folder}"] if kind in ("tts", "stt") else [])
     modules = {kind: [folder]} if kind in ("tts", "stt") else {}
+    if folder.startswith("ovos-media-provider-"):
+        # a media provider: its entry point name is the place its form saves in
+        place = next(b["save"]["config"] for b in data["blocks"]
+                     if b["type"] == "form" and "config" in b.get("save", {}))
+        roots.append(place)
+        modules = {"provider": [place.split(".", 1)[1]]}
     described.check(data, folder, config_roots=roots, modules=modules, by_panel=True)
     found = described.strings(root)
     assert "en" in found and "da" in found
@@ -464,6 +470,8 @@ def test_every_page_the_panel_brings_is_sound(folder):
     assert all(set(table) == keys for table in found.values()), "the same strings in every language"
     used = set(re.findall(r'"([a-z][\w]*\.[\w.]+)"', (root / described.FILE).read_text()))
     used -= {data.get("icon"), *data.get("messages", [])}
+    # where a form saves is a place in mycroft.conf, not a string
+    used -= {b["save"]["config"] for b in data["blocks"] if "config" in b.get("save", {})}
     assert {k for k in used if not k.startswith(("common.", "ovos."))} <= keys
 
 

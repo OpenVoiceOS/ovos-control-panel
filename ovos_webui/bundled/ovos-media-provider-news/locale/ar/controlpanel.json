@@ -1,0 +1,7 @@
+{
+ "provider_news.title": "الأخبار",
+ "provider_news.intro": "نشرات أخبار من هيئات بث عامة، تُشغَّل عندما تطلب الأخبار.",
+ "provider_news.settings": "الإعدادات",
+ "provider_news.default_feed": "أخبارك",
+ "provider_news.default_feed.hint": "اسم مصدر، مثل BBC أو NPR أو RTP أو DLF - Die Nachrichten. فارغ: المعتاد للغة الجهاز."
+}

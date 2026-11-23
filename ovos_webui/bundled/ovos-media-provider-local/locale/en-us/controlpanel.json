@@ -1,0 +1,10 @@
+{
+ "provider_local.title": "Local media",
+ "provider_local.intro": "Your own songs and films, from folders on the device and their subfolders. Put files there from the Media page, or point it at a folder or a mounted drive.",
+ "provider_local.settings": "Settings",
+ "provider_local.paths": "Folders, one per line",
+ "provider_local.paths.hint": "Empty: the user's Music and Videos folders.",
+ "provider_local.max_results": "Most results per search",
+ "provider_local.min_confidence": "How closely a file must match",
+ "provider_local.min_confidence.hint": "Files that match less than this are left out."
+}

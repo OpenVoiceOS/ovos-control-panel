@@ -1,0 +1,50 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-media-provider-mass>=0.0.1a1,<0.1",
+ "id": "media-mass",
+ "path": "/media-mass",
+ "title": "provider_mass.title",
+ "group": "library",
+ "order": 45,
+ "bus": "ovos.media-mass.",
+ "blocks": [
+  {
+   "type": "text",
+   "text": "provider_mass.intro"
+  },
+  {
+   "type": "provider"
+  },
+  {
+   "type": "form",
+   "heading": "provider_mass.settings",
+   "save": {
+    "config": "media_providers.music_assistant"
+   },
+   "fields": [
+    {
+     "name": "url",
+     "type": "url",
+     "max_length": 300,
+     "label": "provider_mass.url",
+     "hint": "provider_mass.url.hint"
+    },
+    {
+     "name": "token",
+     "type": "password",
+     "max_length": 500,
+     "label": "provider_mass.token",
+     "hint": "provider_mass.token.hint"
+    },
+    {
+     "name": "max_results",
+     "type": "number",
+     "min": 1,
+     "max": 100,
+     "default": 10,
+     "label": "provider_mass.max_results"
+    }
+   ]
+  }
+ ]
+}

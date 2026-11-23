@@ -1,0 +1,10 @@
+{
+ "provider_mass.title": "Music Assistant",
+ "provider_mass.intro": "Your own music library in Music Assistant, with what it brings together from your services. Playing it also needs the Music Assistant playback plugin.",
+ "provider_mass.settings": "Settings",
+ "provider_mass.url": "Address of the Music Assistant server",
+ "provider_mass.url.hint": "Such as http://192.168.1.100:8095. Without it nothing is searched there.",
+ "provider_mass.token": "Access token",
+ "provider_mass.token.hint": "Music Assistant 2.11 and later want one: make it in Music Assistant under Settings, Users.",
+ "provider_mass.max_results": "Most results per search"
+}

@@ -1,0 +1,10 @@
+{
+ "provider_mass.title": "Music Assistant",
+ "provider_mass.intro": "مكتبتك الموسيقية في Music Assistant، مع ما تجمعه من خدماتك. يحتاج التشغيل أيضًا إلى إضافة تشغيل Music Assistant.",
+ "provider_mass.settings": "الإعدادات",
+ "provider_mass.url": "عنوان خادم Music Assistant",
+ "provider_mass.url.hint": "مثل http://192.168.1.100:8095. بدونه لا يُبحث هناك.",
+ "provider_mass.token": "رمز الوصول",
+ "provider_mass.token.hint": "يطلبه Music Assistant 2.11 وما بعده: أنشئه في Music Assistant ضمن الإعدادات، المستخدمون.",
+ "provider_mass.max_results": "أقصى عدد من النتائج لكل بحث"
+}

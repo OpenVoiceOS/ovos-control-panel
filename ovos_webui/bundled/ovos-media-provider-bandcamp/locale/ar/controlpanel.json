@@ -1,0 +1,7 @@
+{
+ "provider_bandcamp.title": "Bandcamp",
+ "provider_bandcamp.intro": "ألبومات ومقطوعات من Bandcamp، مباشرة من الفنانين.",
+ "provider_bandcamp.settings": "الإعدادات",
+ "provider_bandcamp.max_pages": "صفحات النتائج التي يُبحث فيها",
+ "provider_bandcamp.max_pages.hint": "صفحات أكثر تجد أكثر، لكن كل بحث يستغرق وقتًا أطول."
+}

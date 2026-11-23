@@ -1,0 +1,7 @@
+{
+ "provider_bandcamp.title": "Bandcamp",
+ "provider_bandcamp.intro": "Album og numre fra Bandcamp, direkte fra kunstnerne.",
+ "provider_bandcamp.settings": "Indstillinger",
+ "provider_bandcamp.max_pages": "Sider med resultater, der gennemgås",
+ "provider_bandcamp.max_pages.hint": "Flere sider finder mere, men hver søgning tager længere tid."
+}

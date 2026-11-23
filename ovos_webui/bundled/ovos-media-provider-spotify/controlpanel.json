@@ -1,0 +1,36 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-media-provider-spotify>=0.0.1a1,<0.1",
+ "id": "media-spotify",
+ "path": "/media-spotify",
+ "title": "provider_spotify.title",
+ "group": "library",
+ "order": 44,
+ "bus": "ovos.media-spotify.",
+ "blocks": [
+  {
+   "type": "text",
+   "text": "provider_spotify.intro"
+  },
+  {
+   "type": "provider"
+  },
+  {
+   "type": "form",
+   "heading": "provider_spotify.settings",
+   "save": {
+    "config": "media_providers.spotify"
+   },
+   "fields": [
+    {
+     "name": "max_tracks",
+     "type": "number",
+     "min": 1,
+     "max": 200,
+     "default": 25,
+     "label": "provider_spotify.max_tracks"
+    }
+   ]
+  }
+ ]
+}

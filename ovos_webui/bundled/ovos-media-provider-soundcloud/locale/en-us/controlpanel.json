@@ -1,0 +1,6 @@
+{
+ "provider_soundcloud.title": "SoundCloud",
+ "provider_soundcloud.intro": "Tracks from SoundCloud, from artists big and small.",
+ "provider_soundcloud.settings": "Settings",
+ "provider_soundcloud.max_results": "Most results per search"
+}

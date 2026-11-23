@@ -1,0 +1,6 @@
+{
+ "provider_spotify.title": "Spotify",
+ "provider_spotify.intro": "Music from Spotify. It needs a Spotify account, signed in through the Spotify playback plugin.",
+ "provider_spotify.settings": "Settings",
+ "provider_spotify.max_tracks": "Most songs from an album or artist"
+}

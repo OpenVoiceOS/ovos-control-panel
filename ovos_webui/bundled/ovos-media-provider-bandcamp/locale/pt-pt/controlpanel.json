@@ -1,0 +1,7 @@
+{
+ "provider_bandcamp.title": "Bandcamp",
+ "provider_bandcamp.intro": "Álbuns e faixas do Bandcamp, diretamente dos artistas.",
+ "provider_bandcamp.settings": "Definições",
+ "provider_bandcamp.max_pages": "Páginas de resultados a percorrer",
+ "provider_bandcamp.max_pages.hint": "Mais páginas encontram mais, mas cada pesquisa demora mais."
+}

@@ -1,0 +1,7 @@
+{
+ "provider_news.title": "News",
+ "provider_news.intro": "News bulletins from public broadcasters, to play when you ask for the news.",
+ "provider_news.settings": "Settings",
+ "provider_news.default_feed": "Your news",
+ "provider_news.default_feed.hint": "The name of a feed, such as BBC, NPR, RTP or DLF - Die Nachrichten. Empty: the usual one for the device's language."
+}

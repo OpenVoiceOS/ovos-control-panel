@@ -1,0 +1,37 @@
+{
+ "controlpanel": 1,
+ "for": "ovos-media-provider-bandcamp>=0.0.1a1,<0.1",
+ "id": "media-bandcamp",
+ "path": "/media-bandcamp",
+ "title": "provider_bandcamp.title",
+ "group": "library",
+ "order": 43,
+ "bus": "ovos.media-bandcamp.",
+ "blocks": [
+  {
+   "type": "text",
+   "text": "provider_bandcamp.intro"
+  },
+  {
+   "type": "provider"
+  },
+  {
+   "type": "form",
+   "heading": "provider_bandcamp.settings",
+   "save": {
+    "config": "media_providers.bandcamp"
+   },
+   "fields": [
+    {
+     "name": "max_pages",
+     "type": "number",
+     "min": 1,
+     "max": 10,
+     "default": 1,
+     "label": "provider_bandcamp.max_pages",
+     "hint": "provider_bandcamp.max_pages.hint"
+    }
+   ]
+  }
+ ]
+}
