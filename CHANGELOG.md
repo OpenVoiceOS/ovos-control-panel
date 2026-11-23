@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.1a102](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a102) (2026-11-23)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a101...0.0.1a102)
+
+**Merged pull requests:**
+
+- Device page: plugins that say what they provide, and companions a distribution chooses [\#195](https://github.com/OpenVoiceOS/ovos-control-panel/pull/195) ([andlo](https://github.com/andlo))
+- Leave out Personas and server lists the device can't use [\#193](https://github.com/OpenVoiceOS/ovos-control-panel/pull/193) ([andlo](https://github.com/andlo))
+
 ## [0.0.1a101](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a101) (2026-11-23)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a100...0.0.1a101)
@@ -530,17 +539,9 @@
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a36...0.0.1a37)
 
-**Merged pull requests:**
-
-- fix: give every page in the nav an icon of its own [\#68](https://github.com/OpenVoiceOS/ovos-control-panel/pull/68) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [0.0.1a36](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a36) (2026-09-01)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-control-panel/compare/0.0.1a35...0.0.1a36)
-
-**Merged pull requests:**
-
-- feat: draw the Mark-1 face as the hardware is laid out [\#67](https://github.com/OpenVoiceOS/ovos-control-panel/pull/67) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.1a35](https://github.com/OpenVoiceOS/ovos-control-panel/tree/0.0.1a35) (2026-09-01)
 
