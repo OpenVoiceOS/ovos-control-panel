@@ -9,6 +9,13 @@ message into the void.
 
 Nothing here runs a command; installation goes through the ordinary sandboxed
 plugin installer, which already accepts ``ovos-PHAL-plugin-*`` names.
+
+A plugin the table does not name can say what it provides, in its
+``controlpanel.json``: ``"provides": ["volume", "power"]`` (a PHAL plugin for
+other hardware, a browser tab). And a distribution chooses which missing
+companions are offered for install, in ``webui.companions`` (a list of
+capabilities; unset offers them all): a device with no Wi-Fi of its own has no
+use for the network manager.
 """
 from __future__ import annotations
 
@@ -70,14 +77,49 @@ def installed_phal_plugins(have: dict[str, str] | None = None) -> list[str]:
     return sorted(name for name in have if classify(name) == "phal")
 
 
+def page_providers() -> dict[str, list[str]]:
+    """Capability -> the packages whose ``controlpanel.json`` says they
+    provide it (``"provides"``)."""
+    out: dict[str, list[str]] = {}
+    try:
+        from ovos_webui import described
+        found = described.discover()
+    except Exception:  # noqa: BLE001 - a broken description adds nothing
+        return out
+    for f in found:
+        provides = f.data.get("provides") if isinstance(f.data, dict) else None
+        if not isinstance(provides, list):
+            continue
+        for key in provides:
+            if key in CAPABILITIES and f.package not in out.setdefault(key, []):
+                out[key].append(f.package)
+    return out
+
+
+def offered_companions() -> set[str] | None:
+    """The capabilities whose plugin is offered for install when missing
+    (``webui.companions``); None offers every one."""
+    try:
+        from ovos_webui import configio
+        raw = configio.user_or_merged(["webui", "companions"])
+    except Exception:  # noqa: BLE001
+        return None
+    if not isinstance(raw, list):
+        return None
+    return {k for k in raw if isinstance(k, str)}
+
+
 def capability_status() -> dict[str, Any]:
     """Report, per capability, whether a providing plugin is installed."""
     from ovos_webui.pypi import installed_versions
 
     have = installed_versions()
+    extra = page_providers()
+    offered = offered_companions()
     out = {}
     for key, spec in CAPABILITIES.items():
-        provider = next((p for p in spec["plugins"] if p.lower() in have), None)
+        plugins = list(spec["plugins"]) + [p for p in extra.get(key, []) if p not in spec["plugins"]]
+        provider = next((p for p in plugins if p.lower() in have), None)
         # the canonical (lowercase) package name to offer for install
         suggest = spec["plugins"][0]
         out[key] = {
@@ -87,6 +129,8 @@ def capability_status() -> dict[str, Any]:
             "provider": provider,
             "needs_admin": spec["admin"],
             "suggest": suggest,
+            # missing and not offered by this distribution: the page leaves it out
+            "offered": offered is None or key in offered,
         }
     return {"capabilities": out, "phal_plugins": installed_phal_plugins(have)}
 

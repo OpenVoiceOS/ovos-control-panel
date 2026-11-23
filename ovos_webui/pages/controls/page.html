@@ -198,7 +198,11 @@ OvosWebUI.ready(function () {
       // install prompt, so the panel only shows their status — no second
       // Install button. Capabilities with no dedicated control (Wi-Fi) keep it.
       var hasOwnControl = {volume: 1, power: 1};
-      var list = Object.keys(caps).map(function (k) {
+      // a companion this distribution does not offer (webui.companions) and
+      // that is not installed has no place here
+      var list = Object.keys(caps).filter(function (k) {
+        return caps[k].installed || caps[k].offered !== false;
+      }).map(function (k) {
         var c = caps[k];
         var status;
         if (c.installed) {

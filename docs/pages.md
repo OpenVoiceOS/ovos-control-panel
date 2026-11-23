@@ -370,6 +370,20 @@ Two more settings describe the device itself:
 A name or an origin the panel cannot use is skipped and named on the About
 page.
 
+`companions` chooses which companion plugins the Device page offers to
+install when they are missing: a list of `volume`, `power`, `system`,
+`network`, `ggwave`. Unset, it offers them all. A device with no Wi-Fi of its
+own (a browser tab, a house server in a container) has no use for the network
+manager:
+
+```json
+{"webui": {"companions": ["volume", "power", "system"]}}
+```
+
+What is installed always shows. A plugin the panel does not know can say in
+its `controlpanel.json` which controls it gives (`"provides"`, see
+[controlpanel.json](controlpanel-json.md#the-page)).
+
 ### A distribution's own recommendations
 
 Setup and the Plugins page recommend plugins for the device's language from
